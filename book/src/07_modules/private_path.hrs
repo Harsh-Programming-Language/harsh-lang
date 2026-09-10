@@ -1,0 +1,11 @@
+mod front_of_house:
+    mod hosting:
+        fn add_to_waitlist$:
+            println! "added to waitlist"
+
+fn eat_at_restaurant$:
+    crate.front_of_house.hosting.add_to_waitlist$    // absolute path
+    front_of_house.hosting.add_to_waitlist$          // relative path
+
+fn main$:
+    eat_at_restaurant$

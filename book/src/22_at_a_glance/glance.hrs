@@ -1,0 +1,69 @@
+use std.collections.HashMap          // `.` walks a path
+
+#[derive Debug Clone PartialEq]      // an attribute applies inside its brackets
+struct Point                         // a record struct: fields beneath...
+    x: f64
+    y: f64
+#[derive Debug]
+struct Size\ w: f64, h: f64          // ...or inline after `\`
+struct Meters f64                    // a tuple struct: the name applied to its types
+struct Origin                        // a unit-like struct
+
+enum Shape                           // a union of the three forms
+    Empty                            // unit-like
+    Circle f64                       // tuple
+    Rect\ w: f64, h: f64             // record, inline (or with the fields beneath)
+
+trait Area:                          // a trait is a block
+    fn area (&self) -> f64
+
+impl Area for Shape:
+    fn area (&self) -> f64:
+        match self:                  // arms: one per line, no commas
+            Shape.Empty => 0.0
+            Shape.Circle r => 3.14159 * r * r
+            Shape.Rect\ w, h => w * h
+
+fn add (a: i32) (b: i32) -> i32:     // one group per parameter
+    a + b
+
+fn twice (f: impl Fn i32 -> i32) -> impl Fn i32 -> i32:  // a closure type; a bare parameter ends at `->`, so this one is grouped
+    move |x| f (f x)
+
+fn describe<T> (label: &str) (item: T) -> String
+    [where T: std.fmt.Debug]:        // a multi-line where clause is bracketed
+    format! "{label}: {item:?}"
+
+fn main$:                            // applied to nothing: `$`
+    let p = Point\ x = 1.0, y = 2.0  // a literal: `\`, then `field = value`
+    let s =
+        Size\
+            w = 3.0
+            h = 4.0
+    let shapes = [Shape.Empty, (Shape.Circle 1.0), (Shape.Rect\ w = 2.0, h = 3.0)]
+
+    let total: f64 =                 // a chain of three or more links: vertical
+        shapes <- iter$
+               <- map (|s| s <- area$)
+               <- sum$
+
+    let n = add 2 3                  // application by juxtaposition
+    let m = add (n * 2) (add 1 1)    // an expression is one argument in parens
+    let inc = 1 |> add               // a partial: one parameter left
+    let k = 5 |> inc |> (twice inc)  // pipes: a value into a function, then the next
+
+    let kind = if n > 4: "big" else: "small"     // inline blocks
+    let mut counts = HashMap.new$
+    for w in ["a", "b", "a"]:
+        *counts <- entry w <- or_insert 0 += 1
+
+    let z = do:                      // a bare block as a value
+        let t = 2
+        t * t
+    let d = Meters 1.5               // a tuple index keeps its dot and is part of the name
+
+    println!
+        "{p:?} {s:?} {} {total:.2} {n} {m} {k} {kind} {} {z} {}"
+        d.0
+        (describe "counts" (counts <- len$))
+        (matches! Origin Origin)

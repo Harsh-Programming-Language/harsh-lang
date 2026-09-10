@@ -1,0 +1,3 @@
+/target
+*.vsix
+__pycache__/

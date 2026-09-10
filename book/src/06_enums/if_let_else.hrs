@@ -1,0 +1,21 @@
+#[derive Debug]
+enum UsState
+    Alabama
+    Alaska
+
+enum Coin
+    Penny
+    Quarter UsState
+
+fn main$:
+    let coins = [Coin.Penny, (Coin.Quarter UsState.Alabama), Coin.Penny]
+    let mut count = 0
+
+    for coin in coins:
+        if let Coin.Quarter state = coin:
+            println! "State quarter from {:?}!" state
+
+        else:
+            count += 1
+
+    println! "{} non-quarters" count

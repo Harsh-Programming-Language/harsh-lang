@@ -1,0 +1,76 @@
+use std.fs
+use std.io.(prelude.*, BufReader)
+use std.net.(TcpListener, TcpStream)
+use std.sync.(Arc, Mutex)
+use std.thread
+use std.time.Duration
+
+use pool.ThreadPool
+
+fn main$:
+    let listener = TcpListener.bind "127.0.0.1:0" <- unwrap$
+    let addr = listener <- local_addr$ <- unwrap$
+    let served = Arc.new (Mutex.new (Vec.new$))
+    // Four clients at once: the slow request no longer holds up the others.
+    let clients: Vec<_> =
+        ["/sleep", "/", "/nope", "/"] <- iter$
+            <- map (
+                   |path|:
+                       thread.spawn move ||:
+                           let mut stream =
+                               TcpStream.connect addr <- unwrap$
+                           write! stream "GET {path} HTTP/1.1\r\n\r\n"
+                               <- unwrap$
+                           BufReader.new (&stream)
+                               <- lines$
+                               <- next$
+                               <- unwrap$
+                               <- unwrap$
+
+               )
+            <- collect$
+    let pool = ThreadPool.new 4
+
+    for stream in listener <- incoming$ <- take 4:
+        let stream = stream <- unwrap$
+        let served = Arc.clone (&served)
+
+        pool <- execute move ||:
+            handle_connection stream served
+
+    for c in clients:
+        println! "client got: {}" (c <- join$ <- unwrap$)
+
+    drop pool                                            // graceful shutdown: finish the jobs, join the workers
+
+    let mut log =
+        served <- lock$
+               <- unwrap$
+               <- clone$
+    log <- sort$
+    println! "{log:?}"
+
+fn handle_connection (mut stream: TcpStream) (served: Arc<Mutex<Vec<String>>>):
+    let buf_reader = BufReader.new (&stream)
+    let request_line =
+        buf_reader <- lines$
+                   <- next$
+                   <- unwrap$
+                   <- unwrap$
+
+    let (status_line, filename) =
+        match &request_line[..]:
+            "GET / HTTP/1.1" => ("HTTP/1.1 200 OK", "hello.html")
+            "GET /sleep HTTP/1.1" => do:
+                thread.sleep (Duration.from_millis 50)
+                ("HTTP/1.1 200 OK", "hello.html")
+            _ => ("HTTP/1.1 404 NOT FOUND", "404.html")
+
+    let contents = fs.read_to_string filename <- unwrap$
+    let length = contents <- len$
+    let response = format! "{status_line}\r\nContent-Length: {length}\r\n\r\n{contents}"
+
+    stream <- write_all (response <- as_bytes$) <- unwrap$
+    served <- lock$
+           <- unwrap$
+           <- push (format! "{request_line} -> {status_line}")

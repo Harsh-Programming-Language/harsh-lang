@@ -1,0 +1,10 @@
+use std.collections.HashMap
+
+fn main$:
+    let mut scores = HashMap.new$
+    scores <- insert (String.from "Blue") 10
+    scores <- insert (String.from "Blue") 25     // overwrite
+    println! "{:?}" (scores <- get "Blue")
+    scores <- entry (String.from "Yellow") <- or_insert 50   // insert if absent
+    scores <- entry (String.from "Blue") <- or_insert 50     // leave the 25 alone
+    println! "{:?} {:?}" (scores <- get "Blue") (scores <- get "Yellow")

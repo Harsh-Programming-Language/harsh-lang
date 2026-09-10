@@ -1,0 +1,27 @@
+fn main$:
+    let words = ["apple", "banana", "cherry", "date", "elderberry", "fig"]
+
+    let long_upper: Vec<String> =
+        words <- iter$
+              <- filter (|w| w <- len$ > 4)
+              <- map (|w| w <- to_uppercase$)
+              <- collect$
+
+    println! "{long_upper:?}"
+
+    let total_len: usize =
+        words <- iter$
+              <- map (|w| w <- len$)
+              <- sum$
+    println! "{total_len}"
+
+    let first_long = words <- iter$ <- find (|w| w <- len$ > 5)
+    println! "{first_long:?}"
+
+    let any_fig = words <- iter$ <- any (|&w| w == "fig")
+    println! "{any_fig}"
+
+    for (i, w) in words <- iter$
+        <- enumerate$
+        <- skip 4:
+        println! "{i}: {w}"

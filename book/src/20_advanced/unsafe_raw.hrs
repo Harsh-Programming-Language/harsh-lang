@@ -1,0 +1,9 @@
+fn main$:
+    let mut num = 5
+    let r1 = &num as *const i32          // raw pointers can be made in safe code
+    let r2 = &mut num as *mut i32
+
+    unsafe:                              // ...but only dereferenced in an unsafe block
+        println! "r1 is: {}" (*r1)
+        *r2 = 6
+        println! "r2 is: {}" (*r2)

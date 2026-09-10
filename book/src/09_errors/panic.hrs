@@ -1,0 +1,3 @@
+fn main$:
+    println! "about to fail"
+    panic! "crash and burn"

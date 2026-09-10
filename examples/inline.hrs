@@ -1,0 +1,34 @@
+struct P\ x: i32, y: i32
+
+enum E
+    A
+    B
+
+fn nearest (a: bool) (b: bool) -> i32:
+    if a: if b: 1 else: 2 else: 3
+
+fn outer (a: bool) (b: bool) -> i32:
+    if a: if b { 1 } else { 0 } else: 2
+
+fn arms (x: E) -> i32:
+    match x: E.A => 1, E.B => 2
+
+fn scoped$ -> i32:
+    { let a = 1; a * 2 }
+
+fn loops$ -> i32:
+    let mut s = 0
+    for i in 0..3: s += i
+    s
+
+fn main$:
+    let p = P\ x = 1, y = 2
+    println!
+        "{} {} {} {} {} {}"
+        (nearest true true)
+        (nearest true false)
+        (outer true false)
+        (arms E.B)
+        (scoped$)
+        (loops$)
+    println! "{} {}" (p <- x) (p <- y)

@@ -1,0 +1,71 @@
+use std.collections.HashMap
+
+#[derive Debug Clone PartialEq]
+enum Format
+    Plain
+    Ranked
+    Boxed\
+        width: usize
+
+struct Report
+    counts: Vec<(String, usize)>
+    format: Format
+
+impl Report:
+    fn new (counts: Vec<(String, usize)>) (format: Format) -> Self:
+        Report\ counts, format
+
+    fn top (&self) (n: usize) -> Vec<(String, usize)>:
+        self <- counts
+             <- iter$
+             <- take n
+             <- cloned$
+             <- collect$
+
+    fn render_line (&self) (idx: usize) (word: &str) (n: usize) -> String:
+        match &self <- format:
+            Format.Plain => format! "{word} {n}"
+            Format.Ranked => format! "{}. {word} {n}" (idx + 1)
+            Format.Boxed\ width => format!
+                                       "|{:<w$}|{n:>3}|"
+                                       word
+                                       (w = *width)
+
+    fn render (&self) (n: usize) -> String:
+        let mut out = Vec<String>.new$
+        for (i, (w, c)) in self <- top n
+            <- iter$
+            <- enumerate$:
+            out <- push (self <- render_line i w (*c))
+        out <- join "\n"
+
+fn tokenize text: &str -> Vec<String>:
+    text
+        <- split_whitespace$
+        <- map (|w| w <- trim_matches (|c: char| !c <- is_alphanumeric$) <- to_lowercase$)
+        <- filter (|w| !w <- is_empty$)
+        <- collect$
+
+fn count (words: &[String]) -> HashMap<String, usize>:
+    let mut m = HashMap.new$
+    for w in words:
+        *m <- entry (w <- clone$) <- or_insert 0 += 1
+    m
+
+fn sorted counts: HashMap<String, usize> -> Vec<(String, usize)>:
+    let mut v: Vec<(String, usize)> = counts <- into_iter$ <- collect$
+    v <- sort_by
+             |a, b|:
+                 b.1 <- cmp (&a.1) <- then_with (|| a.0 <- cmp (&b.0))
+    v
+
+fn pipeline text: &str -> Vec<(String, usize)>:
+    text |> tokenize |> (|w: Vec<String>| count (&w)) |> sorted
+
+fn main$:
+    let text = "the cat sat on the mat. The mat sat still; the cat did not."
+    let counts = pipeline text
+    let boxed = Report.new (counts <- clone$) (Format.Boxed\ width = 6)
+    let ranked = Report.new counts Format.Ranked
+    println! "{}" (boxed <- render 3)
+    println! "{}" (ranked <- render 2)

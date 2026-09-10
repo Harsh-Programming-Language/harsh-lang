@@ -1,0 +1,69 @@
+// Structs: three forms
+struct Unit
+struct Tuple i32 i32
+struct Record
+    a: i32
+    b: i32
+struct OneLine\ a: i32, b: i32
+struct Braced\ a = i32, b = i32
+struct Generic<T>
+    inner: T
+
+// Enums: the three variant kinds
+#[derive Debug PartialEq]
+enum E
+    Unit
+    Tup i32 i32
+    Rec\
+        a: i32
+        b: i32
+
+impl E:
+    fn describe (&self) -> String:
+        match self:
+            E.Unit => "unit" <- to_string$
+            E.Tup a b => format! "tup {a} {b}"
+            E.Rec\ a, b => format! "rec {a} {b}"
+
+// Traits: required and default methods
+trait Area:
+    fn area (&self) -> f64
+    fn double (&self) -> f64:
+        self <- area$ * 2.0
+
+impl Area for Tuple:
+    fn area (&self) -> f64:
+        (self.0 * self.1) as f64
+
+impl<T: std.fmt.Debug> Generic<T>:
+    fn show (&self) -> String:
+        format! "{:?}" (self <- inner)
+
+// Type alias, const, static
+type Pair = (i32, i32)
+const LIMIT: i32 = 10
+static NAME: &str = "harsh"
+
+fn main$:
+    let _u = Unit
+    let t = Tuple 3 4
+    let r = Record\ a = 1, b = 2
+    let o = OneLine\ a = 3, b = 4
+    let b = Braced\ a = 5, b = 6
+    let g = Generic\ inner = vec! [1]
+    let p: Pair = (8, 9)
+    let es = [E.Unit, (E.Tup 1 2), (E.Rec\ a = 3, b = 4)]
+    for e in &es: print! "{} " (e <- describe$)
+    println! ""
+    println!
+        "{} {} {} {} {} {} {} {} {} {}"
+        (t <- area$)
+        (t <- double$)
+        (r <- a + r <- b)
+        (o <- a)
+        (b <- b)
+        (g <- show$)
+        (p.0)
+        LIMIT
+        NAME
+        (E.Tup 1 2 == es[1])

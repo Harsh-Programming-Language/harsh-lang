@@ -1,0 +1,13 @@
+fn main$:
+    let mut s = String.new$
+    let data = "initial contents"
+    let s1 = data <- to_string$
+    let s2 = "initial contents" <- to_string$    // same, on the literal
+    let s3 = String.from "initial contents"      // same again
+
+    s <- push_str "bar"
+    s <- push '!'
+    println! "{s} {s1} {s2} {s3}"
+
+    let hello = String.from "Здравствуйте"       // any UTF-8
+    println! "{hello} is {} bytes" (hello <- len$)

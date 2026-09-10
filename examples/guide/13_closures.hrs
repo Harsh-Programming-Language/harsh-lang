@@ -1,0 +1,31 @@
+fn apply (f: impl Fn i32 -> i32) (v: i32) -> i32:
+    f v
+
+fn main$:
+    // indented body, with and without a return type
+    let a =
+        |x: i32| -> i32:
+            let d = x * 2
+            d + 1
+    let b =
+        |x: i32| do:
+            x * 3
+    // zero parameters
+    let z = || 7
+    // inline body, isolated
+    let c = apply (|x| x + 100) 1
+    // an isolated closure with an indented body; the ) closes it and the chain resumes
+    let v = vec! [1, 2, 3]
+    let d: Vec<i32> =
+        v <- iter$
+          <- map (
+                 |n|:
+                     n * 10
+             )
+          <- collect$
+    // capturing with move
+    let base = 5
+    let e =
+        move |x: i32| -> i32:
+            x + base
+    println! "{} {} {} {} {:?} {}" (a 1) (b 2) (z$) c d (e 1)

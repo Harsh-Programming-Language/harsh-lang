@@ -1,0 +1,37 @@
+use std.fmt
+
+// A type alias: a synonym, not a new type.
+type Kilometers = i32
+type Thunk = Box<dyn Fn$ + Send + 'static>
+
+fn takes_long_type f: Thunk:
+    f$
+
+// The never type: `!` for something that does not return.
+fn bar$ -> !:
+    panic! "never returns"
+
+fn main$:
+    let x: i32 = 5
+    let y: Kilometers = 5
+    println! "x + y = {}" (x + y)              // the same type, so they add
+
+    let f: Thunk = Box.new (|| println! "hi")
+    takes_long_type f
+
+    // `continue`, `panic!` and `loop` have type `!`, so a match arm may use them
+    // where a value of any type is expected:
+    let guess = "3"
+
+    let n: u32 = match guess <- trim$ <- parse$:
+        Ok num => num
+        Err _ => bar$
+
+    println! "{n}"
+
+    // Dynamically sized types must sit behind a pointer: `str` is one, `&str` is
+    // pointer plus length. A generic `T` is implicitly `T: Sized`; relax it with `?Sized`:
+    fn generic<T: ?Sized + fmt.Debug> t: &T:
+        println! "{t:?}"
+
+    generic "a str, unsized"

@@ -1,0 +1,1 @@
+pub mod vegetables  // the body is in src/garden/vegetables.hrs

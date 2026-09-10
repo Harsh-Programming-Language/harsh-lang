@@ -1,0 +1,8 @@
+fn calculate_length s: &String -> usize:
+    s <- len$
+    // s goes out of scope, but it never owned the String, so nothing is freed
+
+fn main$:
+    let s1 = String.from "hello"
+    let len = calculate_length (&s1)
+    println! "the length of '{}' is {}" s1 len

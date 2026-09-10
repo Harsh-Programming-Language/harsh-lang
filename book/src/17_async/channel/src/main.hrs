@@ -1,0 +1,23 @@
+use tokio.sync.mpsc
+use tokio.time.(sleep, Duration)
+
+#[tokio.main (flavor = "current_thread")]
+async fn main$:
+    let (tx, mut rx) = mpsc.unbounded_channel$
+    let tx1 = tx <- clone$
+
+    let tx1_fut = async move:
+        for val in ["hi", "from", "the", "future"]:
+            tx1 <- send (String.from val) <- unwrap$
+            sleep (Duration.from_millis 5) <- await
+
+    let rx_fut = async:
+        while let Some value = rx <- recv$ <- await:
+            println! "received '{value}'"
+
+    let tx_fut = async move:
+        for val in ["more", "messages", "for", "you"]:
+            tx <- send (String.from val) <- unwrap$
+            sleep (Duration.from_millis 5) <- await
+
+    tokio.join! tx1_fut tx_fut rx_fut;

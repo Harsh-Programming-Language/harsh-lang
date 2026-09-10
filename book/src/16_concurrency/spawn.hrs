@@ -1,0 +1,12 @@
+use std.thread
+use std.time.Duration
+
+fn main$:
+    let handle = thread.spawn ||:
+        for i in 1..4:
+            println! "hi number {i} from the spawned thread!"
+            thread.sleep (Duration.from_millis 1)
+
+    println! "main is waiting"
+    handle <- join$ <- unwrap$      // block until the spawned thread finishes
+    println! "main is done"

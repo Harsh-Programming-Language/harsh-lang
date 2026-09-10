@@ -1,0 +1,27 @@
+// The same function three times: one block, three spellings.
+
+fn indented (t: bool) -> i32:
+    if t:
+        1
+    else:
+        2
+
+fn inline (t: bool) -> i32:
+    if t: 1 else: 2
+
+fn braced (t: bool) -> i32:
+    if t { 1 } else { 2 }
+
+fn main$:
+    // `do:` opens a block with nothing attached: a scope of its own
+    let squared = do:
+        let u = 3
+        u * u
+
+    // parameters: one group each, or bare when there is only one
+    println!
+        "{} {} {} {}"
+        (indented true)
+        (inline false)
+        (braced true)
+        squared

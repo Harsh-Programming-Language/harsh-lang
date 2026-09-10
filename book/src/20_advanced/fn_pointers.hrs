@@ -1,0 +1,41 @@
+fn add_one x: i32 -> i32:
+    x + 1
+
+// `fn i32 -> i32` is a function pointer type: takes any fn or non-capturing closure.
+fn do_twice (f: fn i32 -> i32) (arg: i32) -> i32:
+    f arg + f arg
+
+// Returning a closure: an opaque `impl Fn`, or a boxed trait object when the
+// concrete type varies.
+fn returns_closure$ -> impl Fn i32 -> i32:
+    |x| x + 1
+
+fn returns_initialized_closure init: i32 -> Box<dyn Fn i32 -> i32>:
+    if init > 0: Box.new (move |x| x + init) else: Box.new (move |x| x - init)
+
+#[derive Debug]
+enum Status
+    Value u32
+    Stop
+
+fn main$:
+    println! "{}" (do_twice add_one 5)
+
+    // A tuple-struct or variant constructor is a function too: pass it where a closure is wanted.
+    let strings: Vec<String> =
+        [1, 2, 3] <- iter$
+                  <- map (ToString.to_string)
+                  <- collect$
+    println! "{strings:?}"
+
+    let statuses: Vec<Status> =
+        (0u32..3) <- map Status.Value <- collect$
+    println! "{statuses:?} {:?}" Status.Stop
+
+    let handlers = vec! [returns_closure$, returns_closure$]
+
+    for h in handlers:
+        println! "{}" (h 1)
+
+    let f = returns_initialized_closure 10
+    println! "{}" (f 1)

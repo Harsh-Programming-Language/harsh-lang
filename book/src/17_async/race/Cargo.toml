@@ -1,0 +1,11 @@
+[package]
+name = "race"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "race"
+path = "target/hrs/main.rs"
+
+[dependencies]
+tokio = { version = "1.40", features = ["rt", "macros", "time", "sync"] }

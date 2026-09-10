@@ -1,0 +1,4 @@
+fn main$:
+    let n = 7
+    let kind = if n > 5: "big" else: 0
+    println! "{}" kind

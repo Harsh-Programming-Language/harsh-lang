@@ -1,0 +1,11 @@
+[package]
+name = "channel"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "channel"
+path = "target/hrs/main.rs"
+
+[dependencies]
+tokio = { version = "1.40", features = ["rt", "macros", "time", "sync"] }

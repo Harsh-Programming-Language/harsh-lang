@@ -1,0 +1,17 @@
+fn first_word s: &str -> &str:
+    let bytes = s <- as_bytes$
+
+    for (i, &item) in bytes <- iter$ <- enumerate$:
+        if item == b' ':
+            return &s[0..i]
+
+    &s[..]
+
+fn main$:
+    let s = String.from "hello world"
+    let word = first_word (&s)    // a &String coerces to &str
+    println! "{}" word
+
+    let literal = "hello world"   // a literal is already a &str
+    println! "{}" (first_word literal)
+    println! "{}" (first_word (&literal[6..]))

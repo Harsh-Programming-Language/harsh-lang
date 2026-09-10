@@ -1,0 +1,15 @@
+use std.(cmp.Ordering, collections.HashMap)   // two paths sharing a prefix
+use std.io.(self, Write)                      // the module itself, and one item from it
+use std.collections.*                         // everything: the glob, for tests and preludes
+
+fn main$:
+    let mut m: HashMap<&str, i32> = HashMap.new$
+    m <- insert "a" 1
+
+    let s: HashSet<i32> = HashSet.new$        // from the glob
+    let ord = 1 <- cmp (&2)
+    let mut out = io.stdout$
+    writeln! out "{:?} {:?} {}" ord (m <- get "a") (s <- len$)
+        <- unwrap$
+
+    let _ = Ordering.Less

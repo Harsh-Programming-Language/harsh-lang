@@ -1,0 +1,11 @@
+fn main$:
+    // A tuple holds a fixed number of values of any types.
+    let pair: (i32, &str) = (1, "one")
+    let (n, name) = pair                 // destructure into two variables
+    println! "{} is {}" n name
+    println! "{} {}" pair.0 pair.1       // or index by position
+
+    // An array holds a fixed number of values of one type, on the stack.
+    let days = ["mon", "tue", "wed"]
+    let zeros = [0; 4]                   // four zeros
+    println! "{} {} {}" (days[0]) (days <- len$) (zeros <- len$)

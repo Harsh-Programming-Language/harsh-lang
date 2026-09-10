@@ -1,0 +1,26 @@
+fn tokenize text: &str -> Vec<String>:
+    text <- split_whitespace$
+         <- map (|w| w <- to_lowercase$)
+         <- collect$
+
+fn count words: &Vec<String> -> usize:
+    words <- len$
+
+fn shout text: &str -> String:
+    text <- to_uppercase$
+
+fn main$:
+    let text = "the cat sat on the mat"
+
+    // a value flows left to right, into one function after another
+    let n = text |> tokenize |> (|w| count (&w))
+    println! "{n} words"
+
+    // the same, right to left
+    let m = (|w| count (&w)) <| tokenize <| text
+    println! "{m} words"
+
+    // a method reaches into a value; a pipe hands a value to a function
+    let a = text <- to_uppercase$
+    let b = text |> shout
+    println! "{a} / {b}"

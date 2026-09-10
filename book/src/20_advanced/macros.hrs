@@ -1,0 +1,23 @@
+// A declarative macro: pattern-matched at compile time. Both sides are
+// written in Harsh. The matcher is a parameter list -- one group per fragment,
+// a repetition of groups for a list -- and the transcriber is a `do:` block.
+#[macro_export]
+macro_rules! my_vec:
+    ( $( ($x:expr) )* ) => do:
+        do:
+            let mut temp_vec = Vec.new$
+            $(temp_vec <- push $x)*
+            temp_vec
+
+// Two arms, and a repetition that spans lines. The inner `do:` makes the
+// expansion a block with a value, as the Rust `{ { .. } }` would.
+macro_rules! sum:
+    () => do: 0
+    ($h:expr) => do: $h
+    ( ($h:expr) $( ($t:expr) )* ) => do:
+        $h + sum! $( ($t) )*
+
+fn main$:
+    let v: Vec<u32> = my_vec! 1 2 3
+    println! "{v:?}"
+    println! "{}" (sum! 1 2 3 4)

@@ -1,0 +1,10 @@
+mod restaurant:
+    mod front_of_house:
+        pub mod hosting:
+            pub fn add_to_waitlist$:
+                println! "added to waitlist"
+
+    pub use front_of_house.hosting        // re-export: visible to users of `restaurant`
+
+fn main$:
+    restaurant.hosting.add_to_waitlist$   // the internal `front_of_house` is not mentioned

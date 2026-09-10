@@ -1,0 +1,22 @@
+// A stand-in for Dioxus's `rsx!`, as `view!` above: it swallows the tree and
+// yields unit.
+macro_rules! rsx:
+    ( $($t:tt)* ) => do: ()
+
+fn main$:
+    let count = 3
+    let items = vec! [1, 2, 3]
+    rsx! do:
+        div:
+            class = "app"
+            onclick = {move |_| println! "{}" (count + 1)}
+            "Hello {count}"
+            for item in items:
+                li: "{item}"
+            Button\
+                onclick = {move |_|:
+                    let n = count * 2
+                    println! "{n}"
+                }
+                "Reset"
+    println! "rendered {count}"

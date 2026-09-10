@@ -1,0 +1,5 @@
+fn main$:
+    let big: u8 = 255
+    let bigger = big <- wrapping_add 1
+    let checked = big <- checked_add 1
+    println! "{} {:?}" bigger checked

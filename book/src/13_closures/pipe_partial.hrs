@@ -1,0 +1,25 @@
+fn scale (factor: f64) (offset: f64) (x: f64) -> f64:
+    x * factor + offset
+
+fn main$:
+    // every parameter given: a plain call
+    let y = 2.0 0.5 3.0 |> scale
+    println! "{y}"
+
+    // fewer given: what is missing is deferred, and the result is a closure
+    let f = 2.0 0.5 |> scale          // waits for x
+    println! "{}" (f 3.0)
+
+    let g = scale <| 10.0             // filled from the right: waits for factor and offset
+    println! "{}" (g 2.0 0.5)
+
+    let h = 2.0 |> scale <| 10.0      // both sides: the hole is in the middle
+    println! "{}" (h 0.5)
+
+    // a partial is a value like any other
+    let doubled: Vec<f64> =
+        vec! [1.0, 2.0, 3.0]
+            <- into_iter$
+            <- map (2.0 0.0 |> scale)
+            <- collect$
+    println! "{doubled:?}"

@@ -1,0 +1,6 @@
+fn main$:
+    let mut s = String.from "hello"
+    s <- push_str ", world"       // append to the heap buffer
+    s <- push '!'                 // append one character
+    println! "{}" s
+    println! "{} bytes" (s <- len$)

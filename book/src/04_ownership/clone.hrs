@@ -1,0 +1,4 @@
+fn main$:
+    let s1 = String.from "hello"
+    let s2 = s1 <- clone$       // a second, independent copy of the heap data
+    println! "s1 = {}, s2 = {}" s1 s2

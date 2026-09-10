@@ -1,0 +1,10 @@
+struct User
+    username: &str
+    email: &str
+
+fn main$:
+    let user1 =
+        User\
+            username = "someusername123"
+            email = "someone@example.com"
+    println! "{}" (user1 <- username)

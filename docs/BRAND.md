@@ -84,3 +84,7 @@ Eleven characters. Five readings, none of which contradicts the others.
 
 - The mark is not licensed with the code. See `docs/TRADEMARK.md`.
 - Anyone may fork Harsh; a fork must be called something else and must not use this mark.
+
+## The mark as an image
+
+`docs/logo.png` is the drawn mark, chosen 2026-09-10: a copper `h` between a copper `<` and a slate `>`, a slate dot after it, on dark. Read it as the language reads: `<` and `>` are the halves of `<-` and `->`, the arrows Harsh is spelled with; the dot is the one in `Hars.h`. The typographic mark `#[Ha<rs>.h]` stays the wordmark in text; the image is the mark where an image is wanted — the VSCode extension's icon (`editors/vscode-harsh/icon.png`, 256 px) and the two hosts' avatars. Still to do: redraw it as an SVG with exact geometry, so it scales and prints in one colour.

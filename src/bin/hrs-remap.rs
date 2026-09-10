@@ -27,7 +27,7 @@ fn main() {
     }
     let mut loaded = Vec::new();
     for m in &maps {
-        match hrust::remap::SourceMap::load(m) {
+        match harsh_lang::remap::SourceMap::load(m) {
             Ok(s) => loaded.push(s),
             Err(e) => {
                 eprintln!("hrs-remap: {}", e);
@@ -49,7 +49,7 @@ fn main() {
             continue;
         }
         for m in &loaded {
-            if hrust::remap::render(m, msg, &mut w).unwrap_or(false) {
+            if harsh_lang::remap::render(m, msg, &mut w).unwrap_or(false) {
                 match level {
                     "error" => errors += 1,
                     "warning" => warnings += 1,

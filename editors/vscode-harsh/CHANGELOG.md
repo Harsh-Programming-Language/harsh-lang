@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.1
+
+- The extension icon is the Harsh mark (the `h` between `<` and `>`, with the dot); the listing text and the repository link are the published ones.
+
 ## 0.1.0
 
 First public release.

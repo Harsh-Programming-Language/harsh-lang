@@ -5,12 +5,20 @@ idempotent: running it again over an older install just replaces it.
 
 ## 1. The four binaries
 
+From the published crate ([`harsh-lang`](https://crates.io/crates/harsh-lang)):
+
 ```
-cd hrust
+cargo install harsh-lang
+```
+
+or from a checkout, to run what is in the tree rather than the last release:
+
+```
+cd harsh
 cargo install --path .
 ```
 
-Puts `hrs`, `hrs-from`, `hrs-remap` and `hrs-lsp` in `~/.cargo/bin` (on your
+Either puts `hrs`, `hrs-from`, `hrs-remap` and `hrs-lsp` in `~/.cargo/bin` (on your
 `PATH` if Rust is). This is the step the editors depend on: both extensions
 launch `hrs-lsp` from `PATH`. Run it again after every bundle — the server's
 behaviour (Enter, Tab, `)`, format on save) lives in the binary, not in the
@@ -32,15 +40,22 @@ trips them through `hrs-from`, and self-hosts.
 
 ## 3. The VSCode extension
 
+From the Marketplace ([`harsh-lang.harsh-lang`](https://marketplace.visualstudio.com/items?itemName=harsh-lang.harsh-lang)):
+
+```
+code --install-extension harsh-lang.harsh-lang
+```
+
+or, when `editors/vscode-harsh` has changed and you want that version:
+
 ```
 cd editors/vscode-harsh
 npm install                       # first time only
-npx @vscode/vsce package          # produces harsh-0.1.0.vsix
-code --install-extension harsh-0.1.0.vsix
+npx @vscode/vsce package          # produces harsh-lang-0.1.1.vsix
+code --install-extension harsh-lang-0.1.1.vsix
 ```
 
-Then reload the window. Only needed when `editors/vscode-harsh` changed — the
-handover says so when it did. Format on save is VSCode's own setting
+Then reload the window. Format on save is VSCode's own setting
 (`editor.formatOnSave`); the extension supplies the formatter through
 `hrs-lsp`. If the binary is not on VSCode's `PATH`, set `harsh.serverPath`.
 

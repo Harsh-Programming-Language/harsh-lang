@@ -19,12 +19,12 @@ The chapters follow the order of *The Rust Programming Language* (the "Rust Book
 
 ## Setting up
 
-You need the Rust toolchain and the Harsh tools. *The Harsh Language Guide*'s "Setting up" section has the exact commands; in short:
+You need the Rust toolchain and the Harsh tools:
 
 ```text
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh     # Rust, if you do not have it
-cargo install --path harsh                                        # from the Harsh repository
+cargo install harsh-lang                                               # hrs, hrs-from, hrs-remap, hrs-lsp
 hrs new hello && cd hello && hrs run                              # a first project
 ```
 
-If the last line prints `Hello from Harsh`, you are ready.
+If the last line prints `Hello from Harsh`, you are ready. The tools are the crate [`harsh-lang`](https://crates.io/crates/harsh-lang); for the editor, install [Harsh](https://marketplace.visualstudio.com/items?itemName=harsh-lang.harsh-lang) from the VSCode Marketplace, and `hrs-lsp` — already on your `PATH` — gives it the layout-aware Enter, Tab and format-on-save the rest of this book assumes you have.

@@ -40,15 +40,15 @@ fn corpus() -> Vec<PathBuf> {
 }
 
 fn transpile(src: &str) -> Option<String> {
-    let toks = hrust::lex::lex(src).ok()?;
-    let nodes = hrust::layout::build(toks).ok()?;
-    let mut em = hrust::emit::Emitter::new(src);
+    let toks = harsh_lang::lex::lex(src).ok()?;
+    let nodes = harsh_lang::layout::build(toks).ok()?;
+    let mut em = harsh_lang::emit::Emitter::new(src);
     em.program(&nodes);
     Some(em.out)
 }
 
 fn tokens(s: &str) -> Vec<String> {
-    hrust::lex::lex_rust(s).map(|v| v.into_iter().filter(|t| !t.is_comment()).map(|t| t.text).collect()).unwrap_or_default()
+    harsh_lang::lex::lex_rust(s).map(|v| v.into_iter().filter(|t| !t.is_comment()).map(|t| t.text).collect()).unwrap_or_default()
 }
 
 fn first_diff(a: &str, b: &str) -> String {
@@ -66,7 +66,7 @@ fn fmt_changes_no_token() {
     assert!(files.len() > 200, "{} files", files.len());
     for f in &files {
         let src = fs::read_to_string(f).unwrap();
-        let out = hrust::fmt::format(&src);
+        let out = harsh_lang::fmt::format(&src);
         let (a, b) = (transpile(&src), transpile(&out));
         if a.is_none() {
             // A Book snippet that Harsh itself refuses, on purpose (`!error`
@@ -84,8 +84,8 @@ fn fmt_changes_no_token() {
 fn fmt_is_idempotent() {
     for f in corpus() {
         let src = fs::read_to_string(&f).unwrap();
-        let once = hrust::fmt::format(&src);
-        let twice = hrust::fmt::format(&once);
+        let once = harsh_lang::fmt::format(&src);
+        let twice = harsh_lang::fmt::format(&once);
         assert_eq!(once, twice, "{}: not idempotent\n{}", f.display(), first_diff(&once, &twice));
     }
 }
@@ -98,7 +98,7 @@ fn fmt_is_a_no_op_over_the_corpus() {
     let mut changed = Vec::new();
     for f in corpus() {
         let src = fs::read_to_string(&f).unwrap();
-        let out = hrust::fmt::format(&src);
+        let out = harsh_lang::fmt::format(&src);
         if out != src {
             changed.push(format!("{}\n  {}", f.display(), first_diff(&src, &out).replace('\n', "\n  ")));
         }
@@ -188,9 +188,9 @@ fn fmt_shapes() {
         ("fn main$:   \n    1  \n\n\n", "fn main$:\n    1\n"),
     ];
     for (src, want) in cases {
-        let got = hrust::fmt::format(src);
+        let got = harsh_lang::fmt::format(src);
         assert_eq!(&got, want, "\n  input:\n{src}\n  got:\n{got}");
-        assert_eq!(hrust::fmt::format(&got), got, "idempotent:\n{got}");
+        assert_eq!(harsh_lang::fmt::format(&got), got, "idempotent:\n{got}");
         let a = transpile(src).unwrap_or_else(|| panic!("input does not transpile:\n{src}"));
         let b = transpile(&got).unwrap_or_else(|| panic!("output does not transpile:\n{got}"));
         assert_eq!(tokens(&a), tokens(&b), "rule 0:\n{src}");
@@ -208,8 +208,8 @@ fn fmt_shapes() {
 fn the_receiver_decides() {
     let src = "fn f$:\n    let a = very_long_receiver_name <- very_long_method_name\n    let b = receiver <- method <- method\n    let c = very_long_receiver_name <- very_long_method_name <- very_long_method_name <- more\n    let d = receiver <- very_long_method_name <- very_long_method_name <- very_long_method_name\n    receiver <- very_long_method_name <- very_long_method_name <- very_long_method_name <- more\n    very_long_receiver_name <- very_long_method_name <- very_long_method_name <- more\n";
     let want = "fn f$:\n    let a = very_long_receiver_name <- very_long_method_name\n    let b = receiver <- method <- method\n    let c =\n        very_long_receiver_name\n            <- very_long_method_name\n            <- very_long_method_name\n            <- more\n    let d =\n        receiver <- very_long_method_name\n                 <- very_long_method_name\n                 <- very_long_method_name\n    receiver <- very_long_method_name\n             <- very_long_method_name\n             <- very_long_method_name\n             <- more\n    very_long_receiver_name\n        <- very_long_method_name\n        <- very_long_method_name\n        <- more\n";
-    assert_eq!(hrust::fmt::format(src), want);
-    assert_eq!(hrust::fmt::format(want), want, "idempotent");
+    assert_eq!(harsh_lang::fmt::format(src), want);
+    assert_eq!(harsh_lang::fmt::format(want), want, "idempotent");
 }
 
 /// Arguments beneath the callee (the user's rule, 2026-09-10): an
@@ -222,8 +222,8 @@ fn the_receiver_decides() {
 fn arguments_beneath_the_callee() {
     let src = "fn f$:\n    let app =\n        Router.new$ <- leptos_routes (&leptos_options) routes (do:\n                            let leptos_options = leptos_options <- clone$\n                            move || shell (leptos_options <- clone$)\n                        )\n                    <- fallback (leptos_axum.file_and_error_handler shell)\n                    <- with_state leptos_options\n    println! \"The area of the rectangle is {} square pixels.\" (area width1 height1)\n    app\n";
     let want = "fn f$:\n    let app =\n        Router.new$ <- leptos_routes\n                           (&leptos_options)\n                           routes\n                           (do:\n                                let leptos_options = leptos_options <- clone$\n                                move || shell (leptos_options <- clone$)\n                           )\n                    <- fallback (leptos_axum.file_and_error_handler shell)\n                    <- with_state leptos_options\n    println!\n        \"The area of the rectangle is {} square pixels.\"\n        (area width1 height1)\n    app\n";
-    assert_eq!(hrust::fmt::format(src), want);
-    assert_eq!(hrust::fmt::format(want), want, "idempotent");
+    assert_eq!(harsh_lang::fmt::format(src), want);
+    assert_eq!(harsh_lang::fmt::format(want), want, "idempotent");
 }
 
 /// Rule 3, recursion: a chain inside an argument is judged by the same
@@ -234,6 +234,6 @@ fn arguments_beneath_the_callee() {
 fn chains_recurse_and_tails_continue() {
     let src = "fn f$:\n    let e = xs <- iter$ <- map (|x| x <- foo$ <- bar$ <- baz$ <- qux$) <- collect$\n    let app =\n        Router.new$ <- leptos_routes\n                           (&leptos_options)\n                           routes\n                           (do:\n                                let leptos_options = leptos_options <- clone$\n                                move || shell (leptos_options <- clone$)\n                           ) <- fallback (leptos_axum.file_and_error_handler shell) <- with_state leptos_options\n    app\n";
     let want = "fn f$:\n    let e =\n        xs <- iter$\n           <- map (|x| x <- foo$\n                         <- bar$\n                         <- baz$\n                         <- qux$)\n           <- collect$\n    let app =\n        Router.new$ <- leptos_routes\n                           (&leptos_options)\n                           routes\n                           (do:\n                                let leptos_options = leptos_options <- clone$\n                                move || shell (leptos_options <- clone$)\n                           )\n                    <- fallback (leptos_axum.file_and_error_handler shell)\n                    <- with_state leptos_options\n    app\n";
-    assert_eq!(hrust::fmt::format(src), want);
-    assert_eq!(hrust::fmt::format(want), want, "idempotent");
+    assert_eq!(harsh_lang::fmt::format(src), want);
+    assert_eq!(harsh_lang::fmt::format(want), want, "idempotent");
 }

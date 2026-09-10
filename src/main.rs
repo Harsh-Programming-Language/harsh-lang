@@ -4,7 +4,7 @@
 
 //! `hrs` — the Harsh transpiler and build driver.
 
-use hrust::driver::{self, Project};
+use harsh_lang::driver::{self, Project};
 use std::path::PathBuf;
 use std::process::ExitCode;
 
@@ -97,7 +97,7 @@ fn fmt(args: &[String]) -> ExitCode {
                 return ExitCode::FAILURE;
             }
         };
-        let out = hrust::fmt::format(&src);
+        let out = harsh_lang::fmt::format(&src);
         if out != src {
             changed += 1;
             if check {

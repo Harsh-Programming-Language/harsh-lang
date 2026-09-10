@@ -6,7 +6,7 @@
 //!
 //! One feature, layout-aware on-type formatting, and one custom request,
 //! `harsh/columns`, behind it. The server keeps the text of each open file
-//! and answers every question through `hrust::columns`; it has no model of
+//! and answers every question through `harsh_lang::columns`; it has no model of
 //! names, types or projects. Design in `docs/LSP.md`.
 
 use std::collections::HashMap;
@@ -140,7 +140,7 @@ fn invalid(id: RequestId, e: serde_json::Error) -> Response {
 /// The whole buffer through `hrs fmt`. No edits when nothing changes.
 fn format_document(docs: &HashMap<Url, String>, p: &DocumentFormattingParams) -> Option<Vec<TextEdit>> {
     let src = docs.get(&p.text_document.uri)?;
-    let out = hrust::fmt::format(src);
+    let out = harsh_lang::fmt::format(src);
     if out == *src {
         return Some(Vec::new());
     }
@@ -164,7 +164,7 @@ fn columns_at(
 ) -> Option<ColumnsResult> {
     let src = docs.get(&p.text_document.uri)?;
     let line = p.position.line;
-    let c = hrust::columns::columns(src, line as usize);
+    let c = harsh_lang::columns::columns(src, line as usize);
     let current = indent_of(src, line);
     Some(ColumnsResult { legal: c.legal, default: c.default, unit: c.unit, current })
 }
@@ -183,7 +183,7 @@ fn on_type(
     let src = docs.get(&p.text_document_position.text_document.uri)?;
     let pos = p.text_document_position.position;
     let ws = indent_of(src, pos.line);
-    let c = hrust::columns::columns(src, pos.line as usize);
+    let c = harsh_lang::columns::columns(src, pos.line as usize);
     let target = match p.ch.as_str() {
         "\n" => c.default,
         ")" | "]" => {
@@ -209,7 +209,7 @@ fn on_type(
         let rest = text.trim_start_matches(' ');
         if rest == ")" || rest == "]" {
             let nws = text.len() - rest.len();
-            if let Some(cl) = hrust::columns::columns(src, next as usize).closer {
+            if let Some(cl) = harsh_lang::columns::columns(src, next as usize).closer {
                 if cl != nws {
                     edits.push(reindent(next, nws, cl));
                 }

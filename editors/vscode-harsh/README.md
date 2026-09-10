@@ -1,17 +1,59 @@
-# Harsh for VSCode
+# Harsh
 
-Syntax highlighting and layout-aware editing for `.hrs` files — Rust with indentation instead of braces.
+**Rust without the braces.** Harsh is Rust spelled with indentation for structure, `f a b` for applying a function and `<-` for reaching into a value; everything else — ownership, traits, lifetimes, every crate — is Rust, unchanged, because `hrs` is a layout transformation and not a new compiler. This extension makes `.hrs` files first-class in VSCode.
+
+```
+use std.collections.HashMap
+
+fn word_counts text: &str -> Vec<(String, usize)>:
+    let mut counts = HashMap.new$
+    for word in text <- split_whitespace$:
+        *counts <- entry (word <- to_lowercase$) <- or_insert 0 += 1
+    let mut v: Vec<(String, usize)> = counts <- into_iter$ <- collect$
+    v <- sort_by (|a, b| b.1 <- cmp (&a.1))
+    v
+```
+
+## What you get
+
+- **Highlighting** that is Rust's own, plus the four things Harsh adds — `<-`, the pipes `|>` and `<|`, `do:`, and `[where …]`.
+- **Enter that knows the layout.** After a chain line the new line lands under the previous `<-`; after `let x =`, one level in; after `println!`, on the first argument's column, then on each argument's sibling. One keystroke, one place.
+- **Tab and Shift-Tab between legal columns** — the columns the layout would accept on that line, and only those.
+- **Format on save**, with `hrs fmt`'s rules: chains of three or more links vertical with the arrows aligned, a block literal's fields one unit past its name, arguments beneath a callee that no longer fits its line. The formatter changes no token, ever.
+- **Errors on your lines.** Build with `hrs check` or `hrs build` and rustc's diagnostics point at the `.hrs` line and column, not at the generated Rust.
+- **Folding** by indentation.
+
+## Setup
+
+The editing features come from a language server, `hrs-lsp`, which is part of the Harsh toolchain:
+
+```
+cargo install harsh-lang
+```
+
+That installs `hrs` (transpiler and build driver), `hrs-from` (Rust to Harsh), `hrs-remap` and `hrs-lsp`. The extension finds `hrs-lsp` on your `PATH`, or where `harsh.serverPath` points. Without it you still get highlighting and folding, with one warning.
+
+Then: `hrs new hello && cd hello && hrs run`.
+
+## Learn Harsh
+
+- *The Harsh Language Guide* — every construct beside its Rust spelling, for Rust programmers: the fastest way in.
+- *The Harsh Programming Language* — Rust taught in Harsh, from the first program to async, for readers who do not know Rust.
+
+Both are in the repository, every code sample built and run: https://gitlab.com/bahiminin.benoit.dah.opensource/harsh-lang
+
+---
+
+## For contributors
 
 ## How it works
 
 The grammar includes `source.rust` wholesale and adds only what Harsh changes:
 
-| Pattern | Scope |
-|---|---|
-| `<-` | `keyword.operator.member.harsh` |
-| `<\|`, `\|>` | `keyword.operator.pipe.harsh` |
-| `do:` | `keyword.control.block.harsh` |
-| `[where …]` | bracketed clause, contents highlighted as Rust |
+- `<-` — `keyword.operator.member.harsh`
+- `<|` and `|>` — `keyword.operator.pipe.harsh`
+- `do:` — `keyword.control.block.harsh`
+- `[where …]` — a bracketed clause, its contents highlighted as Rust
 
 Everything else — keywords, strings, types, lifetimes, comments, macros — comes from the Rust grammar unchanged, because none of it differs.
 
@@ -29,12 +71,12 @@ Everything else — keywords, strings, types, lifetimes, comments, macros — co
 
 Without `hrs-lsp` installed the extension still loads; you get highlighting and folding, plus one warning — no layout help, since there are no pattern rules to fall back on.
 
-## Install
+## Building from source
 
 ```
 npm install
 npx @vscode/vsce package
-code --install-extension harsh-0.1.0.vsix
+code --install-extension harsh-lang-0.1.1.vsix
 ```
 
 The dependency on `vscode-languageclient` is what makes the `npm install` step necessary.

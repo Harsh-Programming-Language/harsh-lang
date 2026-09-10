@@ -1,5 +1,5 @@
 [package]
-name = "hrust"
+name = "harsh-lang"
 version = "0.1.0"
 edition = "2021"
 authors = ["Bahiminin Benoit Dah"]
@@ -28,7 +28,7 @@ exclude = [
 ]
 
 [lib]
-name = "hrust"
+name = "harsh_lang"
 path = "src/lib.rs"
 
 [[bin]]

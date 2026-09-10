@@ -11,7 +11,7 @@ rm -rf "$WORK" && mkdir -p "$WORK"
 
 say() { printf '\n\033[1m%s\033[0m\n' "$*"; }
 
-say "Building hrust"
+say "Building harsh-lang"
 cargo build --release
 BIN="$ROOT/target/release"
 
@@ -52,7 +52,7 @@ for f in general edge params brackets; do
     fi
 done
 
-say "Self-host: convert hrust's own source and rebuild it"
+say "Self-host: convert harsh-lang's own source and rebuild it"
 cp -r "$ROOT/src" "$ROOT/Cargo.toml" "$ROOT/Cargo.lock" "$WORK/" 2>/dev/null || true
 mkdir -p "$WORK/selfhost" && cp -r "$ROOT/src" "$ROOT/Cargo.toml" "$ROOT/Cargo.lock" "$WORK/selfhost/"
 ( cd "$WORK/selfhost"

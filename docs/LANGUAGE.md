@@ -4,7 +4,7 @@ This describes the language as implemented, not as designed. Everything document
 
 Harsh is a layout transformation over Rust. The transpiler understands block structure and applies a small set of local token substitutions; it has no semantic model, no type knowledge, and no name resolution. Everything not mentioned in this guide is passed through to Rust unchanged, which means generics, lifetimes, closures, `impl Trait`, `async`/`.await`, macros, patterns, operators, and every future Rust syntax addition work without the transpiler knowing they exist.
 
-Source files use the `.hrs` extension. The package is `hrust`; the binaries are `hrs`, `hrs-from`, `hrs-remap` and `hrs-lsp`.
+Source files use the `.hrs` extension. The package is `harsh-lang`; the binaries are `hrs`, `hrs-from`, `hrs-remap` and `hrs-lsp`.
 
 ## The mark
 
@@ -49,13 +49,13 @@ Everything below was run, as written, before it was written down. Harsh needs on
 
 ### Building the tools
 
-From the repository root:
+From the published crate:
 
 ```
-cargo install --path .
+cargo install harsh-lang
 ```
 
-That builds and installs three executables into `~/.cargo/bin`, which rustup already put on your `PATH`:
+or, from the repository root, `cargo install --path .` to get the tree as it is. Either installs four executables into `~/.cargo/bin`, which rustup already put on your `PATH`:
 
 | Executable | What it does |
 |---|---|
@@ -125,7 +125,7 @@ The converter writes Harsh from Rust: braces become indentation, `::` becomes `.
 
 ### Editors
 
-- **VSCode** — install the packaged extension: `code --install-extension harsh-0.1.0.vsix` (build it with `npm install` then `npx @vscode/vsce package` in `editors/vscode-harsh`). Highlighting for `.hrs`, folding by indentation, and — with `hrs-lsp` on your `PATH`, which `cargo install --path .` puts there — layout-aware Enter and Tab: Enter after a chain line lands under the previous arrow, after `let d =` one level in, after a block opener inside the block; Tab on a fresh line moves to the next column the layout allows, and past the last of them keeps indenting a unit at a time; Shift-Tab comes back a unit at a time to column 0. Set `harsh.serverPath` if the binary lives elsewhere. Marketplace listing to come.
+- **VSCode** — `code --install-extension harsh-lang.harsh-lang`, or search for *Harsh* in the Extensions view ([the listing](https://marketplace.visualstudio.com/items?itemName=harsh-lang.harsh-lang)); to run the tree's own version instead, `npm install` then `npx @vscode/vsce package` in `editors/vscode-harsh` and install the `.vsix`. Highlighting for `.hrs`, folding by indentation, and — with `hrs-lsp` on your `PATH`, which `cargo install --path .` puts there — layout-aware Enter and Tab: Enter after a chain line lands under the previous arrow, after `let d =` one level in, after a block opener inside the block; Tab on a fresh line moves to the next column the layout allows, and past the last of them keeps indenting a unit at a time; Shift-Tab comes back a unit at a time to column 0. Set `harsh.serverPath` if the binary lives elsewhere. Marketplace listing to come.
 - **Zed** — `editors/zed-harsh` is a Zed extension backed by the tree-sitter grammar in `editors/tree-sitter-harsh`; install it as a dev extension from the Zed command palette once the grammar repository it names is reachable. It launches `hrs-lsp` too, so Enter behaves as in VSCode; Zed has no way to bind Tab to a language-server request, so Tab there stays Zed's own.
 - **Anything with tree-sitter** — `editors/tree-sitter-harsh` is the grammar; it parses every example in this repository with no error nodes.
 

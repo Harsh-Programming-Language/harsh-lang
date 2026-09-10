@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- **The crate is `harsh-lang`** (library crate `harsh_lang`); the binaries stay `hrs`, `hrs-from`, `hrs-remap`, `hrs-lsp`. `hrust 0.1.0` is yanked. The VSCode extension is `harsh-lang.harsh-lang` on the Marketplace, with the drawn mark as its icon (0.1.1); the docs, the guide and the Book link the crate and the extension.
+
 - Guide code blocks: a second column is always Rust and is compared with the transpiler's output; notes are a third column or a `//` comment. All 24 two-column blocks now match; two Rust columns in the partial-application section were wrong and are corrected from the transpiler's own output.
 
 - **Formatter: a block literal's shape** (the user's rule). `let u = User\` with the fields beneath is re-broken to `let u =` / `User\` / the fields, one unit past the literal; nine corpus files moved. Editor: Enter after a line ending in `\` lands one unit past the literal's name.

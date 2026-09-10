@@ -33,7 +33,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "hrust"
+name = "harsh-lang"
 version = "0.1.0"
 dependencies = [
  "lsp-server",

@@ -1,8 +1,8 @@
 {
-  "name": "harsh",
+  "name": "harsh-lang",
   "displayName": "Harsh",
-  "description": "Harsh. Rust without the braces.",
-  "version": "0.1.0",
+  "description": "Rust without the braces: highlighting, layout-aware Enter and Tab, format on save, and errors on your .hrs lines, for the Harsh language.",
+  "version": "0.1.1",
   "publisher": "harsh-lang",
   "author": "Bahiminin Benoit Dah",
   "engines": {
@@ -38,7 +38,7 @@
         "harsh.serverPath": {
           "type": "string",
           "default": "hrs-lsp",
-          "description": "Path to the hrs-lsp binary (installed by `cargo install --path .` in the hrust checkout)."
+          "description": "Path to the hrs-lsp binary (installed by `cargo install harsh-lang`)."
         }
       }
     },
@@ -90,7 +90,8 @@
     "harsh",
     "rust",
     "indentation",
-    "braceless"
+    "transpiler",
+    "language server"
   ],
   "main": "./client/extension.js",
   "activationEvents": [

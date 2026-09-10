@@ -46,11 +46,11 @@ fn main() -> ExitCode {
     // is in the recommended layout.
     // `--raw`: the converter's own output, before the formatter.
     let raw = std::env::args().any(|a| a == "--raw");
-    match hrust::unbrace::convert(&src)
-        .map(|o| if raw { o } else { hrust::fmt::format(&o) })
+    match harsh_lang::unbrace::convert(&src)
+        .map(|o| if raw { o } else { harsh_lang::fmt::format(&o) })
         .map(|mut o| {
             // A doc example is code, so it is converted like the rest.
-            hrust::docex::to_harsh_in(&mut o);
+            harsh_lang::docex::to_harsh_in(&mut o);
             o
         }) {
         Ok(out) => match output {

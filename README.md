@@ -1,5 +1,7 @@
 # Harsh
 
+Development, issues and merge requests live at [gitlab.com/bahiminin.benoit.dah.opensource/harsh-lang](https://gitlab.com/bahiminin.benoit.dah.opensource/harsh-lang); [github.com/Harsh-Programming-Language/harsh-lang](https://github.com/Harsh-Programming-Language/harsh-lang) is a read-only mirror.
+
 ```
 #[Ha<rs>.h]
      │  │
@@ -8,6 +10,13 @@
 ```
 
 *Rust without the braces.*
+
+```
+cargo install harsh-lang            # hrs, hrs-from, hrs-remap, hrs-lsp
+hrs new hello && cd hello && hrs run
+```
+
+The toolchain is the crate [`harsh-lang`](https://crates.io/crates/harsh-lang); the VSCode extension is [`harsh-lang.harsh-lang`](https://marketplace.visualstudio.com/items?itemName=harsh-lang.harsh-lang) on the Marketplace (`code --install-extension harsh-lang.harsh-lang`).
 
 A layout transformation over Rust. Blocks are delimited by indentation instead of braces, paths use `.` instead of `::`, and field access and method calls use `<-` instead of `.`. Source files carry the `.hrs` extension.
 

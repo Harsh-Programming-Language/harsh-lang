@@ -12,20 +12,20 @@ use std::fs;
 use std::path::Path;
 
 fn transpile(harsh: &str) -> String {
-    let toks = hrust::lex::lex(harsh).expect("lex");
-    let tree = hrust::layout::build(toks).expect("layout");
-    let mut em = hrust::emit::Emitter::new(harsh);
+    let toks = harsh_lang::lex::lex(harsh).expect("lex");
+    let tree = harsh_lang::layout::build(toks).expect("layout");
+    let mut em = harsh_lang::emit::Emitter::new(harsh);
     em.program(&tree);
     em.out
 }
 
 fn convert(rust: &str) -> String {
-    hrust::unbrace::convert(rust).expect("convert")
+    harsh_lang::unbrace::convert(rust).expect("convert")
 }
 
 /// Token stream with whitespace, comments and optional trailing commas removed.
 fn norm_tokens(s: &str) -> Vec<String> {
-    let mut out: Vec<String> = hrust::lex::lex_rust(s)
+    let mut out: Vec<String> = harsh_lang::lex::lex_rust(s)
         .expect("lex_rust")
         .into_iter()
         .filter(|t| !t.is_comment())
@@ -111,9 +111,9 @@ fn examples_transpile() {
             let path = e.path();
             if path.extension().map(|x| x == "hrs").unwrap_or(false) {
                 let src = fs::read_to_string(&path).unwrap();
-                let toks = hrust::lex::lex(&src)
+                let toks = harsh_lang::lex::lex(&src)
                     .unwrap_or_else(|e| panic!("{}: {}", path.display(), e.msg));
-                hrust::layout::build(toks)
+                harsh_lang::layout::build(toks)
                     .unwrap_or_else(|e| panic!("{}: {}", path.display(), e.msg));
                 n += 1;
             }
@@ -124,7 +124,7 @@ fn examples_transpile() {
 
 #[test]
 fn rejects_rust_spellings() {
-    assert!(hrust::lex::lex("fn main$:\n    let x = a::b\n").is_err(), "`::` must be rejected");
+    assert!(harsh_lang::lex::lex("fn main$:\n    let x = a::b\n").is_err(), "`::` must be rejected");
 }
 
 /// Each case is (harsh, expected substring of the emitted Rust).
@@ -236,8 +236,8 @@ fn macros_juxtapose_like_functions() {
         ("fn m$:\n    let c = matches! r (Ok 7)\n", "matches!(r, Ok(7))"),
         ("fn m$:\n    assert_eq! a 5\n", "assert_eq!(a, 5)"),
     ]);
-    let toks = hrust::lex::lex("fn m$:\n    let a = matches! (x, Some(n) if n > 1)\n").expect("lex");
-    assert!(hrust::layout::build(toks).is_err(), "the tuple spelling must be rejected");
+    let toks = harsh_lang::lex::lex("fn m$:\n    let a = matches! (x, Some(n) if n > 1)\n").expect("lex");
+    assert!(harsh_lang::layout::build(toks).is_err(), "the tuple spelling must be rejected");
 }
 
 /// `;` has no meaning where a `,` separator is inserted, and on any statement
@@ -253,8 +253,8 @@ fn rejects_semicolon_in_comma_blocks() {
         "struct P\n    x: i32;\n    y: i32\n",
         "enum E\n    A;\n    B\n",
     ] {
-        let toks = hrust::lex::lex(src).expect("lex");
-        assert!(hrust::layout::build(toks).is_err(), "should reject: {src:?}");
+        let toks = harsh_lang::lex::lex(src).expect("lex");
+        assert!(harsh_lang::layout::build(toks).is_err(), "should reject: {src:?}");
     }
 }
 
@@ -268,8 +268,8 @@ fn rejects_comma_in_comma_blocks() {
         "struct P\n    x: i32,\n    y: i32\n",
         "enum E\n    A,\n    B\n",
     ] {
-        let toks = hrust::lex::lex(src).expect("lex");
-        assert!(hrust::layout::build(toks).is_err(), "should reject: {src:?}");
+        let toks = harsh_lang::lex::lex(src).expect("lex");
+        assert!(harsh_lang::layout::build(toks).is_err(), "should reject: {src:?}");
     }
 }
 
@@ -284,8 +284,8 @@ fn rejects_comma_parameter_lists() {
         "trait T:\n    fn f (a: i32, b: i32) -> i32;\n",
         "impl S:\n    fn m (&self, x: i32) -> i32:\n        x\n",
     ] {
-        let toks = hrust::lex::lex(src).expect("lex");
-        assert!(hrust::layout::build(toks).is_err(), "should reject: {src:?}");
+        let toks = harsh_lang::lex::lex(src).expect("lex");
+        assert!(harsh_lang::layout::build(toks).is_err(), "should reject: {src:?}");
     }
     check(&[
         ("fn t ((a, b): (i32, i32)) -> i32:\n    a + b\n", "fn t((a, b): (i32, i32)) -> i32"),
@@ -298,7 +298,7 @@ fn rejects_comma_parameter_lists() {
 /// leaves tuple patterns and `fn` pointer types alone.
 #[test]
 fn converter_splits_parameter_groups() {
-    let got = hrust::unbrace::convert(
+    let got = harsh_lang::unbrace::convert(
         "fn add(a: i32, b: i32,) -> i32 { a + b }\nimpl S { fn m(&self, (p, q): (i32, i32), g: fn(i32, i32) -> i32) -> i32 { p } }\n",
     )
     .expect("convert");
@@ -322,8 +322,8 @@ fn trailing_comment_keeps_separator() {
 /// `use` is rejected rather than emitted as the invalid `use a::b {`.
 #[test]
 fn rejects_use_block() {
-    let toks = hrust::lex::lex("use std.io:\n    Read\n    Write\n").expect("lex");
-    assert!(hrust::layout::build(toks).is_err());
+    let toks = harsh_lang::lex::lex("use std.io:\n    Read\n    Write\n").expect("lex");
+    assert!(harsh_lang::layout::build(toks).is_err());
     check(&[("use std.io.(\n    Read,\n    Write\n)\n", "use std::io::{\n    Read,\n    Write\n};")]);
 }
 
@@ -395,12 +395,12 @@ fn rejects_rust_call_syntax_in_macros() {
         "fn m$:\n    println!(\"{}\", greet(\"Ben\"))\n",
         "fn m$:\n    format!(\"{} {}\", a, b)\n",
     ] {
-        let toks = hrust::lex::lex(src).expect("lex");
-        assert!(hrust::layout::build(toks).is_err(), "should reject: {src:?}");
+        let toks = harsh_lang::lex::lex(src).expect("lex");
+        assert!(harsh_lang::layout::build(toks).is_err(), "should reject: {src:?}");
     }
     // A genuine tuple argument to a macro is still expressible.
-    let toks = hrust::lex::lex("fn m$:\n    dbg! ((a, b))\n").expect("lex");
-    assert!(hrust::layout::build(toks).is_ok());
+    let toks = harsh_lang::lex::lex("fn m$:\n    dbg! ((a, b))\n").expect("lex");
+    assert!(harsh_lang::layout::build(toks).is_ok());
 }
 
 /// A colon that is not the last token opens an inline block, closed by the end
@@ -521,8 +521,8 @@ fn rejects_bad_pipes() {
         ("fn m$:\n    let a = 1 + 2 |> f\n".to_string(), "atoms"),
         ("fn m$:\n    let a = f <|\n".to_string(), "needs an argument"),
     ] {
-        let toks = hrust::lex::lex(&src).expect("lex");
-        let err = hrust::layout::build(toks).err().expect("must be rejected");
+        let toks = harsh_lang::lex::lex(&src).expect("lex");
+        let err = harsh_lang::layout::build(toks).err().expect("must be rejected");
         assert!(err.msg.contains(needle), "{}", err.msg);
     }
     // `$` as a macro metavariable is untouched.
@@ -571,16 +571,16 @@ fn macro_rules_definition() {
 #[test]
 fn rejects_orphaned_else() {
     let src = "fn b (n: i32) -> i32:\n    if n == 1: 10\n    else: if n == 2: 20\n    else: 30\n";
-    let toks = hrust::lex::lex(src).expect("lex");
-    assert!(hrust::layout::build(toks).is_err());
+    let toks = harsh_lang::lex::lex(src).expect("lex");
+    assert!(harsh_lang::layout::build(toks).is_err());
 
     // The same chain on one line, and the fully indented form, both work.
     for ok in [
         "fn b (n: i32) -> i32:\n    if n == 1: 10 else: if n == 2: 20 else: 30\n",
         "fn b (n: i32) -> i32:\n    if n == 1:\n        10\n    else if n == 2:\n        20\n    else:\n        30\n",
     ] {
-        let toks = hrust::lex::lex(ok).expect("lex");
-        assert!(hrust::layout::build(toks).is_ok(), "{ok:?}");
+        let toks = harsh_lang::lex::lex(ok).expect("lex");
+        assert!(harsh_lang::layout::build(toks).is_ok(), "{ok:?}");
     }
 }
 
@@ -652,8 +652,8 @@ fn paren_blocks() {
 #[test]
 fn rejects_chain_after_bare_closure() {
     let bare = "fn f (v: Vec<i32>) -> usize:\n    v <- iter$ <- map |x|:\n        x * 2\n    <- count$\n";
-    let toks = hrust::lex::lex(bare).expect("lex");
-    let err = hrust::layout::build(toks).err().expect("must be rejected");
+    let toks = harsh_lang::lex::lex(bare).expect("lex");
+    let err = harsh_lang::layout::build(toks).err().expect("must be rejected");
     assert!(err.msg.contains("isolate the closure"), "{}", err.msg);
 
     // The isolated form is the fix, and a bare closure with nothing after it
@@ -662,8 +662,8 @@ fn rejects_chain_after_bare_closure() {
         "fn f (v: Vec<i32>) -> usize:\n    v <- iter$ <- map (|x|:\n        x * 2)\n      <- count$\n",
         "fn main$:\n    v <- sort_by |a, b|:\n        a <- cmp b\n    g$\n",
     ] {
-        let toks = hrust::lex::lex(ok).expect("lex");
-        assert!(hrust::layout::build(toks).is_ok(), "{ok:?}");
+        let toks = harsh_lang::lex::lex(ok).expect("lex");
+        assert!(harsh_lang::layout::build(toks).is_ok(), "{ok:?}");
     }
 }
 
@@ -686,8 +686,8 @@ fn call_parens_follow_rust_spacing() {
 }
 
 fn layout_err(src: &str) -> String {
-    let toks = hrust::lex::lex(src).expect("lex");
-    match hrust::layout::build(toks) {
+    let toks = harsh_lang::lex::lex(src).expect("lex");
+    match harsh_lang::layout::build(toks) {
         Err(e) => e.msg,
         Ok(_) => panic!("accepted:\n{src}"),
     }
@@ -787,7 +787,7 @@ fn dollar_applies_to_nothing() {
         ("fn m$ -> ():\n    ()\n", "fn m() -> () {\n    ()\n}"),
     ]);
     // The converter writes `$` for an empty call and `()` for a unit argument.
-    let back = hrust::unbrace::convert("fn f() -> i32 { g(()) + h::<i32>() }\n").expect("convert");
+    let back = harsh_lang::unbrace::convert("fn f() -> i32 { g(()) + h::<i32>() }\n").expect("convert");
     assert!(back.contains("fn f$ -> i32:"), "{back}");
     assert!(back.contains("g () + h<i32>$") || back.contains("g () + h.<i32>$") || back.contains("h<i32>$"), "{back}");
 }
@@ -804,8 +804,8 @@ fn rejects_bare_parameter_followed_by_group() {
         ("impl C:\n    fn add &mut self (k: i32):\n        k\n", false),
         ("fn add a: i32 (b: i32) -> i32:\n    a\n", false),
     ] {
-        let toks = hrust::lex::lex(src).expect("lex");
-        let r = hrust::layout::build(toks);
+        let toks = harsh_lang::lex::lex(src).expect("lex");
+        let r = harsh_lang::layout::build(toks);
         if ok {
             assert!(r.is_ok(), "{src}: {:?}", r.err());
         } else {
@@ -813,7 +813,7 @@ fn rejects_bare_parameter_followed_by_group() {
             assert!(err.msg.contains("every one is a group"), "{}", err.msg);
         }
     }
-    let err = hrust::layout::build(hrust::lex::lex("impl C:\n    fn add &self (k: i32):\n        k\n").unwrap()).err().unwrap();
+    let err = harsh_lang::layout::build(harsh_lang::lex::lex("impl C:\n    fn add &self (k: i32):\n        k\n").unwrap()).err().unwrap();
     assert!(err.msg.contains("`(&self) (`"), "{}", err.msg);
 }
 
@@ -1096,8 +1096,8 @@ fn leptos_shapes() {
     // Markup lines in brace form are not statements.
     // (A `view! { .. }` over several lines is now a `do:` block; the
     // one-line brace form keeps its place.)
-    let toks = hrust::lex::lex("fn m$:\n    let v = (0..3) <- map (|_| { view! { <input type=\"text\" /> } })\n").expect("lex");
-    assert!(hrust::layout::build(toks).is_ok());
+    let toks = harsh_lang::lex::lex("fn m$:\n    let v = (0..3) <- map (|_| { view! { <input type=\"text\" /> } })\n").expect("lex");
+    assert!(harsh_lang::layout::build(toks).is_ok());
 }
 
 /// The converter on the same shapes.
@@ -1143,7 +1143,7 @@ fn leptos_build_findings() {
     std::fs::write(&hrs, "fn main$:\n    let s = include_str! \"../content/site.toml\"\n    let t = include_bytes! \"data.bin\"\n    s\n").unwrap();
     let rs = gen_dir.join("content.rs");
     let map = gen_dir.join("content.map.json");
-    hrust::driver::transpile_one(&std::fs::read_to_string(&hrs).unwrap(), &hrs, &rs, &map).expect("transpile");
+    harsh_lang::driver::transpile_one(&std::fs::read_to_string(&hrs).unwrap(), &hrs, &rs, &map).expect("transpile");
     let out = std::fs::read_to_string(&rs).unwrap();
     assert!(out.contains("include_str!(\"../../content/site.toml\")"), "{out}");
     assert!(out.contains("include_bytes!(\"../../src/data.bin\")"), "{out}");

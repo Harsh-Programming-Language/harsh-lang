@@ -979,7 +979,9 @@ fn check_region(toks: &[Token], a: usize, b: usize) -> Result<(), JuxtError> {
         // reading is taken: the line is refused with both spellings named.
         // (`vec! [1, 2]` is a macro's bracket body, and a `[` right after the
         // head is an index of the head with no argument in between.)
-        if !is_macro {
+        // A macro too, once it has an argument: `assert_eq! v [1, 2]` is not
+        // the bracket-body form (`vec! [1, 2]`, no argument before the `[`).
+        {
             let mut k = head_end;
             let mut nargs = 0;
             while k < b {

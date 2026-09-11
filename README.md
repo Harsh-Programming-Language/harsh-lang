@@ -9,7 +9,7 @@ Development, issues and merge requests live at [gitlab.com/bahiminin.benoit.dah.
      └───── rs
 ```
 
-*Rust without the braces.*
+*Rust without the braces.* Braces are for the compiler; indentation is for humans.
 
 ```
 cargo install harsh-lang            # hrs, hrs-from, hrs-remap, hrs-lsp

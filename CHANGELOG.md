@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.3 — 2026-09-11
+
+- A spaced `[` after a macro's argument is refused too (`assert_eq! v [1, 2]` used to emit `assert_eq!(v) [1, 2]`); an array argument to a macro is isolated, `assert_eq! v ([1, 2])`. `vec! [1, 2]`, with nothing before the `[`, is the bracket body as before. Found by a Harshlings exercise.
+
 ## 0.1.2 — 2026-09-11
 
 - A tight index is part of its atom: `f arr[1]` is `f(arr[1])` — it used to emit `f(arr)[1]`, silently indexing the result. A spaced `[` inside an application (`f arr [1]`) is now refused, naming `arr[..]` and `(arr [..])`. Brackets never apply; `arr [1]` alone is the index it always was.

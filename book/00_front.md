@@ -1,5 +1,36 @@
 # The Harsh Programming Language
 
+## Why no braces
+
+Here is what a brace language looks and reads like, once you notice it:
+
+```text
+I(would, like, to, go) {
+    to the market so I(could buy) {
+        some groceries
+    }
+    to the laundromat in order to(get) {
+        clothes washed
+    }
+}
+```
+
+and here is the message it was trying to convey:
+
+```text
+I would like to go
+    to the market so I could buy
+        some groceries
+    to the laundromat in order to get
+        clothes washed
+```
+
+The second is already in the first — the indentation was there all along; the braces and parentheses only repeat it, in a form the eye has to skip past. That is sometimes hard to see, and because of it some very simple concepts become harder to learn than they are. Harsh weeds out the braces to let Rust shine.
+
+Early in the work, Claude asked the author to justify removing braces from Rust at all. After a long enough exchange it put the answer in one line, and the line stayed:
+
+> *Braces are for the compiler; indentation is for humans.* — Claude
+
 ## Who this is for
 
 You have programmed before — in Python, JavaScript, Elixir, anything — and you have not programmed in Rust. This book teaches you Rust, using Harsh as the notation.

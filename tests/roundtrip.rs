@@ -208,7 +208,12 @@ fn tight_index_is_an_atom_and_spaced_index_in_an_application_is_refused() {
         ("fn f$:\n    let a = v[g l 2]\n", "let a = v[g(l, 2)];"),
         ("fn f$:\n    let b = (v[g (l) 1])\n", "let b = v[g(l, 1)];"),
         ("fn f$:\n    let c = vec! [g (l + 1) 2]\n", "let c = vec! [g(l + 1, 2)];"),
+        ("fn f$:\n    assert_eq! v ([1, 2])\n", "assert_eq!(v, [1, 2])"),
     ]);
+    // A macro with an argument before a spaced `[` is refused too; only the
+    // bracket-body form `vec! [..]` -- no argument before the `[` -- stands.
+    let toks = harsh_lang::lex::lex("fn f$:\n    assert_eq! v [1, 2]\n").expect("lex");
+    assert!(harsh_lang::layout::build(toks).is_err());
     let toks = harsh_lang::lex::lex("fn f$:\n    g arr [1]\n").expect("lex");
     let err = harsh_lang::layout::build(toks).err().expect("refused").msg;
     assert!(err.contains("`arr [` inside an application"), "{err}");

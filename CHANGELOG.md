@@ -4,6 +4,8 @@
 
 Every fix is published from here on.
 
+- A tight index is part of its atom: `f arr[1]` is `f(arr[1])` — it used to emit `f(arr)[1]`, silently indexing the result. A spaced `[` inside an application (`f arr [1]`) is now refused, naming `arr[..]` and `(arr [..])`. Brackets never apply; `arr [1]` alone is the index it always was.
+
 - Fixed: a written `;` ending an inline block (`if c: f$;`, `let y = do: f$;`, an arm's `do: f$;`) was dropped; it now reaches the Rust as `{ f(); }`, as in the indented form. Found by the Harshlings runner. Settled: brackets always index, spaced or not; `f ([1, 2])` passes an array.
 - `GOVERNANCE.md`: a rule holds in every form it applies to.
 

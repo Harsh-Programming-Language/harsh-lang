@@ -194,6 +194,26 @@ fn semicolons() {
     ]);
 }
 
+/// A tight `[..]` is part of its atom, so `f arr[1]` is `f(arr[1])`; a spaced
+/// `[` inside an application is refused, since it could only mean an index
+/// of the wrong thing. Brackets never apply. The user's rule, 2026-09-11.
+#[test]
+fn tight_index_is_an_atom_and_spaced_index_in_an_application_is_refused() {
+    check(&[
+        ("fn f$:\n    g arr[1]\n", "g(arr[1])"),
+        ("fn f$:\n    g arr[1] x\n", "g(arr[1], x)"),
+        ("fn f$:\n    g (arr [1])\n", "g(arr [1])"),
+        ("fn f$:\n    g t.0[1].2\n", "g(t.0[1].2)"),
+        ("fn f$:\n    let a = arr [1]\n", "let a = arr [1];"),
+        ("fn f$:\n    let a = v[g l 2]\n", "let a = v[g(l, 2)];"),
+        ("fn f$:\n    let b = (v[g (l) 1])\n", "let b = v[g(l, 1)];"),
+        ("fn f$:\n    let c = vec! [g (l + 1) 2]\n", "let c = vec! [g(l + 1, 2)];"),
+    ]);
+    let toks = harsh_lang::lex::lex("fn f$:\n    g arr [1]\n").expect("lex");
+    let err = harsh_lang::layout::build(toks).err().expect("refused").msg;
+    assert!(err.contains("`arr [` inside an application"), "{err}");
+}
+
 /// The written `;` reaches the Rust from an inline block too: `do: f$;` is
 /// `{ f(); }`, as its indented form is. Found by Harshlings' runner, whose
 /// arm `Some ex => do: run_one (&ex);` came out returning a `bool`.

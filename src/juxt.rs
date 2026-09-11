@@ -191,7 +191,7 @@ fn atom_end(toks: &[Token], i: usize, end: usize) -> Option<usize> {
                     Tk::Close(_) => {
                         d -= 1;
                         if d == 0 {
-                            return Some(dollar_end(toks, k + 1, end));
+                            return Some(dollar_end(toks, tight_index_end(toks, k + 1, end), end));
                         }
                     }
                     _ => {}
@@ -258,9 +258,57 @@ fn atom_end(toks: &[Token], i: usize, end: usize) -> Option<usize> {
             while k < end && toks[k].kind == Tk::TupleIdx {
                 k += 1;
             }
-            Some(dollar_end(toks, k, end))
+            Some(dollar_end(toks, tight_index_end(toks, k, end), end))
         }
         _ => Some(k + 1),
+    }
+}
+
+/// The interiors of the `[..]` groups an atom carries are expression regions
+/// of their own: `src[start..off <- min end]` applies `min` inside the index.
+fn bracket_interiors(toks: &[Token], a: usize, b: usize, out: &mut Vec<(usize, Jx)>) {
+    // Only the atom's own brackets: one inside a parenthesised group is
+    // reached when that group is split, and must not be applied twice.
+    let mut i = a;
+    let mut depth = 0i32;
+    while i < b {
+        match toks[i].kind {
+            Tk::Open('[') if depth == 0 => {
+                if let Some(c) = matching_close_idx(toks, i, b) {
+                    split_group(toks, i + 1, c, out);
+                    i = c + 1;
+                    continue;
+                }
+            }
+            Tk::Open(_) => depth += 1,
+            Tk::Close(_) => depth -= 1,
+            _ => {}
+        }
+        i += 1;
+    }
+}
+
+/// A `[..]` written tight against what precedes it is an index and part of
+/// the atom: `f arr[1]` is `f(arr[1])`, as `t.0` is part of `t`. Written with
+/// a space it is an index too (brackets never apply), but inside an
+/// application that spelling is refused rather than read either way -- see
+/// `check`. The user's rule, 2026-09-11.
+fn tight_index_end(toks: &[Token], mut k: usize, end: usize) -> usize {
+    loop {
+        if k < end
+            && k > 0
+            && toks[k].kind == Tk::Open('[')
+            && toks[k].span.lo == toks[k - 1].span.hi
+        {
+            if let Some(c) = matching_close_idx(toks, k, end) {
+                k = c + 1;
+                while k < end && toks[k].kind == Tk::TupleIdx {
+                    k += 1;
+                }
+                continue;
+            }
+        }
+        return k;
     }
 }
 
@@ -397,10 +445,12 @@ fn apply_region(toks: &[Token], from: usize, to: usize, out: &mut Vec<(usize, Jx
         // of a block-bodied argument -- `fold 0 (|acc, x|:` -- whose `)`
         // arrives with the block's tail. It is the last argument.
         let mut open_last = false;
+        bracket_interiors(toks, i, head_end, out);
         while k < to {
             match atom_end(toks, k, to) {
                 Some(e) => {
                     rep_fixups(toks, k, to, out);
+                    bracket_interiors(toks, k, e, out);
                     args.push((k, e));
                     k = e;
                 }
@@ -924,6 +974,34 @@ fn check_region(toks: &[Token], a: usize, b: usize) -> Result<(), JuxtError> {
             continue;
         };
         let is_macro = head_end > a && toks[head_end - 1].text == "!";
+        // `f arr [1]`: the `[` is spaced, so it is an index -- but of what?
+        // Of `arr`, the reader means; of `f(arr)`, the rule would say. Neither
+        // reading is taken: the line is refused with both spellings named.
+        // (`vec! [1, 2]` is a macro's bracket body, and a `[` right after the
+        // head is an index of the head with no argument in between.)
+        if !is_macro {
+            let mut k = head_end;
+            let mut nargs = 0;
+            while k < b {
+                match atom_end(toks, k, b) {
+                    Some(e) => {
+                        nargs += 1;
+                        k = e;
+                    }
+                    None => break,
+                }
+            }
+            if nargs > 0 && k < b && toks[k].kind == Tk::Open('[') && toks[k].span.lo > toks[k - 1].span.hi {
+                let prev = &toks[k - 1];
+                return Err(JuxtError {
+                    msg: format!(
+                        "`{} [` inside an application: write `{}[..]` for the element, or `({} [..])` to make it one argument",
+                        prev.text, prev.text, prev.text
+                    ),
+                    span: toks[k].span,
+                });
+            }
+        }
         if is_macro && head_end < b && toks[head_end].kind == Tk::Open('(') {
             if let Some(e) = atom_end(toks, head_end, b) {
                 // A macro is applied like a function: `matches! x (Some n if n > 1)`.

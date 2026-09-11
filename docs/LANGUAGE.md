@@ -1283,7 +1283,7 @@ f ()             →  f(())            one argument, the unit value
 f (a + 1) (g b)  →  f(a + 1, g(b))    a non-atom argument needs isolating parens
 ```
 
-An atom is a non-keyword identifier (with optional path, generics and macro bang), a literal, a tuple index like `t.0`, a parenthesised group, or any of these followed by `$` — `f$` is one atom, so `g f$ 5` is `g(f(), 5)` and `f$ 5` applies the result of `f()` to `5`. An index expression `a[i]` is not an atom — `f a [i]` would then depend on the space to tell an index from an array-literal argument — so it is isolated: `f (a[i])`.
+An atom is a non-keyword identifier (with optional path, generics and macro bang), a literal, a tuple index like `t.0`, a parenthesised group, or any of these followed by `$` — `f$` is one atom, so `g f$ 5` is `g(f(), 5)` and `f$ 5` applies the result of `f()` to `5`. An index written tight, `a[i]`, is part of its atom: `f a[i]` is `f(a[i])`, as `f t.0` is `f(t.0)`, and `a[i].0[j]` is one atom too. Brackets never apply — `a [i]` is the same index — but inside an application the spaced form is refused, since it could only mean the index of the wrong thing: write `a[i]`, or `(a [i])` to make it one argument. An array passed as an argument is isolated: `f ([1, 2, 3])`.
 
 Application binds tighter than `<-`: `f x <- g$` is `(f x) <- g$`. To apply the arrow to the argument instead, isolate it.
 
@@ -2002,3 +2002,5 @@ The source map records one entry per token as byte offsets. The remapper rewrite
 | Isolated closure, chained | `map (\|x\|:` + body + `) <- f$` | `map(\|x\| { … }).f()` |
 | Block opener synonym | `fn f$ do:` | `fn f() {` |
 | Tuple index argument | `f t.0 t.1` | `f(t.0, t.1)` |
+| Index argument | `f a[i]` | `f(a[i])` |
+| Array argument | `f ([1, 2])` | `f([1, 2])` |

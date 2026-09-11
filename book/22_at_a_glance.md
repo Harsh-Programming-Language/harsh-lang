@@ -21,6 +21,7 @@ Everything of Harsh's own, in one place, each rule with the chapter that teaches
 - An application binds tighter than `<-`: `greet "a" <- to_uppercase$` applies `greet` first, and the next arrow or an operator ends the arguments; parentheses go round an argument that holds an arrow, `f (x <- g$)`, never round the application. A pipe is the exception: its sides are atoms, so `(f x) |> g`. (§2.6, §13.3)
 - A name written tight against a `(` is an error. (§20.5)
 - Parentheses make a tuple (the comma does it), set precedence, or group — and nothing else. (§20.5)
+- Brackets index, never apply: `arr[1]` is part of its atom (`f arr[1]` passes the element); `arr [1]` is the same index but is refused inside an application; an array argument is isolated, `f ([1, 2])`. (§2.6)
 - `<-` reaches into a value: a field, a method. `.` walks a path: a module, a type, an item. A tuple index keeps its dot, `d.0`. (§2.6, §5.1)
 - A macro applies like a function, its `!` glued to its name: `vec! [1, 2]`, `println! "{x}"`. (§2.6)
 

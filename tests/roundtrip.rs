@@ -194,6 +194,23 @@ fn semicolons() {
     ]);
 }
 
+/// The written `;` reaches the Rust from an inline block too: `do: f$;` is
+/// `{ f(); }`, as its indented form is. Found by Harshlings' runner, whose
+/// arm `Some ex => do: run_one (&ex);` came out returning a `bool`.
+#[test]
+fn inline_block_keeps_its_written_semicolon() {
+    check(&[
+        ("fn f$:\n    let x = 1\n    if x == 1: g$;\n", "if x == 1 {\n        g();\n    }"),
+        ("fn f$:\n    let y = do: g$;\n", "let y = {\n        g();\n    };"),
+        ("fn f$:\n    match 1:\n        1 => do: g$;\n        _ => ()\n", "1 => {\n            g();\n        },"),
+    ]);
+    // And the converter writes it back, so the trip is stable.
+    let rust = "fn f() {\n    if true {\n        g();\n    }\n}\n";
+    let harsh = convert(rust);
+    assert!(harsh.contains("g$;"), "{harsh}");
+    assert!(transpile(&harsh).contains("g();"), "{}", transpile(&harsh));
+}
+
 /// `;` marks a discarded tail value. It is legal only in statement blocks, and
 /// must never double up with an inserted separator.
 #[test]

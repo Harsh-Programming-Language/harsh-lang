@@ -66,6 +66,7 @@ A fenced block in a `///` or `//!` comment is code (rustdoc compiles and runs it
 ## Settled
 
 - **`<-` stays member access.** Considered and declined: `~`, `\`, `#`, `->`, `-<`, taking `.` back from paths. A future stream-binding feature, when it has a problem statement, takes a symbol that is not a Rust token — `<<-` or `=<` are the candidates (`<<-` cannot be mistyped into `<=`).
+- **Brackets index; parentheses isolate.** `v[0]` and `v [0]` are the same index; an array passed as an argument is `f ([1, 2])`. A spaced `[` never applies. Decided 2026-09-11 when Harshlings' runner met `<- args [..]`.
 - **The arity table is for the pipes alone.** Decided, and recorded as a rule in `docs/GOVERNANCE.md`. Proposals to read it from any other feature are declined.
 - **An inline `\` field list reads to its group's `)`; the transpiler never reads a type to parse a line.** `Point\ x = 1, msg` — grouped or not — is one literal with the shorthand field `msg`; whether `msg` is a field `Point` has is rustc's question, and rustc answers it by name. A rule that ended the literal "once the fields are satisfied" would need the definition of `Point`, which may be in another crate, and is not decidable even then (`..base`). Considered and declined 2026-09-10. A literal that is one element of a tuple takes its own parens, `((Point\ x = 1), msg)`, and `hrs-from` writes that form. The editor's Enter after a trailing macro `!` follows the same discipline: name-blind, from the line alone.
 

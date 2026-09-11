@@ -858,6 +858,14 @@ fn expand_inline(toks: &[Token], from: usize, to: usize, kind: BlockKind, proto:
         match toks[i].kind {
             Tk::Open(_) => d += 1,
             Tk::Close(_) => d -= 1,
+            // A `;` that ends the whole inline block is the written one --
+            // "discard this block's tail value" -- and stays with its
+            // statement, exactly as it does on the last line of an indented
+            // block: `do: f$;` is `{ f(); }`, not `{ f() }`.
+            Tk::Semi if d == 0 && sep == Tk::Semi && toks[i + 1..to].iter().all(|t| t.is_comment()) => {
+                items.push((start, i + 1));
+                start = to;
+            }
             ref k if d == 0 && *k == sep => {
                 items.push((start, i));
                 start = i + 1;

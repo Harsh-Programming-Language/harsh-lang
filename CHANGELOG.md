@@ -1,6 +1,11 @@
 # Changelog
 
-## Unreleased
+## 0.1.1 — 2026-09-11
+
+Every fix is published from here on.
+
+- Fixed: a written `;` ending an inline block (`if c: f$;`, `let y = do: f$;`, an arm's `do: f$;`) was dropped; it now reaches the Rust as `{ f(); }`, as in the indented form. Found by the Harshlings runner. Settled: brackets always index, spaced or not; `f ([1, 2])` passes an array.
+- `GOVERNANCE.md`: a rule holds in every form it applies to.
 
 - **The crate is `harsh-lang`** (library crate `harsh_lang`); the binaries stay `hrs`, `hrs-from`, `hrs-remap`, `hrs-lsp`. `hrust 0.1.0`, published a few hours earlier, was deleted. The VSCode extension is `harsh-lang.harsh-lang` on the Marketplace, with the drawn mark as its icon (0.1.1); the docs, the guide and the Book link the crate and the extension.
 

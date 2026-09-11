@@ -4,7 +4,7 @@
 
 //! The Zed extension shim: Zed requires a WASM crate to launch any language
 //! server. This one does nothing but hand Zed the `hrs-lsp` command from
-//! PATH (installed by `cargo install --path .` in the hrust checkout).
+//! PATH (installed by `cargo install harsh-lang`).
 //! Build with `cargo build --target wasm32-wasip1`, which Zed does itself
 //! when installing a dev extension.
 
@@ -24,7 +24,7 @@ impl zed::Extension for HarshExtension {
     ) -> Result<zed::Command> {
         let path = worktree
             .which("hrs-lsp")
-            .ok_or_else(|| "hrs-lsp not found on PATH; run `cargo install --path .` in the hrust checkout".to_string())?;
+            .ok_or_else(|| "hrs-lsp not found on PATH; run `cargo install harsh-lang`".to_string())?;
         Ok(zed::Command { command: path, args: Vec::new(), env: Vec::new() })
     }
 }

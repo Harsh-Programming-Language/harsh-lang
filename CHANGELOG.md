@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- **The crate is `harsh-lang`** (library crate `harsh_lang`); the binaries stay `hrs`, `hrs-from`, `hrs-remap`, `hrs-lsp`. `hrust 0.1.0` is yanked. The VSCode extension is `harsh-lang.harsh-lang` on the Marketplace, with the drawn mark as its icon (0.1.1); the docs, the guide and the Book link the crate and the extension.
+- **The crate is `harsh-lang`** (library crate `harsh_lang`); the binaries stay `hrs`, `hrs-from`, `hrs-remap`, `hrs-lsp`. `hrust 0.1.0`, published a few hours earlier, was deleted. The VSCode extension is `harsh-lang.harsh-lang` on the Marketplace, with the drawn mark as its icon (0.1.1); the docs, the guide and the Book link the crate and the extension.
 
 - Guide code blocks: a second column is always Rust and is compared with the transpiler's output; notes are a third column or a `//` comment. All 24 two-column blocks now match; two Rust columns in the partial-application section were wrong and are corrected from the transpiler's own output.
 

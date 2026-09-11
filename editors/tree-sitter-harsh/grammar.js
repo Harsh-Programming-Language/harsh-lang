@@ -94,6 +94,7 @@ module.exports = grammar({
       '<-',   // field access and method call
       '<|',   // backward application pipe
       '|>',   // forward application pipe
+      '\\',   // a struct's field list: `Point\ x = 1`, `struct P\ x: f64`, the pattern `P\ x, ..`
       '->', '..=', '..', '::', '&&', '||', '==', '!=', '<=', '>=',
       '<<', '>>', '+=', '-=', '*=', '/=', '%=', '^=', '&=', '|=',
       '+', '-', '*', '/', '%', '&', '|', '^', '!', '=', '<', '>', '?', '@',

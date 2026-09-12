@@ -10,7 +10,8 @@ Harsh is Rust with indentation instead of braces. This bundle contains the compl
 |---|---|
 | `docs/page-head.html`, `docs/page-tail.html` | The rendered pages' chrome: the CSS and the contents-panel script. Edited by hand; every page is built from them. |
 | `docs/build.py` | Verifies the guide's code blocks (`docs/check-guide.py`), then renders every document in `docs/` and the book to `.ipynb` and `.html` beside its `.md`. The `.md` is the source; the rendered forms are never edited by hand. Run after any document change (`book/build.py` runs it too). |
-| `book/` | *The Harsh Programming Language*: Rust taught in Harsh, for readers who do not know it. `python3 book/build.py` builds `book/HARSH-BOOK.md` from the chapter files and the snippets in `book/src/`, transpiling, compiling and running every one, then renders `harsh-book.ipynb` and `harsh-book.html` — the three forms are always produced together, for the guide and the book alike. One edition, and no Rust code in it: the generated Rust is built and run, and stripped from the page. |
+| `book/HARSH-BOOK.md`, `book/harsh-book.html`, `book/harsh-book.ipynb` | The Book, in its three forms — the whole thing as text, as a page, as a notebook. What a reader reads. |
+| `book/sources/` | The Book's **sources**: the numbered chapter files (prose with `@@ name` where a snippet goes), `src/` (every snippet, one file or one project each) and `build.py`, the harness. Development only — the public tree carries the book, not what makes it. |
 | `` | Regenerates `language.ipynb` and `language.html` from `docs/LANGUAGE.md`. The `.md` is the source; the rendered forms are never edited by hand. Run after any guide change. Development bundle only. |
 | `README.md` | What the project is, how to build it, how to run the examples. |
 | `language.ipynb` | The language guide as a notebook, one cell per heading. Same content as `docs/LANGUAGE.md`. |

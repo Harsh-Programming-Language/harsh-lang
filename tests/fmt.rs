@@ -63,7 +63,10 @@ fn first_diff(a: &str, b: &str) -> String {
 #[test]
 fn fmt_changes_no_token() {
     let files = corpus();
-    assert!(files.len() > 200, "{} files", files.len());
+    // The development tree has the book's snippets too (266 files); a public
+    // clone has the examples and the transpiler's own Harsh (43). Either is a
+    // corpus; an empty one would mean the walk broke.
+    assert!(files.len() > 40, "{} files", files.len());
     for f in &files {
         let src = fs::read_to_string(f).unwrap();
         let out = harsh_lang::fmt::format(&src);

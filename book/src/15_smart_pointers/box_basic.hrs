@@ -1,3 +1,0 @@
-fn main$:
-    let b = Box.new 5           // an i32 on the heap
-    println! "b = {b}"

@@ -1,5 +1,0 @@
-// A comment runs from `//` to the end of the line.
-fn main$:
-    // This one explains the next line.
-    let answer = 42        // and this one sits after the code
-    println! "{}" answer

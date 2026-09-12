@@ -1,6 +1,0 @@
-fn sub (a: i32) (b: i32) (c: i32) -> i32:
-    a - b - c
-
-fn main$:
-    let n = 1 2 3 4 |> sub
-    println! "{n}"

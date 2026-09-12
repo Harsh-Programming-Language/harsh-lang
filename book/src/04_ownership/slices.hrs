@@ -1,8 +1,0 @@
-fn main$:
-    let s = String.from "hello world"
-    let hello = &s[0..5]
-    let world = &s[6..11]
-    let from_start = &s[..5]      // same as 0..5
-    let to_end = &s[6..]          // same as 6..s.len()
-    let whole = &s[..]
-    println! "{} {} {} {} {}" hello world from_start to_end whole

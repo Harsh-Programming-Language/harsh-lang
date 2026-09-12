@@ -1,9 +1,0 @@
-fn main$:
-    do:
-        let s = "hello"          // s is valid from here
-        println! "{}" s          // and usable until the block ends
-    // the block is over: s is gone, and there is nothing to free
-
-    let t = String.from "hello"  // a String owns memory on the heap
-    println! "{}" t
-    // main ends here: t goes out of scope and its memory is freed

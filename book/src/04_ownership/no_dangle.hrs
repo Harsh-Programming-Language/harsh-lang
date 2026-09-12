@@ -1,7 +1,0 @@
-fn no_dangle$ -> String:
-    let s = String.from "hello"
-    s                             // move the String out instead
-
-fn main$:
-    let s = no_dangle$
-    println! "{}" s

@@ -1,6 +1,0 @@
-struct AlwaysEqual
-
-fn main$:
-    let subject = AlwaysEqual
-    let _ = subject
-    println! "made one"

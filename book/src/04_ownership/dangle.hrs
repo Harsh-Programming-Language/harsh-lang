@@ -1,7 +1,0 @@
-fn dangle$ -> &String:
-    let s = String.from "hello"
-    &s                            // a reference to s…
-
-fn main$:
-    let reference_to_nothing = dangle$
-    // …but s was freed when dangle returned

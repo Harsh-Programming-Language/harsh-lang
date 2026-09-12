@@ -1,7 +1,0 @@
-use std.cell.RefCell
-
-fn main$:
-    let cell = RefCell.new 5
-    let one = cell <- borrow_mut$
-    let two = cell <- borrow_mut$       // two mutable borrows: the rule, checked at runtime
-    println! "{one} {two}"

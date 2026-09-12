@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.1.3 — 2026-09-11
+## 0.1.4 — 2026-09-11
 
 - A spaced `[` after a macro's argument is refused too (`assert_eq! v [1, 2]` used to emit `assert_eq!(v) [1, 2]`); an array argument to a macro is isolated, `assert_eq! v ([1, 2])`. `vec! [1, 2]`, with nothing before the `[`, is the bracket body as before. Found by a Harshlings exercise.
 

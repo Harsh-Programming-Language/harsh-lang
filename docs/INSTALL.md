@@ -81,7 +81,19 @@ then in `editors/zed-harsh/extension.toml` set `repository` to
 commit. (Not yet verified on a Mac; the alternative is to push the grammar to
 any GitHub namespace and name that.)
 
-## 5. Day to day
+## 5. Exercises
+
+[Harshlings](https://gitlab.com/bahiminin.benoit.dah.opensource/harshlings) is fifty small exercises in Harsh, Rustlings-style:
+
+```
+git clone https://gitlab.com/bahiminin.benoit.dah.opensource/harshlings
+cd harshlings
+hrs run
+```
+
+It opens the first exercise that is not done, shows why it fails on the line of the `.hrs` file, and reruns on every save.
+
+## 6. Day to day
 
 ```
 hrs new myproject            # a project laid out for Harsh

@@ -37,6 +37,8 @@ You have programmed before — in Python, JavaScript, Elixir, anything — and y
 
 That sentence has a trap in it, so here it is on page one: **Harsh makes Rust quieter, not easier.** Harsh is a spelling of Rust — indentation for structure, `f a b` for applying a function, `<-` for reaching into a value — and it changes nothing about what Rust means. Ownership, borrowing, lifetimes, the type system, the compiler saying no: all of it arrives on schedule, unchanged, and this book is mostly about *that*. The notation just gets out of the way while you learn it.
 
+When you want practice rather than prose, [Harshlings](https://gitlab.com/bahiminin.benoit.dah.opensource/harshlings) is fifty small exercises of the kind this book explains: a short program with one thing wrong, the compiler pointing at your line, and the next one when you fix it.
+
 If you already know Rust, *The Harsh Language Guide*, which teaches only the Harsh superset, will onboard you faster.
 
 ## How to read it

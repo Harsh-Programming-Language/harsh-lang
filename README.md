@@ -98,6 +98,14 @@ Converts Rust source to Harsh. Brace nesting comes from the lexer, so it is exac
 
 This also serves as the project's test oracle. Converting the transpiler's own source to Harsh, transpiling it back, and building the result is an automated round-trip test over real code. The current state is a fixed point: the round-tripped transpiler compiles and its binaries produce byte-identical output to the original.
 
+## Learning it
+
+- **[The Harsh Programming Language](book/HARSH-BOOK.md)** — Rust taught in Harsh, from the first program to async, for readers who do not know Rust. One file per chapter in [`book/chapters/`](book/chapters).
+- **[The Harsh Language Guide](docs/LANGUAGE.md)** — every construct beside its Rust spelling, for Rust programmers: the fastest way in.
+- **[Harshlings](https://gitlab.com/bahiminin.benoit.dah.opensource/harshlings)** — fifty small exercises, each a short program with one thing wrong; the compiler points at the line of the `.hrs` file you are editing, you fix it, and the runner moves on. `cargo install harsh-lang`, clone, `hrs run`. ([mirror](https://github.com/Harsh-Programming-Language/harshlings))
+
+Every code sample in all three is transpiled, compiled and run by the build.
+
 ## Examples
 
 Each `.hrs` file has its generated Rust alongside it.

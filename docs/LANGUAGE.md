@@ -582,6 +582,10 @@ None of this is enforced by the transpiler; all of it is what the formatter will
 - Comment-only lines float to the next real line, so their indentation never opens or closes a block accidentally.
 - Comments are preserved in the generated Rust, including doc comments, which rustdoc then consumes normally.
 
+### Exercises
+
+[Harshlings](https://gitlab.com/bahiminin.benoit.dah.opensource/harshlings) — fifty small exercises, Rustlings-style, in Harsh: `cargo install harsh-lang`, clone, `hrs run`. The topics follow *The Harsh Programming Language*, and Harsh's own rules — the layout, `$`, the `\` literal, the pipes, a spaced `[` inside an application — sit where the construct is taught.
+
 ### Doc examples
 
 A fenced block inside a `///` or `//!` comment is the one part of a comment the transpiler reads, because rustdoc reads it too: it lifts the block out, compiles it and runs it as a test. It is code, so it is Harsh, and the transpiler writes the Rust rustdoc expects.

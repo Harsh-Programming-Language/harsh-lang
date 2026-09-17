@@ -44,7 +44,7 @@ def transpile(harsh):
     # in one, so the block reads as it does in the tutorial's source.
     impl = first.startswith("    ") and ITEM.match(first.lstrip())
     if impl:
-        harsh = "impl Fragment:\n" + harsh
+        harsh = "impl Fragment\n" + harsh
     wrapped = not impl and not is_items(harsh)
     if wrapped:
         # A trailing `()` keeps the last line a statement rather than the

@@ -72,11 +72,11 @@ use std.ops.Deref
 
 struct MyBox<T> T
 
-impl<T> MyBox<T>:
+impl<T> MyBox<T>
     fn new x: T -> MyBox<T>:
         MyBox x
 
-impl<T> Deref for MyBox<T>:
+impl<T> Deref for MyBox<T>
     type Target = T
 
     fn deref (&self) -> &Self.Target:
@@ -113,7 +113,7 @@ A smart pointer's other half is what happens when it goes away. The `Drop` trait
 struct CustomSmartPointer
     data: String
 
-impl Drop for CustomSmartPointer:
+impl Drop for CustomSmartPointer
     fn drop (&mut self):
         println!
             "Dropping CustomSmartPointer with data `{}`!"

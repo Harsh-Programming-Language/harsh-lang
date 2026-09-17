@@ -1,6 +1,6 @@
 [package]
 name = "harsh-lang"
-version = "0.1.4"
+version = "0.1.7"
 edition = "2021"
 authors = ["Bahiminin Benoit Dah"]
 # `examples/` holds Harsh sources and their generated Rust, not Cargo example

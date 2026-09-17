@@ -50,7 +50,294 @@ A fenced block in a `///` or `//!` comment is code (rustdoc compiles and runs it
 
 - **The retrospective — `docs/RETROSPECTIVE.md`.** Opens with the README's two paragraphs on how the work was run (the credit, and the disagreements that held). When the formatter has landed and the tooling is published, a technical document written to draw lessons from: every step from the first session to the last, in order, with what was decided and why and what was undone; every feature of the language and every tool built to implement and support it — transpiler, converter, remapper, driver, language server, editor grammars, book harness, docs pipeline — each with the source files it lives in (`src/lex.rs`, `src/layout.rs`, `src/juxt.rs`, `src/emit.rs`, `src/unbrace.rs`, `src/columns.rs`, `src/driver.rs`, `src/bin/*`, `editors/*`, `book/build.py`, `docs/build.py`, `check.sh`); the oracles and what each one caught; the bugs the Book found; the principles that held and the ones that were amended, with the amendments dated. Sources: every `HANDOVER.md` delivered (each one records a session), `CHANGELOG.md`, `TUTORIAL.md`, `GOVERNANCE.md`, and the test names, which are the change log the compiler enforces. Opening: the README's paragraph on disagreement — the decisions the author made against Claude's first opinion, and the rule that let a disagreement end with an example rather than with whoever spoke last. Written once, at the end, from those records — so keep them complete until then.
 
+## Blocks, real and pseudo: `#…:`, and no mark on an item body — decided 2026-09-12, not yet built
+
+**The framing, the user's, and it is the reason the rest follows.** `:` and
+`do:` are *openers*, not header terminators: a construct's own shape says
+where its header ended, which is why `struct Point` and `enum Message` lost
+their colon and why `do:` can stand alone as a value. And Rust's `{}` is
+overloaded: some braces hold a sequence of statements or expressions with
+Rust's separators -- a **real block** -- and the rest are groupings that
+merely share the delimiter: a struct's fields, an enum's variants, a `use`
+tree, a match arm list, a macro's DSL, an `impl`'s items. Those are **pseudo
+blocks**. The distinction is about producing the right Rust syntax and
+nothing else: scope, lifetimes and visibility stay rustc's, exactly as the
+transpiler never reads a type to parse a line. (For `GOVERNANCE.md`.)
+
+**Three marks, and a rule to tell them apart:**
+
+    no mark     a body of items       impl, trait, mod, struct, enum, extern
+    #x:         a grouping whose separator you name -- Harsh cannot know it
+    :  do:      a real block: statements, Rust's separators, a tail value
+
+A macro's body is not Rust: it is whatever its author invented, and Harsh's
+statement rule — a line ends a statement, the transpiler writes the `;` —
+is wrong there. `quick_error!` shows it plainly: its attribute lists take no
+separator at all, and Harsh writes `from();` where the DSL wants `from()`.
+
+**The decision (the user's design).** A third kind of block, whose opener
+states how its entries end:
+
+    #:      Harsh writes the braces; the entries end with nothing
+    #,:     ... with `,`
+    #;:     ... with `;`
+    #<p>:   ... with `<p>`, whatever punctuation stands between `#` and `:`
+
+written at the end of the line that opens the block, exactly where `:` and
+`do:` go. `:` and `do:` keep their meaning: real blocks, with Rust's
+separators. The example that motivated it:
+
+```
+quick_error!:
+    #[derive Debug]
+    pub enum DocumentServiceError #,:
+        RateLimitExceeded #:
+            description "You've exceeded the allowed number of documents per minutes"
+        Io (err: io.Error) #:
+            from$
+            cause err
+            description "I/O error"
+```
+
+**The rules, as decided:**
+
+- **Only how the entries end, never what they mean.** Inside a pseudo block
+  the lines are Harsh — `from$` is applied to nothing, `cause err`
+  juxtaposes, `description "…"` is an application. Harsh supplies braces and
+  a terminator; the meaning is Rust's once translated.
+- **An entry is a line and whatever is indented under it**, as everywhere
+  else in Harsh; the terminator goes after the entry, not after every
+  physical line. (Reuses the comma-block machinery.)
+- **Applied recursively, never inherited.** Each opener states its own kind;
+  a plain `:` inside a `#:` block is an ordinary statement block again,
+  which is what a DSL that embeds real Rust code needs.
+- **No trailing separator.** A grammar that accepts `a, b, c` accepts it
+  without a final comma by definition; the other direction is not
+  guaranteed. If a DSL is found that requires the trailing form, the fix is
+  additive (`#,,:` or similar) and does not change what `#,:` means.
+- **Allowed anywhere a block may open, except after a construct that already
+  has a spelling**: `fn`, `struct`, `enum`, `impl`, `trait`, `mod`,
+  `extern`, `macro_rules!`, and the openers `if`, `match`, `loop`, `while`,
+  `for`, `do`, `unsafe`. `struct Point #,:` is refused, naming `:` — one
+  spelling per construct. A local check at the line, like the dedent rule;
+  no context to carry, no "inside a macro" to define.
+- **The terminator is general, not a list of three**: punctuation between
+  `#` and a line-ending `:`, copied verbatim, so a DSL that separates with
+  `|` or `=>` works the day someone meets it. Refused: an identifier or a
+  literal (`#x:`), a terminator beginning `[` (that is an attribute), and
+  one that would leave the output un-lexable (a lone quote). The guide
+  teaches the three common forms and states that any punctuation is legal.
+
+**`impl`, `trait`, `mod` and `extern` lose their `:`.** Their bodies are
+items, always, with no separator, always -- pseudo blocks with an empty
+terminator, which is `#:`. But a mark that never varies carries no
+information, and the header already ends itself: only a name can follow
+`impl`, `trait` or `mod`. So they take no mark at all, as `struct` and
+`enum` already do. `do:` is refused there for the reason it reads well --
+it says "statement block", which an item body is not, and it would teach
+that fluently and wrongly.
+
+```
+mod garden                          mod garden;                 // no deeper line: Rust's file module
+
+mod geometry                        mod geometry {              // a deeper line: an inline module
+    struct Point                        struct Point {
+        x: f64                              x: f64,
+        y: f64                              y: f64,
+                                        }
+    impl Point                          impl Point {
+        fn origin$ -> Point:                fn origin() -> Point {
+            Point\ x = 0.0, y = 0.0             Point { x: 0.0, y: 0.0 }
+                                            }
+                                        }
+                                    }
+```
+
+The two cases bare has to survive, and both do:
+
+- **`mod garden` with a body and without** is the lookahead `struct Marker`
+  versus `struct Point` already requires, and it was accepted there for the
+  same reason.
+- **A multi-line `where`** would otherwise read as the body's first item;
+  the clause is bracketed, so the layout pass and the reader both see it:
+
+```
+impl<T> Summary for Wrapper<T>      impl<T> Summary for Wrapper<T>
+    [where T: Display]                  where
+    fn summarize (&self) -> String:         T: Display,
+        format! "{}" (self <- 0)        {
+                                            fn summarize(&self) -> String {
+                                                format!("{}", self.0)
+                                            }
+                                        }
+```
+
+  `fn` keeps its `:` -- a statement block -- while `impl` has none.
+
+**The trailing terminator.** `#,:` writes no separator after the last entry;
+`#,:,` writes one. The mark after the `:` repeats the terminator (`#=>:=>`,
+`#**:**`), so it needs no table and cannot collide with a terminator whose
+own spelling repeats a character -- the reason `#,,:` was dropped. The
+lexer's rule: `#` opens it, everything to the *first* `:` is the terminator,
+and what follows on that line is either nothing or the terminator again.
+Anything else is an error naming the two shapes. Note that the line does not
+end in `:` here: `#` opens the pseudo block and `:` closes the terminator
+specification -- the line-final `:` was a rule about real blocks, not about
+these.
+
+**Macros** — the design conversation of
+2026-09-12 in full, and the state to resume from. In short: the two kinds of
+macro were separated (one you write, one you import); imported DSLs are
+**delegated to the library author**, who ships a definition file with the
+crate (`harsh/dsl.hrs`) stating its grammar, with Harsh providing the
+generator, the editor tooltip, and definition files for the crates that
+matter — `view!` and `rsx!` to be extracted from the transpiler into two
+such files as the test of the format; `#…:` shrank from a family of
+terminators to a single `#:` for the no-separator exception, because `\`
+already opens a comma-separated block and needs no new mark;
+`macro_rules!` loses its `:` like `impl`/`mod`/`extern` and its arms are
+separated by `;`, written by Harsh. **Open**: how a matcher is spelled in
+Harsh without losing the repetition's separator (the user is working it out
+against real matchers), whether `quote!`'s holes want a Harsh spelling, and
+`hrs expand`.
+
+**The earlier direction for library DSLs (2026-09-12, superseded in part by
+the delegation above): let `hrs-from` say
+what the Harsh version is.** Two kinds of macro were being treated as one,
+and they pull opposite ways:
+
+1. **A macro the programmer writes.** He is entitled to the illusion that it
+   is a pattern over *Harsh* -- that what he writes inside is what he would
+   write outside -- even though the expansion is Rust and Harsh maps both
+   ways. Today that illusion holds for the transcriber's shape and breaks at
+   the matcher, which is Rust's (`$x:expr`, the fragment specifiers, the
+   repetition syntax). How far the illusion can honestly be carried is an
+   open question; `hrs expand` -- a user's macro expanded and shown back in
+   Harsh -- would carry it a long way, since the loop would then stay in one
+   language even though the middle is Rust.
+
+2. **A macro from a library.** Someone else's grammar, which Harsh cannot
+   know. Everything proposed so far -- `#…:`, a declaration table, deriving
+   the separator from the matcher -- asks the *user* to produce Harsh that
+   the DSL will accept, which means looking the answer up in the Rust. That
+   relocates the Rust rather than removing it, and a language of lookups is
+   the block of granite, not the bricks.
+
+**The inversion (the user's).** Do not guess what a DSL might want: let the
+converter say what the Harsh version *is*. `hrs-from` over a crate's
+documentation and doc examples produces that crate's DSL in Harsh -- the
+Harsh version of its docs, written by the same mapping for every crate in
+the ecosystem. The programmer learns one thing, the converter's mapping, and
+infers every DSL from it; nobody asserts a fact about someone else's macro,
+because the Rust is the truth, the converter is the map, and the round trip
+is the check. This is the `view!` hole rule generalised: Harsh imposes one
+shape and carries the translation, and the user recognises a pattern instead
+of recalling a rule.
+
+**What that makes `#…:`:** the spelling the *converter emits*, not a choice
+the user makes. `hrs-from` meets a brace group inside a macro call, reads
+the separators that are visible in the text it is converting, and writes
+`#,:` or `#:` at the right depth. The user reads the result and copies the
+shape. Writing one by hand stays possible and honest -- an escape hatch,
+rare -- and `raw:` sits under that for bodies that do not lex as Harsh.
+
+**The work this implies**, when it is taken up: `hrs-from` recognising a
+brace group inside a macro call and reproducing its entries as layout plus
+the right opener (a mechanical rule over tokens -- the separators are in the
+text, not guessed -- so it is uniform across crates); the round trip as the
+oracle, crate by crate; and a tool that runs a crate's README and doc
+examples through it, which is the same machinery as the notebook
+converter and the doc-example pass, pointed at other people's code. **Before any of
+it**, the user is looking at real `macro_rules!` and proc-macro sources to
+answer: how often a separator is visible in a repetition rather than baked
+into hand-written arms; how many of the DSLs a Harsh user meets are
+proc-macros, which state nothing; and whether a separator is uniform through
+a body or varies by depth, as `quick_error!`'s does.
+
+**Two questions left open (2026-09-12) — proposals only, nothing decided,
+nothing changed.** The user will read them rested and decide.
+
+*Question A — where `#…:` sits beside the macro rules, and whether anything
+in `docs/MACROS.md` has to move.* The case that raised it, a `quick_error!`
+variant whose entries are applications with no separator and whose second
+entry runs onto a continuation line:
+
+```
+Io (filename: &str) (cause: io.Error) #:      Io(filename: &str, cause: io::Error) {
+    display "I/O error: {} for filename {}"       display("I/O error: {} for filename {}",
+        cause filename                                    cause, filename)
+    context (filename: &str) (cause: io.Error)    context(filename: &str, cause: io::Error)
+        -> (filename <- to_string$, cause)            -> (filename.to_string(), cause)
+                                                  }
+```
+
+Everything in it is ordinary Harsh -- the parameter groups juxtapose, the
+continuation line belongs to its entry, the terminator (none here) goes
+after the entry and not after every physical line. **Checked, and the answer
+is that nothing has to move:** rule 3 once turned juxtaposition off inside a
+macro's braces, but that exemption was *withdrawn* with the space rule, and
+today a brace body is what a brace is anywhere -- layout off, juxtaposition
+on. So Leptos and Dioxus are untouched by any of this: `view!` has rule 1
+(markup from the block's tokens) and `rsx!` has rule 6 (the brace tree), and
+neither depends on juxtaposition being off. What `#…:` adds is the one thing
+rules 1, 3 and 6 do not provide -- a brace body whose *entries are
+terminated as the opener says* -- and it answers the sentence at the end of
+rule 3 ("a DSL with bare adjacent words ... has rule 1 or rule 6, or a `do:`
+body") for the DSLs whose entries are applications but whose separators are
+not Rust's. Proposal: add `#…:` to `MACROS.md` as the fourth answer and
+leave rules 1--6 as they stand. *(An earlier idea -- making `#…:` "the mark
+that says these lines are Harsh", with unmarked brace bodies copied through
+-- was withdrawn once rule 3's current wording was read: it solved a problem
+that no longer exists.)*
+
+*Question B — `raw:`, the escape hatch, for bodies that are not Harsh at
+all.* `#…:` assumes the entries lex as Harsh. Some DSLs do not: `sql! {
+SELECT * FROM t WHERE a <> b }`, a matcher full of `$x:expr`, anything whose
+punctuation Harsh's lexer would reject or reinterpret. For those no
+terminator helps; what is wanted is *brace these lines by indentation, copy
+them verbatim, touch nothing*. That is a different feature -- the layout
+supplies the braces, the lexer holds its tongue -- and it would need its own
+mark. Proposal: record `raw:` as a companion item, unbuilt, and build it
+only when a real crate needs it. The pair would then read: `#…:` for DSLs
+whose lines are Harsh, `raw:` for DSLs that are not.
+
+**Order of work.** The framing and the three marks into `GOVERNANCE.md` and
+the guide; the rules into `GOVERNANCE.md` and the guide; the opener
+in the layout pass with the entry rule reusing the comma block; the refusal
+lint with its message; `hrs-from` recognising a brace group whose entries
+carry `,` or nothing and writing the right opener (without it the round trip
+breaks on the crates that motivated this); then `quick_error!` and one or
+two other DSL crates through the round trip as the proof; a Harshlings
+exercise, since a learner meets this in someone else's macro; the Book's
+macro chapters and `docs/MACROS.md` updated — rule 3 (nothing juxtaposes
+inside a macro's braces) is what this completes.
+
+**The cost is the corpus, not the parser.** Dropping the `:` from `impl`,
+`trait`, `mod` and `extern` touches every one of them: the transpiler's own
+source (through `round_trip_own_source`), the 266-file corpus, the Book's
+221 snippets, the guide, the 50 Harshlings exercises, the converted Leptos
+site. `hrs fmt` can do most of it and `hrs-from` must stop writing the
+colon; the round trip is the oracle. Land it **with** `#…:` so the corpus
+moves once, not twice.
+
+## A Jupyter kernel for Harsh
+
+A notebook where a cell of Harsh runs. The pieces exist: `evcxr_jupyter` is a Rust kernel that evaluates a cell by compiling it against a growing context, and `hrs` is a library that turns Harsh into Rust with a source map. So the kernel is a thin thing: take the cell, transpile it, hand the Rust to evcxr, and put any error back on the cell's own lines with `hrs-remap` — the same route `hrs check` takes. The notebook converter in the development tree already turns a notebook of Rust into one of Harsh, so there is material to test it on (the five notebooks).
+
+Questions to settle before writing it, in the order they bite:
+
+- **Wrapper or fork.** A wrapper kernel (Python, speaking the Jupyter protocol, delegating to evcxr) is a weekend; a fork of evcxr that calls the transpiler in-process is cleaner and ties us to their release cycle. Start with the wrapper and see whether the indirection hurts.
+- **What a cell is.** evcxr's unit is a statement list with `:dep` and `:` commands; a Harsh cell is a layout block. A cell of statements at column 0 is the obvious reading, items included, but `let` at top level and a trailing expression both have to work, as they do in a doc example — `docex.rs` already solves exactly this, wrapping a fragment to give it an expression region, and the kernel can reuse it.
+- **Errors on the cell's lines.** The map is per-cell and thrown away after; the remapper takes a map and a JSON diagnostic stream, so this is plumbing, not design.
+- **The `:` commands.** Pass them through untouched — they are the kernel's, not the language's.
+- **Completion and hover** would come from `hrs-lsp`, once it has types (see "Language server, the rest of it"). Not for the first version.
+
+Worth it because a notebook is where people try a language without installing a project, and because the Book already renders to `.ipynb`: a reader could run the chapter they are reading. Size: the wrapper and a green "hello" cell in a session; a version that survives the five notebooks in another.
+
 ## Next week
+
+- **A turbofish head does not apply to a juxtaposed argument.** `from_str.<Person> "…"` and its multi-line form emit `from_str::<Person> "…"` — no call, and rustc's message is about the string, not about the missing application; only `from_str.<Person> ("…")` works. Cause (found 2026-09-12): `juxt::atom_end` accepts a generic list only when the matching `>` is followed by `(` or `.`, which was written for `Vec<i32>` versus the comparison `a < b && c > d`; a juxtaposed argument after `>` fails that test, so the head is never an atom and nothing applies. The rule Harsh states is that a name with its generics is a callee like any other, so this is the rule failing in one of its forms (GOVERNANCE: "a rule holds in every form it applies to"). Fix: accept the list when the `>` belongs to a path segment written `.<…>` — that spelling is unambiguous, since a comparison never follows a dot — and leave the bare `name<…>` case as it is. Pin both directions plus `a < b && c > d`. **And the error**: when a name with generics is followed by something that is not an application, say so — "`from_str.<Person>` is a name with its generics; write `from_str.<Person> arg` to apply it" beats rustc's complaint about the string that follows.
+
 
 - **Harshlings: an exercise for every edge case decided this week**, so the language's own rules are the ones a learner practises first: the tight index as an atom (`add a[0] a[1]`, `add a[0] (a[1] * 2)`, a tuple of elements), the refused `f arr [1]` and its two spellings, `f ([1, 2])` for an array argument, the written `;` in an inline `do:`, the `\` literal in a tuple, application binding tighter than `<-`, a pipe's sides as atoms, `$` versus `()`, a bare parameter before `->`. Each with the error it produces today as the exercise and the decided spelling as the solution.
 - **The same edge cases into the Book**, where each construct is taught — chapter 2's applying section for the index atom and the refused spaced form, chapter 5 for the literal in a tuple, chapter 13 for the pipes — as verified snippets, so a reader meets the rule where the construct is introduced and not only in the reference. (The user's request, 2026-09-11.)
@@ -67,6 +354,17 @@ A fenced block in a `///` or `//!` comment is code (rustdoc compiles and runs it
 - **Language server, the rest of it.** `hrs-lsp` exists and formats on type. What rust-analyzer gives that `.hrs` files still don't: types on hover, go-to-definition, inline errors. Decides adoption beyond one person. Needs error recovery in the layout pass (first error currently stops the run) and the source map in both directions. Largest item by far; deserves its own design conversation. Smaller first steps in `hrs-lsp`: `)` as a second on-type trigger so the closing paren of an isolated closure snaps into place; `else` likewise.
 - **Remove the dead `depth` field** from `scanner.c`.
 - **Converter: a `while … matches! …` condition inside a block-bodied arm of a nested `match`** leaves a `,` on the next arm and drops the outer `},` — reproduction in the handover (2026-09-10). Not pinned. It was never updated and does nothing; noted so it isn't mistaken for load-bearing.
+
+## Last: a Harsh crate registry
+
+An online repository of Harsh crates, the user's request of 2026-09-17,
+placed last deliberately. It is not a prerequisite for anything above:
+a Harsh crate published to crates.io through `hrs export` is a Rust crate
+that can also ship its `.hrs` sources in the package; cargo vendors them,
+and `hrs` finds a crate's `macro_rules~` definitions (and any `harsh/dsl.hrs`)
+there. So Harsh crates live on crates.io as Rust crates with their Harsh
+alongside, and a registry of Harsh's own is a convenience for the day the
+ecosystem is large enough to want one.
 
 ## Settled
 

@@ -45,6 +45,9 @@ pub struct Emitter<'a> {
     stmt_ctx: bool,
     /// The kind of block whose nodes are being written.
     kind: BlockKind,
+    /// The enclosing block was opened by a macro call: its last entry takes
+    /// no trailing separator (2026-09-17).
+    macro_lit: bool,
     /// The next `indent()` writes nothing: a fragment that begins mid-line.
     skip_indent: bool,
     /// The last token was an include macro's bang: the string that follows
@@ -67,6 +70,7 @@ pub struct Emitter<'a> {
 impl<'a> Emitter<'a> {
     pub fn new(src: &'a str) -> Self {
         Emitter {
+            macro_lit: false,
             pending_close: 0,
             stmt_ctx: false,
             kind: BlockKind::Items,
@@ -718,6 +722,14 @@ impl<'a> Emitter<'a> {
                     if toks[d].is_kw("do") {
                         skip_do = d;
                     }
+                    // `#:` is one mark, not a `#` followed by a block opener:
+                    // the `:` goes as any opener does, and the `#` with it.
+                    if toks[c].kind == Tk::Colon
+                        && toks[d].text == "#"
+                        && toks[d].span.hi == toks[c].span.lo
+                    {
+                        skip_do = d;
+                    }
                 }
             }
         }
@@ -940,6 +952,16 @@ impl<'a> Emitter<'a> {
         self.nodes(nodes, BlockKind::Items);
     }
 
+    /// Is this header a macro call? `m!\` and `m~\` open a literal-shaped
+    /// block whose entries are the macro's, so the last one takes no comma:
+    /// a matcher of fixed arity refuses a trailing separator, while Rust's
+    /// own struct literals and fields accept one and keep it (rustfmt writes
+    /// it, and the corpus is written that way).
+    fn macro_header(toks: &[Token]) -> bool {
+        toks.iter()
+            .any(|t| (t.text == "!" || t.text == "~") && t.kind != Tk::Str)
+    }
+
     fn nodes(&mut self, nodes: &[Node], kind: BlockKind) {
         let saved_ctx = self.stmt_ctx;
         let saved_kind = self.kind;
@@ -975,7 +997,7 @@ impl<'a> Emitter<'a> {
                     let (body, trail) = l.toks.split_at(body_end);
                     // A comment-only line is just its comment.
                     if !body.is_empty() {
-                        self.lit_line(body);
+                        self.lit_line_at(body, is_last && self.macro_lit);
                     }
                     for c in trail {
                         self.out.push(' ');
@@ -1167,6 +1189,13 @@ impl<'a> Emitter<'a> {
     /// (the expression juxtaposes as anywhere); a bare `field` is the
     /// shorthand; `..base` is written as it is, and takes no comma.
     fn lit_line(&mut self, toks: &[Token]) {
+        self.lit_line_at(toks, false)
+    }
+
+    /// `is_last` suppresses the separator: no trailing comma (2026-09-17).
+    /// A grammar that takes `a, b` takes it without a final comma, and a
+    /// macro matcher of fixed arity -- `( $a:expr, $b:expr )` -- refuses one.
+    fn lit_line_at(&mut self, toks: &[Token], is_last: bool) {
         let sig: Vec<usize> = (0..toks.len()).filter(|&i| !toks[i].is_comment()).collect();
         let is_spread = sig.first().map_or(false, |&i| toks[i].kind == Tk::DotDot);
         let is_field = sig.len() >= 3 && toks[sig[0]].kind == Tk::Ident && toks[sig[1]].kind == Tk::Eq;
@@ -1182,7 +1211,7 @@ impl<'a> Emitter<'a> {
         } else {
             self.line_tokens_ctx(toks, false, !is_spread, false);
         }
-        if !is_spread {
+        if !is_spread && !is_last {
             self.out.push(',');
         }
     }
@@ -1480,7 +1509,10 @@ impl<'a> Emitter<'a> {
         self.out.push('\n');
         let owed = std::mem::take(&mut self.pending_close);
         self.level += 1;
+        let saved_macro_lit = self.macro_lit;
+        self.macro_lit = Self::macro_header(&b.header.toks);
         self.nodes(&b.body, b.kind);
+        self.macro_lit = saved_macro_lit;
         self.level -= 1;
         self.indent();
         self.out.push('}');
@@ -1577,7 +1609,11 @@ impl<'a> Emitter<'a> {
             // A struct literal's fields take `,`; the writer of a `..base`
             // line writes none (Rust allows none after it).
             BlockKind::Lit => {
-                if !already_semi {
+                // No separator after the last entry (2026-09-17): a grammar
+                // that takes `a, b` always takes it without a final comma,
+                // and a macro matcher with a fixed arity -- `( $a:expr,
+                // $b:expr )` -- refuses one outright.
+                if !already_semi && !(is_last && self.macro_lit) {
                     self.out.push(',');
                 }
             }
@@ -1587,6 +1623,9 @@ impl<'a> Emitter<'a> {
                     self.out.push(';');
                 }
             }
+            // `#:` writes nothing between entries: the block's grammar is its
+            // author's, and Harsh supplies only the braces and the lines.
+            BlockKind::Bare => {}
             // Markup never reaches here; a tree line writes its own comma,
             // and a tree's blocks take none.
             BlockKind::Hsx | BlockKind::Macro | BlockKind::Tree => {}

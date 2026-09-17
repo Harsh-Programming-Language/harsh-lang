@@ -65,7 +65,7 @@ enum Message
     Write String                  // a tuple struct
     ChangeColor i32 i32 i32       // a tuple struct
 
-impl Message:
+impl Message
     fn call (&self):
         println! "calling {:?}" self
 
@@ -376,7 +376,7 @@ enum UsState
     Alabama
     Alaska
 
-impl UsState:
+impl UsState
     fn existed_in (&self) (year: u16) -> bool:
         match self:
             UsState.Alabama => year >= 1819

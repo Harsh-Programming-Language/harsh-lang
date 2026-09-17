@@ -11,7 +11,7 @@ pub struct AveragedCollection
     list: Vec<i32>
     average: f64
 
-impl AveragedCollection:
+impl AveragedCollection
     pub fn new$ -> Self:
         Self\ list = vec! [], average = 0.0
 
@@ -59,13 +59,13 @@ fn main$:
 Chapter 8 held several types in one `Vec` by wrapping them in an enum, which works when the set of types is known when you write the enum. A GUI library cannot know what components its users will define. It needs "a vector of anything that can draw itself":
 
 ```
-pub trait Draw:
+pub trait Draw
     fn draw (&self)
 
 pub struct Screen
     pub components: Vec<Box<dyn Draw>>      // any type that implements Draw, boxed
 
-impl Screen:
+impl Screen
     pub fn run (&self):
         for component in self <- components <- iter$:
             component <- draw$
@@ -75,7 +75,7 @@ pub struct Button
     pub height: u32
     pub label: String
 
-impl Draw for Button:
+impl Draw for Button
     fn draw (&self):
         println!
             "button {}x{} '{}'"
@@ -88,7 +88,7 @@ struct SelectBox
     height: u32
     options: Vec<String>
 
-impl Draw for SelectBox:
+impl Draw for SelectBox
     fn draw (&self):
         println!
             "select box {}x{} {:?}"
@@ -125,7 +125,7 @@ button 50x10 'OK'
 The compiler still checks that every element can draw:
 
 ```
-pub trait Draw:
+pub trait Draw
     fn draw (&self)
 
 pub struct Screen
@@ -155,21 +155,21 @@ A `String` does not implement `Draw`, so it cannot become a `Box<dyn Draw>`, and
 The same screen could be written with a type parameter:
 
 ```
-pub trait Draw:
+pub trait Draw
     fn draw (&self)
 
 // Generic: one T for the whole screen, chosen at compile time, no boxing.
 pub struct Screen<T: Draw>
     pub components: Vec<T>
 
-impl<T> Screen<T> [where T: Draw]:
+impl<T> Screen<T> [where T: Draw]
     pub fn run (&self):
         for component in self <- components <- iter$:
             component <- draw$
 
 struct Label String
 
-impl Draw for Label:
+impl Draw for Label
     fn draw (&self):
         println! "label '{}'" (self.0)
 
@@ -196,7 +196,7 @@ pub struct Post
     state: Option<Box<dyn State>>
     content: String
 
-impl Post:
+impl Post
     pub fn new$ -> Post:
         Post\ state = Some (Box.new Draft), content = String.new$
 
@@ -217,7 +217,7 @@ impl Post:
         if let Some s = self <- state <- take$:
             self <- state = Some (s <- approve$)
 
-trait State:
+trait State
     fn request_review (self: Box<Self>) -> Box<dyn State>
     fn approve (self: Box<Self>) -> Box<dyn State>
 
@@ -226,7 +226,7 @@ trait State:
 
 struct Draft
 
-impl State for Draft:
+impl State for Draft
     fn request_review (self: Box<Self>) -> Box<dyn State>:
         Box.new PendingReview
 
@@ -235,7 +235,7 @@ impl State for Draft:
 
 struct PendingReview
 
-impl State for PendingReview:
+impl State for PendingReview
     fn request_review (self: Box<Self>) -> Box<dyn State>:
         self
 
@@ -244,7 +244,7 @@ impl State for PendingReview:
 
 struct Published
 
-impl State for Published:
+impl State for Published
     fn request_review (self: Box<Self>) -> Box<dyn State>:
         self
 
@@ -285,21 +285,21 @@ pub struct DraftPost
 pub struct PendingReviewPost
     content: String
 
-impl Post:
+impl Post
     pub fn new$ -> DraftPost:
         DraftPost\ content = String.new$
 
     pub fn content (&self) -> &str:
         &self <- content
 
-impl DraftPost:
+impl DraftPost
     pub fn add_text (&mut self) (text: &str):
         self <- content <- push_str text
 
     pub fn request_review self -> PendingReviewPost:
         PendingReviewPost\ content = self <- content
 
-impl PendingReviewPost:
+impl PendingReviewPost
     pub fn approve self -> Post:
         Post\ content = self <- content
 

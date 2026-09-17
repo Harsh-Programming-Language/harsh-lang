@@ -7,7 +7,7 @@ fn g<T> (x: T) -> T where T: Clone do:
 struct P do
     a: i32
 
-impl P do:
+impl P do
     fn get (&self) -> i32 do:
         self <- a
 

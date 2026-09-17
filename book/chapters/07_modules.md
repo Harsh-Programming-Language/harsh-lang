@@ -11,15 +11,15 @@ A crate is the unit of compilation: `rustc` is given one file — the *crate roo
 A module is a named scope for items — functions, structs, enums, other modules — declared with `mod` and a block:
 
 ```
-mod front_of_house:
-    mod hosting:
+mod front_of_house
+    mod hosting
         fn add_to_waitlist$:
             println! "added to waitlist"
 
         fn seat_at_table$:
             println! "seated"
 
-    mod serving:
+    mod serving
         fn take_order$:
             println! "order taken"
 
@@ -58,8 +58,8 @@ Modules are for organising code the way directories organise files, and — the 
 To call something in a module you name its path, the way you name a file in a directory. A path is either *absolute*, starting from `crate`, or *relative*, starting from the current module; the segments are joined with `.`:
 
 ```
-mod front_of_house:
-    mod hosting:
+mod front_of_house
+    mod hosting
         fn add_to_waitlist$:
             println! "added to waitlist"
 
@@ -94,8 +94,8 @@ Both paths are correctly spelled and the program does not build, because `hostin
 `pub` is that decision:
 
 ```
-mod front_of_house:
-    pub mod hosting:
+mod front_of_house
+    pub mod hosting
         pub fn add_to_waitlist$:
             println! "added to waitlist"
 
@@ -122,7 +122,7 @@ A path may also start from the *parent* module, with `super`:
 fn deliver_order$:
     println! "delivered"
 
-mod back_of_house:
+mod back_of_house
     pub fn fix_incorrect_order$:
         cook_order$
         super.deliver_order$      // one level up: the crate root
@@ -146,12 +146,12 @@ delivered
 `pub` on a struct makes the *type* public, and each field is still private unless it too is marked:
 
 ```
-mod back_of_house:
+mod back_of_house
     pub struct Breakfast
         pub toast: String
         seasonal_fruit: String
 
-    impl Breakfast:
+    impl Breakfast
         pub fn summer toast: &str -> Breakfast:
             Breakfast\
                 toast = String.from toast
@@ -171,12 +171,12 @@ I'd like Wheat toast please
 `toast` is public and `seasonal_fruit` is not, so outside `back_of_house` a `Breakfast` can be read and written through `toast` alone — and cannot be constructed with a literal at all, since a literal has to give every field. That is why `summer` exists: a public associated function is the way to build a struct that has a private field, and it is where the module gets to choose the default. Try the private field from outside:
 
 ```
-mod back_of_house:
+mod back_of_house
     pub struct Breakfast
         pub toast: String
         seasonal_fruit: String
 
-    impl Breakfast:
+    impl Breakfast
         pub fn summer toast: &str -> Breakfast:
             Breakfast\
                 toast = String.from toast
@@ -198,7 +198,7 @@ error[E0616]: field `seasonal_fruit` of struct `Breakfast` is private
 An enum is the opposite: `pub enum` makes every variant public, because an enum with hidden variants would be one you could not match on:
 
 ```
-mod back_of_house:
+mod back_of_house
     #[derive Debug]
     pub enum Appetizer
         Soup
@@ -219,8 +219,8 @@ Soup Salad
 Writing the full path at every call is tedious, and `use` brings a path into scope once:
 
 ```
-mod front_of_house:
-    pub mod hosting:
+mod front_of_house
+    pub mod hosting
         pub fn add_to_waitlist$:
             println! "added to waitlist"
 
@@ -242,14 +242,14 @@ After `use crate.front_of_house.hosting`, the name `hosting` is in scope in this
 A `use` is scoped to the module it appears in. It does not reach into a child module:
 
 ```
-mod front_of_house:
-    pub mod hosting:
+mod front_of_house
+    pub mod hosting
         pub fn add_to_waitlist$:
             println! "added to waitlist"
 
 use crate.front_of_house.hosting
 
-mod customer:
+mod customer
     pub fn eat_at_restaurant$:
         hosting.add_to_waitlist$          // `use` above is in the parent, not here
 
@@ -297,9 +297,9 @@ Both `std.fmt` and `std.io` define a `Result`. `use std.io.Result as IoResult` b
 `use` brings a name in for *this* module. `pub use` brings it in and passes it on, so that users of this module see it as if it had been defined here:
 
 ```
-mod restaurant:
-    mod front_of_house:
-        pub mod hosting:
+mod restaurant
+    mod front_of_house
+        pub mod hosting
             pub fn add_to_waitlist$:
                 println! "added to waitlist"
 

@@ -6,7 +6,7 @@ use std.collections.(
         HashSet,
     )
 
-mod geo:
+mod geo
     pub struct V
         pub x: f64
 

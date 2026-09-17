@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.1.7 — 2026-09-17
+
+- **The block kit is complete, and item bodies lose their `:`.** A block's opener says how its entries end: **no mark** after a header that ends itself — now `impl`, `trait`, `mod` and `extern` as well as `struct`, `enum`, `union` — **`\`** for a comma-separated list, **`:`** or **`do:`** for statements, and the new **`#:`** for a grouping whose grammar is its author's, where Harsh writes the braces and the lines and nothing between them. `impl Foo:` is refused, naming the spelling; so is `#:` on a construct that already has one (`struct Point #:`).
+- A macro call written `m!\` no longer ends its last entry with a comma: a matcher of fixed arity refuses a trailing separator. Struct literals and declarations keep theirs.
+- `hrs-from` writes the bare item header, and the whole corpus, the Book, the guide and the exercises are written that way.
+
+## 0.1.6 — 2026-09-17
+
+- **`macro_rules!` is a zone of Rust**, copied verbatim in both directions: the transpiler reads none of it and rewrites none of it, and `hrs-from` copies a Rust one into a Harsh file unchanged, so the round trip through a definition is byte-exact. `macro_rules! name` opens the zone and its `{` … `}` delimit it — no Harsh opener, since the body is laid out as Rust. A `}` inside a string, a char, a raw string or a comment is text, not a brace. Only the definition is foreign: `my_vec! 1 2 3` is still a Harsh call and becomes `my_vec!(1, 2, 3)`.
+- `hrs-from` no longer converts a Rust `macro_rules!` into Harsh — it copies it.
+
+## 0.1.5 — 2026-09-17
+
+- **Harsh's own declarative macros are marked `~`**: `macro_rules~ twice:` at the definition, `twice~ 4` at the call. Rust's `macro_rules!` and its calls (`println!`, `vec!`, `view!`) are unchanged. Today the two behave identically — the mark is normalised once, at the door — so this release is the spelling and nothing else; it is the fork where Harsh's own expansion will happen. A `~` with a space before it is not a mark and is left alone.
+- The Book's macro chapter, the guide, `docs/MACROS.md` and the examples are written in the new spelling; every two-column block is still checked against its Rust.
+
 ## 0.1.4 — 2026-09-11
 
 - A spaced `[` after a macro's argument is refused too (`assert_eq! v [1, 2]` used to emit `assert_eq!(v) [1, 2]`); an array argument to a macro is isolated, `assert_eq! v ([1, 2])`. `vec! [1, 2]`, with nothing before the `[`, is the bracket body as before. Found by a Harshlings exercise.

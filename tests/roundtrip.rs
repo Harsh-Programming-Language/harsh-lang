@@ -12,10 +12,14 @@ use std::fs;
 use std::path::Path;
 
 fn transpile(harsh: &str) -> String {
-    let toks = harsh_lang::lex::lex(harsh).expect("lex");
+    // The same pipeline the driver runs: a Rust `macro_rules!` is blanked out
+    // before anything reads it and put back verbatim after.
+    let (work, zones) = harsh_lang::rawzone::prepare(harsh);
+    let toks = harsh_lang::lex::lex(&work).expect("lex");
     let tree = harsh_lang::layout::build(toks).expect("layout");
-    let mut em = harsh_lang::emit::Emitter::new(harsh);
+    let mut em = harsh_lang::emit::Emitter::new(&work);
     em.program(&tree);
+    harsh_lang::rawzone::restore(&mut em.out, harsh, &zones);
     em.out
 }
 
@@ -167,7 +171,7 @@ fn curried_parameters() {
         ("fn g (u: ()) (b: i32) -> i32:\n    b\n", "fn g(u: (), b: i32) -> i32"),
         ("fn g$ -> i32:\n    1\n", "fn g() -> i32"),
         // A one-token bare parameter: `self` by value.
-        ("impl A:\n    fn g self -> i32:\n        1\n", "fn g(self) -> i32"),
+        ("impl A\n    fn g self -> i32:\n        1\n", "fn g(self) -> i32"),
         // A bare parameter ends at a `[where …]` clause as it does at `->`.
         ("fn g<T> x: &T\n    [where T: Clone]:\n    1\n", "fn g<T>(x: &T) where T: Clone {"),
     ]);
@@ -178,7 +182,7 @@ fn block_separators() {
     check(&[
         ("struct P\n    x: i32\n    y: i32\n", "x: i32,"),
         ("enum E\n    A\n    B\n", "A,"),
-        ("trait T:\n    fn a (&self) -> i32\n", "fn a(&self) -> i32;"),
+        ("trait T\n    fn a (&self) -> i32\n", "fn a(&self) -> i32;"),
         ("fn main$:\n    let x = do:\n        1\n", "let x = {"),
         ("fn main$:\n    match x:\n        A => 1\n        B => 2\n", "A => 1,"),
     ]);
@@ -323,8 +327,8 @@ fn rejects_comma_in_comma_blocks() {
 fn rejects_comma_parameter_lists() {
     for src in [
         "fn f (a: i32, b: i32) -> i32:\n    a\n",
-        "trait T:\n    fn f (a: i32, b: i32) -> i32;\n",
-        "impl S:\n    fn m (&self, x: i32) -> i32:\n        x\n",
+        "trait T\n    fn f (a: i32, b: i32) -> i32;\n",
+        "impl S\n    fn m (&self, x: i32) -> i32:\n        x\n",
     ] {
         let toks = harsh_lang::lex::lex(src).expect("lex");
         assert!(harsh_lang::layout::build(toks).is_err(), "should reject: {src:?}");
@@ -332,7 +336,7 @@ fn rejects_comma_parameter_lists() {
     check(&[
         ("fn t ((a, b): (i32, i32)) -> i32:\n    a + b\n", "fn t((a, b): (i32, i32)) -> i32"),
         ("fn p (g: fn i32 i32 -> i32) (v: i32) -> i32:\n    g v v\n", "fn p(g: fn(i32, i32) -> i32, v: i32) -> i32"),
-        ("impl S:\n    fn m (&self) (x: i32) -> i32:\n        x\n", "fn m(&self, x: i32) -> i32"),
+        ("impl S\n    fn m (&self) (x: i32) -> i32:\n        x\n", "fn m(&self, x: i32) -> i32"),
     ]);
 }
 
@@ -597,6 +601,96 @@ fn closure_returning_functions() {
     ]);
 }
 
+/// `#:` opens a block whose entries take **no separator at all** — for a
+/// grouping whose grammar is its author's. The case that asked for it is a
+/// `quick_error!` body: its variants are comma-separated (`\`), and each
+/// variant's attribute list takes nothing (`#:`).
+#[test]
+fn hash_colon_writes_no_separator() {
+    let got = transpile(
+        "fn main$:\n    let e = qe!\\\n        Rate #:\n            display \"too many\"\n        Io #:\n            from$\n            cause err\n"
+    );
+    // the outer block: commas between variants
+    assert!(got.contains("Rate {") && got.contains("},"), "{got}");
+    // the inner blocks: nothing between entries, and no `#` left in the header
+    assert!(got.contains("display(\"too many\")\n        }"), "{got}");
+    assert!(got.contains("from()\n            cause(err)\n        }"), "{got}");
+    assert!(!got.contains('#'), "the mark leaked into the output:\n{got}");
+}
+
+/// One spelling per construct: `#:` is for a grouping Harsh does not define,
+/// so a construct that has its own spelling is refused, by name.
+#[test]
+fn hash_colon_is_refused_where_a_spelling_exists() {
+    for (src, want) in [
+        ("impl Foo #:\n    fn a$:\n        1\n", "`impl` already has a spelling"),
+        ("fn main$ #:\n    1\n", "`fn` already has a spelling"),
+        ("mod m #:\n    fn a$:\n        1\n", "`mod` already has a spelling"),
+    ] {
+        let toks = harsh_lang::lex::lex(src).expect("lex");
+        let err = harsh_lang::layout::build(toks).err().expect("refused").msg;
+        assert!(err.contains(want), "{err}");
+    }
+}
+
+/// The call-site forms for a Rust macro, one per shape the macro can take
+/// (2026-09-17). Nothing here is special to macros: each is the ordinary
+/// block kit applied to a call, which is why a Harsh writer can guess them.
+#[test]
+fn macro_call_forms() {
+    let defs = "macro_rules! m {\n    ( $( $x:expr ),* ) => { 0 };\n}\nmacro_rules! s {\n    ( $( $x:stmt );* ) => { 0 };\n}\n";
+    let got = transpile(&format!(
+        "{defs}\nfn main$:\n    let a = m! 1 2 3\n    let b = m! (1) (2)\n    let c = m!\\ 1, 2\n    let d = s! do:\n        let q = 1\n        q\n    let e = s! {{ let q = 1; q }}\n"
+    ));
+    // juxtaposed arguments, and the same isolated
+    assert!(got.contains("m!(1, 2, 3)"), "{got}");
+    assert!(got.contains("m!(1, 2)"), "{got}");
+    // `\` opens a comma-separated block: entries by line, commas written
+    assert!(got.contains("m! {") && got.contains("1,") && got.contains("2,"), "{got}");
+    // `do:` opens a statement block: entries by line, `;` written
+    assert!(got.contains("s! {") && got.contains("let q = 1;"), "{got}");
+    // braces on one line stay one line
+    assert!(got.contains("s! { let q = 1; q }"), "{got}");
+}
+
+/// A Rust `macro_rules!` is a zone of Rust inside a Harsh file: the
+/// transpiler reads none of it and rewrites none of it, and the converter
+/// copies it back the same way. Its *calls* stay Harsh — `my_vec! 1 2 3`
+/// becomes `my_vec!(1, 2, 3)` — because only the definition is foreign.
+#[test]
+fn a_rust_macro_rules_is_copied_verbatim() {
+    let body = "macro_rules! my_vec {\n    ( $( $x:expr ),* ) => {\n        {\n            let mut v = Vec::new();\n            $( v.push($x); )*\n            v\n        }\n    };\n}\n";
+    let harsh = format!("{body}\nfn main$:\n    let v = my_vec! 1 2 3\n    println! \"{{v:?}}\"\n");
+    let rust = transpile(&harsh);
+    assert!(rust.contains(body.trim_end()), "the zone is not byte-identical:\n{rust}");
+    assert!(rust.contains("my_vec!(1, 2, 3)"), "the call is not Harsh's:\n{rust}");
+    // A `}` inside a string is text, not a brace: the zone ends at the real one.
+    let tricky = "macro_rules! m {\n    () => {\n        println!(\"}\");\n    };\n}\n";
+    let out = transpile(&format!("{tricky}\nfn main$:\n    m$\n"));
+    assert!(out.contains(tricky.trim_end()), "{out}");
+    assert!(out.contains("fn main()"), "the file after the zone was lost:\n{out}");
+    // And back: Rust -> Harsh -> Rust through a zone is byte-exact.
+    let back = convert(&rust);
+    assert!(back.contains("macro_rules! my_vec {"), "{back}");
+    assert_eq!(transpile(&back), rust);
+}
+
+/// Harsh's own declarative macros are marked `~`, at the definition and at
+/// the call: `macro_rules~ pair:` and `pair~ 7`. Today `~` and `!` behave
+/// identically (the mark is normalised at the door, `layout::normalise_macro_mark`);
+/// the mark exists so the two worlds can be told apart on the page, and it is
+/// where the fork will be when Harsh expands its own macros.
+#[test]
+fn tilde_is_the_harsh_macro_mark() {
+    let got = transpile("macro_rules~ pair:\n    ($a:expr) => { $a }\n\nfn main$:\n    println! \"{}\" (pair~ 7)\n");
+    assert!(got.contains("macro_rules! pair {"), "{got}");
+    assert!(got.contains("pair!(7)"), "{got}");
+    // A spaced `~` is not a mark: nothing in Harsh writes one, so it is left
+    // alone rather than quietly becoming a macro call.
+    let plain = transpile("fn main$:\n    let a = 1\n    let b = a ~ 2\n");
+    assert!(plain.contains("a ~ 2"), "{plain}");
+}
+
 /// `macro_rules! name:` is a definition; the name is not an argument.
 #[test]
 fn macro_rules_definition() {
@@ -838,12 +932,12 @@ fn dollar_applies_to_nothing() {
 #[test]
 fn rejects_bare_parameter_followed_by_group() {
     for (src, ok) in [
-        ("impl C:\n    fn top &self -> i32:\n        1\n", true),
-        ("impl C:\n    fn top (&self) -> i32:\n        1\n", true),
-        ("impl C:\n    fn add (&self) (k: i32) -> i32:\n        k\n", true),
+        ("impl C\n    fn top &self -> i32:\n        1\n", true),
+        ("impl C\n    fn top (&self) -> i32:\n        1\n", true),
+        ("impl C\n    fn add (&self) (k: i32) -> i32:\n        k\n", true),
         ("fn f g: fn i32:\n    g 1\n", true),
-        ("impl C:\n    fn add &self (k: i32) -> i32:\n        k\n", false),
-        ("impl C:\n    fn add &mut self (k: i32):\n        k\n", false),
+        ("impl C\n    fn add &self (k: i32) -> i32:\n        k\n", false),
+        ("impl C\n    fn add &mut self (k: i32):\n        k\n", false),
         ("fn add a: i32 (b: i32) -> i32:\n    a\n", false),
     ] {
         let toks = harsh_lang::lex::lex(src).expect("lex");
@@ -855,7 +949,7 @@ fn rejects_bare_parameter_followed_by_group() {
             assert!(err.msg.contains("every one is a group"), "{}", err.msg);
         }
     }
-    let err = harsh_lang::layout::build(harsh_lang::lex::lex("impl C:\n    fn add &self (k: i32):\n        k\n").unwrap()).err().unwrap();
+    let err = harsh_lang::layout::build(harsh_lang::lex::lex("impl C\n    fn add &self (k: i32):\n        k\n").unwrap()).err().unwrap();
     assert!(err.msg.contains("`(&self) (`"), "{}", err.msg);
 }
 
@@ -973,10 +1067,14 @@ fn rejects_bad_macro_spellings() {
 fn converter_macros() {
     let rust = "macro_rules! hashmap {\n    ( $( $k:expr => $v:expr ),* ) => {\n        {\n            let mut m = HashMap::new();\n            $( m.insert($k, $v); )*\n            m\n        }\n    };\n}\n\nmacro_rules! add {\n    ($a:expr, $b:expr) => { $a + $b };\n    ($h:expr, $($t:tt)*) => { $h + add!($($t)*) };\n}\n\nmacro_rules! filled {\n    [ $elem:expr ; $n:expr ] => { vec![$elem; $n] };\n}\n\nfn main() {\n    let m = hashmap!(\"a\" => 1, \"b\" => 2);\n    let s = add!(1, 2, 3);\n    let z = filled![0u8; 4];\n}\n";
     let harsh = convert(rust);
+    // Since 2026-09-17 a Rust `macro_rules!` is a zone of Rust: the converter
+    // copies the definition through byte for byte (Harsh's own macros are
+    // `macro_rules~`, which this converter never writes). The *calls* are
+    // converted as any other macro call is.
     for want in [
-        "macro_rules! hashmap:\n    ($( ($k:expr => $v:expr) )*) => do:\n        do:\n            let mut m = HashMap.new$\n            $(m <- insert $k $v)*\n            m\n",
-        "macro_rules! add:\n    (($a:expr) ($b:expr)) => { $a + $b }\n    (($h:expr) $($t:tt)*) => { $h + add! $($t)* }\n",
-        "macro_rules! filled:\n    [ $elem:expr ; $n:expr ] => { vec![$elem; $n] }\n",
+        "macro_rules! hashmap {\n    ( $( $k:expr => $v:expr ),* ) => {\n",
+        "macro_rules! add {\n    ($a:expr, $b:expr) => { $a + $b };\n",
+        "macro_rules! filled {\n    [ $elem:expr ; $n:expr ] => { vec![$elem; $n] };\n}",
         "hashmap! (\"a\" => 1) (\"b\" => 2)",
         "add! 1 2 3",
     ] {

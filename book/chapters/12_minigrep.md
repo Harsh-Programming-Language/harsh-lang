@@ -95,7 +95,7 @@ struct Config
     query: String
     file_path: String
 
-impl Config:
+impl Config
     fn new args: &[String] -> Config:
         if args <- len$ < 3:
             panic! "not enough arguments"
@@ -136,7 +136,7 @@ struct Config
     query: String
     file_path: String
 
-impl Config:
+impl Config
     fn build args: &[String] -> Result<Config, &'static str>:
         if args <- len$ < 3:
             return Err "not enough arguments"
@@ -185,7 +185,7 @@ pub struct Config
     pub file_path: String
     pub ignore_case: bool
 
-impl Config:
+impl Config
     pub fn build args: &[String] -> Result<Config, &'static str>:
         if args <- len$ < 3:
             return Err "not enough arguments"
@@ -230,7 +230,7 @@ pub fn search_case_insensitive<'a> (query: &str) (contents: &'a str) -> Vec<&'a 
     results
 
 #[cfg test]
-mod tests:
+mod tests
     use super.*
 
     #[test]
@@ -306,7 +306,7 @@ pub struct Config
     pub file_path: String
     pub ignore_case: bool
 
-impl Config:
+impl Config
     pub fn build args: &[String] -> Result<Config, &'static str>:
         if args <- len$ < 3:
             return Err "not enough arguments"
@@ -351,7 +351,7 @@ pub fn search_case_insensitive<'a> (query: &str) (contents: &'a str) -> Vec<&'a 
     results
 
 #[cfg test]
-mod tests:
+mod tests
     use super.*
 
     #[test]
@@ -420,7 +420,7 @@ pub struct Config
     pub file_path: String
     pub ignore_case: bool
 
-impl Config:
+impl Config
     pub fn build args: &[String] -> Result<Config, &'static str>:
         if args <- len$ < 3:
             return Err "not enough arguments"
@@ -465,7 +465,7 @@ pub fn search_case_insensitive<'a> (query: &str) (contents: &'a str) -> Vec<&'a 
     results
 
 #[cfg test]
-mod tests:
+mod tests
     use super.*
 
     #[test]
@@ -536,7 +536,7 @@ pub struct Config
     pub file_path: String
     pub ignore_case: bool
 
-impl Config:
+impl Config
     pub fn build args: &[String] -> Result<Config, &'static str>:
         if args <- len$ < 3:
             return Err "not enough arguments"
@@ -581,7 +581,7 @@ pub fn search_case_insensitive<'a> (query: &str) (contents: &'a str) -> Vec<&'a 
     results
 
 #[cfg test]
-mod tests:
+mod tests
     use super.*
 
     #[test]
@@ -655,7 +655,7 @@ pub struct Config
     pub file_path: String
     pub ignore_case: bool
 
-impl Config:
+impl Config
     pub fn build args: &[String] -> Result<Config, &'static str>:
         if args <- len$ < 3:
             return Err "not enough arguments"
@@ -700,7 +700,7 @@ pub fn search_case_insensitive<'a> (query: &str) (contents: &'a str) -> Vec<&'a 
     results
 
 #[cfg test]
-mod tests:
+mod tests
     use super.*
 
     #[test]

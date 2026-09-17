@@ -11,7 +11,7 @@ pub fn add (left: u64) (right: u64) -> u64:
     left + right
 
 #[cfg test]
-mod tests:
+mod tests
     use super.*
 
     #[test]
@@ -33,7 +33,7 @@ Here is what failure looks like:
 
 ```
 #[cfg test]
-mod tests:
+mod tests
     #[test]
     fn exploration$:
         assert_eq! (2 + 2) 4
@@ -69,12 +69,12 @@ struct Rectangle
     width: u32
     height: u32
 
-impl Rectangle:
+impl Rectangle
     fn can_hold (&self) (other: &Rectangle) -> bool:
         self <- width > other <- width && self <- height > other <- height
 
 #[cfg test]
-mod tests:
+mod tests
     use super.*
 
     #[test]
@@ -107,7 +107,7 @@ pub fn add_two a: u64 -> u64:
     a + 3        // a bug
 
 #[cfg test]
-mod tests:
+mod tests
     use super.*
 
     #[test]
@@ -142,7 +142,7 @@ pub fn greeting name: &str -> String:
     String.from "Hello!"      // forgot the name
 
 #[cfg test]
-mod tests:
+mod tests
     use super.*
 
     #[test]
@@ -176,7 +176,7 @@ Sometimes the correct behaviour *is* a panic — chapter 9's `Guess.new` on a ba
 pub struct Guess
     value: i32
 
-impl Guess:
+impl Guess
     pub fn new value: i32 -> Guess:
         if value < 1:
             panic! "Guess value must be greater than or equal to 1, got {value}."
@@ -187,7 +187,7 @@ impl Guess:
         Guess\ value
 
 #[cfg test]
-mod tests:
+mod tests
     use super.*
 
     #[test]
@@ -211,7 +211,7 @@ A test may return a `Result` instead of panicking:
 
 ```
 #[cfg test]
-mod tests:
+mod tests
     #[test]
     fn it_works$ -> Result<(), String>:
         let result = 2 + 2
@@ -243,7 +243,7 @@ pub fn add_two a: u64 -> u64:
     a + 2
 
 #[cfg test]
-mod tests:
+mod tests
     use super.*
 
     #[test]
@@ -289,7 +289,7 @@ fn internal_adder (left: u64) (right: u64) -> u64:
     left + right
 
 #[cfg test]
-mod tests:
+mod tests
     use super.*
 
     #[test]

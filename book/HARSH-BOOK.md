@@ -316,7 +316,9 @@ fn main$:
 hello, harsh 5 52 42 () 3 abc HELLO, HARSH 6 hello, ABC
 ```
 
-> **Harsh —** A function is applied by writing its arguments after it, separated by spaces: `add 2 3`. Parentheses around an argument mean *this is one argument* — `add (n * 2) (nothing$)` — and never *these are the arguments*; an argument that is a single token needs none. Applying a function to nothing is `nothing$`, because `()` is a value, the unit, and only ever that. The same rule declares a function: `fn add (a: i32) (b: i32)` is one group per parameter, and a lone parameter may drop its parentheses, `fn greet name: &str`. An index written tight, `arr[1]`, is part of its atom, so `f arr[1]` passes the element — the same way `t.0` is part of `t`; brackets never apply, and an array passed as an argument is isolated, `f ([1, 2, 3])`. Two arrows share the work of reaching into things: `<-` reaches into a *value* — a field, a method, `v <- len$` — and `.` walks a *path* — a module, a type, an item, `String.from`. A macro applies like a function, with its `!` glued to its name: `vec! [1, 2, 3]`, `println! "{s}"`. And when an application and an arrow meet, **the application binds tighter**: in `greet "harsh" <- to_uppercase$` the function is applied first and the arrow takes its result, and the next arrow, or an operator, ends the arguments. The parentheses you will be tempted to write, `(greet "harsh") <- to_uppercase$`, are not wrong; they are not needed. Parentheses are needed the other way round — when the arrow belongs *inside* an argument, `greet (&(text <- to_uppercase$))`.
+> **Harsh —** A function is applied by writing its arguments after it, separated by spaces: `add 2 3`. Parentheses around an argument mean *this is one argument* — `add (n * 2) (nothing$)` — and never *these are the arguments*; an argument that is a single token needs none. Applying a function to nothing is `nothing$`, because `()` is a value, the unit, and only ever that. The same rule declares a function: `fn add (a: i32) (b: i32)` is one group per parameter, and a lone parameter may drop its parentheses, `fn greet name: &str`. A block's opener says how its entries end, and there are only four kinds. A header that ends itself — `struct Point`, `impl Point`, `mod geometry`, `extern "C"` — needs no mark at all, since nothing but a name can follow it and what comes deeper can only be the body. A `\` opens a comma-separated list. A `:` or `do:` opens statements. And `#:` opens a grouping whose grammar belongs to someone else — a macro's DSL — where Harsh writes the braces and the lines and nothing between them. A construct that already has a spelling keeps it: `struct Point #:` is refused rather than read a second way.
+
+An index written tight, `arr[1]`, is part of its atom, so `f arr[1]` passes the element — the same way `t.0` is part of `t`; brackets never apply, and an array passed as an argument is isolated, `f ([1, 2, 3])`. Two arrows share the work of reaching into things: `<-` reaches into a *value* — a field, a method, `v <- len$` — and `.` walks a *path* — a module, a type, an item, `String.from`. A macro applies like a function, with its `!` glued to its name: `vec! [1, 2, 3]`, `println! "{s}"`. And when an application and an arrow meet, **the application binds tighter**: in `greet "harsh" <- to_uppercase$` the function is applied first and the arrow takes its result, and the next arrow, or an operator, ends the arguments. The parentheses you will be tempted to write, `(greet "harsh") <- to_uppercase$`, are not wrong; they are not needed. Parentheses are needed the other way round — when the arrow belongs *inside* an argument, `greet (&(text <- to_uppercase$))`.
 
 ## 2.7 What you have met
 
@@ -1588,7 +1590,7 @@ struct Rectangle
     width: u32
     height: u32
 
-impl Rectangle:
+impl Rectangle
     fn area (&self) -> u32:
         self <- width * self <- height
 
@@ -1628,7 +1630,7 @@ struct Rectangle
     width: u32
     height: u32
 
-impl Rectangle:
+impl Rectangle
     fn area (&self) -> u32:
         self <- width * self <- height
 
@@ -1661,11 +1663,11 @@ struct Rectangle
     width: u32
     height: u32
 
-impl Rectangle:
+impl Rectangle
     fn square size: u32 -> Self:
         Self\ width = size, height = size
 
-impl Rectangle:
+impl Rectangle
     fn area (&self) -> u32:
         self <- width * self <- height
 
@@ -1753,7 +1755,7 @@ enum Message
     Write String                  // a tuple struct
     ChangeColor i32 i32 i32       // a tuple struct
 
-impl Message:
+impl Message
     fn call (&self):
         println! "calling {:?}" self
 
@@ -2064,7 +2066,7 @@ enum UsState
     Alabama
     Alaska
 
-impl UsState:
+impl UsState
     fn existed_in (&self) (year: u16) -> bool:
         match self:
             UsState.Alabama => year >= 1819
@@ -2120,15 +2122,15 @@ A crate is the unit of compilation: `rustc` is given one file — the *crate roo
 A module is a named scope for items — functions, structs, enums, other modules — declared with `mod` and a block:
 
 ```
-mod front_of_house:
-    mod hosting:
+mod front_of_house
+    mod hosting
         fn add_to_waitlist$:
             println! "added to waitlist"
 
         fn seat_at_table$:
             println! "seated"
 
-    mod serving:
+    mod serving
         fn take_order$:
             println! "order taken"
 
@@ -2167,8 +2169,8 @@ Modules are for organising code the way directories organise files, and — the 
 To call something in a module you name its path, the way you name a file in a directory. A path is either *absolute*, starting from `crate`, or *relative*, starting from the current module; the segments are joined with `.`:
 
 ```
-mod front_of_house:
-    mod hosting:
+mod front_of_house
+    mod hosting
         fn add_to_waitlist$:
             println! "added to waitlist"
 
@@ -2203,8 +2205,8 @@ Both paths are correctly spelled and the program does not build, because `hostin
 `pub` is that decision:
 
 ```
-mod front_of_house:
-    pub mod hosting:
+mod front_of_house
+    pub mod hosting
         pub fn add_to_waitlist$:
             println! "added to waitlist"
 
@@ -2231,7 +2233,7 @@ A path may also start from the *parent* module, with `super`:
 fn deliver_order$:
     println! "delivered"
 
-mod back_of_house:
+mod back_of_house
     pub fn fix_incorrect_order$:
         cook_order$
         super.deliver_order$      // one level up: the crate root
@@ -2255,12 +2257,12 @@ delivered
 `pub` on a struct makes the *type* public, and each field is still private unless it too is marked:
 
 ```
-mod back_of_house:
+mod back_of_house
     pub struct Breakfast
         pub toast: String
         seasonal_fruit: String
 
-    impl Breakfast:
+    impl Breakfast
         pub fn summer toast: &str -> Breakfast:
             Breakfast\
                 toast = String.from toast
@@ -2280,12 +2282,12 @@ I'd like Wheat toast please
 `toast` is public and `seasonal_fruit` is not, so outside `back_of_house` a `Breakfast` can be read and written through `toast` alone — and cannot be constructed with a literal at all, since a literal has to give every field. That is why `summer` exists: a public associated function is the way to build a struct that has a private field, and it is where the module gets to choose the default. Try the private field from outside:
 
 ```
-mod back_of_house:
+mod back_of_house
     pub struct Breakfast
         pub toast: String
         seasonal_fruit: String
 
-    impl Breakfast:
+    impl Breakfast
         pub fn summer toast: &str -> Breakfast:
             Breakfast\
                 toast = String.from toast
@@ -2307,7 +2309,7 @@ error[E0616]: field `seasonal_fruit` of struct `Breakfast` is private
 An enum is the opposite: `pub enum` makes every variant public, because an enum with hidden variants would be one you could not match on:
 
 ```
-mod back_of_house:
+mod back_of_house
     #[derive Debug]
     pub enum Appetizer
         Soup
@@ -2328,8 +2330,8 @@ Soup Salad
 Writing the full path at every call is tedious, and `use` brings a path into scope once:
 
 ```
-mod front_of_house:
-    pub mod hosting:
+mod front_of_house
+    pub mod hosting
         pub fn add_to_waitlist$:
             println! "added to waitlist"
 
@@ -2351,14 +2353,14 @@ After `use crate.front_of_house.hosting`, the name `hosting` is in scope in this
 A `use` is scoped to the module it appears in. It does not reach into a child module:
 
 ```
-mod front_of_house:
-    pub mod hosting:
+mod front_of_house
+    pub mod hosting
         pub fn add_to_waitlist$:
             println! "added to waitlist"
 
 use crate.front_of_house.hosting
 
-mod customer:
+mod customer
     pub fn eat_at_restaurant$:
         hosting.add_to_waitlist$          // `use` above is in the parent, not here
 
@@ -2406,9 +2408,9 @@ Both `std.fmt` and `std.io` define a `Result`. `use std.io.Result as IoResult` b
 `use` brings a name in for *this* module. `pub use` brings it in and passes it on, so that users of this module see it as if it had been defined here:
 
 ```
-mod restaurant:
-    mod front_of_house:
-        pub mod hosting:
+mod restaurant
+    mod front_of_house
+        pub mod hosting
             pub fn add_to_waitlist$:
                 println! "added to waitlist"
 
@@ -3158,7 +3160,7 @@ That last point is what types are for, and a type can carry a check so that no c
 pub struct Guess
     value: i32
 
-impl Guess:
+impl Guess
     pub fn new value: i32 -> Guess:
         if value < 1 || value > 100:
             panic! "Guess value must be between 1 and 100, got {value}."
@@ -3290,11 +3292,11 @@ struct Point<T>
     x: T
     y: T
 
-impl<T> Point<T>:
+impl<T> Point<T>
     fn x (&self) -> &T:
         &self <- x
 
-impl Point<f32>:
+impl Point<f32>
     fn distance_from_origin (&self) -> f32:
         (self <- x <- powi 2 + self <- y <- powi 2) <- sqrt$
 
@@ -3346,7 +3348,7 @@ error[E0308]: mismatched types
 A trait is a set of methods a type may implement — an interface, a protocol, whichever word your last language used. It is defined with `trait`, and a type implements it with `impl … for`:
 
 ```
-pub trait Summary:
+pub trait Summary
     fn summarize (&self) -> String
 
 pub struct NewsArticle
@@ -3354,7 +3356,7 @@ pub struct NewsArticle
     pub location: String
     pub author: String
 
-impl Summary for NewsArticle:
+impl Summary for NewsArticle
     fn summarize (&self) -> String:
         format!
             "{}, by {} ({})"
@@ -3366,7 +3368,7 @@ pub struct Tweet
     pub username: String
     pub content: String
 
-impl Summary for Tweet:
+impl Summary for Tweet
     fn summarize (&self) -> String:
         format! "{}: {}" (self <- username) (self <- content)
 
@@ -3399,7 +3401,7 @@ One rule to know: you may implement a trait for a type only if the trait or the 
 A trait method may have a body, used by any type that does not supply its own:
 
 ```
-pub trait Summary:
+pub trait Summary
     fn summarize_author (&self) -> String
 
     fn summarize (&self) -> String:
@@ -3409,7 +3411,7 @@ pub struct Tweet
     pub username: String
     pub content: String
 
-impl Summary for Tweet:
+impl Summary for Tweet
     fn summarize_author (&self) -> String:
         format! "@{}" (self <- username)
 
@@ -3434,17 +3436,17 @@ A function that takes "anything summarizable" has four spellings, all in this ex
 ```
 use std.fmt.Display
 
-pub trait Summary:
+pub trait Summary
     fn summarize (&self) -> String
 
 pub struct Tweet
     pub username: String
 
-impl Summary for Tweet:
+impl Summary for Tweet
     fn summarize (&self) -> String:
         format! "@{}" (self <- username)
 
-impl Display for Tweet:
+impl Display for Tweet
     fn fmt (&self) (f: &mut std.fmt.Formatter) -> std.fmt.Result:
         write! f "tweet by {}" (self <- username)
 
@@ -3493,13 +3495,13 @@ tweet by horse_ebooks — @horse_ebooks
 `impl Trait` works in return position too:
 
 ```
-pub trait Summary:
+pub trait Summary
     fn summarize (&self) -> String
 
 pub struct Tweet
     pub username: String
 
-impl Summary for Tweet:
+impl Summary for Tweet
     fn summarize (&self) -> String:
         format! "@{}" (self <- username)
 
@@ -3527,13 +3529,13 @@ struct Pair<T>
     x: T
     y: T
 
-impl<T> Pair<T>:
+impl<T> Pair<T>
     fn new (x: T) (y: T) -> Self:
         Self\ x, y
 
 // Only a Pair whose T can be compared and displayed gets this method.
 
-impl<T: Display + PartialOrd> Pair<T>:
+impl<T: Display + PartialOrd> Pair<T>
     fn cmp_display (&self):
         if self <- x >= self <- y:
             println! "The largest member is x = {}" (self <- x)
@@ -3641,7 +3643,7 @@ Chapter 5's `&str` field had this error. A struct that holds a reference declare
 struct ImportantExcerpt<'a>
     part: &'a str
 
-impl<'a> ImportantExcerpt<'a>:
+impl<'a> ImportantExcerpt<'a>
     fn level (&self) -> i32:
         3
 
@@ -3744,7 +3746,7 @@ pub fn add (left: u64) (right: u64) -> u64:
     left + right
 
 #[cfg test]
-mod tests:
+mod tests
     use super.*
 
     #[test]
@@ -3766,7 +3768,7 @@ Here is what failure looks like:
 
 ```
 #[cfg test]
-mod tests:
+mod tests
     #[test]
     fn exploration$:
         assert_eq! (2 + 2) 4
@@ -3802,12 +3804,12 @@ struct Rectangle
     width: u32
     height: u32
 
-impl Rectangle:
+impl Rectangle
     fn can_hold (&self) (other: &Rectangle) -> bool:
         self <- width > other <- width && self <- height > other <- height
 
 #[cfg test]
-mod tests:
+mod tests
     use super.*
 
     #[test]
@@ -3840,7 +3842,7 @@ pub fn add_two a: u64 -> u64:
     a + 3        // a bug
 
 #[cfg test]
-mod tests:
+mod tests
     use super.*
 
     #[test]
@@ -3875,7 +3877,7 @@ pub fn greeting name: &str -> String:
     String.from "Hello!"      // forgot the name
 
 #[cfg test]
-mod tests:
+mod tests
     use super.*
 
     #[test]
@@ -3909,7 +3911,7 @@ Sometimes the correct behaviour *is* a panic — chapter 9's `Guess.new` on a ba
 pub struct Guess
     value: i32
 
-impl Guess:
+impl Guess
     pub fn new value: i32 -> Guess:
         if value < 1:
             panic! "Guess value must be greater than or equal to 1, got {value}."
@@ -3920,7 +3922,7 @@ impl Guess:
         Guess\ value
 
 #[cfg test]
-mod tests:
+mod tests
     use super.*
 
     #[test]
@@ -3944,7 +3946,7 @@ A test may return a `Result` instead of panicking:
 
 ```
 #[cfg test]
-mod tests:
+mod tests
     #[test]
     fn it_works$ -> Result<(), String>:
         let result = 2 + 2
@@ -3976,7 +3978,7 @@ pub fn add_two a: u64 -> u64:
     a + 2
 
 #[cfg test]
-mod tests:
+mod tests
     use super.*
 
     #[test]
@@ -4022,7 +4024,7 @@ fn internal_adder (left: u64) (right: u64) -> u64:
     left + right
 
 #[cfg test]
-mod tests:
+mod tests
     use super.*
 
     #[test]
@@ -4145,7 +4147,7 @@ struct Config
     query: String
     file_path: String
 
-impl Config:
+impl Config
     fn new args: &[String] -> Config:
         if args <- len$ < 3:
             panic! "not enough arguments"
@@ -4186,7 +4188,7 @@ struct Config
     query: String
     file_path: String
 
-impl Config:
+impl Config
     fn build args: &[String] -> Result<Config, &'static str>:
         if args <- len$ < 3:
             return Err "not enough arguments"
@@ -4235,7 +4237,7 @@ pub struct Config
     pub file_path: String
     pub ignore_case: bool
 
-impl Config:
+impl Config
     pub fn build args: &[String] -> Result<Config, &'static str>:
         if args <- len$ < 3:
             return Err "not enough arguments"
@@ -4280,7 +4282,7 @@ pub fn search_case_insensitive<'a> (query: &str) (contents: &'a str) -> Vec<&'a 
     results
 
 #[cfg test]
-mod tests:
+mod tests
     use super.*
 
     #[test]
@@ -4356,7 +4358,7 @@ pub struct Config
     pub file_path: String
     pub ignore_case: bool
 
-impl Config:
+impl Config
     pub fn build args: &[String] -> Result<Config, &'static str>:
         if args <- len$ < 3:
             return Err "not enough arguments"
@@ -4401,7 +4403,7 @@ pub fn search_case_insensitive<'a> (query: &str) (contents: &'a str) -> Vec<&'a 
     results
 
 #[cfg test]
-mod tests:
+mod tests
     use super.*
 
     #[test]
@@ -4470,7 +4472,7 @@ pub struct Config
     pub file_path: String
     pub ignore_case: bool
 
-impl Config:
+impl Config
     pub fn build args: &[String] -> Result<Config, &'static str>:
         if args <- len$ < 3:
             return Err "not enough arguments"
@@ -4515,7 +4517,7 @@ pub fn search_case_insensitive<'a> (query: &str) (contents: &'a str) -> Vec<&'a 
     results
 
 #[cfg test]
-mod tests:
+mod tests
     use super.*
 
     #[test]
@@ -4586,7 +4588,7 @@ pub struct Config
     pub file_path: String
     pub ignore_case: bool
 
-impl Config:
+impl Config
     pub fn build args: &[String] -> Result<Config, &'static str>:
         if args <- len$ < 3:
             return Err "not enough arguments"
@@ -4631,7 +4633,7 @@ pub fn search_case_insensitive<'a> (query: &str) (contents: &'a str) -> Vec<&'a 
     results
 
 #[cfg test]
-mod tests:
+mod tests
     use super.*
 
     #[test]
@@ -4705,7 +4707,7 @@ pub struct Config
     pub file_path: String
     pub ignore_case: bool
 
-impl Config:
+impl Config
     pub fn build args: &[String] -> Result<Config, &'static str>:
         if args <- len$ < 3:
             return Err "not enough arguments"
@@ -4750,7 +4752,7 @@ pub fn search_case_insensitive<'a> (query: &str) (contents: &'a str) -> Vec<&'a 
     results
 
 #[cfg test]
-mod tests:
+mod tests
     use super.*
 
     #[test]
@@ -4810,7 +4812,7 @@ enum ShirtColor
 struct Inventory
     shirts: Vec<ShirtColor>
 
-impl Inventory:
+impl Inventory
     fn giveaway (&self) (user_preference: Option<ShirtColor>) -> ShirtColor:
         user_preference <- unwrap_or_else (|| self <- most_stocked$)
 
@@ -5135,7 +5137,7 @@ fn main$:
 An iterator produces a sequence of values, one at a time, on request. The whole of the `Iterator` trait that matters is one method:
 
 ```
-pub trait Iterator:
+pub trait Iterator
     type Item
     fn next (&mut self) -> Option<Self.Item>
 ```
@@ -5536,7 +5538,7 @@ pub struct Config
     pub file_path: String
     pub ignore_case: bool
 
-impl Config:
+impl Config
     // Take the iterator itself: no clones, and the argument list is consumed as it is read.
     pub fn build (mut args: impl Iterator<Item = String>) -> Result<Config, &'static str>:
         args <- next$                                   // the program name
@@ -5649,7 +5651,7 @@ $ hrs test
 running 1 test
 test target/hrs/lib.rs - add_one (line 10) ... ok
 
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.22s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.18s
 ```
 
 `cargo doc --open` renders every `///` and `//!` in the crate as HTML, with the Markdown inside them — headings, code blocks, links — laid out. The conventional sections are `# Examples`, `# Panics` (when the function can), `# Errors` (what `Err`s it returns) and `# Safety` (for `unsafe` functions). The example in the `///` is Harsh, like everything else in the file, and `cargo test` *runs it* — every code block in a doc comment is a test, so documentation cannot drift from the code without failing the build.
@@ -5667,7 +5669,7 @@ pub use self.kinds.PrimaryColor
 pub use self.kinds.SecondaryColor
 pub use self.utils.mix
 
-pub mod kinds:
+pub mod kinds
     /// The primary colors according to the RYB color model.
     #[derive Debug Clone Copy]
     pub enum PrimaryColor
@@ -5683,7 +5685,7 @@ pub mod kinds:
         Green
         Purple
 
-pub mod utils:
+pub mod utils
     use crate.kinds.*
 
     /// Combines two primary colors in equal amounts to create a secondary color.
@@ -5806,11 +5808,11 @@ use std.ops.Deref
 
 struct MyBox<T> T
 
-impl<T> MyBox<T>:
+impl<T> MyBox<T>
     fn new x: T -> MyBox<T>:
         MyBox x
 
-impl<T> Deref for MyBox<T>:
+impl<T> Deref for MyBox<T>
     type Target = T
 
     fn deref (&self) -> &Self.Target:
@@ -5847,7 +5849,7 @@ A smart pointer's other half is what happens when it goes away. The `Drop` trait
 struct CustomSmartPointer
     data: String
 
-impl Drop for CustomSmartPointer:
+impl Drop for CustomSmartPointer
     fn drop (&mut self):
         println!
             "Dropping CustomSmartPointer with data `{}`!"
@@ -6609,7 +6611,7 @@ pub struct AveragedCollection
     list: Vec<i32>
     average: f64
 
-impl AveragedCollection:
+impl AveragedCollection
     pub fn new$ -> Self:
         Self\ list = vec! [], average = 0.0
 
@@ -6657,13 +6659,13 @@ fn main$:
 Chapter 8 held several types in one `Vec` by wrapping them in an enum, which works when the set of types is known when you write the enum. A GUI library cannot know what components its users will define. It needs "a vector of anything that can draw itself":
 
 ```
-pub trait Draw:
+pub trait Draw
     fn draw (&self)
 
 pub struct Screen
     pub components: Vec<Box<dyn Draw>>      // any type that implements Draw, boxed
 
-impl Screen:
+impl Screen
     pub fn run (&self):
         for component in self <- components <- iter$:
             component <- draw$
@@ -6673,7 +6675,7 @@ pub struct Button
     pub height: u32
     pub label: String
 
-impl Draw for Button:
+impl Draw for Button
     fn draw (&self):
         println!
             "button {}x{} '{}'"
@@ -6686,7 +6688,7 @@ struct SelectBox
     height: u32
     options: Vec<String>
 
-impl Draw for SelectBox:
+impl Draw for SelectBox
     fn draw (&self):
         println!
             "select box {}x{} {:?}"
@@ -6723,7 +6725,7 @@ button 50x10 'OK'
 The compiler still checks that every element can draw:
 
 ```
-pub trait Draw:
+pub trait Draw
     fn draw (&self)
 
 pub struct Screen
@@ -6753,21 +6755,21 @@ A `String` does not implement `Draw`, so it cannot become a `Box<dyn Draw>`, and
 The same screen could be written with a type parameter:
 
 ```
-pub trait Draw:
+pub trait Draw
     fn draw (&self)
 
 // Generic: one T for the whole screen, chosen at compile time, no boxing.
 pub struct Screen<T: Draw>
     pub components: Vec<T>
 
-impl<T> Screen<T> [where T: Draw]:
+impl<T> Screen<T> [where T: Draw]
     pub fn run (&self):
         for component in self <- components <- iter$:
             component <- draw$
 
 struct Label String
 
-impl Draw for Label:
+impl Draw for Label
     fn draw (&self):
         println! "label '{}'" (self.0)
 
@@ -6794,7 +6796,7 @@ pub struct Post
     state: Option<Box<dyn State>>
     content: String
 
-impl Post:
+impl Post
     pub fn new$ -> Post:
         Post\ state = Some (Box.new Draft), content = String.new$
 
@@ -6815,7 +6817,7 @@ impl Post:
         if let Some s = self <- state <- take$:
             self <- state = Some (s <- approve$)
 
-trait State:
+trait State
     fn request_review (self: Box<Self>) -> Box<dyn State>
     fn approve (self: Box<Self>) -> Box<dyn State>
 
@@ -6824,7 +6826,7 @@ trait State:
 
 struct Draft
 
-impl State for Draft:
+impl State for Draft
     fn request_review (self: Box<Self>) -> Box<dyn State>:
         Box.new PendingReview
 
@@ -6833,7 +6835,7 @@ impl State for Draft:
 
 struct PendingReview
 
-impl State for PendingReview:
+impl State for PendingReview
     fn request_review (self: Box<Self>) -> Box<dyn State>:
         self
 
@@ -6842,7 +6844,7 @@ impl State for PendingReview:
 
 struct Published
 
-impl State for Published:
+impl State for Published
     fn request_review (self: Box<Self>) -> Box<dyn State>:
         self
 
@@ -6883,21 +6885,21 @@ pub struct DraftPost
 pub struct PendingReviewPost
     content: String
 
-impl Post:
+impl Post
     pub fn new$ -> DraftPost:
         DraftPost\ content = String.new$
 
     pub fn content (&self) -> &str:
         &self <- content
 
-impl DraftPost:
+impl DraftPost
     pub fn add_text (&mut self) (text: &str):
         self <- content <- push_str text
 
     pub fn request_review self -> PendingReviewPost:
         PendingReviewPost\ content = self <- content
 
-impl PendingReviewPost:
+impl PendingReviewPost
     pub fn approve self -> Post:
         Post\ content = self <- content
 
@@ -7319,7 +7321,7 @@ this function is unsafe to call
 `unsafe fn dangerous$` is a function whose *caller* must uphold some contract, and may only be called from an `unsafe:` block. `split_at_mut` is the pattern that matters: a *safe* function that uses unsafe code inside, after checking the contract itself. Two mutable slices into one vector cannot be expressed to the borrow checker, so the function takes a raw pointer, asserts that `mid` is in range, and builds the slices from raw parts inside `unsafe:` — and its callers never see the keyword, because the function has done the reasoning and stands behind it. This is how the standard library is written, and the discipline to copy: keep `unsafe` small, wrap it in a safe interface, and write down the invariant it depends on.
 
 ```
-extern "C":                             // a foreign block: a layout block like any other
+extern "C"                             // a foreign block: a layout block like any other
     fn abs (input: i32) -> i32           // a foreign function has no body; the `;` is supplied
 
 static mut COUNTER: u32 = 0             // a mutable global: reading or writing it is unsafe
@@ -7355,7 +7357,7 @@ Chapter 13 showed `Iterator`'s `type Item`. Here is a type implementing it:
 struct Counter
     count: u32
 
-impl Iterator for Counter:
+impl Iterator for Counter
     type Item = u32                       // the associated type: what `next` yields
 
     fn next (&mut self) -> Option<Self.Item>:
@@ -7395,7 +7397,7 @@ struct Point
     x: i32
     y: i32
 
-impl Add for Point:
+impl Add for Point
     type Output = Point
 
     fn add (self) (other: Point) -> Point:
@@ -7405,7 +7407,7 @@ struct Millimeters u32
 struct Meters u32
 
 // The default type parameter, `Rhs = Self`, overridden: add a different type.
-impl Add<Meters> for Millimeters:
+impl Add<Meters> for Millimeters
     type Output = Millimeters
 
     fn add (self) (other: Meters) -> Millimeters:
@@ -7430,36 +7432,36 @@ Point { x: 3, y: 3 }
 Two traits may define a method with the same name, and a type may implement both, and have an inherent method of that name as well:
 
 ```
-trait Pilot:
+trait Pilot
     fn fly (&self)
 
-trait Wizard:
+trait Wizard
     fn fly (&self)
 
 struct Human
 
-impl Pilot for Human:
+impl Pilot for Human
     fn fly (&self):
         println! "This is your captain speaking."
 
-impl Wizard for Human:
+impl Wizard for Human
     fn fly (&self):
         println! "Up!"
 
-impl Human:
+impl Human
     fn fly (&self):
         println! "*waving arms furiously*"
 
-trait Animal:
+trait Animal
     fn baby_name$ -> String
 
 struct Dog
 
-impl Dog:
+impl Dog
     fn baby_name$ -> String:
         String.from "Spot"
 
-impl Animal for Dog:
+impl Animal for Dog
     fn baby_name$ -> String:
         String.from "puppy"
 
@@ -7490,7 +7492,7 @@ A trait may require another:
 use std.fmt
 
 // A supertrait: OutlinePrint requires Display, and may use it.
-trait OutlinePrint: fmt.Display:
+trait OutlinePrint: fmt.Display
     fn outline_print (&self):
         let output = self <- to_string$
         let len = output <- len$
@@ -7504,7 +7506,7 @@ struct Point
     x: i32
     y: i32
 
-impl fmt.Display for Point:
+impl fmt.Display for Point
     fn fmt (&self) (f: &mut fmt.Formatter) -> fmt.Result:
         write! f "({}, {})" (self <- x) (self <- y)
 
@@ -7512,7 +7514,7 @@ impl OutlinePrint for Point {}
 // The newtype pattern: a local wrapper lets us implement a foreign trait on a foreign type.
 struct Wrapper (Vec<String>)
 
-impl fmt.Display for Wrapper:
+impl fmt.Display for Wrapper
     fn fmt (&self) (f: &mut fmt.Formatter) -> fmt.Result:
         write! f "[{}]" (self.0 <- join ", ")
 
@@ -7650,14 +7652,14 @@ Returning a closure needs a type for it, and a closure's type has no name. `impl
 
 ## 20.5 Macros
 
-A macro is code that writes code at compile time. `println!`, `vec!` and `#[derive]` are macros; the `!` and the `#[…]` are how you tell. A *declarative* macro is defined with `macro_rules!` as a set of patterns and what each expands to:
+A macro is code that writes code at compile time. `println!`, `vec!` and `#[derive]` are macros; the `!` and the `#[…]` are how you tell. A *declarative* macro is defined with `macro_rules~` as a set of patterns and what each expands to:
 
 ```
 // A declarative macro: pattern-matched at compile time. Both sides are
 // written in Harsh. The matcher is a parameter list -- one group per fragment,
 // a repetition of groups for a list -- and the transcriber is a `do:` block.
 #[macro_export]
-macro_rules! my_vec:
+macro_rules~ my_vec:
     ( $( ($x:expr) )* ) => do:
         do:
             let mut temp_vec = Vec.new$
@@ -7666,16 +7668,16 @@ macro_rules! my_vec:
 
 // Two arms, and a repetition that spans lines. The inner `do:` makes the
 // expansion a block with a value, as the Rust `{ { .. } }` would.
-macro_rules! sum:
+macro_rules~ sum:
     () => do: 0
     ($h:expr) => do: $h
     ( ($h:expr) $( ($t:expr) )* ) => do:
-        $h + sum! $( ($t) )*
+        $h + sum~ $( ($t) )*
 
 fn main$:
-    let v: Vec<u32> = my_vec! 1 2 3
+    let v: Vec<u32> = my_vec~ 1 2 3
     println! "{v:?}"
-    println! "{}" (sum! 1 2 3 4)
+    println! "{}" (sum~ 1 2 3 4)
 ```
 
 ```text
@@ -7693,8 +7695,9 @@ A macro whose body is markup — the `view!` of a web framework — is written t
 // A stand-in for a UI framework's `view!`: it swallows the markup and yields
 // unit, so this file compiles without a dependency. Only the spelling of the
 // call is the point here.
-macro_rules! view:
-    ( $($t:tt)* ) => do: ()
+macro_rules! view {
+    ( $($t:tt)* ) => { () };
+}
 
 fn main$:
     let count = 3
@@ -7723,8 +7726,9 @@ Dioxus writes its interface not as markup but as a tree of braces — an element
 ```
 // A stand-in for Dioxus's `rsx!`, as `view!` above: it swallows the tree and
 // yields unit.
-macro_rules! rsx:
-    ( $($t:tt)* ) => do: ()
+macro_rules! rsx {
+    ( $($t:tt)* ) => { () };
+}
 
 fn main$:
     let count = 3
@@ -7779,7 +7783,7 @@ fn main$:
 
 ## 20.6 What you have
 
-`unsafe:` for five operations the compiler cannot check, wrapped in safe functions that do the checking; `extern "C"` for foreign functions. Associated types for a trait with one choice per implementation; operator traits in `std.ops` with default type parameters; disambiguation by trait path and `<Type as Trait>`; supertraits; the newtype pattern for the orphan rule and for distinct types. Aliases, `!`, and `?Sized`. `fn` pointers, constructors as functions, `impl Fn` and `Box<dyn Fn>` for returned closures. `macro_rules!` written in Harsh on both sides, markup and brace-tree macros with Harsh holes, and where procedural macros come from.
+`unsafe:` for five operations the compiler cannot check, wrapped in safe functions that do the checking; `extern "C"` for foreign functions. Associated types for a trait with one choice per implementation; operator traits in `std.ops` with default type parameters; disambiguation by trait path and `<Type as Trait>`; supertraits; the newtype pattern for the orphan rule and for distinct types. Aliases, `!`, and `?Sized`. `fn` pointers, constructors as functions, `impl Fn` and `Box<dyn Fn>` for returned closures. `macro_rules~` written in Harsh on both sides, markup and brace-tree macros with Harsh holes, and where procedural macros come from.
 
 Next, and last: a multithreaded web server, built from the standard library alone — the book's closing project.
 
@@ -7976,7 +7980,7 @@ pub struct ThreadPool
 
 type Job = Box<dyn FnOnce$ + Send + 'static>
 
-impl ThreadPool:
+impl ThreadPool
     /// Create a new ThreadPool. `size` is the number of threads in the pool.
     ///
     /// # Panics
@@ -8003,7 +8007,7 @@ impl ThreadPool:
              <- send job
              <- unwrap$
 
-impl Drop for ThreadPool:
+impl Drop for ThreadPool
     fn drop (&mut self):
         drop (self <- sender <- take$)                    // close the channel: workers see Err and stop
 
@@ -8016,7 +8020,7 @@ struct Worker
     id: usize
     thread: Option<thread.JoinHandle<()>>
 
-impl Worker:
+impl Worker
     fn new (id: usize) (receiver: Arc<Mutex<mpsc.Receiver<Job>>>) -> Worker:
         let thread = thread.spawn move ||:
             loop:
@@ -8082,10 +8086,10 @@ enum Shape                           // a union of the three forms
     Circle f64                       // tuple
     Rect\ w: f64, h: f64             // record, inline (or with the fields beneath)
 
-trait Area:                          // a trait is a block
+trait Area                          // a trait is a block
     fn area (&self) -> f64
 
-impl Area for Shape:
+impl Area for Shape
     fn area (&self) -> f64:
         match self:                  // arms: one per line, no commas
             Shape.Empty => 0.0
@@ -8158,6 +8162,7 @@ Point { x: 1.0, y: 2.0 } Size { w: 3.0, h: 4.0 } 1.5 9.14 5 12 8 big counts: 2 4
 - An application binds tighter than `<-`: `greet "a" <- to_uppercase$` applies `greet` first, and the next arrow or an operator ends the arguments; parentheses go round an argument that holds an arrow, `f (x <- g$)`, never round the application. A pipe is the exception: its sides are atoms, so `(f x) |> g`. (§2.6, §13.3)
 - A name written tight against a `(` is an error. (§20.5)
 - Parentheses make a tuple (the comma does it), set precedence, or group — and nothing else. (§20.5)
+- A block's opener says how its entries end: **no mark** after a header that ends itself (`struct`, `enum`, `union`, `impl`, `trait`, `mod`, `extern`), **`\`** for a comma-separated list, **`:`** or **`do:`** for statements, **`#:`** for a grouping whose grammar is its author's. A construct that already has a spelling keeps it — `struct Point #:` is refused. (§2.6, §5.1, §20)
 - Brackets index, never apply: `arr[1]` is part of its atom (`f arr[1]` passes the element); `arr [1]` is the same index but is refused inside an application; an array argument is isolated, `f ([1, 2])`. (§2.6)
 - `<-` reaches into a value: a field, a method. `.` walks a path: a module, a type, an item. A tuple index keeps its dot, `d.0`. (§2.6, §5.1)
 - A macro applies like a function, its `!` glued to its name: `vec! [1, 2]`, `println! "{x}"`. (§2.6)

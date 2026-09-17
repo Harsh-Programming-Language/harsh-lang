@@ -49,7 +49,7 @@ $ hrs test
 running 1 test
 test target/hrs/lib.rs - add_one (line 10) ... ok
 
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.22s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.18s
 ```
 
 `cargo doc --open` renders every `///` and `//!` in the crate as HTML, with the Markdown inside them — headings, code blocks, links — laid out. The conventional sections are `# Examples`, `# Panics` (when the function can), `# Errors` (what `Err`s it returns) and `# Safety` (for `unsafe` functions). The example in the `///` is Harsh, like everything else in the file, and `cargo test` *runs it* — every code block in a doc comment is a test, so documentation cannot drift from the code without failing the build.
@@ -67,7 +67,7 @@ pub use self.kinds.PrimaryColor
 pub use self.kinds.SecondaryColor
 pub use self.utils.mix
 
-pub mod kinds:
+pub mod kinds
     /// The primary colors according to the RYB color model.
     #[derive Debug Clone Copy]
     pub enum PrimaryColor
@@ -83,7 +83,7 @@ pub mod kinds:
         Green
         Purple
 
-pub mod utils:
+pub mod utils
     use crate.kinds.*
 
     /// Combines two primary colors in equal amounts to create a secondary color.

@@ -144,7 +144,7 @@ Diagnostic remapping verified on three simultaneous errors across three lines, i
 ## Known gaps
 
 - Indented closure bodies cannot work, since a closure body inside a call sits within brackets where layout is suppressed. The brace form works.
-- `macro_rules!` definitions are untested.
+- `macro_rules~` definitions are untested.
 - `else if` chains beyond one level are untested.
 - Nested `.( … )` groups more than one level deep in a use tree are handled but only lightly exercised.
 - `else` emits on its own line after the closing brace. Valid, but rustfmt would join it.

@@ -62,7 +62,7 @@ this function is unsafe to call
 `unsafe fn dangerous$` is a function whose *caller* must uphold some contract, and may only be called from an `unsafe:` block. `split_at_mut` is the pattern that matters: a *safe* function that uses unsafe code inside, after checking the contract itself. Two mutable slices into one vector cannot be expressed to the borrow checker, so the function takes a raw pointer, asserts that `mid` is in range, and builds the slices from raw parts inside `unsafe:` — and its callers never see the keyword, because the function has done the reasoning and stands behind it. This is how the standard library is written, and the discipline to copy: keep `unsafe` small, wrap it in a safe interface, and write down the invariant it depends on.
 
 ```
-extern "C":                             // a foreign block: a layout block like any other
+extern "C"                             // a foreign block: a layout block like any other
     fn abs (input: i32) -> i32           // a foreign function has no body; the `;` is supplied
 
 static mut COUNTER: u32 = 0             // a mutable global: reading or writing it is unsafe
@@ -98,7 +98,7 @@ Chapter 13 showed `Iterator`'s `type Item`. Here is a type implementing it:
 struct Counter
     count: u32
 
-impl Iterator for Counter:
+impl Iterator for Counter
     type Item = u32                       // the associated type: what `next` yields
 
     fn next (&mut self) -> Option<Self.Item>:
@@ -138,7 +138,7 @@ struct Point
     x: i32
     y: i32
 
-impl Add for Point:
+impl Add for Point
     type Output = Point
 
     fn add (self) (other: Point) -> Point:
@@ -148,7 +148,7 @@ struct Millimeters u32
 struct Meters u32
 
 // The default type parameter, `Rhs = Self`, overridden: add a different type.
-impl Add<Meters> for Millimeters:
+impl Add<Meters> for Millimeters
     type Output = Millimeters
 
     fn add (self) (other: Meters) -> Millimeters:
@@ -173,36 +173,36 @@ Point { x: 3, y: 3 }
 Two traits may define a method with the same name, and a type may implement both, and have an inherent method of that name as well:
 
 ```
-trait Pilot:
+trait Pilot
     fn fly (&self)
 
-trait Wizard:
+trait Wizard
     fn fly (&self)
 
 struct Human
 
-impl Pilot for Human:
+impl Pilot for Human
     fn fly (&self):
         println! "This is your captain speaking."
 
-impl Wizard for Human:
+impl Wizard for Human
     fn fly (&self):
         println! "Up!"
 
-impl Human:
+impl Human
     fn fly (&self):
         println! "*waving arms furiously*"
 
-trait Animal:
+trait Animal
     fn baby_name$ -> String
 
 struct Dog
 
-impl Dog:
+impl Dog
     fn baby_name$ -> String:
         String.from "Spot"
 
-impl Animal for Dog:
+impl Animal for Dog
     fn baby_name$ -> String:
         String.from "puppy"
 
@@ -233,7 +233,7 @@ A trait may require another:
 use std.fmt
 
 // A supertrait: OutlinePrint requires Display, and may use it.
-trait OutlinePrint: fmt.Display:
+trait OutlinePrint: fmt.Display
     fn outline_print (&self):
         let output = self <- to_string$
         let len = output <- len$
@@ -247,7 +247,7 @@ struct Point
     x: i32
     y: i32
 
-impl fmt.Display for Point:
+impl fmt.Display for Point
     fn fmt (&self) (f: &mut fmt.Formatter) -> fmt.Result:
         write! f "({}, {})" (self <- x) (self <- y)
 
@@ -255,7 +255,7 @@ impl OutlinePrint for Point {}
 // The newtype pattern: a local wrapper lets us implement a foreign trait on a foreign type.
 struct Wrapper (Vec<String>)
 
-impl fmt.Display for Wrapper:
+impl fmt.Display for Wrapper
     fn fmt (&self) (f: &mut fmt.Formatter) -> fmt.Result:
         write! f "[{}]" (self.0 <- join ", ")
 
@@ -393,14 +393,14 @@ Returning a closure needs a type for it, and a closure's type has no name. `impl
 
 ## 20.5 Macros
 
-A macro is code that writes code at compile time. `println!`, `vec!` and `#[derive]` are macros; the `!` and the `#[…]` are how you tell. A *declarative* macro is defined with `macro_rules!` as a set of patterns and what each expands to:
+A macro is code that writes code at compile time. `println!`, `vec!` and `#[derive]` are macros; the `!` and the `#[…]` are how you tell. A *declarative* macro is defined with `macro_rules~` as a set of patterns and what each expands to:
 
 ```
 // A declarative macro: pattern-matched at compile time. Both sides are
 // written in Harsh. The matcher is a parameter list -- one group per fragment,
 // a repetition of groups for a list -- and the transcriber is a `do:` block.
 #[macro_export]
-macro_rules! my_vec:
+macro_rules~ my_vec:
     ( $( ($x:expr) )* ) => do:
         do:
             let mut temp_vec = Vec.new$
@@ -409,16 +409,16 @@ macro_rules! my_vec:
 
 // Two arms, and a repetition that spans lines. The inner `do:` makes the
 // expansion a block with a value, as the Rust `{ { .. } }` would.
-macro_rules! sum:
+macro_rules~ sum:
     () => do: 0
     ($h:expr) => do: $h
     ( ($h:expr) $( ($t:expr) )* ) => do:
-        $h + sum! $( ($t) )*
+        $h + sum~ $( ($t) )*
 
 fn main$:
-    let v: Vec<u32> = my_vec! 1 2 3
+    let v: Vec<u32> = my_vec~ 1 2 3
     println! "{v:?}"
-    println! "{}" (sum! 1 2 3 4)
+    println! "{}" (sum~ 1 2 3 4)
 ```
 
 ```text
@@ -436,8 +436,9 @@ A macro whose body is markup — the `view!` of a web framework — is written t
 // A stand-in for a UI framework's `view!`: it swallows the markup and yields
 // unit, so this file compiles without a dependency. Only the spelling of the
 // call is the point here.
-macro_rules! view:
-    ( $($t:tt)* ) => do: ()
+macro_rules! view {
+    ( $($t:tt)* ) => { () };
+}
 
 fn main$:
     let count = 3
@@ -466,8 +467,9 @@ Dioxus writes its interface not as markup but as a tree of braces — an element
 ```
 // A stand-in for Dioxus's `rsx!`, as `view!` above: it swallows the tree and
 // yields unit.
-macro_rules! rsx:
-    ( $($t:tt)* ) => do: ()
+macro_rules! rsx {
+    ( $($t:tt)* ) => { () };
+}
 
 fn main$:
     let count = 3
@@ -522,6 +524,6 @@ fn main$:
 
 ## 20.6 What you have
 
-`unsafe:` for five operations the compiler cannot check, wrapped in safe functions that do the checking; `extern "C"` for foreign functions. Associated types for a trait with one choice per implementation; operator traits in `std.ops` with default type parameters; disambiguation by trait path and `<Type as Trait>`; supertraits; the newtype pattern for the orphan rule and for distinct types. Aliases, `!`, and `?Sized`. `fn` pointers, constructors as functions, `impl Fn` and `Box<dyn Fn>` for returned closures. `macro_rules!` written in Harsh on both sides, markup and brace-tree macros with Harsh holes, and where procedural macros come from.
+`unsafe:` for five operations the compiler cannot check, wrapped in safe functions that do the checking; `extern "C"` for foreign functions. Associated types for a trait with one choice per implementation; operator traits in `std.ops` with default type parameters; disambiguation by trait path and `<Type as Trait>`; supertraits; the newtype pattern for the orphan rule and for distinct types. Aliases, `!`, and `?Sized`. `fn` pointers, constructors as functions, `impl Fn` and `Box<dyn Fn>` for returned closures. `macro_rules~` written in Harsh on both sides, markup and brace-tree macros with Harsh holes, and where procedural macros come from.
 
 Next, and last: a multithreaded web server, built from the standard library alone — the book's closing project.

@@ -2,24 +2,24 @@ use std.collections.HashMap
 use std.fmt
 const MAX_DEPTH: usize = 8
 static GREETING: &str = "tokenizing"
-mod geometry:
+mod geometry
     #[derive Debug Clone Copy PartialEq]
     pub struct Vec2
         pub x: f64
         pub y: f64
-    impl Vec2:
+    impl Vec2
         pub fn dot (self) (o: Vec2) -> f64:
             self <- x * o <- x + self <- y * o <- y
-pub trait Shape:
+pub trait Shape
     fn area (&self) -> f64
     fn describe (&self) -> String:
         format! "shape with area {:.2}" (self <- area$)
 pub struct Circle
     r: f64
-impl Shape for Circle:
+impl Shape for Circle
     fn area (&self) -> f64:
         3.14159265358979 * self <- r * self <- r
-impl fmt.Display for Circle:
+impl fmt.Display for Circle
     fn fmt (&self) (f: &mut fmt.Formatter<'_>) -> fmt.Result:
         write! f "Circle(r={})" (self <- r)
 #[derive Debug]

@@ -15,7 +15,7 @@ enum ShirtColor
 struct Inventory
     shirts: Vec<ShirtColor>
 
-impl Inventory:
+impl Inventory
     fn giveaway (&self) (user_preference: Option<ShirtColor>) -> ShirtColor:
         user_preference <- unwrap_or_else (|| self <- most_stocked$)
 
@@ -340,7 +340,7 @@ fn main$:
 An iterator produces a sequence of values, one at a time, on request. The whole of the `Iterator` trait that matters is one method:
 
 ```
-pub trait Iterator:
+pub trait Iterator
     type Item
     fn next (&mut self) -> Option<Self.Item>
 ```
@@ -741,7 +741,7 @@ pub struct Config
     pub file_path: String
     pub ignore_case: bool
 
-impl Config:
+impl Config
     // Take the iterator itself: no clones, and the argument list is consumed as it is read.
     pub fn build (mut args: impl Iterator<Item = String>) -> Result<Config, &'static str>:
         args <- next$                                   // the program name

@@ -39,6 +39,12 @@ pub enum BlockKind {
     /// The statements of a repetition `$( .. )*` in a transcriber: every one
     /// takes `;`, the last included
     Rep,
+    /// A `#:` block: Harsh writes the braces and the entries by line, and
+    /// **no separator at all** between them -- for a grouping whose grammar
+    /// is its author's, where a comma or a `;` would be refused
+    /// (`quick_error!`'s attribute lists are the case that asked for it;
+    /// 2026-09-17, `docs/dev/MACRO-DESIGN.md`).
+    Bare,
     /// A struct literal, `Point:` in expression position: `field = expr`
     /// lines (emitted `field: expr,`), a bare `field` (shorthand), `..base`
     Lit,
@@ -192,6 +198,19 @@ fn opens_block(toks: &[Token]) -> Option<bool> {
 fn decl_header(toks: &[Token]) -> bool {
     let sig: Vec<&Token> = toks.iter().filter(|t| !t.is_comment()).collect();
     let mut i = 0;
+    // `extern "C"` is a header in its own right, but `extern` is also a
+    // modifier (`extern crate`, `pub extern fn`), so it is recognised before
+    // the modifier skip eats it.
+    let foreign_block = sig
+        .first()
+        .map_or(false, |t| t.is_kw("extern") || t.text == "extern")
+        && sig.get(1).map_or(true, |t| t.kind == Tk::Str);
+    if foreign_block {
+        return !matches!(
+            sig.last().map(|t| &t.kind),
+            Some(Tk::Semi) | Some(Tk::Colon) | Some(Tk::Backslash)
+        );
+    }
     while i < sig.len() && sig[i].kind == Tk::Ident && crate::rules::MODIFIERS.contains(&sig[i].text.as_str()) {
         i += 1;
         if i < sig.len() && sig[i].kind == Tk::Open('(') {
@@ -203,7 +222,16 @@ fn decl_header(toks: &[Token]) -> bool {
     }
     i < sig.len()
         && sig[i].kind == Tk::Ident
-        && matches!(sig[i].text.as_str(), "struct" | "enum" | "union")
+        && matches!(
+            sig[i].text.as_str(),
+            // A declaration's header takes one name (and its generics, and a
+            // `[where …]`), so what follows deeper can only be the body: no
+            // mark is needed, and none is written. `impl`, `trait`, `mod` and
+            // `extern` joined `struct`/`enum`/`union` here on 2026-09-17 --
+            // their bodies are items, and a mark that never varies carries no
+            // information (`docs/dev/MACRO-DESIGN.md`, the block kit).
+            "struct" | "enum" | "union" | "impl" | "trait" | "mod" | "extern"
+        )
         && !matches!(sig.last().map(|t| &t.kind), Some(Tk::Semi) | Some(Tk::Colon) | Some(Tk::Backslash))
 }
 
@@ -443,6 +471,17 @@ fn logical_lines(pls: Vec<(PLine, usize)>) -> Vec<Line> {
 fn classify(header: &[Token], outer: BlockKind) -> BlockKind {
     let sig: Vec<&Token> = header.iter().filter(|t| !t.is_comment()).collect();
 
+    // `#:` first: it is a mark on the header, so it decides the kind before
+    // any keyword in the line does. A construct that has its own spelling is
+    // refused by `check_hash_colon_head`, not read as a `#:` block.
+    if sig.len() >= 2
+        && sig[sig.len() - 1].kind == Tk::Colon
+        && sig[sig.len() - 2].text == "#"
+        && sig[sig.len() - 2].span.hi == sig[sig.len() - 1].span.lo
+    {
+        return BlockKind::Bare;
+    }
+
     // `macro_rules! name:` holds arms; `name! do:` is a macro body written in
     // Harsh (HSX when its first line begins with `<`, decided by the caller).
     if sig.first().map_or(false, |t| t.is_kw("macro_rules")) {
@@ -460,6 +499,7 @@ fn classify(header: &[Token], outer: BlockKind) -> BlockKind {
         return BlockKind::Tree;
     }
 
+
     // A header ending in `\`: a declaration's field list (`struct Point\`,
     // or a record variant inside an enum), else a literal's. A declaration
     // header without a mark is a field list too.
@@ -468,7 +508,12 @@ fn classify(header: &[Token], outer: BlockKind) -> BlockKind {
         return if is_decl || outer == BlockKind::Fields { BlockKind::Fields } else { BlockKind::Lit };
     }
     if decl_header(header) {
-        return BlockKind::Fields;
+        // `struct`/`enum`/`union` bodies are fields, separated by `,`;
+        // `impl`/`trait`/`mod`/`extern` bodies are items, separated by nothing.
+        let item_body = sig.iter().any(|t| {
+            t.kind == Tk::Ident && matches!(t.text.as_str(), "impl" | "trait" | "mod" | "extern")
+        });
+        return if item_body { BlockKind::Items } else { BlockKind::Fields };
     }
     let mut depth = 0i32;
     let mut eq_at = None;
@@ -547,6 +592,11 @@ fn check_old_marks(ln: &Line, outer: BlockKind) -> Result<(), LayoutError> {
     if last.kind != Tk::Colon {
         return Ok(());
     }
+    // A header ending in `#:` is the pseudo-block mark, not an old `:`:
+    // `check_hash_colon_head` reports it, with the message that fits.
+    if sig.len() >= 2 && sig[sig.len() - 2].text == "#" && sig[sig.len() - 2].span.hi == last.span.lo {
+        return Ok(());
+    }
     let mut k = 0;
     while k < sig.len() && sig[k].kind == Tk::Ident && crate::rules::MODIFIERS.contains(&sig[k].text.as_str()) && !sig[k].is_kw("const") {
         k += 1;
@@ -563,6 +613,24 @@ fn check_old_marks(ln: &Line, outer: BlockKind) -> Result<(), LayoutError> {
             msg: format!(
                 "a declaration's body follows its name with no mark: `{kw} {name}` with the fields beneath, or `{kw} {name}\\ a: T, b: U` inline",
                 kw = sig[k].text
+            ),
+            span: last.span,
+        });
+    }
+    // Item bodies lost their `:` on 2026-09-17: the header ends itself, as a
+    // declaration's does, and one spelling per construct.
+    if k < sig.len()
+        && sig[k].kind == Tk::Ident
+        && matches!(sig[k].text.as_str(), "impl" | "trait" | "mod" | "extern")
+    {
+        let head: String = sig[k..sig.len() - 1]
+            .iter()
+            .map(|t| t.text.as_str())
+            .collect::<Vec<_>>()
+            .join(" ");
+        return Err(LayoutError {
+            msg: format!(
+                "an item body follows its header with no mark: `{head}` with the items beneath it"
             ),
             span: last.span,
         });
@@ -585,6 +653,36 @@ fn check_old_marks(ln: &Line, outer: BlockKind) -> Result<(), LayoutError> {
 
 /// The same for an inline `Point: x = 1` in a line: every colon that reads
 /// as a literal's opener names `\`.
+/// `#:` is for a grouping Harsh does not define. A construct that already has
+/// a spelling keeps it -- one spelling per construct -- so `struct Point #:`
+/// is refused, naming the spelling it should have used (2026-09-17).
+fn check_hash_colon_head(ln: &Line) -> Result<(), LayoutError> {
+    let sig: Vec<&Token> = ln.toks.iter().filter(|t| !t.is_comment()).collect();
+    if sig.len() < 3 {
+        return Ok(());
+    }
+    let (colon, hash) = (sig[sig.len() - 1], sig[sig.len() - 2]);
+    if colon.kind != Tk::Colon || hash.text != "#" || hash.span.hi != colon.span.lo {
+        return Ok(());
+    }
+    const OWN: [&str; 14] = [
+        "fn", "struct", "enum", "union", "impl", "trait", "mod", "extern", "macro_rules",
+        "if", "match", "while", "for", "loop",
+    ];
+    if let Some(kw) = sig.iter().find(|t| t.kind == Tk::Ident && OWN.contains(&t.text.as_str())) {
+        let how = match kw.text.as_str() {
+            "struct" | "enum" | "union" => "the fields beneath it, or `\\` for an inline list",
+            "impl" | "trait" | "mod" | "extern" | "macro_rules" => "the items beneath it",
+            _ => "`:` and the block beneath it",
+        };
+        return Err(LayoutError {
+            msg: format!("`{}` already has a spelling: write {how}", kw.text),
+            span: hash.span,
+        });
+    }
+    Ok(())
+}
+
 fn check_old_inline_literal(ln: &Line, outer: BlockKind) -> Result<(), LayoutError> {
     let value_position = matches!(outer, BlockKind::Stmts | BlockKind::Macro | BlockKind::Rep | BlockKind::Lit | BlockKind::Arms);
     let sig: Vec<&Token> = ln.toks.iter().filter(|t| !t.is_comment()).collect();
@@ -894,6 +992,9 @@ fn expand_item(toks: &[Token], from: usize, to: usize, outer: BlockKind, proto: 
     };
     let header = sub_line(toks, from, colon + 1, proto);
     let kind = classify(&header.toks, outer);
+    if kind == BlockKind::Bare {
+        check_hash_colon_head(&header)?;
+    }
 
     // Where the body ends: at `else` for an `if`, at a foreign separator, or at
     // the end of the item.
@@ -1021,12 +1122,41 @@ pub fn build(toks: Vec<Token>) -> Result<Vec<Node>, LayoutError> {
     build_with(toks, &arities)
 }
 
+/// Harsh's own declarative macros are defined with `macro_rules~` and Rust's
+/// with `macro_rules!` (2026-09-17: two worlds, `docs/dev/MACRO-DESIGN.md`).
+/// Everything downstream was written for the `!` spelling, so the mark is
+/// normalised here, once, at the door: from this point a definition is a
+/// definition and the rest of the pipeline does not care which world wrote
+/// it. The token keeps its span, so errors still point at the `~` the author
+/// typed.
+///
+/// A call is marked the same way -- `twice~ 21` against `println! "…"` -- so a
+/// reader and the transpiler can tell the two worlds apart without hunting
+/// for the definition. Harsh has no `~` operator, and the mark is written
+/// tight against the name, so there is nothing else it could be.
+///
+/// **Interim, and deliberately so**: today a `~` macro behaves exactly like a
+/// `!` one -- same matchers, same transcribers, same emission -- and this
+/// function is what makes that true. When Harsh expands its own macros, this
+/// is the fork: `~` goes to the expander, `!` goes on to Rust untouched.
+pub fn normalise_macro_mark(toks: &mut [Token]) {
+    for i in 1..toks.len() {
+        let tight = toks[i - 1].span.hi == toks[i].span.lo;
+        let after_name = toks[i - 1].kind == Tk::Ident;
+        if toks[i].text == "~" && after_name && (tight || toks[i - 1].is_kw("macro_rules")) {
+            toks[i].text = "!".to_string();
+        }
+    }
+}
+
 /// Build with arities known from beyond this file -- the driver collects them
 /// across the project so `$` works on functions defined in other modules.
 pub fn build_with(
     toks: Vec<Token>,
     arities: &std::collections::HashMap<String, usize>,
 ) -> Result<Vec<Node>, LayoutError> {
+    let mut toks = toks;
+    normalise_macro_mark(&mut toks);
     let mut lines = logical_lines(physical_lines(toks));
     // The pipes become ordinary calls (or closures) before anything else
     // looks at the tokens, so the rest of the pipeline needs no knowledge of
@@ -1779,6 +1909,7 @@ fn build_block(lines: &[Line], idx: &mut usize, min_indent: usize, outer: BlockK
         };
         match opens {
             None => {
+                check_hash_colon_head(ln)?;
                 check_old_inline_literal(ln, outer)?;
                 if inline_colon(&ln.toks, 0, ln.toks.len(), outer).is_some() {
                     let mut nodes = expand_item(&ln.toks, 0, ln.toks.len(), outer, ln)?;
@@ -1818,6 +1949,7 @@ fn build_block(lines: &[Line], idx: &mut usize, min_indent: usize, outer: BlockK
                 }
                 check_fn_params(&ln.toks)?;
                 check_old_marks(ln, outer)?;
+                check_hash_colon_head(ln)?;
                 let kind = classify(&ln.toks, outer);
                 let body_indent = lines.get(*idx).map(|l| l.indent).unwrap_or(0);
                 if *idx >= lines.len() || body_indent <= ln.indent {

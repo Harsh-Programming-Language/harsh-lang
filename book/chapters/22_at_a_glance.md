@@ -19,10 +19,10 @@ enum Shape                           // a union of the three forms
     Circle f64                       // tuple
     Rect\ w: f64, h: f64             // record, inline (or with the fields beneath)
 
-trait Area:                          // a trait is a block
+trait Area                          // a trait is a block
     fn area (&self) -> f64
 
-impl Area for Shape:
+impl Area for Shape
     fn area (&self) -> f64:
         match self:                  // arms: one per line, no commas
             Shape.Empty => 0.0
@@ -95,6 +95,7 @@ Point { x: 1.0, y: 2.0 } Size { w: 3.0, h: 4.0 } 1.5 9.14 5 12 8 big counts: 2 4
 - An application binds tighter than `<-`: `greet "a" <- to_uppercase$` applies `greet` first, and the next arrow or an operator ends the arguments; parentheses go round an argument that holds an arrow, `f (x <- g$)`, never round the application. A pipe is the exception: its sides are atoms, so `(f x) |> g`. (§2.6, §13.3)
 - A name written tight against a `(` is an error. (§20.5)
 - Parentheses make a tuple (the comma does it), set precedence, or group — and nothing else. (§20.5)
+- A block's opener says how its entries end: **no mark** after a header that ends itself (`struct`, `enum`, `union`, `impl`, `trait`, `mod`, `extern`), **`\`** for a comma-separated list, **`:`** or **`do:`** for statements, **`#:`** for a grouping whose grammar is its author's. A construct that already has a spelling keeps it — `struct Point #:` is refused. (§2.6, §5.1, §20)
 - Brackets index, never apply: `arr[1]` is part of its atom (`f arr[1]` passes the element); `arr [1]` is the same index but is refused inside an application; an array argument is isolated, `f ([1, 2])`. (§2.6)
 - `<-` reaches into a value: a field, a method. `.` walks a path: a module, a type, an item. A tuple index keeps its dot, `d.0`. (§2.6, §5.1)
 - A macro applies like a function, its `!` glued to its name: `vec! [1, 2]`, `println! "{x}"`. (§2.6)

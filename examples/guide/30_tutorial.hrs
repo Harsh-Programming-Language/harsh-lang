@@ -11,7 +11,7 @@ struct Report
     counts: Vec<(String, usize)>
     format: Format
 
-impl Report:
+impl Report
     fn new (counts: Vec<(String, usize)>) (format: Format) -> Self:
         Report\ counts, format
 

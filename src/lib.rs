@@ -18,5 +18,6 @@ pub mod juxt;
 pub mod layout;
 pub mod lex;
 pub mod remap;
+pub mod rawzone;
 pub mod rules;
 pub mod unbrace;

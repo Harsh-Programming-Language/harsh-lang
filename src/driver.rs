@@ -150,16 +150,18 @@ impl Project {
         for (u, src) in units.iter().zip(sources) {
             let rel = u.source.strip_prefix(&src_root).unwrap_or(&u.source);
             let rust = out_src.join(rel.with_extension("rs"));
-            let toks = crate::lex::lex(&src)
+            let (work, zs) = crate::rawzone::prepare(&src);
+            let toks = crate::lex::lex(&work)
                 .map_err(|e| render_error(&u.source, &src, e.span, &e.msg))?;
             let tree = crate::layout::build_with(toks, &arities)
                 .map_err(|e| render_error(&u.source, &src, e.span, &e.msg))?;
-            let mut em = crate::emit::Emitter::new(&src);
+            let mut em = crate::emit::Emitter::new(&work);
             em.program(&tree);
             // The exported crate is built by cargo alone, doc tests included,
             // so its doc examples are translated here as well.
-            crate::docex::to_rust_in(&mut em.out, &mut em.map, &src)
+            crate::docex::to_rust_in(&mut em.out, &mut em.map, &work)
                 .map_err(|(span, msg)| render_error(&u.source, &src, span, &msg))?;
+            crate::rawzone::restore(&mut em.out, &src, &zs);
             if let Some(d) = rust.parent() {
                 fs::create_dir_all(d).map_err(|e| e.to_string())?;
             }
@@ -319,9 +321,12 @@ pub fn transpile_one(
     rust: &Path,
     map: &Path,
 ) -> Result<PathBuf, String> {
-    let toks = crate::lex::lex(src).map_err(|e| render_error(from, src, e.span, &e.msg))?;
+    // A Rust `macro_rules!` is a zone of Rust: blanked out here, put back
+    // verbatim after the emitter has run (`rawzone`).
+    let (work, zs) = crate::rawzone::prepare(src);
+    let toks = crate::lex::lex(&work).map_err(|e| render_error(from, src, e.span, &e.msg))?;
     let arities = crate::juxt::collect_arities(&toks);
-    transpile_tokens(toks, src, from, rust, map, &arities)
+    transpile_tokens(toks, &work, from, rust, map, &arities, &zs, src)
 }
 
 /// Transpile one file with arities known from the whole project.
@@ -332,8 +337,9 @@ pub fn transpile_one_with(
     map: &Path,
     arities: &std::collections::HashMap<String, usize>,
 ) -> Result<PathBuf, String> {
-    let toks = crate::lex::lex(src).map_err(|e| render_error(from, src, e.span, &e.msg))?;
-    transpile_tokens(toks, src, from, rust, map, arities)
+    let (work, zs) = crate::rawzone::prepare(src);
+    let toks = crate::lex::lex(&work).map_err(|e| render_error(from, src, e.span, &e.msg))?;
+    transpile_tokens(toks, &work, from, rust, map, arities, &zs, src)
 }
 
 fn transpile_tokens(
@@ -343,6 +349,8 @@ fn transpile_tokens(
     rust: &Path,
     map: &Path,
     arities: &std::collections::HashMap<String, usize>,
+    zones: &[crate::rawzone::Zone],
+    original: &str,
 ) -> Result<PathBuf, String> {
     let tree = crate::layout::build_with(toks, arities)
         .map_err(|e| render_error(from, src, e.span, &e.msg))?;
@@ -358,6 +366,8 @@ fn transpile_tokens(
     // comment a comment everywhere else in the transpiler.
     crate::docex::to_rust_in(&mut em.out, &mut em.map, src)
         .map_err(|(span, msg)| render_error(from, src, span, &msg))?;
+    // The Rust zones go back where their markers stand, byte for byte.
+    crate::rawzone::restore(&mut em.out, original, zones);
 
     if let Some(d) = rust.parent() {
         fs::create_dir_all(d).map_err(|e| e.to_string())?;

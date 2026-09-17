@@ -292,7 +292,7 @@ struct Report
     counts: Vec<(String, usize)>
     format: Format
 
-impl Report:
+impl Report
     fn new (counts: Vec<(String, usize)>) (format: Format) -> Self:
         Report\ counts, format
 
@@ -357,6 +357,35 @@ Partial application (the pipes), inline blocks on one line, `while let`, labelle
 # Part two — the language
 
 ## Blocks
+
+### The four kinds, and what opens each
+
+A block's opener says how its entries end. There are four kinds, and every
+block in Harsh is one of them:
+
+| opener | the body | separator Harsh writes |
+|---|---|---|
+| *(no mark)* | items, after a header that ends itself — `struct`, `enum`, `union`, `impl`, `trait`, `mod`, `extern` | none (or `,` for a declaration's fields) |
+| `\` | a comma-separated list: a literal's fields, an inline declaration, a macro's entries | `,` |
+| `:` / `do:` | statements, and a tail value | `;` |
+| `#:` | a grouping whose grammar is its author's | none |
+
+`impl`, `trait`, `mod` and `extern` take no mark because nothing but a name
+can follow them, exactly as for `struct` and `enum`: the header ends itself,
+so what follows deeper can only be the body.
+
+```
+impl Point                          impl Point {
+    fn x (&self) -> f64:                fn x(&self) -> f64 {
+        self <- x                           self.x
+                                        }
+                                    }
+```
+
+`#:` is for a grouping Harsh does not define — a macro's DSL, most often. A
+construct that already has a spelling keeps it: `struct Point #:` is refused,
+naming the spelling it should have used, since there is one spelling per
+construct.
 
 ### Opening a block
 
@@ -1210,13 +1239,13 @@ match q:
 Item bodies take no separator, except that a declaration without a body gets a semicolon.
 
 ```
-pub trait Shape:
+pub trait Shape
     fn area (&self) -> f64
 
     fn describe (&self) -> String:
         format! "shape with area {:.2}" (self <- area$)
 
-impl Shape for Circle:
+impl Shape for Circle
     fn area (&self) -> f64:
         3.14159 * self <- r * self <- r
 ```
@@ -1228,11 +1257,11 @@ impl Shape for Circle:
 - A generic `impl` and a trait `impl` for a tuple struct:
 
 ```
-impl<T: std.fmt.Debug> Generic<T>:
+impl<T: std.fmt.Debug> Generic<T>
     fn show (&self) -> String:
         format! "{:?}" (self <- inner)
 
-impl Area for Tuple:
+impl Area for Tuple
     fn area (&self) -> f64:
         (self.0 * self.1) as f64
 ```
@@ -1240,12 +1269,12 @@ impl Area for Tuple:
 ### Modules
 
 ```
-mod geometry:
+mod geometry
     pub struct Vec2
         pub x: f64
         pub y: f64
 
-    impl Vec2:
+    impl Vec2
         pub fn dot (self) (o: Vec2) -> f64:
             self <- x * o <- x + self <- y * o <- y
 ```
@@ -1347,7 +1376,7 @@ format! "Hello, {name}"       →  format!("Hello, {name}")
 | `x`, `42`, `"s"`, `'c'` | `a + 1`, `*c`, `&w`, `!flag` |
 | `Some`, `Point.new`, `std.io.stdout` | `w = *width` (named format argument) |
 | `(a + 1)`, `(g b)`, `t.0` — a group, or a tuple index | `\|x\| body` — a closure with an inline body |
-| `m!` — a macro name | `f(a, b)` — an argument list, which is an error |
+| `m~` — a macro name | `f(a, b)` — an argument list, which is an error |
 | `f$`, `s <- len$`, `(add 10)$` — an application to nothing | `f $` — the `$` is a suffix and is never spaced |
 
 - The rule that decides every row: **if it contains an operator, isolate it.** `count &w` is bitwise-and; `count (&w)` is a call. `render i w *c` is a multiplication; `render i w (*c)` is a call.
@@ -1359,7 +1388,7 @@ let f = (one) 3                  →  let f = (one)(3)
 ```
 
 - A parenthesised group may itself be the **head** of an application: `(add 10) 7` applies the closure that `add 10` returns, and `(add 10)$` applies it to nothing.
-- `$` is the one suffix. It means *apply to nothing* in a call — `main$`, `String.new$`, `v <- iter$ <- collect$`, `m!$` — and *no parameters* in a declaration, `fn main$:`. The two are the same rule read from either side. It is tight, like `!`; `f $` with a space is an error naming `f$`. Because `$` carries this meaning, `()` never has to: `f ()` passes the unit value, `Ok ()` is `Ok(())`, `tx <- send ()` sends unit, and there is no `(())`. (A macro transcriber's `$a` is a prefix, a metavariable, and is an atom there.)
+- `$` is the one suffix. It means *apply to nothing* in a call — `main$`, `String.new$`, `v <- iter$ <- collect$`, `m~$` — and *no parameters* in a declaration, `fn main$:`. The two are the same rule read from either side. It is tight, like `!`; `f $` with a space is an error naming `f$`. Because `$` carries this meaning, `()` never has to: `f ()` passes the unit value, `Ok ()` is `Ok(())`, `tx <- send ()` sends unit, and there is no `(())`. (A macro transcriber's `$a` is a prefix, a metavariable, and is an atom there.)
 
 ### The four uses of parentheses
 
@@ -1454,7 +1483,7 @@ f $                     `$` applies a name to nothing and is written tight again
 fn f ():                `()` is the unit value; a function with no parameters is `fn f$`
 ```
 
-- A prefix `$a` in a `macro_rules!` body is Rust's metavariable sigil and is an atom.
+- A prefix `$a` in a `macro_rules~` body is Rust's metavariable sigil and is an atom.
 
 ### Functions returning closures
 
@@ -1746,7 +1775,7 @@ async fn main$:
 ### Invocation forms
 
 ```
-println! "{} {}" a (twice! 4)      →  println!("{} {}", a, twice!(4))      juxtaposed
+println! "{} {}" a (twice~ 4)      →  println!("{} {}", a, twice!(4))      juxtaposed
 let s = format! "value={a}"        →  let s = format!("value={a}")                 a single argument
 let v = vec! [1, 2, 3]             →  let v = vec![1, 2, 3]                        bracket form, untouched
 let z = vec! [0u8; 4]              →  let z = vec![0u8; 4]                         `;` form, untouched
@@ -1759,18 +1788,20 @@ assert_eq! a 5                     →  assert_eq!(a, 5)
 - Macros follow the function rule exactly, with no exemption: one atom per argument, isolate anything that is not one. A pattern with a guard or an or-pattern is a multi-token argument like any other, so it is isolated — `matches! a (n if n > 3)` — and inside the isolating parens the ordinary rules apply, which is why `(Ok 7)` becomes `Ok(7)`.
 - This is the reason Rust and Julia give macros the same syntax as the language, where C gives them a foreign one: a macro call written in Harsh is checked against Harsh's rules, and whether the result means what the macro wants is the macro's business in Rust. The transpiler removes the parens and commas and puts them back; it does not need to know what `matches!` expects.
 - Rust call syntax written into a macro — `println!("{}", 1)` — is rejected, since under these rules it passes a single tuple. So is `matches! (a, n if n > 3)`, for the same reason.
-- The bracket and brace forms are Rust's and pass through: `vec! [0; 4]`, `quote! { … }`; inside a brace body nothing juxtaposes. A macro with a body of its own is written `name! do:` — see "Macro bodies" below.
+- The bracket and brace forms are Rust's and pass through: `vec! [0; 4]`, `quote! { … }`; inside a brace body nothing juxtaposes. A macro with a body of its own is written `name~ do:` — see "Macro bodies" below.
 
 ### Definitions
 
-Both sides of a `macro_rules!` are written in Harsh, and both follow rules already stated: a matcher is a parameter list, a transcriber is a block.
+A `macro_rules!` — with Rust's `!` — is a zone of Rust: the transpiler copies it out byte for byte and `hrs-from` copies one in the same way. It carries no Harsh opener, since its `{` … `}` delimit it and its body is laid out as Rust, not as Harsh. Its calls are still Harsh calls (`my_vec! 1 2 3` → `my_vec!(1, 2, 3)`); only the definition is foreign.
+
+Both sides of a `macro_rules~` are written in Harsh, and both follow rules already stated: a matcher is a parameter list, a transcriber is a block.
 
 ```
-macro_rules! twice:                                  macro_rules! twice {
+macro_rules~ twice:                                  macro_rules! twice {
     ($e:expr) => do: $e * 2                              ($e:expr) => { $e * 2 };
                                                      }
 
-macro_rules! my_vec:                                 macro_rules! my_vec {
+macro_rules~ my_vec:                                 macro_rules! my_vec {
     ( $( ($x:expr) )* ) => do:                           ( $($x:expr),* ) => {
         do:                                                  {
             let mut v = Vec.new$                                 let mut v = Vec::new();
@@ -1781,19 +1812,19 @@ macro_rules! my_vec:                                 macro_rules! my_vec {
                                                      }
 
 fn main$:                                            fn main() {
-    let v = my_vec! 1 2 3                                let v = my_vec!(1, 2, 3);
-    println! "{}" (twice! 21)                            println!("{}", twice!(21))
+    let v = my_vec~ 1 2 3                                let v = my_vec!(1, 2, 3);
+    println! "{}" (twice~ 21)                            println!("{}", twice!(21))
                                                      }
 ```
 
-- `macro_rules! name:` opens a block whose lines are arms; each arm ends where the next begins, and the `;` Rust wants between them comes from the layout. A written `;` or `,` after an arm is rejected, as a written `,` after a match arm is.
-- **The matcher is a parameter list.** A parenthesised fragment `($x:expr)` is one parameter; two or more are all grouped, `( ($a:expr) ($b:expr) )` → `( $a:expr, $b:expr )`; a repetition of groups is a comma-separated repetition, `( $( ($k:expr => $v:expr) )* )` → `( $( $k:expr => $v:expr ),* )`. It is the rule for `fn f (a: T) (b: U)`, applied a third time, and it is what makes the call `m! a b` and the matcher meet in Rust. The mapping applies to a matcher with a group at its top level; `( $x:expr )` and a `tt` matcher `( $( $arg:tt )* )` are the same in both languages, since `tt` matches anything, the commas a Harsh call produces included. A bracketed or braced matcher — `[ $elem:expr ; $n:expr ]` — is Rust's, exactly as `vec! [0u8; 4]` is on the call side.
+- `macro_rules~ name:` opens a block whose lines are arms; each arm ends where the next begins, and the `;` Rust wants between them comes from the layout. A written `;` or `,` after an arm is rejected, as a written `,` after a match arm is.
+- **The matcher is a parameter list.** A parenthesised fragment `($x:expr)` is one parameter; two or more are all grouped, `( ($a:expr) ($b:expr) )` → `( $a:expr, $b:expr )`; a repetition of groups is a comma-separated repetition, `( $( ($k:expr => $v:expr) )* )` → `( $( $k:expr => $v:expr ),* )`. It is the rule for `fn f (a: T) (b: U)`, applied a third time, and it is what makes the call `m~ a b` and the matcher meet in Rust. The mapping applies to a matcher with a group at its top level; `( $x:expr )` and a `tt` matcher `( $( $arg:tt )* )` are the same in both languages, since `tt` matches anything, the commas a Harsh call produces included. A bracketed or braced matcher — `[ $elem:expr ; $n:expr ]` — is Rust's, exactly as `vec! [0u8; 4]` is on the call side.
 - **The transcriber is a block**, `=> do:` with the body beneath or `=> do: expr` inline. Its lines follow the block rules: statements take `;`, a line with a top-level `=>` is an arm and takes `,`, and `$x` is an atom, so `push $x` is a call. A transcriber's braces are Rust's *delimiters*, not a block: an expansion that is several statements with a value writes its block, the inner `do:` above, as Rust writes `{ { … } }`. A transcriber may also be Rust's delimited group, `=> { … }`, for a DSL of its own (`quote!`'s output, say); that form is for such transcribers, not a place to write Rust's `if` and `match`. A bare `=> $e * 2` is an error naming the forms.
 - **A repetition** `$( … )*` that is the whole of its line repeats what its block holds — statements, each with its `;` — and may span lines: `$(` line-final, the body beneath, `)*` as its own line. One inside an expression follows the matcher's brick from the other side: `$( ($x) )*` is a list of arguments and becomes `$($x),*`; a repetition of bare tokens, `$($arg)*`, forwards `tt`s and is copied as it stands. A written separator, `$( … );*`, is an error.
 
 ### Macro bodies
 
-A macro invoked with a body — `tokio.select!`, a framework's `view!` or `rsx!` — is written `name! do:` with the body beneath, and is emitted `name! { … }`. What the body is depends on the shape of its first line.
+A macro invoked with a body — `tokio.select!`, a framework's `view!` or `rsx!` — is written `name~ do:` with the body beneath, and is emitted `name~ { … }`. What the body is depends on the shape of its first line.
 
 ```
 let winner = tokio.select! do:           let winner = tokio::select! {
@@ -1836,7 +1867,7 @@ rsx! do:                                              rsx! {
                                                       }
 ```
 
-- **Braces**, `name! { … }`, are the one-line form, as braces are everywhere: the body is Harsh, layout off, and it juxtaposes — `quote! { fn #name$ -> u32 { #body } }` emits `fn #name() -> u32 { #body }`, and `tokio.select! { n = slow "slow" => n, }` the call it names. There is no exemption: `f(x)` is an error inside a macro's braces as anywhere.
+- **Braces**, `name~ { … }`, are the one-line form, as braces are everywhere: the body is Harsh, layout off, and it juxtaposes — `quote! { fn #name$ -> u32 { #body } }` emits `fn #name() -> u32 { #body }`, and `tokio.select! { n = slow "slow" => n, }` the call it names. There is no exemption: `f(x)` is an error inside a macro's braces as anywhere.
 
 ## Attributes and comments
 
@@ -1872,7 +1903,7 @@ Harsh has one way to apply a name to arguments, and it is juxtaposition. A paren
 ```fragment
 f (a + b)   /   f x                 f(a + b)   /   f(x)
 Some (a + b)   /   Some n           patterns and constructors alike
-m! (a + b)   /   m! a               macros
+m~ (a + b)   /   m~ a               macros
 #[cfg (feature = "x")]              attributes
 fn f (a: T) (b: U)                  declarations
 Circle (f64)                        a variant's payload — the group is Rust's payload list and keeps its commas
@@ -2032,7 +2063,7 @@ The source map records one entry per token as byte offsets. The remapper rewrite
 | Tuple struct | `struct T (i32, i32)` / `T 3 4` | `struct T(i32, i32);` / `T(3, 4)` |
 | Record variant | `Rec:` + fields | `Rec { … }` |
 | Macro, bracket form | `vec! [0; 4]` | `vec![0; 4]` |
-| Macro definition | `macro_rules! m:` | `macro_rules! m {` |
+| Macro definition | `macro_rules~ m:` | `macro_rules~ m {` |
 | Pipe into closure | `x \|> (\|w\| f w)` | `(\|w\| f(w))(x)` |
 | Isolated closure, chained | `map (\|x\|:` + body + `) <- f$` | `map(\|x\| { … }).f()` |
 | Block opener synonym | `fn f$ do:` | `fn f() {` |

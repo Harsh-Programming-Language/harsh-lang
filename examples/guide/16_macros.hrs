@@ -1,10 +1,10 @@
-macro_rules! twice:
+macro_rules~ twice:
     ($e:expr) => do: $e * 2
 
 fn main$:
     let a = 5
     // juxtaposed: one atom per argument
-    println! "{} {}" a (twice! 4)
+    println! "{} {}" a (twice~ 4)
     // a string alone
     let s = format! "value={a}"
     // non-comma forms keep their brackets

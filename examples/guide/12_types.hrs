@@ -18,7 +18,7 @@ enum E
         a: i32
         b: i32
 
-impl E:
+impl E
     fn describe (&self) -> String:
         match self:
             E.Unit => "unit" <- to_string$
@@ -26,16 +26,16 @@ impl E:
             E.Rec\ a, b => format! "rec {a} {b}"
 
 // Traits: required and default methods
-trait Area:
+trait Area
     fn area (&self) -> f64
     fn double (&self) -> f64:
         self <- area$ * 2.0
 
-impl Area for Tuple:
+impl Area for Tuple
     fn area (&self) -> f64:
         (self.0 * self.1) as f64
 
-impl<T: std.fmt.Debug> Generic<T>:
+impl<T: std.fmt.Debug> Generic<T>
     fn show (&self) -> String:
         format! "{:?}" (self <- inner)
 

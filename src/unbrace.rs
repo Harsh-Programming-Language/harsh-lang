@@ -42,6 +42,21 @@ enum Kind {
 }
 
 pub fn convert(src: &str) -> Result<String, String> {
+    // A Rust `macro_rules!` is Rust on both sides of the boundary (2026-09-17,
+    // two worlds): it is copied into the Harsh file verbatim rather than
+    // converted, so the round trip is byte-exact for free. Harsh's own macros
+    // are `macro_rules~`, which this converter never writes.
+    let zones = crate::rawzone::zones(&crate::lex::lex_rust(src).map_err(|e| e.msg.clone())?);
+    if !zones.is_empty() {
+        let work = crate::rawzone::blank_out(src, &zones);
+        let mut out = convert_inner(&work)?;
+        crate::rawzone::restore(&mut out, src, &zones);
+        return Ok(out);
+    }
+    convert_inner(src)
+}
+
+fn convert_inner(src: &str) -> Result<String, String> {
     let toks = crate::lex::lex_rust(src).map_err(|e| e.msg)?;
     let classes = classify_all(&toks);
     let pc = param_commas(&toks);
@@ -2430,10 +2445,23 @@ impl<'a> Writer<'a> {
                         // mark (`struct Point`, `enum Truth`, a record
                         // variant's bare name); every other block opens
                         // with `:`.
-                        let decl = kind == Kind::Commas && {
+                        let decl = {
                             let words: Vec<&str> = line.split_whitespace().collect();
-                            words.iter().any(|w| matches!(*w, "struct" | "enum" | "union"))
-                                || (self.in_enum_body && words.len() == 1)
+                            // `impl<'a> Emitter<'a>` is one word to
+                            // `split_whitespace`, so a keyword is matched up
+                            // to its generics.
+                            let named = |k: &str| {
+                                words
+                                    .iter()
+                                    .any(|w| *w == k || w.split('<').next() == Some(k))
+                            };
+                            (kind == Kind::Commas
+                                && (named("struct") || named("enum") || named("union")
+                                    || (self.in_enum_body && words.len() == 1)))
+                                // Item bodies take no mark either, since
+                                // 2026-09-17: `impl`, `trait`, `mod`, `extern`.
+                                || (kind == Kind::Items
+                                    && (named("impl") || named("trait") || named("mod") || named("extern")))
                         };
                         if !self.out.ends_with("=>") && !decl {
                             self.out.push(':');

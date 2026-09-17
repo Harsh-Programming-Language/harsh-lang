@@ -375,7 +375,7 @@ struct Rectangle
     width: u32
     height: u32
 
-impl Rectangle:
+impl Rectangle
     fn area (&self) -> u32:
         self <- width * self <- height
 
@@ -415,7 +415,7 @@ struct Rectangle
     width: u32
     height: u32
 
-impl Rectangle:
+impl Rectangle
     fn area (&self) -> u32:
         self <- width * self <- height
 
@@ -448,11 +448,11 @@ struct Rectangle
     width: u32
     height: u32
 
-impl Rectangle:
+impl Rectangle
     fn square size: u32 -> Self:
         Self\ width = size, height = size
 
-impl Rectangle:
+impl Rectangle
     fn area (&self) -> u32:
         self <- width * self <- height
 

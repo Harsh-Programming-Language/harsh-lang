@@ -98,11 +98,11 @@ struct Point<T>
     x: T
     y: T
 
-impl<T> Point<T>:
+impl<T> Point<T>
     fn x (&self) -> &T:
         &self <- x
 
-impl Point<f32>:
+impl Point<f32>
     fn distance_from_origin (&self) -> f32:
         (self <- x <- powi 2 + self <- y <- powi 2) <- sqrt$
 
@@ -154,7 +154,7 @@ error[E0308]: mismatched types
 A trait is a set of methods a type may implement — an interface, a protocol, whichever word your last language used. It is defined with `trait`, and a type implements it with `impl … for`:
 
 ```
-pub trait Summary:
+pub trait Summary
     fn summarize (&self) -> String
 
 pub struct NewsArticle
@@ -162,7 +162,7 @@ pub struct NewsArticle
     pub location: String
     pub author: String
 
-impl Summary for NewsArticle:
+impl Summary for NewsArticle
     fn summarize (&self) -> String:
         format!
             "{}, by {} ({})"
@@ -174,7 +174,7 @@ pub struct Tweet
     pub username: String
     pub content: String
 
-impl Summary for Tweet:
+impl Summary for Tweet
     fn summarize (&self) -> String:
         format! "{}: {}" (self <- username) (self <- content)
 
@@ -207,7 +207,7 @@ One rule to know: you may implement a trait for a type only if the trait or the 
 A trait method may have a body, used by any type that does not supply its own:
 
 ```
-pub trait Summary:
+pub trait Summary
     fn summarize_author (&self) -> String
 
     fn summarize (&self) -> String:
@@ -217,7 +217,7 @@ pub struct Tweet
     pub username: String
     pub content: String
 
-impl Summary for Tweet:
+impl Summary for Tweet
     fn summarize_author (&self) -> String:
         format! "@{}" (self <- username)
 
@@ -242,17 +242,17 @@ A function that takes "anything summarizable" has four spellings, all in this ex
 ```
 use std.fmt.Display
 
-pub trait Summary:
+pub trait Summary
     fn summarize (&self) -> String
 
 pub struct Tweet
     pub username: String
 
-impl Summary for Tweet:
+impl Summary for Tweet
     fn summarize (&self) -> String:
         format! "@{}" (self <- username)
 
-impl Display for Tweet:
+impl Display for Tweet
     fn fmt (&self) (f: &mut std.fmt.Formatter) -> std.fmt.Result:
         write! f "tweet by {}" (self <- username)
 
@@ -301,13 +301,13 @@ tweet by horse_ebooks — @horse_ebooks
 `impl Trait` works in return position too:
 
 ```
-pub trait Summary:
+pub trait Summary
     fn summarize (&self) -> String
 
 pub struct Tweet
     pub username: String
 
-impl Summary for Tweet:
+impl Summary for Tweet
     fn summarize (&self) -> String:
         format! "@{}" (self <- username)
 
@@ -335,13 +335,13 @@ struct Pair<T>
     x: T
     y: T
 
-impl<T> Pair<T>:
+impl<T> Pair<T>
     fn new (x: T) (y: T) -> Self:
         Self\ x, y
 
 // Only a Pair whose T can be compared and displayed gets this method.
 
-impl<T: Display + PartialOrd> Pair<T>:
+impl<T: Display + PartialOrd> Pair<T>
     fn cmp_display (&self):
         if self <- x >= self <- y:
             println! "The largest member is x = {}" (self <- x)
@@ -449,7 +449,7 @@ Chapter 5's `&str` field had this error. A struct that holds a reference declare
 struct ImportantExcerpt<'a>
     part: &'a str
 
-impl<'a> ImportantExcerpt<'a>:
+impl<'a> ImportantExcerpt<'a>
     fn level (&self) -> i32:
         3
 

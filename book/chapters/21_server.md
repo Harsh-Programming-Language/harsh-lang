@@ -191,7 +191,7 @@ pub struct ThreadPool
 
 type Job = Box<dyn FnOnce$ + Send + 'static>
 
-impl ThreadPool:
+impl ThreadPool
     /// Create a new ThreadPool. `size` is the number of threads in the pool.
     ///
     /// # Panics
@@ -218,7 +218,7 @@ impl ThreadPool:
              <- send job
              <- unwrap$
 
-impl Drop for ThreadPool:
+impl Drop for ThreadPool
     fn drop (&mut self):
         drop (self <- sender <- take$)                    // close the channel: workers see Err and stop
 
@@ -231,7 +231,7 @@ struct Worker
     id: usize
     thread: Option<thread.JoinHandle<()>>
 
-impl Worker:
+impl Worker
     fn new (id: usize) (receiver: Arc<Mutex<mpsc.Receiver<Job>>>) -> Worker:
         let thread = thread.spawn move ||:
             loop:

@@ -1,0 +1,40 @@
+use std.collections.HashMap
+/// A point in the plane.
+#[derive Debug Clone]
+struct Point
+    x: i32
+    y: i32
+enum Shape
+    Circle f64
+    Rect Point Point
+    Empty
+impl Point
+    fn new (x: i32) (y: i32) -> Self:
+        // comment inside a fn body
+        Point\ x = x, y = y
+    fn norm (&self) -> i32:
+        self <- x * self <- x + self <- y * self <- y
+fn describe (s: &Shape) -> String:
+    match s:
+        Shape.Circle r => format! "circle {r}"
+        Shape.Rect a b => { let w = b <- x - a <- x; format! "rect {w}" }
+        Shape.Empty => "empty" <- to_string$
+fn main$:
+    let p = Point.new 3 4
+    println! "{:?} norm={}" p (p <- norm$)
+    let v = Vec<i32>. new$
+    println! "{}" (v <- len$)
+    let m = HashMap<String, i32>. new$
+    println! "{}" (m <- len$)
+    let t = (1, 2.5, "three")
+    println! "{} {} {}" (t.0) (t.1) (t.2)
+    let scoped = { let a = 10; a * 2 }
+    println! "scoped={}" scoped
+    for i in 0..3:
+        if i % 2 == 0:
+            println! "even {i}"
+        else:
+            println! "odd {i}"
+    println!
+        "{}"
+        (describe (& Shape.Rect (p <- clone$) (Point.new 1 1)))

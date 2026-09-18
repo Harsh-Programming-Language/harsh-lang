@@ -1,0 +1,12 @@
+fn double n: i32 -> i32:
+    n * 2
+
+fn show n: i32 -> String:
+    format! "{n}"
+
+fn main$:
+    let a = double <| 21
+    let b = show <| double <| 3
+    let c = 5 |> double
+    let d = 5 |> double |> show
+    println! "{a} {b} {c} {d}"

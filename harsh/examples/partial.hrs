@@ -1,0 +1,8 @@
+fn sub a: i32 -> impl Fn i32 -> i32:
+    move |b| a - b
+
+fn main$:
+    let u = (3 |> sub) 100
+    let v = 3 |> (sub 100)
+    let x = (sub 100) 3
+    println! "u={u} v={v} x={x}"

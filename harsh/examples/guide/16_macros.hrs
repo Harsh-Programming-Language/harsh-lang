@@ -1,0 +1,19 @@
+macro_rules~ twice
+    ($e:expr) => do: $e * 2
+
+fn main$:
+    let a = 5
+    // juxtaposed: one atom per argument
+    println! "{} {}" a (twice~ 4)
+    // a string alone
+    let s = format! "value={a}"
+    // non-comma forms keep their brackets
+    let v = vec! [1, 2, 3]
+    let z = vec! [0u8; 4]
+    // a pattern is one argument, isolated like any multi-token argument
+    let m1 = matches! a (1..=9)
+    let m2 = matches! a (n if n > 3)
+    let d = dbg! a
+    assert! (a == 5)
+    assert_eq! a 5
+    println! "{s} {:?} {:?} {m1} {m2} {d}" v z

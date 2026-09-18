@@ -1,0 +1,15 @@
+fn one<T> (x: T) -> T where T: Clone:
+    x
+
+fn two<T> (x: T) -> T
+    where T: Clone + Send:
+    x
+
+fn three<T, U> (a: T) (b: U) -> String
+    where
+        T: std.fmt.Debug,
+        U: std.fmt.Display:
+    format! "{a:?} {b}"
+
+fn main$:
+    println! "{} {} {}" (one 1) (two 2) (three 3 "s")

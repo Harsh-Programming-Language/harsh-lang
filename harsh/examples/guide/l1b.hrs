@@ -1,0 +1,6 @@
+fn show (a: i32) (b: f64):
+    println! "{a} {b}"
+
+fn main$:
+    let t = (1, 2.5)
+    show (t.0) (t.1)

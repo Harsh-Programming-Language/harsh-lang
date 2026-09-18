@@ -1,0 +1,43 @@
+// Parameter forms.
+fn bare name: &str -> String:
+    format! "hi {name}"
+
+fn curried (a: i32) (b: i32) -> i32:
+    a + b
+
+fn commas (a: i32) (b: i32) -> i32:
+    a * b
+
+fn unit$ -> i32:
+    7
+
+fn unit_then (x: i32) -> i32:
+    x
+
+fn generic<T: std.fmt.Debug> (label: &str) (item: T) -> String:
+    format! "{label}: {item:?}"
+
+fn fnptr (g: fn i32 -> i32) (v: i32) -> i32:
+    g v
+
+fn single_line_where<T> (x: T) -> T where T: Clone:
+    x
+
+fn bracketed_where<T, U> (a: T) (b: U) -> String
+    [where
+        T: std.fmt.Debug,
+        U: std.fmt.Display]:
+    format! "{a:?} {b}"
+
+fn main$:
+    println!
+        "{} {} {} {} {} {} {} {} {}"
+        (bare "x")
+        (curried 2 3)
+        (commas 2 3)
+        (unit$)
+        (unit_then 4)
+        (generic "v" (vec! [1]))
+        (fnptr (|n| n + 1) 41)
+        (single_line_where 9)
+        (bracketed_where 1 "s")

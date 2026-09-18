@@ -1,0 +1,26 @@
+fn f (x: i32) -> i32 do:
+    x + 1
+
+fn g<T> (x: T) -> T where T: Clone do:
+    x
+
+struct P do
+    a: i32
+
+impl P do
+    fn get (&self) -> i32 do:
+        self <- a
+
+fn main$ do:
+    let p = P\ a = 3
+    if true do:
+        print! "a"
+    match p <- get$ do:
+        3 => print! "b"
+        _ => print! "c"
+    for i in 0..2 do:
+        print! "{i}"
+    let v =
+        |x: i32| do:
+            x * 2
+    println! " {} {} {}" (f 1) (g 2) (v 4)

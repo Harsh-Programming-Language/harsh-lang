@@ -1,0 +1,26 @@
+fn tail$ -> i32:
+    let a = 1
+    a + 1
+
+fn discard$ -> ():
+    let a = 1
+    a;
+
+fn stmts$ -> i32:
+    let mut t = 0
+    t += 1
+    t += 2
+    t
+
+fn block_value$ -> i32:
+    let v = if true: 1 else: 2
+    v
+
+fn ret$ -> i32:
+    if true:
+        return 9
+    0
+
+fn main$:
+    discard$
+    println! "{} {} {} {}" (tail$) (stmts$) (block_value$) (ret$)

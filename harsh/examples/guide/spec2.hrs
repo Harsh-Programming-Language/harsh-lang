@@ -1,0 +1,18 @@
+fn my_func (f: impl Fn$):
+    f$
+fn parent_statement$:
+    ()
+fn closure_statement$:
+    ()
+fn last_closure_statement$:
+    ()
+fn last_parent_statement$:
+    ()
+
+fn main$:
+    parent_statement$
+    my_func || do:
+        closure_statement$
+        last_closure_statement$;
+    parent_statement$
+    last_parent_statement$;

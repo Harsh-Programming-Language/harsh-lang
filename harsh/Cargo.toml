@@ -1,0 +1,66 @@
+[package]
+name = "harsh-lang"
+version = "0.1.8"
+edition = "2021"
+authors = ["Bahiminin Benoit Dah"]
+# `examples/` holds Harsh sources and their generated Rust, not Cargo example
+# targets. Without this, Cargo tries to build `edge.generated.rs` as a crate.
+autoexamples = false
+license = "MPL-2.0"
+description = "Harsh: Rust without the braces. A layout transformation over Rust, and back again."
+readme = "README.md"
+repository = "https://gitlab.com/bahiminin.benoit.dah.opensource/harsh-lang"
+keywords = ["rust", "transpiler", "indentation", "syntax", "layout"]
+categories = ["development-tools", "compilers", "development-tools::build-utils"]
+rust-version = "1.75"
+# The crate is the four binaries and the library. Editors, the book, the
+# rendered notebooks and the example corpus stay in the repository.
+exclude = [
+    "editors/",
+    "book/",
+    "examples/",
+    "docs/*.ipynb",
+    "docs/*.html",
+    "docs/dev/",
+    "docs/build.py",
+    "check.sh",
+    ".gitlab-ci.yml",
+]
+
+[lib]
+name = "harsh_lang"
+path = "src/lib.rs"
+
+[[bin]]
+name = "hrs"
+path = "src/main.rs"
+
+[[bin]]
+name = "hrs-from"
+path = "src/bin/hrs-from.rs"
+
+[[bin]]
+name = "hrs-remap"
+path = "src/bin/hrs-remap.rs"
+required-features = ["remap"]
+
+[[bin]]
+name = "hrs-lsp"
+path = "src/bin/hrs-lsp.rs"
+required-features = ["lsp"]
+
+[features]
+default = ["remap", "lsp"]
+remap = ["dep:serde_json"]
+# The language server: stdio transport and the wire types, pinned to
+# versions that build on rustc 1.75 so the container and the Mac agree.
+lsp = ["dep:serde_json", "dep:serde", "dep:lsp-server", "dep:lsp-types"]
+
+[dependencies]
+serde_json = { version = "1", optional = true }
+serde = { version = "1", features = ["derive"], optional = true }
+lsp-server = { version = "0.7", optional = true }
+lsp-types = { version = "0.95", optional = true }
+
+[dev-dependencies]
+serde_json = "1"

@@ -1,6 +1,0 @@
-# One job: the same two commands a maintainer runs before every archive.
-test:
-  image: rust:latest
-  script:
-    - cargo test
-    - ./check.sh

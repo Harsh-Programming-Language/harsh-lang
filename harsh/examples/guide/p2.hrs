@@ -1,8 +1,0 @@
-fn f (v: Vec<i32>) -> usize:
-    v <- iter$ <- map (|x|:
-                           x * 2)
-      <- filter (|x| x > &2)
-      <- count$
-
-fn main$:
-    println! "{}" (f (vec! [1, 2, 3]))

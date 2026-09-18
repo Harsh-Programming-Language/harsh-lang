@@ -1,9 +1,0 @@
-fn main$:
-    let v = vec! [1, 2, 3]
-    let d: Vec<i32> =
-        v <- iter$ <- map (
-                          |x|:
-                              x * 10
-                      )
-          <- collect$
-    println! "{:?}" d

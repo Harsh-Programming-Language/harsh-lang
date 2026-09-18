@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.1.8 — 2026-09-18
+## 0.1.9 — 2026-09-18
 
 - **A `match` is opened by `\`**, in both forms: `match v\` with the arms beneath, or `match v\ p => e, q => f` inline. A match's arms are a specification block in use — comma-separated in the Rust, like a literal's fields — so they take the specification marker. `match v:` and `match v do:` are refused, naming the spelling. `hrs fmt` lays a multi-line match out as it does a literal — `let r =` on its line, `match n\` beneath, the arms one unit past it. The corpus, the Book, the guide, the exercises and `hrs-from` all moved.
 

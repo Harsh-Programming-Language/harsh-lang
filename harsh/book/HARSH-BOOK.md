@@ -155,11 +155,12 @@ fn main$:
         let mut line = String.new$
         io.stdin$ <- read_line (&mut line) <- expect "read failed"
 
-        let guess: u32 = match line <- trim$ <- parse$:
-            Ok n => n
-            Err _ => continue
+        let guess: u32 =
+            match line <- trim$ <- parse$\
+                Ok n => n
+                Err _ => continue
 
-        match guess <- cmp (&secret):
+        match guess <- cmp (&secret)\
             Ordering.Less => println! "higher"
             Ordering.Greater => println! "lower"
             Ordering.Equal => do:
@@ -227,7 +228,7 @@ The line the user typed ends in a newline, so `<- trim$` removes it. `<- parse$`
 ## 2.5 Compare and decide
 
 ```
-    match guess <- cmp (&secret):
+    match guess <- cmp (&secret)\
         Ordering.Less => println! "higher"
         Ordering.Greater => println! "lower"
         Ordering.Equal => do:
@@ -316,7 +317,7 @@ fn main$:
 hello, harsh 5 52 42 () 3 abc HELLO, HARSH 6 hello, ABC
 ```
 
-> **Harsh —** A function is applied by writing its arguments after it, separated by spaces: `add 2 3`. Parentheses around an argument mean *this is one argument* — `add (n * 2) (nothing$)` — and never *these are the arguments*; an argument that is a single token needs none. Applying a function to nothing is `nothing$`, because `()` is a value, the unit, and only ever that. The same rule declares a function: `fn add (a: i32) (b: i32)` is one group per parameter, and a lone parameter may drop its parentheses, `fn greet name: &str`. A block's opener says how its entries end, and there are only four kinds. A header that ends itself — `struct Point`, `impl Point`, `mod geometry`, `extern "C"` — needs no mark at all, since nothing but a name can follow it and what comes deeper can only be the body. A `\` opens a comma-separated list. A `:` or `do:` opens statements. And `#:` opens a grouping whose grammar belongs to someone else — a macro's DSL — where Harsh writes the braces and the lines and nothing between them. A construct that already has a spelling keeps it: `struct Point #:` is refused rather than read a second way.
+> **Harsh —** A function is applied by writing its arguments after it, separated by spaces: `add 2 3`. Parentheses around an argument mean *this is one argument* — `add (n * 2) (nothing$)` — and never *these are the arguments*; an argument that is a single token needs none. Applying a function to nothing is `nothing$`, because `()` is a value, the unit, and only ever that. The same rule declares a function: `fn add (a: i32) (b: i32)` is one group per parameter, and a lone parameter may drop its parentheses, `fn greet name: &str`. A block's opener says how its entries end, and there are only four kinds. A header that ends itself — `struct Point`, `impl Point`, `mod geometry`, `extern "C"` — needs no mark at all, since nothing but a name can follow it and what comes deeper can only be the body. A `\` opens a comma-separated list — a literal's fields, or a `match`'s arms. A `:` or `do:` opens statements. And `#:` opens a grouping whose grammar belongs to someone else — a macro's DSL — where Harsh writes the braces and the lines and nothing between them. A construct that already has a spelling keeps it: `struct Point #:` is refused rather than read a second way.
 
 An index written tight, `arr[1]`, is part of its atom, so `f arr[1]` passes the element — the same way `t.0` is part of `t`; brackets never apply, and an array passed as an argument is isolated, `f ([1, 2, 3])`. Two arrows share the work of reaching into things: `<-` reaches into a *value* — a field, a method, `v <- len$` — and `.` walks a *path* — a module, a type, an item, `String.from`. A macro applies like a function, with its `!` glued to its name: `vec! [1, 2, 3]`, `println! "{s}"`. And when an application and an arrow meet, **the application binds tighter**: in `greet "harsh" <- to_uppercase$` the function is applied first and the arrow takes its result, and the next arrow, or an operator, ends the arguments. The parentheses you will be tempted to write, `(greet "harsh") <- to_uppercase$`, are not wrong; they are not needed. Parentheses are needed the other way round — when the arrow belongs *inside* an argument, `greet (&(text <- to_uppercase$))`.
 
@@ -592,10 +593,11 @@ fn main$:
 
     // a construct whose body fits on the line: the colon is followed by the body
     let parity = if n % 2 == 0: "even" else: "odd"
-    let size = match n:
-        0 => "none"
-        1..=5 => "few"
-        _ => "many"
+    let size =
+        match n\
+            0 => "none"
+            1..=5 => "few"
+            _ => "many"
     let sign = match n: 0 => 0, _ if n > 0 => 1, _ => -1
 
     // `else` answers the `if` above it, and may sit under the `if`...
@@ -1856,7 +1858,7 @@ enum Coin
     Quarter
 
 fn value_in_cents coin: Coin -> u8:
-    match coin:
+    match coin\
         Coin.Penny => do:
             println! "Lucky penny!"
             1
@@ -1875,7 +1877,7 @@ Lucky penny!
 25
 ```
 
-`match coin:` opens the arms; each is `pattern => expression`, one per line. An arm's expression is its value, and the `match` is worth whichever arm ran — so `value_in_cents` returns the `u8` from the arm that matched. An arm that needs several statements opens a block with `=> do:`, and the block's last line is its value, as everywhere.
+`match coin\` opens the arms; each is `pattern => expression`, one per line. An arm's expression is its value, and the `match` is worth whichever arm ran — so `value_in_cents` returns the `u8` from the arm that matched. An arm that needs several statements opens a block with `=> do:`, and the block's last line is its value, as everywhere.
 
 > **Harsh —** One arm per line, and no comma after it: the line ending is what separates arms, and a `,` at the end of one is an error naming the newline. Commas separate arms only when several share a line.
 
@@ -1896,7 +1898,7 @@ enum Coin
     Quarter UsState
 
 fn value_in_cents coin: Coin -> u8:
-    match coin:
+    match coin\
         Coin.Penny => 1
         Coin.Nickel => 5
         Coin.Dime => 10
@@ -1921,7 +1923,7 @@ Now the `Option` from the previous section can be used:
 
 ```
 fn plus_one x: Option<i32> -> Option<i32>:
-    match x:
+    match x\
         None => None
         Some i => Some (i + 1)
 
@@ -1944,7 +1946,7 @@ Leave a case out and the compiler stops you:
 
 ```
 fn plus_one x: Option<i32> -> Option<i32>:
-    match x:
+    match x\
         Some i => Some (i + 1)
 
 fn main$:
@@ -1955,7 +1957,7 @@ fn main$:
 error[E0004]: non-exhaustive patterns: `None` not covered
   --> non_exhaustive.hrs:2:11
    |
- 2 |     match x:
+ 2 |     match x\
    |           ^ pattern `None` not covered
    = note: `Option<i32>` defined here
    = note: the matched value is of type `Option<i32>`
@@ -1978,7 +1980,7 @@ fn move_player spaces: u8:
 
 fn main$:
     for dice_roll in [3, 7, 4]:
-        match dice_roll:
+        match dice_roll\
             3 => add_fancy_hat$
             7 => remove_fancy_hat$
             other => move_player other
@@ -1987,7 +1989,7 @@ fn main$:
 
     let roll = 9
 
-    match roll:
+    match roll\
         3 => add_fancy_hat$
         7 => remove_fancy_hat$
         _ => ()
@@ -2010,7 +2012,7 @@ fn main$:
     let config_max = Some 3u8
 
     // The match way: one arm that matters, one that does nothing.
-    match config_max:
+    match config_max\
         Some max => println! "The maximum is configured to be {max}"
         _ => ()
 
@@ -2068,7 +2070,7 @@ enum UsState
 
 impl UsState
     fn existed_in (&self) (year: u16) -> bool:
-        match self:
+        match self\
             UsState.Alabama => year >= 1819
             UsState.Alaska => year >= 1959
 
@@ -2537,7 +2539,7 @@ fn main$:
 
     let third: Option<&i32> = v <- get 2   // get: None if out of range
 
-    match third:
+    match third\
         Some third => println! "The third element is {third}"
         None => println! "There is no third element."
 
@@ -2644,7 +2646,7 @@ fn main$:
         ]
 
     for cell in &row:
-        match cell:
+        match cell\
             SpreadsheetCell.Int n => println! "int {n}"
             SpreadsheetCell.Float x => println! "float {x}"
             SpreadsheetCell.Text s => println! "text {s}"
@@ -2939,15 +2941,16 @@ use std.fs.File
 fn main$:
     let greeting_file_result = File.open "hello.txt"
 
-    let greeting_file = match greeting_file_result:
-        Ok file => file
-        Err error => panic! "Problem opening the file: {error:?}"
+    let greeting_file =
+        match greeting_file_result\
+            Ok file => file
+            Err error => panic! "Problem opening the file: {error:?}"
 
     let _ = greeting_file
 ```
 
 ```text
-thread 'main' panicked at result_match.hrs:8:
+thread 'main' panicked at result_match.hrs:9:
 Problem opening the file: Os { code: 2, kind: NotFound, message: "No such file or directory" }
 ```
 
@@ -2962,13 +2965,14 @@ use std.fs.File
 use std.io.ErrorKind
 
 fn main$:
-    let greeting_file = match File.open "hello.txt":
-        Ok file => file
-        Err error => match error <- kind$:
-            ErrorKind.NotFound => match File.create "hello.txt":
-                Ok fc => fc
-                Err e => panic! "Problem creating the file: {e:?}"
-            _ => panic! "Problem opening the file: {error:?}"
+    let greeting_file =
+        match File.open "hello.txt"\
+            Ok file => file
+            Err error => match error <- kind$\
+                ErrorKind.NotFound => match File.create "hello.txt"\
+                    Ok fc => fc
+                    Err e => panic! "Problem creating the file: {e:?}"
+                _ => panic! "Problem opening the file: {error:?}"
 
     println!
         "{:?}"
@@ -3030,13 +3034,14 @@ use std.io.(self, Read)
 fn read_username_from_file$ -> Result<String, io.Error>:
     let username_file_result = File.open "hello.txt"
 
-    let mut username_file = match username_file_result:
-        Ok file => file
-        Err e => return Err e
+    let mut username_file =
+        match username_file_result\
+            Ok file => file
+            Err e => return Err e
 
     let mut username = String.new$
 
-    match username_file <- read_to_string (&mut username):
+    match username_file <- read_to_string (&mut username)\
         Ok _ => Ok username
         Err e => Err e
 
@@ -4821,7 +4826,7 @@ impl Inventory
         let mut num_blue = 0
 
         for color in &self <- shirts:
-            match color:
+            match color\
                 ShirtColor.Red => num_red += 1
                 ShirtColor.Blue => num_blue += 1
 
@@ -5651,7 +5656,7 @@ $ hrs test
 running 1 test
 test target/hrs/lib.rs - add_one (line 10) ... ok
 
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.16s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.17s
 ```
 
 `cargo doc --open` renders every `///` and `//!` in the crate as HTML, with the Markdown inside them — headings, code blocks, links — laid out. The conventional sections are `# Examples`, `# Panics` (when the function can), `# Errors` (what `Err`s it returns) and `# Safety` (for `unsafe` functions). The example in the `///` is Harsh, like everything else in the file, and `cargo test` *runs it* — every code block in a doc comment is a test, so documentation cannot drift from the code without failing the build.
@@ -5690,7 +5695,7 @@ pub mod utils
 
     /// Combines two primary colors in equal amounts to create a secondary color.
     pub fn mix (c1: PrimaryColor) (c2: PrimaryColor) -> SecondaryColor:
-        match (c1, c2):
+        match (c1, c2)\
             (PrimaryColor.Red, PrimaryColor.Yellow) | (PrimaryColor.Yellow, PrimaryColor.Red) => SecondaryColor.Orange
             (PrimaryColor.Yellow, PrimaryColor.Blue) | (PrimaryColor.Blue, PrimaryColor.Yellow) => SecondaryColor.Green
             _ => SecondaryColor.Purple
@@ -6622,7 +6627,7 @@ impl AveragedCollection
     pub fn remove (&mut self) -> Option<i32>:
         let result = self <- list <- pop$
 
-        match result:
+        match result\
             Some value => do:
                 self <- update_average$
                 Some value
@@ -6937,7 +6942,7 @@ fn main$:
     // match arms
     let x = Some 3
 
-    match x:
+    match x\
         None => println! "none"
         Some i => println! "some {i}"
     // if let, with else if and else if let
@@ -7026,7 +7031,7 @@ error[E0005]: refutable pattern in local binding
 fn main$:
     let x = 1
 
-    match x:
+    match x\
         1 => println! "one"
         2 => println! "two"
         3 => println! "three"
@@ -7036,7 +7041,7 @@ fn main$:
     let x = Some 5
     let y = 10
 
-    match x:
+    match x\
         Some 50 => println! "Got 50"
         Some y => println! "Matched, y = {y}"     // a new y, bound to 5
         _ => println! "Default case, x = {x:?}"
@@ -7046,14 +7051,14 @@ fn main$:
     // or-patterns and ranges
     let x = 5
 
-    match x:
+    match x\
         1 | 2 => println! "one or two"
         3..=5 => println! "three through five"
         _ => println! "anything"
 
     let c = 'c'
 
-    match c:
+    match c\
         'a'..='j' => println! "early ASCII letter"
         'k'..='z' => println! "late ASCII letter"
         _ => println! "something else"
@@ -7098,7 +7103,7 @@ fn main$:
     let Point\ x, y = p                 // shorthand: same names
     println! "{x} {y}"
 
-    match p:
+    match p\
         Point\ x, y: 0 => println! "On the x axis at {x}"
         Point\ x: 0, y => println! "On the y axis at {y}"
         Point\ x, y => println! "On neither axis: ({x}, {y})"
@@ -7112,7 +7117,7 @@ fn main$:
         ]
 
     for msg in msgs:
-        match msg:
+        match msg\
             Message.Quit => println! "The Quit variant has no data to destructure."
             Message.Move\ x, y => println! "Move in the x direction {x} and in the y direction {y}"
             Message.Write text => println! "Text message: {text}"
@@ -7151,7 +7156,7 @@ fn main$:
     let mut setting_value = Some 5
     let new_setting_value = Some 10
 
-    match (setting_value, new_setting_value):
+    match (setting_value, new_setting_value)\
         (Some _, Some _) => println! "Can't overwrite an existing customized value"
         _ => setting_value = new_setting_value
 
@@ -7159,7 +7164,7 @@ fn main$:
 
     let numbers = (2, 4, 8, 16, 32)
 
-    match numbers:
+    match numbers\
         (first, _, third, _, fifth) => println! "Some numbers: {first}, {third}, {fifth}"
     // `_x` binds and silences the warning; `_` does not bind at all
 
@@ -7178,10 +7183,10 @@ fn main$:
 
     let origin = Point\ x = 0, y = 0, z = 0
 
-    match origin:
+    match origin\
         Point\ x, .. => println! "x is {x}"
 
-    match numbers:
+    match numbers\
         (first, .., last) => println! "Some numbers: {first}, {last}"
 ```
 
@@ -7209,7 +7214,7 @@ fn main$:
     // a match guard: an extra condition after the pattern
     let num = Some 4
 
-    match num:
+    match num\
         Some x if x % 2 == 0 => println! "The number {x} is even"
         Some x => println! "The number {x} is odd"
         None => ()
@@ -7218,7 +7223,7 @@ fn main$:
     let x = Some 5
     let y = 10
 
-    match x:
+    match x\
         Some 50 => println! "Got 50"
         Some n if n == y => println! "Matched, n = {n}"
         _ => println! "Default case, x = {x:?}"
@@ -7227,14 +7232,14 @@ fn main$:
     let x = 4
     let y = false
 
-    match x:
+    match x\
         4 | 5 | 6 if y => println! "yes"
         _ => println! "no"
     // `@` binds a value while also testing it against a range
 
     let msg = Message.Hello\ id = 5
 
-    match msg:
+    match msg\
         Message.Hello { id: id_variable @ 3..=7 } => println! "Found an id in range: {id_variable}"
         Message.Hello { id: 10..=12 } => println! "Found an id in another range"
         Message.Hello\ id => println! "Found some other id: {id}"
@@ -7566,9 +7571,10 @@ fn main$:
     // where a value of any type is expected:
     let guess = "3"
 
-    let n: u32 = match guess <- trim$ <- parse$:
-        Ok num => num
-        Err _ => bar$
+    let n: u32 =
+        match guess <- trim$ <- parse$\
+            Ok num => num
+            Err _ => bar$
 
     println! "{n}"
 
@@ -7869,7 +7875,7 @@ fn handle_connection mut stream: TcpStream:
                    <- unwrap$
 
     let (status_line, filename) =
-        match &request_line[..]:
+        match &request_line[..]\
             "GET / HTTP/1.1" => ("HTTP/1.1 200 OK", "hello.html")
             "GET /sleep HTTP/1.1" => do:
                 thread.sleep (Duration.from_millis 50)          // a slow request
@@ -7963,7 +7969,7 @@ fn handle_connection (mut stream: TcpStream) (served: Arc<Mutex<Vec<String>>>):
                    <- unwrap$
 
     let (status_line, filename) =
-        match &request_line[..]:
+        match &request_line[..]\
             "GET / HTTP/1.1" => ("HTTP/1.1 200 OK", "hello.html")
             "GET /sleep HTTP/1.1" => do:
                 thread.sleep (Duration.from_millis 50)
@@ -8041,7 +8047,7 @@ impl Worker
                              <- unwrap$
                              <- recv$   // the lock is released here, before the job runs
 
-                match message:
+                match message\
                     Ok job => job$
                     Err _ => break                                    // the sender is gone: shut down
 
@@ -8103,7 +8109,7 @@ trait Area                          // a trait is a block
 
 impl Area for Shape
     fn area (&self) -> f64:
-        match self:                  // arms: one per line, no commas
+        match self\                  // arms: one per line, no commas
             Shape.Empty => 0.0
             Shape.Circle r => 3.14159 * r * r
             Shape.Rect\ w, h => w * h
@@ -8193,7 +8199,7 @@ Point { x: 1.0, y: 2.0 } Size { w: 3.0, h: 4.0 } 1.5 9.14 5 12 8 big counts: 2 4
 
 - A pattern is an application: `Some n`, `Ok value`, `Circle r`, `Coin.Quarter state`. (§6.2)
 - A record is taken apart with the mark that builds it: `Point\ x, y`, `Point\ x: a, y: b`, `Point\ x, ..`. (§19.1)
-- `match x:` with one arm per line, `pattern => body`, no commas; several arms on one line are comma-separated. An arm with several statements is `=> do:`. (§6.2, §3.5)
+- `match x\` with one arm per line, `pattern => body`, no commas; several arms on one line are comma-separated. An arm with several statements is `=> do:`. (§6.2, §3.5)
 
 ## Closures, chains and pipes — chapter 13
 

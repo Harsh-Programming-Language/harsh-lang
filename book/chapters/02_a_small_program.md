@@ -17,11 +17,12 @@ fn main$:
         let mut line = String.new$
         io.stdin$ <- read_line (&mut line) <- expect "read failed"
 
-        let guess: u32 = match line <- trim$ <- parse$:
-            Ok n => n
-            Err _ => continue
+        let guess: u32 =
+            match line <- trim$ <- parse$\
+                Ok n => n
+                Err _ => continue
 
-        match guess <- cmp (&secret):
+        match guess <- cmp (&secret)\
             Ordering.Less => println! "higher"
             Ordering.Greater => println! "lower"
             Ordering.Equal => do:
@@ -89,7 +90,7 @@ The line the user typed ends in a newline, so `<- trim$` removes it. `<- parse$`
 ## 2.5 Compare and decide
 
 ```
-    match guess <- cmp (&secret):
+    match guess <- cmp (&secret)\
         Ordering.Less => println! "higher"
         Ordering.Greater => println! "lower"
         Ordering.Equal => do:
@@ -178,7 +179,7 @@ fn main$:
 hello, harsh 5 52 42 () 3 abc HELLO, HARSH 6 hello, ABC
 ```
 
-> **Harsh —** A function is applied by writing its arguments after it, separated by spaces: `add 2 3`. Parentheses around an argument mean *this is one argument* — `add (n * 2) (nothing$)` — and never *these are the arguments*; an argument that is a single token needs none. Applying a function to nothing is `nothing$`, because `()` is a value, the unit, and only ever that. The same rule declares a function: `fn add (a: i32) (b: i32)` is one group per parameter, and a lone parameter may drop its parentheses, `fn greet name: &str`. A block's opener says how its entries end, and there are only four kinds. A header that ends itself — `struct Point`, `impl Point`, `mod geometry`, `extern "C"` — needs no mark at all, since nothing but a name can follow it and what comes deeper can only be the body. A `\` opens a comma-separated list. A `:` or `do:` opens statements. And `#:` opens a grouping whose grammar belongs to someone else — a macro's DSL — where Harsh writes the braces and the lines and nothing between them. A construct that already has a spelling keeps it: `struct Point #:` is refused rather than read a second way.
+> **Harsh —** A function is applied by writing its arguments after it, separated by spaces: `add 2 3`. Parentheses around an argument mean *this is one argument* — `add (n * 2) (nothing$)` — and never *these are the arguments*; an argument that is a single token needs none. Applying a function to nothing is `nothing$`, because `()` is a value, the unit, and only ever that. The same rule declares a function: `fn add (a: i32) (b: i32)` is one group per parameter, and a lone parameter may drop its parentheses, `fn greet name: &str`. A block's opener says how its entries end, and there are only four kinds. A header that ends itself — `struct Point`, `impl Point`, `mod geometry`, `extern "C"` — needs no mark at all, since nothing but a name can follow it and what comes deeper can only be the body. A `\` opens a comma-separated list — a literal's fields, or a `match`'s arms. A `:` or `do:` opens statements. And `#:` opens a grouping whose grammar belongs to someone else — a macro's DSL — where Harsh writes the braces and the lines and nothing between them. A construct that already has a spelling keeps it: `struct Point #:` is refused rather than read a second way.
 
 An index written tight, `arr[1]`, is part of its atom, so `f arr[1]` passes the element — the same way `t.0` is part of `t`; brackets never apply, and an array passed as an argument is isolated, `f ([1, 2, 3])`. Two arrows share the work of reaching into things: `<-` reaches into a *value* — a field, a method, `v <- len$` — and `.` walks a *path* — a module, a type, an item, `String.from`. A macro applies like a function, with its `!` glued to its name: `vec! [1, 2, 3]`, `println! "{s}"`. And when an application and an arrow meet, **the application binds tighter**: in `greet "harsh" <- to_uppercase$` the function is applied first and the arrow takes its result, and the next arrow, or an operator, ends the arguments. The parentheses you will be tempted to write, `(greet "harsh") <- to_uppercase$`, are not wrong; they are not needed. Parentheses are needed the other way round — when the arrow belongs *inside* an argument, `greet (&(text <- to_uppercase$))`.
 

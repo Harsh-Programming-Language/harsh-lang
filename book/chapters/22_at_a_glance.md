@@ -24,7 +24,7 @@ trait Area                          // a trait is a block
 
 impl Area for Shape
     fn area (&self) -> f64:
-        match self:                  // arms: one per line, no commas
+        match self\                  // arms: one per line, no commas
             Shape.Empty => 0.0
             Shape.Circle r => 3.14159 * r * r
             Shape.Rect\ w, h => w * h
@@ -114,7 +114,7 @@ Point { x: 1.0, y: 2.0 } Size { w: 3.0, h: 4.0 } 1.5 9.14 5 12 8 big counts: 2 4
 
 - A pattern is an application: `Some n`, `Ok value`, `Circle r`, `Coin.Quarter state`. (§6.2)
 - A record is taken apart with the mark that builds it: `Point\ x, y`, `Point\ x: a, y: b`, `Point\ x, ..`. (§19.1)
-- `match x:` with one arm per line, `pattern => body`, no commas; several arms on one line are comma-separated. An arm with several statements is `=> do:`. (§6.2, §3.5)
+- `match x\` with one arm per line, `pattern => body`, no commas; several arms on one line are comma-separated. An arm with several statements is `=> do:`. (§6.2, §3.5)
 
 ## Closures, chains and pipes — chapter 13
 

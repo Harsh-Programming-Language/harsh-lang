@@ -166,7 +166,7 @@ enum Coin
     Quarter
 
 fn value_in_cents coin: Coin -> u8:
-    match coin:
+    match coin\
         Coin.Penny => do:
             println! "Lucky penny!"
             1
@@ -185,7 +185,7 @@ Lucky penny!
 25
 ```
 
-`match coin:` opens the arms; each is `pattern => expression`, one per line. An arm's expression is its value, and the `match` is worth whichever arm ran — so `value_in_cents` returns the `u8` from the arm that matched. An arm that needs several statements opens a block with `=> do:`, and the block's last line is its value, as everywhere.
+`match coin\` opens the arms; each is `pattern => expression`, one per line. An arm's expression is its value, and the `match` is worth whichever arm ran — so `value_in_cents` returns the `u8` from the arm that matched. An arm that needs several statements opens a block with `=> do:`, and the block's last line is its value, as everywhere.
 
 > **Harsh —** One arm per line, and no comma after it: the line ending is what separates arms, and a `,` at the end of one is an error naming the newline. Commas separate arms only when several share a line.
 
@@ -206,7 +206,7 @@ enum Coin
     Quarter UsState
 
 fn value_in_cents coin: Coin -> u8:
-    match coin:
+    match coin\
         Coin.Penny => 1
         Coin.Nickel => 5
         Coin.Dime => 10
@@ -231,7 +231,7 @@ Now the `Option` from the previous section can be used:
 
 ```
 fn plus_one x: Option<i32> -> Option<i32>:
-    match x:
+    match x\
         None => None
         Some i => Some (i + 1)
 
@@ -254,7 +254,7 @@ Leave a case out and the compiler stops you:
 
 ```
 fn plus_one x: Option<i32> -> Option<i32>:
-    match x:
+    match x\
         Some i => Some (i + 1)
 
 fn main$:
@@ -265,7 +265,7 @@ fn main$:
 error[E0004]: non-exhaustive patterns: `None` not covered
   --> non_exhaustive.hrs:2:11
    |
- 2 |     match x:
+ 2 |     match x\
    |           ^ pattern `None` not covered
    = note: `Option<i32>` defined here
    = note: the matched value is of type `Option<i32>`
@@ -288,7 +288,7 @@ fn move_player spaces: u8:
 
 fn main$:
     for dice_roll in [3, 7, 4]:
-        match dice_roll:
+        match dice_roll\
             3 => add_fancy_hat$
             7 => remove_fancy_hat$
             other => move_player other
@@ -297,7 +297,7 @@ fn main$:
 
     let roll = 9
 
-    match roll:
+    match roll\
         3 => add_fancy_hat$
         7 => remove_fancy_hat$
         _ => ()
@@ -320,7 +320,7 @@ fn main$:
     let config_max = Some 3u8
 
     // The match way: one arm that matters, one that does nothing.
-    match config_max:
+    match config_max\
         Some max => println! "The maximum is configured to be {max}"
         _ => ()
 
@@ -378,7 +378,7 @@ enum UsState
 
 impl UsState
     fn existed_in (&self) (year: u16) -> bool:
-        match self:
+        match self\
             UsState.Alabama => year >= 1819
             UsState.Alaska => year >= 1959
 

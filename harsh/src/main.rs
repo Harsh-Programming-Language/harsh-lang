@@ -55,7 +55,45 @@ fn main() -> ExitCode {
         "new" => new_project(&rest),
         "export" => export(&rest),
         "fmt" => fmt(&rest),
+        "expand" => expand(&rest),
         _ => single_file(&args),
+    }
+}
+
+/// `hrs expand <file.hrs>`: the file with its Harsh macros unfolded, as Harsh
+/// -- the middle step between what you wrote and the Rust it becomes. What
+/// the transpiler goes on to read; useful when a macro does not do what you
+/// meant, since a mistake in a macro is a mistake in the Harsh it produced.
+fn expand(args: &[String]) -> ExitCode {
+    let Some(path) = args.first() else {
+        eprintln!("hrs expand <file.hrs>");
+        return ExitCode::from(2);
+    };
+    let src = match std::fs::read_to_string(path) {
+        Ok(s) => s,
+        Err(e) => {
+            eprintln!("hrs: cannot read {path}: {e}");
+            return ExitCode::from(2);
+        }
+    };
+    let (work, _zones) = harsh_lang::rawzone::prepare(&src);
+    let toks = match harsh_lang::lex::lex(&work) {
+        Ok(t) => t,
+        Err(e) => {
+            eprintln!("error: {}", e.msg);
+            return ExitCode::from(1);
+        }
+    };
+    let taken = harsh_lang::layout::names_in_scope(&toks);
+    match harsh_lang::mac::expand_all(toks, &taken) {
+        Ok(out) => {
+            println!("{}", harsh_lang::mac::render_file(&out));
+            ExitCode::SUCCESS
+        }
+        Err(e) => {
+            eprintln!("error: {}", e.msg);
+            ExitCode::from(1)
+        }
     }
 }
 

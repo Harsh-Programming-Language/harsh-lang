@@ -2,6 +2,34 @@
 
 Decided in conversation before any code, from a real test: five notebooks of Leptos, Axum and Actix notes converted with `hrs-from`, whose `view!` bodies the transpiler mangled. The principle that came out of it: **the macro rules are Harsh's rules, on both sides.** A Harsh call is one group per argument; a Harsh matcher is one group per fragment; a macro body is Harsh where it is expressions and markup where it is markup; and the bracketed and braced forms are Rust's, exactly as brackets and braces are everywhere else in the language. Macros do not produce Harsh — `hrs` transpiles the file, then rustc expands — but the programmer never has to know: both sides of every macro are written in Harsh and meet in Rust.
 
+## Procedural macros and foreign DSLs: still in development
+
+What is finished is **declarative** macros: Harsh's own (`macro_rules~`, which
+unfolds into Harsh) and Rust's (`macro_rules!`, copied verbatim and expanded
+by rustc).
+
+**Procedural macros are not finished.** A proc-macro definition written in
+Harsh transpiles to what looks like an ordinary Rust proc macro, and a call
+with simple arguments reaches the macro as ordinary Rust tokens
+(`echo! 1 2 3` arrives as `1, 2, 3`) -- but this is not yet verified end to
+end, and one sharp edge is known: a call whose arguments carry a top-level
+operator is read as an expression, so
+
+```
+my_macro! a | b | c        emits    my_macro!(a) | b | c
+```
+
+and the macro receives only `a`. Isolate the tokens until this is settled:
+`my_macro! (a | b | c)`, `my_macro! [a | b | c]`, `my_macro!\ …` or
+`my_macro! do:` all carry them through intact.
+
+**Foreign DSLs** -- a `view!`, `rsx!` or `sql!` from someone else's crate --
+work only as far as the shapes Harsh emits happen to match what that macro's
+parser wants. The general answer is a spelling map shipped by the crate
+(`dsl.hrs`), which is designed but not built.
+
+Both are in progress; the shapes above may change.
+
 ## Rule 0 — `macro_rules!` is Rust, `macro_rules~` is Harsh
 
 Harsh has two declarative macro systems, and the mark says which. Everything
@@ -95,14 +123,14 @@ let winner = tokio.select! do:
     n = slow "slow" => n
     n = fast "fast" => n
 
-macro_rules~ my_vec:
+macro_rules~ my_vec
     ( $( ($x:expr) )* ) => do:
         do:
             let mut v = Vec.new$
             $(v <- push $x)*
             v
 
-macro_rules~ twice:
+macro_rules~ twice
     ($e:expr) => do: $e * 2
 ```
 
@@ -117,7 +145,7 @@ A brace body is what a brace is anywhere in Harsh: the one-line form, layout off
 A parenthesised fragment `($x:expr)` is one parameter; a sequence of them is a comma list; a repetition `$( (…) )*` is a comma-separated repetition. Literal tokens *inside* a group stay inside it.
 
 ```
-macro_rules~ hashmap:                                  // Rust: ( $( $k:expr => $v:expr ),* )
+macro_rules~ hashmap                                  // Rust: ( $( $k:expr => $v:expr ),* )
     ( $( ($k:expr => $v:expr) )* ) => do:
         …
 let m = hashmap~ ("a" => 1) ("b" => 2)                 // Rust: hashmap!("a" => 1, "b" => 2)
@@ -130,7 +158,7 @@ let m = hashmap~ ("a" => 1) ("b" => 2)                 // Rust: hashmap!("a" => 
 A matcher in `[ … ]` or `{ … }` is Rust's syntax, as its calls are: `vec! [0u8; 4]` is kept verbatim, so `[ $elem:expr ; $n:expr ]` is how a macro takes a `;`-separated pair.
 
 ```
-macro_rules~ filled:
+macro_rules~ filled
     [ $elem:expr ; $n:expr ] => do:
         vec! [$elem; $n]
 let v = filled~ [0u8; 4]

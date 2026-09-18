@@ -8,7 +8,7 @@ enum Shape
         sides: u32
 
 fn indented (s: &Shape) -> String:
-    match s:
+    match s\
         Shape.Empty => "empty" <- to_string$
         Shape.Circle r => format! "circle {r}"
         Shape.Rect w h =>
@@ -23,40 +23,41 @@ fn braced (n: i32) -> &'static str:
     match n { 0 => "zero", _ => "other" }
 
 fn guards (n: i32) -> &'static str:
-    match n:
+    match n\
         x if x < 0 => "neg"
         0 => "zero"
         x if x % 2 == 0 => "even"
         _ => "odd"
 
 fn as_value (n: i32) -> i32:
-    let r = match n:
-        1 => 10
-        _ => 20
+    let r =
+        match n\
+            1 => 10
+            _ => 20
     r
 
 fn nested (a: Option<i32>) (b: Option<i32>) -> i32:
-    match a:
+    match a\
         Some x =>
-            match b:
+            match b\
                 Some y => x + y
                 None => x
         None => 0
 
 fn tuple_pat (p: (i32, i32)) -> i32:
-    match p:
+    match p\
         (0, y) => y
         (x, 0) => x
         (x, y) => x * y
 
 fn ranges (n: u8) -> &'static str:
-    match n:
+    match n\
         0..=9 => "digit"
         b'a'..=b'z' => "lower"
         _ => "other"
 
 fn binding (n: i32) -> String:
-    match n:
+    match n\
         v @ 1..=5 => format! "low {v}"
         v => format! "hi {v}"
 

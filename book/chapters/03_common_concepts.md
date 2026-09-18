@@ -266,10 +266,11 @@ fn main$:
 
     // a construct whose body fits on the line: the colon is followed by the body
     let parity = if n % 2 == 0: "even" else: "odd"
-    let size = match n:
-        0 => "none"
-        1..=5 => "few"
-        _ => "many"
+    let size =
+        match n\
+            0 => "none"
+            1..=5 => "few"
+            _ => "many"
     let sign = match n: 0 => 0, _ if n > 0 => 1, _ => -1
 
     // `else` answers the `if` above it, and may sit under the `if`...

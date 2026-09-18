@@ -45,3 +45,22 @@ The only requirement is the name: a fork must be called something else. See `doc
 ## Contributor agreement
 
 Contributions require signing off under the terms in `CONTRIBUTING.md`, which keeps the project able to relicense in future. Without that, a project with many contributors is permanently frozen on its original licence, which is a worse outcome for everyone.
+
+## The two kinds of block (the user's taxonomy, 2026-09-18)
+
+Rust has two kinds of braced block, and Harsh marks them differently:
+
+- A **statement block** holds statements separated by `;`. Opened by `:` or
+  `do:` across lines; written `{ stmt; stmt }` inline.
+- A **specification block** holds entries separated by `,`: a struct's
+  fields, an enum's variants, a match's arms. In *use* — a literal, a match —
+  it is opened by `\` in both forms (`Point\` / `Point\ x = 1, y = 2`;
+  `match v\` / `match v\ p => e, q => f`). In a *declaration* the header
+  ends itself and takes no marker across lines (`struct Point`, `enum
+  Message`), and `\` only inline (`struct Point\ x: f64, y: f64`).
+
+`macro_rules~` is the one exception: a specification block whose entries
+Rust separates with `;`, set apart by taking no marker at all — layout
+separates its arms. And `impl`, `trait`, `mod` and `extern` hold items,
+which take no separator, so their headers end themselves like a declaration's.
+

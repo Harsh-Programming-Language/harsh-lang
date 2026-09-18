@@ -306,7 +306,7 @@ Struct fields go one per line with no commas, and the declaration's body follows
 
 ```
     fn render_line (&self) (idx: usize) (word: &str) (n: usize) -> String:
-        match &self <- format:
+        match &self <- format\
             Format.Plain => format! "{word} {n}"
             Format.Ranked => format! "{}. {word} {n}" (idx + 1)
             Format.Boxed\ width => format! "|{:<w$}|{n:>3}|" word (w = *width)
@@ -366,7 +366,7 @@ block in Harsh is one of them:
 | opener | the body | separator Harsh writes |
 |---|---|---|
 | *(no mark)* | items, after a header that ends itself — `struct`, `enum`, `union`, `impl`, `trait`, `mod`, `extern` | none (or `,` for a declaration's fields) |
-| `\` | a comma-separated list: a literal's fields, an inline declaration, a macro's entries | `,` |
+| `\` | a comma-separated list: a literal's fields, an inline declaration, a `match`'s arms, a macro's entries | `,` |
 | `:` / `do:` | statements, and a tail value | `;` |
 | `#:` | a grouping whose grammar is its author's | none |
 
@@ -402,10 +402,10 @@ fn greet(name: &str) -> String {
 }
 ```
 
-Match arms use a fat arrow instead, since an arm already has one:
+A `match` is a specification block in use, like a literal's fields, so it is opened by `\` — `match value\` with the arms beneath, or `match value\ p => e, q => f` inline — and its arms are comma-separated in the Rust. Each arm's body opens with a fat arrow, since an arm already has one:
 
 ```
-match value:
+match value\
     Some n =>
         log n
         n * 2
@@ -442,7 +442,7 @@ fn braced (t: bool) -> i32:
 
 ### The two block openers
 
-- `:` and `do:` open a block interchangeably, on any construct that takes one. (A struct or enum declaration takes none: its body follows its name; a literal is marked `\`.)
+- `:` and `do:` open a block interchangeably, on any construct that takes one. (A declaration takes none — `struct`, `enum`, `union`, `impl`, `trait`, `mod`, `extern`: the body follows the header, and `struct P do` is refused like `struct P:`; a literal is marked `\`.)
 
 ```
 fn f (x: i32) -> i32 do:
@@ -1191,7 +1191,7 @@ let m = Message.Move\ x = 1, y = 2          let m = Message::Move { x: 1, y: 2 }
 An inline literal reads to the end of its line or to the `)` that isolates it, which is what lets it stand anywhere an expression can — in a header, in a list, as an operand:
 
 ```fragment
-match (Point\ x = 1.0, y = 4.0):            match (Point { x: 1.0, y: 4.0 }) {
+match (Point\ x = 1.0, y = 4.0)\            match (Point { x: 1.0, y: 4.0 }) {
     Point\ x, .. => x
 if p == (Point\ x = 1.0):                   if p == (Point { x: 1.0 }) {
 let v = vec! [(Point\ x = 1), (Point\ x = 2)]
@@ -1229,7 +1229,7 @@ A pattern destructures with the same mark: `Point\ x, y`, `Point\ x: px, ..` (a 
 
 ```
 let Point\ x, y = p
-match q:
+match q\
     Point\ x: 0, y => println! "on the y axis at {y}"
     Some (Point\ x, ..) => x
 ```
@@ -1506,7 +1506,7 @@ A parenthesised group may head an application, which is what makes `(add 10) 7` 
 Arms are separated by line breaks rather than commas. An arm body may be inline after the fat arrow, or an indented block when the arrow ends the line.
 
 ```
-match parse_all items:
+match parse_all items\
     Ok ns =>
         let total: i64 = ns <- iter$ <- sum$
         println! "parsed {:?} total {}" ns total
@@ -1520,7 +1520,7 @@ match parse_all items:
 A struct literal may appear in a scrutinee or condition, which Rust itself forbids. Harsh has no ambiguity there, since the `:` ends the expression, so the expression is parenthesised on emission:
 
 ```
-match P { x: 1, y: 2 }:
+match P { x: 1, y: 2 }\
     P { x, y } => x + y
 ```
 
@@ -1533,7 +1533,7 @@ match (P { x: 1, y: 2 }) {
 ### Every match form
 
 ```
-match s:    // indented arms
+match s\    // indented arms
     Shape.Empty => "empty" <- to_string$
     Shape.Circle r => format! "circle {r}"
     Shape.Rect w h =>    // block-bodied arm
@@ -1552,23 +1552,23 @@ match n { 0 => "zero", _ => "other" }    // braced
 - Record patterns keep braces: `Shape.Named { name, sides }`, `E.Rec { a, b }`.
 
 ```
-match n:    // guards
+match n\    // guards
     x if x < 0 => "neg"
     0 => "zero"
     x if x % 2 == 0 => "even"
     _ => "odd"
 
-match p:    // tuple patterns
+match p\    // tuple patterns
     (0, y) => y
     (x, 0) => x
     (x, y) => x * y
 
-match n:    // ranges
+match n\    // ranges
     0..=9 => "digit"
     b'a'..=b'z' => "lower"
     _ => "other"
 
-match n:    // bindings
+match n\    // bindings
     v @ 1..=5 => format! "low {v}"
     v => format! "hi {v}"
 
@@ -1578,13 +1578,13 @@ match n: 0 => "zero", 1 | 2 => "small", _ => "big"    // or-patterns
 ### Match as a value and nested matches
 
 ```
-let r = match n:
+let r = match n\
     1 => 10
     _ => 20
 
-match a:
+match a\
     Some x =>
-        match b:
+        match b\
             Some y => x + y
             None => x
     None => 0
@@ -1792,29 +1792,27 @@ assert_eq! a 5                     →  assert_eq!(a, 5)
 
 ### Definitions
 
+**Procedural macros and foreign DSLs are still in development.** Declarative macros are finished — Harsh's own and Rust's both. A proc macro *defined* in Harsh transpiles to an ordinary Rust proc macro, and a call with simple arguments reaches it as ordinary Rust tokens, but this is not verified end to end; and a call whose arguments carry a top-level operator is read as an expression (`my_macro! a | b | c` emits `my_macro!(a) | b | c`), so isolate the tokens — `my_macro! (a | b | c)` — until it is settled. A DSL from someone else's crate works only where the shapes Harsh emits match what its parser wants; the general answer, a spelling map shipped by the crate, is designed and not built.
+
 A `macro_rules!` — with Rust's `!` — is a zone of Rust: the transpiler copies it out byte for byte and `hrs-from` copies one in the same way. It carries no Harsh opener, since its `{` … `}` delimit it and its body is laid out as Rust, not as Harsh. Its calls are still Harsh calls (`my_vec! 1 2 3` → `my_vec!(1, 2, 3)`); only the definition is foreign.
 
-Both sides of a `macro_rules~` are written in Harsh, and both follow rules already stated: a matcher is a parameter list, a transcriber is a block.
+Both sides of a `macro_rules~` are written in Harsh, and both follow rules already stated: a matcher is a parameter list, a transcriber is a block. The macro unfolds **into Harsh** before anything is transpiled, so the generated Rust holds no macro at all — only what the expansion came to.
 
 ```
-macro_rules~ twice:                                  macro_rules! twice {
-    ($e:expr) => do: $e * 2                              ($e:expr) => { $e * 2 };
+macro_rules~ twice                                   fn main() {
+    (($e:expr)) => do:                                   let v = {
+        $e * 2                                               let mut tmp = Vec::new();
+                                                             tmp.push(1);
+macro_rules~ my_vec                                          tmp.push(2);
+    ( $( ($x:expr) )* ) => do:                               tmp.push(3);
+        do:                                                  tmp
+            let mut tmp = Vec.new$                       };
+            $(tmp <- push $x)*
+            tmp                                          println!("{}", 21 * 2)
                                                      }
-
-macro_rules~ my_vec:                                 macro_rules! my_vec {
-    ( $( ($x:expr) )* ) => do:                           ( $($x:expr),* ) => {
-        do:                                                  {
-            let mut v = Vec.new$                                 let mut v = Vec::new();
-            $(v <- push $x)*                                     $(v.push($x);)*
-            v                                                    v
-                                                             }
-                                                         };
-                                                     }
-
-fn main$:                                            fn main() {
-    let v = my_vec~ 1 2 3                                let v = my_vec!(1, 2, 3);
-    println! "{}" (twice~ 21)                            println!("{}", twice!(21))
-                                                     }
+fn main$:
+    let v = my_vec~ 1 2 3
+    println! "{}" (twice~ 21)
 ```
 
 - `macro_rules~ name:` opens a block whose lines are arms; each arm ends where the next begins, and the `;` Rust wants between them comes from the layout. A written `;` or `,` after an arm is rejected, as a written `,` after a match arm is.

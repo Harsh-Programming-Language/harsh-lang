@@ -2463,7 +2463,28 @@ impl<'a> Writer<'a> {
                                 || (kind == Kind::Items
                                     && (named("impl") || named("trait") || named("mod") || named("extern")))
                         };
-                        if !self.out.ends_with("=>") && !decl {
+                        // A match's arms are a specification block in use:
+                        // opened by `\`, like a literal's fields (2026-09-18).
+                        let is_match = kind == Kind::Commas && {
+                            let mut d = 0i32;
+                            let mut seen = false;
+                            for w in line.split_whitespace() {
+                                for c in w.chars() {
+                                    match c {
+                                        '(' | '[' => d += 1,
+                                        ')' | ']' => d -= 1,
+                                        _ => {}
+                                    }
+                                }
+                                if d == 0 && w == "match" {
+                                    seen = true;
+                                }
+                            }
+                            seen
+                        };
+                        if is_match {
+                            self.out.push('\\');
+                        } else if !self.out.ends_with("=>") && !decl {
                             self.out.push(':');
                         }
                         let was_enum = self.in_enum_body;

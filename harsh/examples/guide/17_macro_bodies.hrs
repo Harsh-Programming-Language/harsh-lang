@@ -28,7 +28,7 @@ macro_rules~ filled
     [ $elem:expr ; $n:expr ] => do:
         vec! [$elem; $n]
 
-// A macro body: `name! do:`, a Harsh block by default.
+// A macro body: `name~ do:`, a Harsh block handed to the macro as tokens.
 macro_rules~ first_of
     ( $($t:tt)* ) => do:
         match ($($t)*): (a, _) => a

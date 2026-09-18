@@ -31,7 +31,14 @@ The editing features come from a language server, `hrs-lsp`, which is part of th
 cargo install harsh-lang
 ```
 
-That installs `hrs` (transpiler and build driver), `hrs-from` (Rust to Harsh), `hrs-remap` and `hrs-lsp`. The extension finds `hrs-lsp` on your `PATH`, or where `harsh.serverPath` points. Without it you still get highlighting and folding, with one warning.
+That installs `hrs` (transpiler and build driver), `hrs-from` (Rust to Harsh), `hrs-remap` and `hrs-lsp`. The extension finds `hrs-lsp` itself: `harsh.serverPath` if you set one, then your `PATH`, then where `cargo install` puts it (`~/.cargo/bin`), then `/usr/local/bin` and `/opt/homebrew/bin`, and finally by asking a login shell — an editor started from the Dock or Finder does not inherit your shell's `PATH`. Without the server you still get highlighting and folding, with one warning; the **Harsh: server search** output channel lists every path it tried.
+
+On macOS, a freshly built binary can be refused by Gatekeeper when a sandboxed app spawns it, while your terminal runs it happily. If the server will not start and the channel shows the path was found, clear the flag and sign it ad hoc:
+
+```
+xattr -d com.apple.quarantine ~/.cargo/bin/hrs-lsp 2>/dev/null
+codesign --force --sign - ~/.cargo/bin/hrs-lsp
+```
 
 Then: `hrs new hello && cd hello && hrs run`.
 

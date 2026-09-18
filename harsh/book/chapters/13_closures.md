@@ -24,7 +24,7 @@ impl Inventory
         let mut num_blue = 0
 
         for color in &self <- shirts:
-            match color:
+            match color\
                 ShirtColor.Red => num_red += 1
                 ShirtColor.Blue => num_blue += 1
 

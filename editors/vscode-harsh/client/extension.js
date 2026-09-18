@@ -9,11 +9,78 @@
 
 const vscode = require("vscode");
 const { LanguageClient, TransportKind } = require("vscode-languageclient/node");
+const fs = require("fs");
+const os = require("os");
+const path = require("path");
 
 let client;
 
+// Where `hrs-lsp` is, in order of authority.
+//
+// An editor launched from the Dock or from Finder does not inherit a login
+// shell's PATH, so `~/.cargo/bin` is often missing from it and spawning
+// `hrs-lsp` fails even though the terminal finds it. The extension therefore
+// looks for itself, and says in its output channel what it tried, so a
+// failure is diagnosable rather than mysterious (2026-09-17).
+function findServer(log) {
+  const set = vscode.workspace.getConfiguration("harsh").get("serverPath");
+  if (set) {
+    log(`harsh.serverPath is set: ${set}`);
+    return set;
+  }
+  const exe = process.platform === "win32" ? "hrs-lsp.exe" : "hrs-lsp";
+  log(`looking for ${exe}; platform ${process.platform}, home ${os.homedir()}`);
+
+  const dirs = [];
+  if (process.env.CARGO_HOME) dirs.push(path.join(process.env.CARGO_HOME, "bin"));
+  dirs.push(path.join(os.homedir(), ".cargo", "bin"));
+  for (const d of (process.env.PATH || "").split(path.delimiter)) {
+    if (d) dirs.push(d);
+  }
+  dirs.push("/usr/local/bin", "/opt/homebrew/bin", path.join(os.homedir(), ".local", "bin"));
+  for (const d of dirs) {
+    const p = path.join(d, exe);
+    try {
+      fs.accessSync(p, fs.constants.X_OK);
+      log(`found: ${p}`);
+      return p;
+    } catch (e) {
+      log(`  not at ${p} (${e.code || e.message})`);
+    }
+  }
+
+  // Last resort, and the one that fixes the Dock/Finder case on macOS and
+  // Linux: ask a login shell, which has the user's own PATH.
+  try {
+    const shell = process.env.SHELL || "/bin/sh";
+    const found = require("child_process")
+      .execFileSync(shell, ["-lc", `command -v ${exe}`], { encoding: "utf8", timeout: 5000 })
+      .trim()
+      .split("\n")[0];
+    if (found) {
+      log(`a login shell (${shell}) found it: ${found}`);
+      return found;
+    }
+  } catch (e) {
+    log(`a login shell could not find it (${e.message})`);
+  }
+
+  log(`not found; trying ${exe} on the extension host's PATH`);
+  return exe;
+}
+
 function activate(context) {
-  const command = vscode.workspace.getConfiguration("harsh").get("serverPath") || "hrs-lsp";
+  // Not "Harsh": `LanguageClient` makes a channel of that name for the
+  // server's own traffic, and two channels with one name is a way to lose a
+  // log (2026-09-17).
+  const out = vscode.window.createOutputChannel("Harsh: server search");
+  context.subscriptions.push(out);
+  const log = (m) => {
+    out.appendLine(m);
+    console.log(`[harsh] ${m}`);
+  };
+  out.show(true);
+  const command = findServer(log);
   const serverOptions = {
     run: { command, transport: TransportKind.stdio },
     debug: { command, transport: TransportKind.stdio },
@@ -22,10 +89,24 @@ function activate(context) {
     documentSelector: [{ scheme: "file", language: "harsh" }],
   };
   client = new LanguageClient("harsh", "Harsh", serverOptions, clientOptions);
-  client.start().catch((e) => {
-    vscode.window.showWarningMessage(
-      `Harsh: could not start ${command} (${e.message}). Install it with \`cargo install --path .\` in the hrust checkout, or set harsh.serverPath.`
+  client.start().catch(async (e) => {
+    const install = "How to install";
+    const setPath = "Set harsh.serverPath";
+    const pick = await vscode.window.showWarningMessage(
+      `Harsh: the language server could not start (${command}: ${e && e.message}). ` +
+        `The "Harsh: server search" output channel lists the paths tried. ` +
+        `Highlighting still works; Enter, Tab and format on save need \`hrs-lsp\`.`,
+      install,
+      setPath
     );
+    if (pick === install) {
+      vscode.window.showInformationMessage(
+        "Install the Harsh toolchain with `cargo install harsh-lang`, then reload the window. " +
+          "If it is installed but not found, your editor's PATH may not include ~/.cargo/bin: set harsh.serverPath to the full path."
+      );
+    } else if (pick === setPath) {
+      vscode.commands.executeCommand("workbench.action.openSettings", "harsh.serverPath");
+    }
   });
 
   context.subscriptions.push(

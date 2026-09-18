@@ -188,7 +188,7 @@ fn block_separators() {
         ("enum E\n    A\n    B\n", "A,"),
         ("trait T\n    fn a (&self) -> i32\n", "fn a(&self) -> i32;"),
         ("fn main$:\n    let x = do:\n        1\n", "let x = {"),
-        ("fn main$:\n    match x:\n        A => 1\n        B => 2\n", "A => 1,"),
+        ("fn main$:\n    match x\\\n        A => 1\n        B => 2\n", "A => 1,"),
     ]);
 }
 
@@ -235,7 +235,7 @@ fn inline_block_keeps_its_written_semicolon() {
     check(&[
         ("fn f$:\n    let x = 1\n    if x == 1: g$;\n", "if x == 1 {\n        g();\n    }"),
         ("fn f$:\n    let y = do: g$;\n", "let y = {\n        g();\n    };"),
-        ("fn f$:\n    match 1:\n        1 => do: g$;\n        _ => ()\n", "1 => {\n            g();\n        },"),
+        ("fn f$:\n    match 1\\\n        1 => do: g$;\n        _ => ()\n", "1 => {\n            g();\n        },"),
     ]);
     // And the converter writes it back, so the trip is stable.
     let rust = "fn f() {\n    if true {\n        g();\n    }\n}\n";
@@ -265,7 +265,7 @@ fn semicolon_discipline() {
         "fn e$:\n    if c:\n        f$;\n    g$;\n",
         "use std.fmt\nfn f$:\n    ()\n",
         "struct P\n    x: i32\n    y: i32\n",
-        "fn g$ -> i32:\n    match x:\n        A => 1\n        B => 2\n",
+        "fn g$ -> i32:\n    match x\\\n        A => 1\n        B => 2\n",
     ];
     for src in sources {
         let got = transpile(src);
@@ -299,7 +299,7 @@ fn rejects_semicolon_in_comma_blocks() {
         // Mid-block `;` on a statement that is not last.
         "fn a$:\n    let x = 1;\n    let y = 2\n",
         "fn b$:\n    f$;\n    g$\n",
-        "fn g$ -> i32:\n    match x:\n        A => 1;\n        B => 2\n",
+        "fn g$ -> i32:\n    match x\\\n        A => 1;\n        B => 2\n",
         "struct P\n    x: i32;\n    y: i32\n",
         "enum E\n    A;\n    B\n",
     ] {
@@ -313,8 +313,8 @@ fn rejects_semicolon_in_comma_blocks() {
 #[test]
 fn rejects_comma_in_comma_blocks() {
     for src in [
-        "fn g$ -> i32:\n    match x:\n        A => 1,\n        B => 2\n",
-        "fn g$ -> i32:\n    match x:\n        A => 1\n        B => 2,\n",
+        "fn g$ -> i32:\n    match x\\\n        A => 1,\n        B => 2\n",
+        "fn g$ -> i32:\n    match x\\\n        A => 1\n        B => 2,\n",
         "struct P\n    x: i32,\n    y: i32\n",
         "enum E\n    A,\n    B\n",
     ] {
@@ -403,7 +403,7 @@ fn bracketed_where_clause() {
 fn parenthesised_scrutinee() {
     check(&[
         (
-            "fn f$ -> i32:\n    let p = P\\ x = 1\n    match p:\n        P\\ x => x\n",
+            "fn f$ -> i32:\n    let p = P\\ x = 1\n    match p\\\n        P\\ x => x\n",
             "match p {",
         ),
         (
@@ -411,7 +411,7 @@ fn parenthesised_scrutinee() {
             "if p == q {",
         ),
         // No brace in the scrutinee: no parens added.
-        ("fn f (a: i32) -> i32:\n    match a:\n        1 => 2\n", "match a {"),
+        ("fn f (a: i32) -> i32:\n    match a\\\n        1 => 2\n", "match a {"),
         ("fn f (a: i32) -> i32:\n    if a > 1:\n        2\n    else:\n        0\n", "if a > 1 {"),
     ]);
 }
@@ -493,7 +493,7 @@ fn inline_matches_indented() {
         ),
         (
             "fn b (x: E) -> i32:\n    match x: A => 1, B => 2\n",
-            "fn b (x: E) -> i32:\n    match x:\n        A => 1\n        B => 2\n",
+            "fn b (x: E) -> i32:\n    match x\\\n        A => 1\n        B => 2\n",
         ),
         (
             "struct P\\ x: i32, y: i32\n",
@@ -707,6 +707,33 @@ fn a_harsh_macro_expands_into_harsh() {
     );
     assert!(got.contains("let tmp = 5;"), "the caller's name moved:\n{got}");
     assert!(got.contains("let tmp__1 = tmp + 1;"), "{got}");
+
+    // A call may hand its arguments as a block — `m~ do:` with the body
+    // beneath, or `m~\` with its entries — as a `!` call does. The opener is
+    // the call's; what the matcher sees is the block's own tokens.
+    let got = transpile(
+        "macro_rules~ first_of\n    ( $($t:tt)* ) => do:\n        match ($($t)*): (a, _) => a\n\nfn main$\\\n    let f = first_of~ do:\n        (4, 0)\n",
+    );
+    assert!(got.contains("match((4, 0))"), "{got}");
+    // In a block call the matcher sees what was written: the entries of a
+    // `\` block arrive one per line, with no comma between them, since
+    // nothing has been emitted yet.
+    let got = transpile(
+        "macro_rules~ sum\n    ($( ($x:expr) )*) => do:\n        0 $( + $x )*\n\nfn main$:\n    let n = sum~\\\n        1\n        2\n",
+    );
+    assert!(got.contains("let n = 0 + 1 + 2;"), "{got}");
+
+    // Hygiene covers every binding a transcriber can write, not `let` alone:
+    // a closure parameter, a `for` binding, a `match` arm binding. Each of
+    // these would otherwise capture the caller's expression, silently.
+    for (src, want) in [
+        ("macro_rules~ m\n    (($e:expr)) => do:\n        (|x| $e) 5\n\nfn f$:\n    let x = 10\n    let n = m~ (x + 1)\n", "(| x__1 | x + 1)(5)"),
+        ("macro_rules~ m\n    (($e:expr)) => do:\n        for i in 0..3:\n            acc += $e\n\nfn f$:\n    let i = 100\n    m~ i\n", "for i__1 in 0 .. 3"),
+        ("macro_rules~ m\n    (($e:expr)) => do:\n        match Some 1\\\n            Some v => $e\n            None => 0\n\nfn f$:\n    let v = 50\n    let n = m~ (v * 2)\n", "Some(v__1) => v * 2"),
+    ] {
+        let got = transpile(src);
+        assert!(got.contains(want), "expected {want:?} in:\n{got}");
+    }
 
     // A Rust `macro_rules!` in the same file is untouched by any of this.
     let got = transpile(

@@ -513,6 +513,23 @@ fn classify(header: &[Token], outer: BlockKind) -> BlockKind {
     // or a record variant inside an enum), else a literal's. A declaration
     // header without a mark is a field list too.
     if sig.last().map_or(false, |t| t.kind == Tk::Backslash) {
+        // `match v\` opens the arms: a specification block in use, like a
+        // literal's fields, separated by `,` (2026-09-18: `match v:` and
+        // `match v do:` are dropped; `\` is the spelling in both forms).
+        let is_match = {
+            let mut d = 0i32;
+            sig.iter().any(|t| {
+                match t.kind {
+                    Tk::Open(_) => d += 1,
+                    Tk::Close(_) => d -= 1,
+                    _ => {}
+                }
+                d == 0 && t.is_kw("match")
+            })
+        };
+        if is_match {
+            return BlockKind::Arms;
+        }
         let is_decl = sig.iter().any(|t| t.kind == Tk::Ident && matches!(t.text.as_str(), "struct" | "enum" | "union"));
         return if is_decl || outer == BlockKind::Fields { BlockKind::Fields } else { BlockKind::Lit };
     }
@@ -598,8 +615,50 @@ fn classify(header: &[Token], outer: BlockKind) -> BlockKind {
 fn check_old_marks(ln: &Line, outer: BlockKind) -> Result<(), LayoutError> {
     let sig: Vec<&Token> = ln.toks.iter().filter(|t| !t.is_comment()).collect();
     let Some(last) = sig.last() else { return Ok(()) };
+    // A declaration or item header may end in neither `:` nor `do` (nor
+    // `do:`): those constructs take no opener at all. `struct P do` is the
+    // old `struct P:` with the other opener, and is refused the same way.
+    let ends_in_do = last.is_kw("do")
+        || (last.kind == Tk::Colon && sig.len() >= 2 && sig[sig.len() - 2].is_kw("do"));
+    if ends_in_do {
+        let head: Vec<&Token> = sig.iter().copied().filter(|t| !t.is_kw("do") && t.kind != Tk::Colon).collect();
+        let kw = head.iter().find(|t| {
+            t.kind == Tk::Ident
+                && matches!(t.text.as_str(), "struct" | "enum" | "union" | "impl" | "trait" | "mod" | "extern" | "macro_rules")
+        });
+        if let Some(kw) = kw {
+            let name = head.iter().skip_while(|t| t.text != kw.text).nth(1).map(|t| t.text.clone()).unwrap_or_default();
+            let what = if matches!(kw.text.as_str(), "struct" | "enum" | "union") { "the fields" } else { "the items" };
+            return Err(LayoutError {
+                msg: format!("`{}` takes no opener: write `{} {name}` with {what} beneath it", kw.text, kw.text),
+                span: last.span,
+            });
+        }
+    }
     if last.kind != Tk::Colon {
         return Ok(());
+    }
+    // `match v:` and `match v do:` are dropped (2026-09-18): a match's arms
+    // are a specification block in use, opened by `\` like a literal's
+    // fields -- `match v\` with the arms beneath, or `match v\ p => e, q => f`.
+    {
+        let mut d = 0i32;
+        let is_match = sig.iter().any(|t| {
+            match t.kind {
+                Tk::Open(_) => d += 1,
+                Tk::Close(_) => d -= 1,
+                _ => {}
+            }
+            d == 0 && t.is_kw("match")
+        });
+        if is_match && !sig.iter().any(|t| t.is_kw("if") || t.is_kw("while")) {
+            let head_end = sig.len() - if sig.len() >= 2 && sig[sig.len() - 2].is_kw("do") { 2 } else { 1 };
+            let head: Vec<&str> = sig[..head_end].iter().map(|t| t.text.as_str()).collect();
+            return Err(LayoutError {
+                msg: format!("a match's arms are opened by `\\`: `{}\\` with the arms beneath it, or inline `{}\\ p => e, q => f`", head.join(" "), head.join(" ")),
+                span: last.span,
+            });
+        }
     }
     // A header ending in `#:` is the pseudo-block mark, not an old `:`:
     // `check_hash_colon_head` reports it, with the message that fits.

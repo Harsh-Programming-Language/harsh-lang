@@ -147,7 +147,26 @@ impl<'a> Emitter<'a> {
             let last = self.out.chars().last();
             let after_value = matches!(last, Some(c)
                 if c.is_alphanumeric() || c == '_' || c == ')' || c == ']' || c == '>' || c == '!');
-            let tight = matches!(t.kind, Tk::Open('(') | Tk::Close(')')) && after_value;
+            // `.` and `::` bind tight on both sides, synthetic or not.
+            let path = |k: &Tk| matches!(k, Tk::LArrow | Tk::Dot | Tk::PathSep);
+            let arrow = path(&t.kind) || prev.map_or(false, |p| path(&p.kind));
+            // Rust's spacing for the punctuation an expansion brings with it:
+            // `,` and `;` sit against what precedes them, a closing bracket
+            // against its content, and nothing is written after an opener.
+            // `!` sits against its macro's name, as `println!` is written.
+            let bang = t.kind == Tk::Punct && t.text == "!" && after_value;
+            // A `:` after a name (`x: T`), and the `<`/`>` of generics
+            // (`Vec<i32>`), sit tight as Rust writes them.
+            let colon = t.kind == Tk::Colon && after_value;
+            let generic = matches!(t.kind, Tk::Lt | Tk::Gt) && after_value
+                || prev.map_or(false, |p| p.kind == Tk::Lt);
+            let punct = bang || colon || generic || matches!(t.kind, Tk::Comma | Tk::Semi | Tk::Close(_));
+            let after_open = self.out.ends_with('[') || self.out.ends_with('{');
+            let tight = arrow
+                || punct
+                || after_open
+                || (matches!(t.kind, Tk::Open('(') | Tk::Close(')')) && after_value)
+                || (t.kind == Tk::Open('[') && after_value);
             if !tight
                 && !self.out.ends_with(' ')
                 && !self.out.ends_with('\n')
@@ -157,7 +176,13 @@ impl<'a> Emitter<'a> {
                 self.out.push(' ');
             }
             let lo = self.here();
-            self.out.push_str(&t.text);
+            // A synthetic token is still Harsh: an expansion's `<-` becomes a
+            // `.` and its `.` a `::`, exactly as a hand-written one does.
+            match t.kind {
+                Tk::Dot => self.out.push_str("::"),
+                Tk::LArrow => self.out.push('.'),
+                _ => self.out.push_str(&t.text),
+            }
             let hi = self.here();
             self.map.push(MapEntry {
                 gen_lo: lo,
@@ -552,7 +577,12 @@ impl<'a> Emitter<'a> {
                 Tk::Close(_) => d -= 1,
                 Tk::Ident if d == 0 => {
                     if matches!(toks[i].text.as_str(), "match" | "if" | "while" | "in") {
-                        start = Some(i + 1);
+                        // `if let Pat = e` / `while let Pat = e`: what follows
+                        // is a pattern, and a pattern's braces are legal where
+                        // an expression's are not. Only the expression after
+                        // the `=` could need parens, and it is not a literal.
+                        let is_let = toks.get(i + 1).map_or(false, |t| t.is_kw("let"));
+                        start = if is_let { None } else { Some(i + 1) };
                     }
                 }
                 _ => {}
@@ -568,6 +598,9 @@ impl<'a> Emitter<'a> {
         for i in start..end {
             match toks[i].kind {
                 Tk::Open('{') if d == 0 => has_brace = true,
+                // A `\` literal becomes a braced struct literal on the way
+                // out, and Rust refuses one as a bare scrutinee just the same.
+                Tk::Backslash if d == 0 => has_brace = true,
                 Tk::Open(_) => d += 1,
                 Tk::Close(_) => d -= 1,
                 _ => {}
@@ -879,8 +912,15 @@ impl<'a> Emitter<'a> {
                     self.out.push(' ');
                 } else if let Some(p) = prev.as_ref() {
                     // A dropped opener keeps the space that preceded it, so
-                    // `= (1 + 2)` becomes `= 1 + 2`, not `=1 + 2`.
-                    let gap = &self.src[p.span.hi as usize..t.span.lo as usize];
+                    // `= (1 + 2)` becomes `= 1 + 2`, not `=1 + 2`. An
+                    // expansion's tokens carry spans from the definition, so
+                    // the two may not be in order: there is no source gap to
+                    // read, and none is needed.
+                    let gap = if p.span.hi <= t.span.lo {
+                        &self.src[p.span.hi as usize..t.span.lo as usize]
+                    } else {
+                        ""
+                    };
                     if t.kind == Tk::Open('(') && !gap.is_empty() && !self.out.ends_with(' ') && !self.out.ends_with('(') {
                         self.out.push(' ');
                     }
@@ -1134,6 +1174,26 @@ impl<'a> Emitter<'a> {
                 continue;
             }
             let is_pattern = crate::layout::pattern_backslash(toks, 0, end, i);
+            // `match v\ p => e, q => f` inline: the `\` opens the arms, which
+            // run to the end of the line (or the group). Arms hold `=>` and
+            // `=`, so neither bounds the run here.
+            let is_match_arms = {
+                let mut d = 0i32;
+                let mut seen_match = false;
+                for t in &toks[..i] {
+                    match t.kind {
+                        Tk::Open(_) => d += 1,
+                        Tk::Close(_) => d -= 1,
+                        _ => {}
+                    }
+                    if d == 0 && t.is_kw("match") {
+                        seen_match = true;
+                    }
+                }
+                // Only a `\` at the match's own level opens its arms; one
+                // inside a group is a literal's -- `match (P\ x = 1)\`.
+                seen_match && d == 0
+            };
             fixes.insert(i, Fix::Text(" {"));
             // The bound.
             let mut d = 0i32;
@@ -1153,6 +1213,8 @@ impl<'a> Emitter<'a> {
                         }
                         d -= 1;
                     }
+                    Tk::FatArrow if d == 0 && is_match_arms => {}
+                    Tk::Eq if d == 0 && is_match_arms => {}
                     Tk::FatArrow if d == 0 => break,
                     Tk::Eq if d == 0 && is_pattern => break,
                     Tk::Eq if d == 0 && !is_pattern => {
@@ -1172,6 +1234,10 @@ impl<'a> Emitter<'a> {
                     fixes.insert(
                         l,
                         match cur {
+                            // The literal is a `match` scrutinee, already
+                            // marked to be closed with `)`: the brace comes
+                            // first, then the paren.
+                            Some(Fix::CloseAfter) => Fix::TextAfter(" })"),
                             Some(Fix::Text(":")) => Fix::TextAfter(" }"),
                             _ => Fix::TextAfter(" }"),
                         },

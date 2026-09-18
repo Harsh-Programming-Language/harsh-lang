@@ -16,6 +16,10 @@ fn transpile(harsh: &str) -> String {
     // before anything reads it and put back verbatim after.
     let (work, zones) = harsh_lang::rawzone::prepare(harsh);
     let toks = harsh_lang::lex::lex(&work).expect("lex");
+    // The driver expands Harsh's own macros before reading the file as a
+    // program; the tests take the same path.
+    let taken = harsh_lang::layout::names_in_scope(&toks);
+    let toks = harsh_lang::mac::expand_all(toks, &taken).expect("expand");
     let tree = harsh_lang::layout::build(toks).expect("layout");
     let mut em = harsh_lang::emit::Emitter::new(&work);
     em.program(&tree);
@@ -184,7 +188,7 @@ fn block_separators() {
         ("enum E\n    A\n    B\n", "A,"),
         ("trait T\n    fn a (&self) -> i32\n", "fn a(&self) -> i32;"),
         ("fn main$:\n    let x = do:\n        1\n", "let x = {"),
-        ("fn main$:\n    match x:\n        A => 1\n        B => 2\n", "A => 1,"),
+        ("fn main$:\n    match x\\\n        A => 1\n        B => 2\n", "A => 1,"),
     ]);
 }
 
@@ -231,7 +235,7 @@ fn inline_block_keeps_its_written_semicolon() {
     check(&[
         ("fn f$:\n    let x = 1\n    if x == 1: g$;\n", "if x == 1 {\n        g();\n    }"),
         ("fn f$:\n    let y = do: g$;\n", "let y = {\n        g();\n    };"),
-        ("fn f$:\n    match 1:\n        1 => do: g$;\n        _ => ()\n", "1 => {\n            g();\n        },"),
+        ("fn f$:\n    match 1\\\n        1 => do: g$;\n        _ => ()\n", "1 => {\n            g();\n        },"),
     ]);
     // And the converter writes it back, so the trip is stable.
     let rust = "fn f() {\n    if true {\n        g();\n    }\n}\n";
@@ -261,7 +265,7 @@ fn semicolon_discipline() {
         "fn e$:\n    if c:\n        f$;\n    g$;\n",
         "use std.fmt\nfn f$:\n    ()\n",
         "struct P\n    x: i32\n    y: i32\n",
-        "fn g$ -> i32:\n    match x:\n        A => 1\n        B => 2\n",
+        "fn g$ -> i32:\n    match x\\\n        A => 1\n        B => 2\n",
     ];
     for src in sources {
         let got = transpile(src);
@@ -295,7 +299,7 @@ fn rejects_semicolon_in_comma_blocks() {
         // Mid-block `;` on a statement that is not last.
         "fn a$:\n    let x = 1;\n    let y = 2\n",
         "fn b$:\n    f$;\n    g$\n",
-        "fn g$ -> i32:\n    match x:\n        A => 1;\n        B => 2\n",
+        "fn g$ -> i32:\n    match x\\\n        A => 1;\n        B => 2\n",
         "struct P\n    x: i32;\n    y: i32\n",
         "enum E\n    A;\n    B\n",
     ] {
@@ -309,8 +313,8 @@ fn rejects_semicolon_in_comma_blocks() {
 #[test]
 fn rejects_comma_in_comma_blocks() {
     for src in [
-        "fn g$ -> i32:\n    match x:\n        A => 1,\n        B => 2\n",
-        "fn g$ -> i32:\n    match x:\n        A => 1\n        B => 2,\n",
+        "fn g$ -> i32:\n    match x\\\n        A => 1,\n        B => 2\n",
+        "fn g$ -> i32:\n    match x\\\n        A => 1\n        B => 2,\n",
         "struct P\n    x: i32,\n    y: i32\n",
         "enum E\n    A,\n    B\n",
     ] {
@@ -399,7 +403,7 @@ fn bracketed_where_clause() {
 fn parenthesised_scrutinee() {
     check(&[
         (
-            "fn f$ -> i32:\n    let p = P\\ x = 1\n    match p:\n        P\\ x => x\n",
+            "fn f$ -> i32:\n    let p = P\\ x = 1\n    match p\\\n        P\\ x => x\n",
             "match p {",
         ),
         (
@@ -407,7 +411,7 @@ fn parenthesised_scrutinee() {
             "if p == q {",
         ),
         // No brace in the scrutinee: no parens added.
-        ("fn f (a: i32) -> i32:\n    match a:\n        1 => 2\n", "match a {"),
+        ("fn f (a: i32) -> i32:\n    match a\\\n        1 => 2\n", "match a {"),
         ("fn f (a: i32) -> i32:\n    if a > 1:\n        2\n    else:\n        0\n", "if a > 1 {"),
     ]);
 }
@@ -489,7 +493,7 @@ fn inline_matches_indented() {
         ),
         (
             "fn b (x: E) -> i32:\n    match x: A => 1, B => 2\n",
-            "fn b (x: E) -> i32:\n    match x:\n        A => 1\n        B => 2\n",
+            "fn b (x: E) -> i32:\n    match x\\\n        A => 1\n        B => 2\n",
         ),
         (
             "struct P\\ x: i32, y: i32\n",
@@ -571,9 +575,11 @@ fn rejects_bad_pipes() {
         let err = harsh_lang::layout::build(toks).err().expect("must be rejected");
         assert!(err.msg.contains(needle), "{}", err.msg);
     }
-    // `$` as a macro metavariable is untouched.
-    let got = transpile("macro_rules! pair:\n    ($a:expr) => { $a }\n");
-    assert!(got.contains("$a"), "{got}");
+    // `$` as a macro metavariable is substituted, not emitted: a Harsh macro
+    // unfolds here, so nothing of the definition reaches the output.
+    let got = transpile("macro_rules~ pair\n    (($a:expr)) => do: $a\n\nfn m$:\n    let x = pair~ 7\n");
+    assert!(!got.contains("$a"), "{got}");
+    assert!(got.contains("let x = 7;"), "{got}");
 }
 
 /// Application binds tighter than `<-`; the arrow applies to the argument only
@@ -675,16 +681,75 @@ fn a_rust_macro_rules_is_copied_verbatim() {
     assert_eq!(transpile(&back), rust);
 }
 
+/// A Harsh macro unfolds **into Harsh**, before anything is transpiled: the
+/// definition leaves no trace, the call becomes what the transcriber says,
+/// and the emitted Rust holds no macro of ours at all.
+#[test]
+fn a_harsh_macro_expands_into_harsh() {
+    let got = transpile(
+        "macro_rules~ twice\n    (($e:expr)) => do:\n        $e * 2\n\nfn main$:\n    let n = twice~ 21\n",
+    );
+    assert!(!got.contains("macro_rules"), "the definition leaked:\n{got}");
+    assert!(got.contains("let n = 21 * 2;"), "{got}");
+
+    // A repetition becomes one statement per round, and `<-` and `$` are
+    // translated as in any Harsh: the expansion is ordinary code.
+    let got = transpile(
+        "macro_rules~ push_all\n    (($v:ident) $( ($x:expr) )*) => do:\n        $( $v <- push $x )*\n\nfn main$:\n    let mut v = Vec.new$\n    push_all~ v 1 2\n",
+    );
+    // the last push is the function's tail expression, so it carries no `;`
+    assert!(got.contains("v.push(1);"), "{got}");
+    assert!(got.contains("v.push(2)"), "{got}");
+
+    // Hygiene: the macro's own local moves when the caller has that name.
+    let got = transpile(
+        "macro_rules~ dbl\n    (($e:expr)) => do:\n        do:\n            let tmp = $e\n            tmp + tmp\n\nfn main$:\n    let tmp = 5\n    let n = dbl~ (tmp + 1)\n",
+    );
+    assert!(got.contains("let tmp = 5;"), "the caller's name moved:\n{got}");
+    assert!(got.contains("let tmp__1 = tmp + 1;"), "{got}");
+
+    // A call may hand its arguments as a block — `m~ do:` with the body
+    // beneath, or `m~\` with its entries — as a `!` call does. The opener is
+    // the call's; what the matcher sees is the block's own tokens.
+    let got = transpile(
+        "macro_rules~ first_of\n    ( $($t:tt)* ) => do:\n        match ($($t)*): (a, _) => a\n\nfn main$\\\n    let f = first_of~ do:\n        (4, 0)\n",
+    );
+    assert!(got.contains("match((4, 0))"), "{got}");
+    // In a block call the matcher sees what was written: the entries of a
+    // `\` block arrive one per line, with no comma between them, since
+    // nothing has been emitted yet.
+    let got = transpile(
+        "macro_rules~ sum\n    ($( ($x:expr) )*) => do:\n        0 $( + $x )*\n\nfn main$:\n    let n = sum~\\\n        1\n        2\n",
+    );
+    assert!(got.contains("let n = 0 + 1 + 2;"), "{got}");
+
+    // Hygiene covers every binding a transcriber can write, not `let` alone:
+    // a closure parameter, a `for` binding, a `match` arm binding. Each of
+    // these would otherwise capture the caller's expression, silently.
+    for (src, want) in [
+        ("macro_rules~ m\n    (($e:expr)) => do:\n        (|x| $e) 5\n\nfn f$:\n    let x = 10\n    let n = m~ (x + 1)\n", "(| x__1 | x + 1)(5)"),
+        ("macro_rules~ m\n    (($e:expr)) => do:\n        for i in 0..3:\n            acc += $e\n\nfn f$:\n    let i = 100\n    m~ i\n", "for i__1 in 0 .. 3"),
+        ("macro_rules~ m\n    (($e:expr)) => do:\n        match Some 1\\\n            Some v => $e\n            None => 0\n\nfn f$:\n    let v = 50\n    let n = m~ (v * 2)\n", "Some(v__1) => v * 2"),
+    ] {
+        let got = transpile(src);
+        assert!(got.contains(want), "expected {want:?} in:\n{got}");
+    }
+
+    // A Rust `macro_rules!` in the same file is untouched by any of this.
+    let got = transpile(
+        "macro_rules! keep {\n    () => { 1 };\n}\n\nfn main$:\n    let n = keep$\n",
+    );
+    assert!(got.contains("macro_rules! keep {"), "{got}");
+}
+
 /// Harsh's own declarative macros are marked `~`, at the definition and at
-/// the call: `macro_rules~ pair:` and `pair~ 7`. Today `~` and `!` behave
-/// identically (the mark is normalised at the door, `layout::normalise_macro_mark`);
-/// the mark exists so the two worlds can be told apart on the page, and it is
-/// where the fork will be when Harsh expands its own macros.
+/// the call. Since expansion landed, the mark is the fork: a `~` macro is
+/// unfolded here, into Harsh, and leaves no trace; a `!` one is Rust's.
 #[test]
 fn tilde_is_the_harsh_macro_mark() {
-    let got = transpile("macro_rules~ pair:\n    ($a:expr) => { $a }\n\nfn main$:\n    println! \"{}\" (pair~ 7)\n");
-    assert!(got.contains("macro_rules! pair {"), "{got}");
-    assert!(got.contains("pair!(7)"), "{got}");
+    let got = transpile("macro_rules~ pair\n    (($a:expr)) => do: $a\n\nfn main$:\n    println! \"{}\" (pair~ 7)\n");
+    assert!(!got.contains("macro_rules"), "a Harsh macro leaves no trace:\n{got}");
+    assert!(got.contains("println!(\"{}\", 7)"), "{got}");
     // A spaced `~` is not a mark: nothing in Harsh writes one, so it is left
     // alone rather than quietly becoming a macro call.
     let plain = transpile("fn main$:\n    let a = 1\n    let b = a ~ 2\n");
@@ -694,12 +759,16 @@ fn tilde_is_the_harsh_macro_mark() {
 /// `macro_rules! name:` is a definition; the name is not an argument.
 #[test]
 fn macro_rules_definition() {
-    let got = transpile("macro_rules! pair:\n    ($a:expr) => { $a }\n");
-    assert!(got.contains("macro_rules! pair {"), "{got}");
-    assert!(got.contains("($a:expr) => { $a };"), "{got}");
-    // The arms take `;` from the newline; a written one is rejected, as a
-    // written `,` is after a match arm.
-    assert!(layout_err("macro_rules! pair:\n    ($a:expr) => { $a };\n").contains("macro arm"));
+    // Since expansion landed, a `~` definition emits nothing at all and its
+    // calls become what the transcriber says.
+    let got = transpile("macro_rules~ pair\n    (($a:expr)) => do: $a\n\nfn main$:\n    let x = pair~ 7\n");
+    assert!(!got.contains("macro_rules"), "{got}");
+    assert!(got.contains("let x = 7;"), "{got}");
+    // An arm's transcriber must be a block: `=> do:`, not a bare expression.
+    assert!(
+        layout_err("macro_rules~ pair\n    (($a:expr)) => $a\n\nfn main$:\n    let x = pair~ 7\n")
+            .contains("transcriber is a block")
+    );
 }
 
 /// Mixing the inline and multi-line `else` forms orphans the second `else`,
@@ -823,6 +892,13 @@ fn call_parens_follow_rust_spacing() {
 
 fn layout_err(src: &str) -> String {
     let toks = harsh_lang::lex::lex(src).expect("lex");
+    // Harsh's own macros are read and expanded before the file is a program,
+    // as the driver does it; a macro's own errors arrive from there.
+    let taken = harsh_lang::layout::names_in_scope(&toks);
+    let toks = match harsh_lang::mac::expand_all(toks, &taken) {
+        Ok(t) => t,
+        Err(e) => return e.msg,
+    };
     match harsh_lang::layout::build(toks) {
         Err(e) => e.msg,
         Ok(_) => panic!("accepted:\n{src}"),
@@ -983,15 +1059,12 @@ fn macro_do_block_is_harsh() {
             "let w = tokio::select! {\n        n = slow(\"slow\") => n,\n        n = fast(\"fast\") => n,\n    };",
         ),
         ("fn m$:\n    let w = tokio.select! do:\n        n = slow \"slow\" => do:\n            n\n    w\n", "n = slow(\"slow\") => {\n            n\n        },"),
+        // A `~` macro's transcriber is Harsh, and the expansion is Harsh:
+        // the definition emits nothing and the call becomes the block.
         (
-            "macro_rules! my_vec:\n    ( $( ($x:expr) )* ) => do:\n        do:\n            let mut v = Vec.new$\n            $(v <- push $x)*\n            v\n",
-            "( $($x:expr ),* ) => {\n        {\n            let mut v = Vec::new();\n            $(v.push($x);)*\n            v\n        }\n    };",
+            "macro_rules~ my_vec\n    ( $( ($x:expr) )* ) => do:\n        do:\n            let mut tmp = Vec.new$\n            $(tmp <- push $x)*\n            tmp\n\nfn m$:\n    let v = my_vec~ 1 2\n",
+            "let v = {\n        let mut tmp = Vec::new();\n        tmp.push(1);\n        tmp.push(2);\n        tmp\n    };",
         ),
-        (
-            "macro_rules! my_vec:\n    ( $( ($x:expr) )* ) => do:\n        do:\n            let mut v = Vec.new$\n            $(\n                let x = $x\n                v <- push x\n            )*\n            v\n",
-            "$(\n                let x = $x;\n                v.push(x);\n            )*\n            v",
-        ),
-        ("macro_rules! twice:\n    ($e:expr) => do: $e * 2\n", "($e:expr) => {\n        $e * 2\n    };"),
         ("fn m$:\n    let v = my_vec! 1 2 3\n    let m = hashmap! (\"a\" => 1) (\"b\" => 2)\n", "my_vec!(1, 2, 3);\n    let m = hashmap!(\"a\" => 1, \"b\" => 2)"),
     ]);
 }
@@ -1002,17 +1075,18 @@ fn macro_do_block_is_harsh() {
 /// forwarding included, are Rust's. Bracketed and braced matchers are Rust's.
 #[test]
 fn macro_matchers_are_parameter_groups() {
-    check(&[
-        ("macro_rules! m:\n    ( ($a:expr) ($b:expr) ) => do: $a\n", "($a:expr, $b:expr ) => {"),
-        ("macro_rules! m:\n    ( $( ($k:expr => $v:expr) )* ) => do: 0\n", "( $($k:expr => $v:expr ),* ) => {"),
-        ("macro_rules! m:\n    ( ($h:expr) $( ($t:expr) )* ) => do: $h + m! $( ($t) )*\n", "($h:expr, $($t:expr ),* ) => {\n        $h + m!($($t ),*)"),
-        ("macro_rules! m:\n    ( add ($a:expr) ($b:expr) ) => do: $a\n", "( add, $a:expr, $b:expr ) => {"),
-        ("macro_rules! m:\n    ( $x:expr ) => do: $x\n", "( $x:expr ) => {"),
-        ("macro_rules! m:\n    () => do: 0\n", "() => {"),
-        ("macro_rules! log:\n    ( ($level:expr) $($arg:tt)* ) => do:\n        println! \"[{}] {}\" $level (format! $($arg)*)\n", "($level:expr, $($arg:tt)* ) => {\n        println!(\"[{}] {}\", $level, format!($($arg)*))"),
-        ("macro_rules! filled:\n    [ $elem:expr ; $n:expr ] => do:\n        vec! [$elem; $n]\n", "[ $elem:expr ; $n:expr ] => {\n        vec! [$elem; $n]\n    };"),
-        ("fn m$:\n    let v = filled! [0u8; 4]\n    log! \"info\" \"x = {}\" 1\n", "filled! [0u8; 4];\n    log!(\"info\", \"x = {}\", 1)"),
-    ]);
+    // One group per argument, and a call juxtaposes them: `m~ 1 2`.
+    let got = transpile("macro_rules~ m\n    (($a:expr) ($b:expr)) => do: $a + $b\n\nfn main$:\n    let n = m~ 1 2\n");
+    assert!(got.contains("let n = 1 + 2;"), "{got}");
+    // A repetition of groups is a list of arguments.
+    let got = transpile("macro_rules~ m\n    ($( ($x:expr) )*) => do:\n        [$( $x ),*]\n\nfn main$:\n    let v = m~ 1 2 3\n");
+    assert!(got.contains("[1, 2, 3]"), "{got}");
+    // A literal token in the matcher must appear in the call.
+    let got = transpile("macro_rules~ m\n    (add ($a:expr)) => do: $a\n\nfn main$:\n    let n = m~ add 5\n");
+    assert!(got.contains("let n = 5;"), "{got}");
+    // An empty matcher takes no argument.
+    let got = transpile("macro_rules~ m\n    () => do: 0\n\nfn main$:\n    let n = m~\n");
+    assert!(got.contains("let n = 0;"), "{got}");
 }
 
 /// Rule 1: a macro `do:` block whose first line begins with `<` is markup,
@@ -1049,11 +1123,18 @@ fn hsx_markup_with_harsh_holes() {
 #[test]
 fn rejects_bad_macro_spellings() {
     for (src, needle) in [
-        ("macro_rules! twice:\n    ($e:expr) => $e * 2\n", "transcriber is a block"),
-        ("macro_rules! pair:\n    ($a:expr) => { $a };\n", "macro arm"),
-        ("macro_rules! pair:\n    ($a:expr) => { $a },\n", "macro arm"),
-        ("macro_rules! m:\n    ( ($x:expr) ) => do:\n        do:\n            $(v <- push $x);*\n", "no separator"),
-        ("macro_rules! m:\n    $a\n", "expected a macro arm"),
+        // the header takes no mark, and an arm needs its matcher first
+        ("macro_rules~ kept:\n    (($e:expr)) => do: $e\n", "arms follow its header"),
+        ("macro_rules~ m\n    $a\n", "an arm begins with its matcher"),
+        // the transcriber is a block
+        ("macro_rules~ twice\n    (($e:expr)) => $e * 2\n", "transcriber is a block"),
+        // a capture the matcher never bound, and one used at the wrong depth
+        ("macro_rules~ m\n    (($a:expr)) => do: $b\n\nfn f$:\n    let x = m~ 1\n", "not captured"),
+        ("macro_rules~ m\n    ($( ($x:expr) )*) => do: $x\n\nfn f$:\n    let x = m~ 1 2\n", "used inside one"),
+        // and a call no arm fits
+        ("macro_rules~ one\n    (($a:ident)) => do: $a\n\nfn f$:\n    let x = one~ 1\n", "no arm of `one~` matches"),
+        // the wrong mark on a call, named rather than left to rustc
+        ("macro_rules~ adding\n    (($a:expr)) => do: $a\n\nfn f$:\n    let x = adding! 3\n", "is called `adding~`"),
     ] {
         assert!(layout_err(src).contains(needle), "{src:?}: {}", layout_err(src));
     }

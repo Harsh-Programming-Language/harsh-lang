@@ -345,7 +345,10 @@ pub fn rewrite_dollar(toks: &[Token]) -> Result<Vec<Token>, JuxtError> {
     }
     let mut v: Vec<Token> = Vec::with_capacity(toks.len() + 2);
     for (i, t) in toks.iter().enumerate() {
-        if t.text != "$" || t.kind != Tk::Punct || t.synthetic {
+        // A `$` from a macro expansion is synthetic -- every spliced token is,
+        // since its span points into the definition -- but it is still a call
+        // marker and `f$` must still become `f()` (2026-09-18).
+        if t.text != "$" || t.kind != Tk::Punct {
             v.push(t.clone());
             continue;
         }
@@ -377,6 +380,7 @@ pub fn rewrite_dollar(toks: &[Token]) -> Result<Vec<Token>, JuxtError> {
         }
         for (kind, text) in [(Tk::Open('('), "("), (Tk::Close(')'), ")")] {
             v.push(Token {
+                ctx: 0,
                 kind,
                 span: t.span,
                 text: text.to_string(),
@@ -1441,6 +1445,7 @@ impl Side {
 
 fn paren(kind: Tk, text: &str, at: Span, line: usize) -> Token {
     Token {
+        ctx: 0,
         kind,
         span: Span { lo: at.lo, hi: at.lo },
         text: text.to_string(),
@@ -1715,6 +1720,7 @@ impl<'a> Pipes<'a> {
         if holes > 0 {
             let params: Vec<String> = (1..=holes).map(|p| format!("__hrs{p}")).collect();
             v.push(Token {
+                ctx: 0,
                 kind: Tk::Punct,
                 span: Span { lo: at.lo, hi: at.lo },
                 text: format!("move |{}| ", params.join(", ")),
@@ -1728,6 +1734,7 @@ impl<'a> Pipes<'a> {
             let end_at = v.last().map(|t| t.span).unwrap_or(at);
             for p in params {
                 v.push(Token {
+                    ctx: 0,
                     kind: Tk::Ident,
                     span: Span { lo: end_at.hi, hi: end_at.hi },
                     text: p,

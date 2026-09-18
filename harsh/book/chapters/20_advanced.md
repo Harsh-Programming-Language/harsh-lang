@@ -307,9 +307,10 @@ fn main$:
     // where a value of any type is expected:
     let guess = "3"
 
-    let n: u32 = match guess <- trim$ <- parse$:
-        Ok num => num
-        Err _ => bar$
+    let n: u32 =
+        match guess <- trim$ <- parse$\
+            Ok num => num
+            Err _ => bar$
 
     println! "{n}"
 

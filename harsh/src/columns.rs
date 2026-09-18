@@ -516,7 +516,7 @@ mod tests {
 
     #[test]
     fn enter_after_arm_opener() {
-        let s = "fn f n: i32 -> i32:\n    match n:\n        0 =>\n";
+        let s = "fn f n: i32 -> i32:\n    match n\\\n        0 =>\n";
         let c = at(s, 3);
         assert_eq!(c.default, 12);
         assert_eq!(c.legal, vec![0, 4, 8, 12]);

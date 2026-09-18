@@ -347,7 +347,43 @@ Worth it because a notebook is where people try a language without installing a 
 - **Formatter: a block literal's shape — done 2026-09-10** (the rule below landed in `fmt.rs` and `columns.rs`; the corpus moved with one `hrs fmt`).
 - Was: `let user1 = User\` with the fields one unit past the *statement* is legal and is what the Book's snippets write today, but it hides what belongs to what. The author's rule (2026-09-10): the fields sit one unit past the literal's own column, so either `=` ends its line and `User\` starts the next one with the fields beneath it — the guide's stated style, and what `hrs-from` already writes — or the fields align one unit past `User` on the `=` line. Today `hrs fmt` leaves the first form alone (`fmt --check` on `book/src/05_structs/define.hrs` is a no-op), so this is a re-breaking rule for `fmt.rs`, the same brick as "break after `=` before a multi-line group": once it lands, the Book's snippets move with one `hrs fmt`, and Enter after a line ending in `\` should land one unit past the literal's name (`columns.rs`), not the statement. Verified the same day the Book's literals are not in the formatter's style.
 
+## Procedural macros — paused 2026-09-18, by the user
+
+Declarative macros are finished. Procedural macros are **paused while the user
+reads into `TokenStream`**; the careful approach is his, and the state is:
+
+**Group 2, a proc macro the programmer writes in Harsh.** The definition
+transpiles to what looks like an ordinary Rust proc macro (checked by eye, not
+built and called). A call with simple arguments reaches the macro as ordinary
+Rust tokens -- verified with an echo macro: `echo! 1 2 3` arrives as
+`1, 2, 3`, `echo!\ a = 1, b = 2` as `a : 1, b : 2`, `echo! do:` as
+`let x = 1 ; x + 1`. **One sharp edge found, and it is silent**: a call whose
+arguments carry a top-level operator is read as an expression, because
+application binds tighter than operators --
+
+    my_macro! a | b | c        emits    my_macro!(a) | b | c
+
+so the macro receives `a` alone and `| b | c` applies to the expansion. The
+grouped forms carry operators through intact (`(a | b | c)`, `[a | b | c]`,
+`\`, `do:`). **Open question for the user**: refuse the bare form, naming the
+fix, or let a macro call take everything to the end of its line as arguments
+-- which costs `let x = m! 1 + 2`, where `+ 2` is the caller's arithmetic
+today.
+
+**Still untested in group 2**: a proc-macro crate actually written in Harsh,
+built and called; the derive and attribute forms applied to Harsh items; a
+macro body carrying Harsh's own marks (`<-`, `$`, a `\` literal); and whether
+`hrs-remap` carries a macro's own diagnostics back to `.hrs` lines.
+
+**Group 3, a foreign DSL** (`view!`, `rsx!`, `sql!` from someone else's
+crate): works only where the shapes Harsh emits match what that parser wants.
+The general answer is the crate shipping a spelling map (`dsl.hrs`), designed
+in the development tree and not built. Untouched.
+
 ## Further out
+
+- **Converter: a struct literal inside a macro's bracket body.** `vec![Arm { matcher: m }]` converts with a stray paren (`vec ! [ ( Arm { …`). Found by the self-host, 2026-09-17, the same day as the `if let` case below and probably the same cause: a brace group after a name inside a macro body. Not pinned.
+- **Converter: `if let` with a struct pattern.** `if let E::G { body, .. } = &m {` converts to a broken shape (`= &m (do:`, a stray paren): the pattern's braces are read as a block. Found by the self-host, 2026-09-17; reproduction in the handover. Not pinned.
 
 - **Publish on crates.io — first of the two below.** `cargo install <crate>` gives anyone the three binaries with one line and no repository; it is packaging what exists, not new code, and it is gated only by the name. The package name stays **`hrust`** (decided: the `h` and the `rust` tell a reader what the package is to Rust; `harsh` is taken on crates.io; the Rust Foundation's policy permits "Rust" in a crate name that refers to compatibility, and the *language* is named Harsh everywhere, which is what the policy is about). **Reversed the evening of 2026-09-10, after `hrust 0.1.0` had been published**: the repository, the mirror, the Marketplace publisher and the extension had all become `harsh-lang`, and one project with one name in four places and another in the fifth was worse than either name; a name without "rust" in it also needs no tolerance from the policy. The crate is **`harsh-lang`** (library crate `harsh_lang`; the binaries stay `hrs`, `hrs-from`, `hrs-remap`, `hrs-lsp`), `hrust 0.1.0` deleted from crates.io the same night, with zero downloads. Then, manifest metadata (`description`, `license = "MPL-2.0"`, `repository`, `readme`, `keywords`, `categories`, `rust-version`), an `exclude` list so editor grammars, notebooks and examples stay in the repository rather than the package, and `cargo publish --dry-run` as the test.
 - **Build-script integration.** The transpiler is already a library. A small `build.rs` that walks `src/**.hrs`, writes the Rust into `OUT_DIR` and lets `main.rs` `include!` it would make a Harsh project a dependency-only affair: `cargo build` alone, no `hrs` binary, for every collaborator and every CI. `include!` is known not to break span mapping. Short of the language server, the largest adoption lever there is. Caveat: a build script transpiles but cannot sit between cargo and the terminal, so on a plain `cargo build` rustc names the generated file; the driver stays the way to get errors on `.hrs` lines, and `hrs` should learn the build-script layout alongside the `[[bin]]` one.

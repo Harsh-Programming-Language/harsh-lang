@@ -345,7 +345,10 @@ pub fn rewrite_dollar(toks: &[Token]) -> Result<Vec<Token>, JuxtError> {
     }
     let mut v: Vec<Token> = Vec::with_capacity(toks.len() + 2);
     for (i, t) in toks.iter().enumerate() {
-        if t.text != "$" || t.kind != Tk::Punct || t.synthetic {
+        // A `$` from a macro expansion is synthetic -- every spliced token is,
+        // since its span points into the definition -- but it is still a call
+        // marker and `f$` must still become `f()` (2026-09-18).
+        if t.text != "$" || t.kind != Tk::Punct {
             v.push(t.clone());
             continue;
         }

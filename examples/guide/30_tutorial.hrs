@@ -23,7 +23,7 @@ impl Report
              <- collect$
 
     fn render_line (&self) (idx: usize) (word: &str) (n: usize) -> String:
-        match &self <- format:
+        match &self <- format\
             Format.Plain => format! "{word} {n}"
             Format.Ranked => format! "{}. {word} {n}" (idx + 1)
             Format.Boxed\ width => format!

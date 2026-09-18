@@ -79,6 +79,22 @@ pub struct Token {
     /// exactly where the `$` stood (its span is the `$`'s), so the whitespace
     /// after it is the source's and is copied like any other token's.
     pub dollar: bool,
+    /// **Syntax context** — the hygiene mark, as in Rust (2026-09-17).
+    ///
+    /// Source starts at `ctx == 0`, the root. Each expansion of a
+    /// `macro_rules~` macro allocates a fresh id and stamps it on the tokens
+    /// the *definition* contributed; tokens substituted from a `$capture`
+    /// keep the context they arrived with, which is the caller's. Two
+    /// identifiers are the same name only when their text **and** their
+    /// context agree, which is what makes the macro's `a` and the caller's
+    /// `a` two different variables (`docs/dev/MACRO-DESIGN.md`).
+    ///
+    /// The one place Harsh must differ from rustc: rustc *is* the resolver,
+    /// so a context can stay invisible forever, while Harsh hands its result
+    /// on as text. At emission, where two identifiers share a spelling,
+    /// differ in context and are visible in one scope, one is respelled --
+    /// the context decides that it must happen and to which.
+    pub ctx: u32,
 }
 
 impl Token {
@@ -169,6 +185,7 @@ impl<'a> Lexer<'a> {
         let ls = if self.at_line_start { Some(self.pending_indent) } else { None };
         self.at_line_start = false;
         self.toks.push(Token {
+            ctx: 0,
             kind,
             span: Span::new(lo, hi),
             text,

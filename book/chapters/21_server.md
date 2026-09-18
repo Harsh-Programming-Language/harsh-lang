@@ -68,7 +68,7 @@ fn handle_connection mut stream: TcpStream:
                    <- unwrap$
 
     let (status_line, filename) =
-        match &request_line[..]:
+        match &request_line[..]\
             "GET / HTTP/1.1" => ("HTTP/1.1 200 OK", "hello.html")
             "GET /sleep HTTP/1.1" => do:
                 thread.sleep (Duration.from_millis 50)          // a slow request
@@ -162,7 +162,7 @@ fn handle_connection (mut stream: TcpStream) (served: Arc<Mutex<Vec<String>>>):
                    <- unwrap$
 
     let (status_line, filename) =
-        match &request_line[..]:
+        match &request_line[..]\
             "GET / HTTP/1.1" => ("HTTP/1.1 200 OK", "hello.html")
             "GET /sleep HTTP/1.1" => do:
                 thread.sleep (Duration.from_millis 50)
@@ -240,7 +240,7 @@ impl Worker
                              <- unwrap$
                              <- recv$   // the lock is released here, before the job runs
 
-                match message:
+                match message\
                     Ok job => job$
                     Err _ => break                                    // the sender is gone: shut down
 

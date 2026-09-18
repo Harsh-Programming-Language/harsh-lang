@@ -22,7 +22,7 @@ impl AveragedCollection
     pub fn remove (&mut self) -> Option<i32>:
         let result = self <- list <- pop$
 
-        match result:
+        match result\
             Some value => do:
                 self <- update_average$
                 Some value

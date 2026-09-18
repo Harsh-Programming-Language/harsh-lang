@@ -307,9 +307,10 @@ fn main$:
     // where a value of any type is expected:
     let guess = "3"
 
-    let n: u32 = match guess <- trim$ <- parse$:
-        Ok num => num
-        Err _ => bar$
+    let n: u32 =
+        match guess <- trim$ <- parse$\
+            Ok num => num
+            Err _ => bar$
 
     println! "{n}"
 
@@ -393,14 +394,22 @@ Returning a closure needs a type for it, and a closure's type has no name. `impl
 
 ## 20.5 Macros
 
-A macro is code that writes code at compile time. `println!`, `vec!` and `#[derive]` are macros; the `!` and the `#[…]` are how you tell. A *declarative* macro is defined with `macro_rules~` as a set of patterns and what each expands to:
+A macro is code that writes code before your program is compiled. **Harsh has two kinds, and the mark tells you which.**
+
+A macro written `name~` is **Harsh's**: it is defined with `macro_rules~`, its matchers and its body are Harsh, and `hrs` unfolds it *into Harsh* before anything is transpiled — so what it produces is ordinary Harsh, meeting the rules of this book. A macro written `name!` is **Rust's**: `println!`, `vec!`, `format!` and every macro a Rust crate exports. You call it with Harsh syntax, and Rust unfolds it.
+
+Which you meet depends on where it came from: a Harsh crate may export either kind, a Rust crate exports `!` macros only. (`#[derive …]` and the other attribute forms are Rust's too; the `#[…]` is how you tell those.)
+
+This chapter covers **declarative** macros, which are finished. Rust's other family, *procedural* macros — the `#[proc_macro]`, `#[derive]` and attribute forms — and the DSLs built with them are **still in development in Harsh**: a proc macro written in Harsh transpiles to an ordinary Rust one, and simple calls reach it as ordinary Rust tokens, but the shapes are not settled and may change.
+
+A declarative Harsh macro is a set of patterns and what each expands to:
 
 ```
 // A declarative macro: pattern-matched at compile time. Both sides are
 // written in Harsh. The matcher is a parameter list -- one group per fragment,
 // a repetition of groups for a list -- and the transcriber is a `do:` block.
 #[macro_export]
-macro_rules~ my_vec:
+macro_rules~ my_vec
     ( $( ($x:expr) )* ) => do:
         do:
             let mut temp_vec = Vec.new$
@@ -409,7 +418,7 @@ macro_rules~ my_vec:
 
 // Two arms, and a repetition that spans lines. The inner `do:` makes the
 // expansion a block with a value, as the Rust `{ { .. } }` would.
-macro_rules~ sum:
+macro_rules~ sum
     () => do: 0
     ($h:expr) => do: $h
     ( ($h:expr) $( ($t:expr) )* ) => do:
@@ -425,6 +434,10 @@ fn main$:
 [1, 2, 3]
 10
 ```
+
+The macro unfolds **into Harsh**, before anything is transpiled: `my_vec~ 1 2 3` becomes the block the transcriber describes, and the generated Rust holds no macro at all — only what the expansion came to. You can see that middle step with `hrs expand`, and any mistake in a macro shows up as a mistake in the Harsh it produced, on lines you can read.
+
+Two rules come with that, and both are Rust's. A name the macro introduces is its own: a `let tmp` in a transcriber never captures the caller's `tmp`, and where both would stand in one scope the macro's is the one that moves. And a name the *caller* is meant to use must be passed in — `$name:ident` — since a macro cannot invent a binding for someone else's code.
 
 Both sides of the macro are written in Harsh, and both follow rules you already know. The matcher `( $( ($x:expr) )* )` is a parameter list: one group per fragment, and a repetition of groups is a list of them — the same brick as `fn f (a: T) (b: U)`, applied a third time. The call `my_vec! 1 2 3` is an ordinary application, one atom per argument. The transcriber is a `do:` block; its statements take their `;` from the layout, `$x` is an atom like any other so `push $x` is a call, and a repetition `$( … )*` that is the whole of its line repeats a statement. The inner `do:` is there because a macro's expansion is a run of tokens, not a block: for the expansion to *be* a block with a value, the block must be written, as Rust writes `{ { … } }`. `sum!` shows an arm with nothing to match and a repetition that spans lines, `$(` on one line, its body beneath, `)*` back under it. On the call side, `$( ($t) )*` in an argument position is a list of arguments, the mirror of the matcher; a repetition of bare tokens, `$($arg)*`, is copied as it stands and is how a macro forwards `tt`s.
 

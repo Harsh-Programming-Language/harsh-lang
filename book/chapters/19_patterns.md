@@ -9,7 +9,7 @@ fn main$:
     // match arms
     let x = Some 3
 
-    match x:
+    match x\
         None => println! "none"
         Some i => println! "some {i}"
     // if let, with else if and else if let
@@ -98,7 +98,7 @@ error[E0005]: refutable pattern in local binding
 fn main$:
     let x = 1
 
-    match x:
+    match x\
         1 => println! "one"
         2 => println! "two"
         3 => println! "three"
@@ -108,7 +108,7 @@ fn main$:
     let x = Some 5
     let y = 10
 
-    match x:
+    match x\
         Some 50 => println! "Got 50"
         Some y => println! "Matched, y = {y}"     // a new y, bound to 5
         _ => println! "Default case, x = {x:?}"
@@ -118,14 +118,14 @@ fn main$:
     // or-patterns and ranges
     let x = 5
 
-    match x:
+    match x\
         1 | 2 => println! "one or two"
         3..=5 => println! "three through five"
         _ => println! "anything"
 
     let c = 'c'
 
-    match c:
+    match c\
         'a'..='j' => println! "early ASCII letter"
         'k'..='z' => println! "late ASCII letter"
         _ => println! "something else"
@@ -170,7 +170,7 @@ fn main$:
     let Point\ x, y = p                 // shorthand: same names
     println! "{x} {y}"
 
-    match p:
+    match p\
         Point\ x, y: 0 => println! "On the x axis at {x}"
         Point\ x: 0, y => println! "On the y axis at {y}"
         Point\ x, y => println! "On neither axis: ({x}, {y})"
@@ -184,7 +184,7 @@ fn main$:
         ]
 
     for msg in msgs:
-        match msg:
+        match msg\
             Message.Quit => println! "The Quit variant has no data to destructure."
             Message.Move\ x, y => println! "Move in the x direction {x} and in the y direction {y}"
             Message.Write text => println! "Text message: {text}"
@@ -223,7 +223,7 @@ fn main$:
     let mut setting_value = Some 5
     let new_setting_value = Some 10
 
-    match (setting_value, new_setting_value):
+    match (setting_value, new_setting_value)\
         (Some _, Some _) => println! "Can't overwrite an existing customized value"
         _ => setting_value = new_setting_value
 
@@ -231,7 +231,7 @@ fn main$:
 
     let numbers = (2, 4, 8, 16, 32)
 
-    match numbers:
+    match numbers\
         (first, _, third, _, fifth) => println! "Some numbers: {first}, {third}, {fifth}"
     // `_x` binds and silences the warning; `_` does not bind at all
 
@@ -250,10 +250,10 @@ fn main$:
 
     let origin = Point\ x = 0, y = 0, z = 0
 
-    match origin:
+    match origin\
         Point\ x, .. => println! "x is {x}"
 
-    match numbers:
+    match numbers\
         (first, .., last) => println! "Some numbers: {first}, {last}"
 ```
 
@@ -281,7 +281,7 @@ fn main$:
     // a match guard: an extra condition after the pattern
     let num = Some 4
 
-    match num:
+    match num\
         Some x if x % 2 == 0 => println! "The number {x} is even"
         Some x => println! "The number {x} is odd"
         None => ()
@@ -290,7 +290,7 @@ fn main$:
     let x = Some 5
     let y = 10
 
-    match x:
+    match x\
         Some 50 => println! "Got 50"
         Some n if n == y => println! "Matched, n = {n}"
         _ => println! "Default case, x = {x:?}"
@@ -299,14 +299,14 @@ fn main$:
     let x = 4
     let y = false
 
-    match x:
+    match x\
         4 | 5 | 6 if y => println! "yes"
         _ => println! "no"
     // `@` binds a value while also testing it against a range
 
     let msg = Message.Hello\ id = 5
 
-    match msg:
+    match msg\
         Message.Hello { id: id_variable @ 3..=7 } => println! "Found an id in range: {id_variable}"
         Message.Hello { id: 10..=12 } => println! "Found an id in another range"
         Message.Hello\ id => println! "Found some other id: {id}"

@@ -15,7 +15,7 @@ impl Point
     fn norm (&self) -> i32:
         self <- x * self <- x + self <- y * self <- y
 fn describe (s: &Shape) -> String:
-    match s:
+    match s\
         Shape.Circle r => format! "circle {r}"
         Shape.Rect a b => { let w = b <- x - a <- x; format! "rect {w}" }
         Shape.Empty => "empty" <- to_string$

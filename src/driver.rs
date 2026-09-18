@@ -153,6 +153,7 @@ impl Project {
             let (work, zs) = crate::rawzone::prepare(&src);
             let toks = crate::lex::lex(&work)
                 .map_err(|e| render_error(&u.source, &src, e.span, &e.msg))?;
+            let toks = expand_harsh_macros(toks, &u.source, &src)?;
             let tree = crate::layout::build_with(toks, &arities)
                 .map_err(|e| render_error(&u.source, &src, e.span, &e.msg))?;
             let mut em = crate::emit::Emitter::new(&work);
@@ -325,8 +326,22 @@ pub fn transpile_one(
     // verbatim after the emitter has run (`rawzone`).
     let (work, zs) = crate::rawzone::prepare(src);
     let toks = crate::lex::lex(&work).map_err(|e| render_error(from, src, e.span, &e.msg))?;
+    let toks = expand_harsh_macros(toks, from, src)?;
     let arities = crate::juxt::collect_arities(&toks);
     transpile_tokens(toks, &work, from, rust, map, &arities, &zs, src)
+}
+
+/// Harsh's own macros unfold here, into Harsh, before the file is read as a
+/// program: what follows is ordinary Harsh and the emitted Rust holds no macro
+/// of ours (`src/mac.rs`). Only this path expands -- `hrs fmt` and the editor
+/// must show the author their macro, not its expansion.
+fn expand_harsh_macros(
+    toks: Vec<crate::lex::Token>,
+    from: &Path,
+    src: &str,
+) -> Result<Vec<crate::lex::Token>, String> {
+    let taken = crate::layout::names_in_scope(&toks);
+    crate::mac::expand_all(toks, &taken).map_err(|e| render_error(from, src, e.span, &e.msg))
 }
 
 /// Transpile one file with arities known from the whole project.
@@ -339,6 +354,7 @@ pub fn transpile_one_with(
 ) -> Result<PathBuf, String> {
     let (work, zs) = crate::rawzone::prepare(src);
     let toks = crate::lex::lex(&work).map_err(|e| render_error(from, src, e.span, &e.msg))?;
+    let toks = expand_harsh_macros(toks, from, src)?;
     transpile_tokens(toks, &work, from, rust, map, arities, &zs, src)
 }
 

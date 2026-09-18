@@ -201,6 +201,15 @@ fn decl_header(toks: &[Token]) -> bool {
     // `extern "C"` is a header in its own right, but `extern` is also a
     // modifier (`extern crate`, `pub extern fn`), so it is recognised before
     // the modifier skip eats it.
+    // `macro_rules~ name` opens its arms with no mark: nothing but a name can
+    // follow, so the header ends itself, as `struct Point` and `impl Foo` do
+    // (2026-09-17). Rust's `macro_rules!` is a zone and never reaches here.
+    if sig.first().map_or(false, |t| t.is_kw("macro_rules")) {
+        return !matches!(
+            sig.last().map(|t| &t.kind),
+            Some(Tk::Semi) | Some(Tk::Colon) | Some(Tk::Backslash)
+        );
+    }
     let foreign_block = sig
         .first()
         .map_or(false, |t| t.is_kw("extern") || t.text == "extern")
@@ -504,6 +513,23 @@ fn classify(header: &[Token], outer: BlockKind) -> BlockKind {
     // or a record variant inside an enum), else a literal's. A declaration
     // header without a mark is a field list too.
     if sig.last().map_or(false, |t| t.kind == Tk::Backslash) {
+        // `match v\` opens the arms: a specification block in use, like a
+        // literal's fields, separated by `,` (2026-09-18: `match v:` and
+        // `match v do:` are dropped; `\` is the spelling in both forms).
+        let is_match = {
+            let mut d = 0i32;
+            sig.iter().any(|t| {
+                match t.kind {
+                    Tk::Open(_) => d += 1,
+                    Tk::Close(_) => d -= 1,
+                    _ => {}
+                }
+                d == 0 && t.is_kw("match")
+            })
+        };
+        if is_match {
+            return BlockKind::Arms;
+        }
         let is_decl = sig.iter().any(|t| t.kind == Tk::Ident && matches!(t.text.as_str(), "struct" | "enum" | "union"));
         return if is_decl || outer == BlockKind::Fields { BlockKind::Fields } else { BlockKind::Lit };
     }
@@ -589,8 +615,50 @@ fn classify(header: &[Token], outer: BlockKind) -> BlockKind {
 fn check_old_marks(ln: &Line, outer: BlockKind) -> Result<(), LayoutError> {
     let sig: Vec<&Token> = ln.toks.iter().filter(|t| !t.is_comment()).collect();
     let Some(last) = sig.last() else { return Ok(()) };
+    // A declaration or item header may end in neither `:` nor `do` (nor
+    // `do:`): those constructs take no opener at all. `struct P do` is the
+    // old `struct P:` with the other opener, and is refused the same way.
+    let ends_in_do = last.is_kw("do")
+        || (last.kind == Tk::Colon && sig.len() >= 2 && sig[sig.len() - 2].is_kw("do"));
+    if ends_in_do {
+        let head: Vec<&Token> = sig.iter().copied().filter(|t| !t.is_kw("do") && t.kind != Tk::Colon).collect();
+        let kw = head.iter().find(|t| {
+            t.kind == Tk::Ident
+                && matches!(t.text.as_str(), "struct" | "enum" | "union" | "impl" | "trait" | "mod" | "extern" | "macro_rules")
+        });
+        if let Some(kw) = kw {
+            let name = head.iter().skip_while(|t| t.text != kw.text).nth(1).map(|t| t.text.clone()).unwrap_or_default();
+            let what = if matches!(kw.text.as_str(), "struct" | "enum" | "union") { "the fields" } else { "the items" };
+            return Err(LayoutError {
+                msg: format!("`{}` takes no opener: write `{} {name}` with {what} beneath it", kw.text, kw.text),
+                span: last.span,
+            });
+        }
+    }
     if last.kind != Tk::Colon {
         return Ok(());
+    }
+    // `match v:` and `match v do:` are dropped (2026-09-18): a match's arms
+    // are a specification block in use, opened by `\` like a literal's
+    // fields -- `match v\` with the arms beneath, or `match v\ p => e, q => f`.
+    {
+        let mut d = 0i32;
+        let is_match = sig.iter().any(|t| {
+            match t.kind {
+                Tk::Open(_) => d += 1,
+                Tk::Close(_) => d -= 1,
+                _ => {}
+            }
+            d == 0 && t.is_kw("match")
+        });
+        if is_match && !sig.iter().any(|t| t.is_kw("if") || t.is_kw("while")) {
+            let head_end = sig.len() - if sig.len() >= 2 && sig[sig.len() - 2].is_kw("do") { 2 } else { 1 };
+            let head: Vec<&str> = sig[..head_end].iter().map(|t| t.text.as_str()).collect();
+            return Err(LayoutError {
+                msg: format!("a match's arms are opened by `\\`: `{}\\` with the arms beneath it, or inline `{}\\ p => e, q => f`", head.join(" "), head.join(" ")),
+                span: last.span,
+            });
+        }
     }
     // A header ending in `#:` is the pseudo-block mark, not an old `:`:
     // `check_hash_colon_head` reports it, with the message that fits.
@@ -614,6 +682,15 @@ fn check_old_marks(ln: &Line, outer: BlockKind) -> Result<(), LayoutError> {
                 "a declaration's body follows its name with no mark: `{kw} {name}` with the fields beneath, or `{kw} {name}\\ a: T, b: U` inline",
                 kw = sig[k].text
             ),
+            span: last.span,
+        });
+    }
+    // `macro_rules~ name:` lost its colon with the item bodies: its arms are a
+    // specification block, and the header ends itself.
+    if k < sig.len() && sig[k].is_kw("macro_rules") {
+        let name = sig.get(k + 2).map(|t| t.text.clone()).unwrap_or_default();
+        return Err(LayoutError {
+            msg: format!("a macro's arms follow its header with no mark: `macro_rules~ {name}` with the arms beneath it"),
             span: last.span,
         });
     }
@@ -1135,10 +1212,9 @@ pub fn build(toks: Vec<Token>) -> Result<Vec<Node>, LayoutError> {
 /// for the definition. Harsh has no `~` operator, and the mark is written
 /// tight against the name, so there is nothing else it could be.
 ///
-/// **Interim, and deliberately so**: today a `~` macro behaves exactly like a
-/// `!` one -- same matchers, same transcribers, same emission -- and this
-/// function is what makes that true. When Harsh expands its own macros, this
-/// is the fork: `~` goes to the expander, `!` goes on to Rust untouched.
+/// Any `~` call left after expansion is a call to a macro that was never
+/// defined in Harsh. It is normalised to `!` so the rest of the pipeline sees
+/// one shape, and rustc reports the missing macro by its own name.
 pub fn normalise_macro_mark(toks: &mut [Token]) {
     for i in 1..toks.len() {
         let tight = toks[i - 1].span.hi == toks[i].span.lo;
@@ -1147,6 +1223,32 @@ pub fn normalise_macro_mark(toks: &mut [Token]) {
             toks[i].text = "!".to_string();
         }
     }
+}
+
+/// Every identifier a file binds at the top level or in a `let`: the names an
+/// expansion must not silently capture. Used by `mac::respell`.
+///
+/// Expansion belongs to the *transpile* path, not here: `hrs fmt` and the
+/// editor read a file through `build_with` too, and formatting must show the
+/// author their own macro rather than its expansion.
+pub fn names_in_scope(toks: &[Token]) -> Vec<String> {
+    let mut out: Vec<String> = Vec::new();
+    for (i, t) in toks.iter().enumerate() {
+        let binds = t.is_kw("let") || t.is_kw("const") || t.is_kw("static") || t.is_kw("fn");
+        if !binds {
+            continue;
+        }
+        let mut k = i + 1;
+        if toks.get(k).map_or(false, |x| x.is_kw("mut")) {
+            k += 1;
+        }
+        if let Some(n) = toks.get(k) {
+            if n.kind == Tk::Ident && !out.contains(&n.text) {
+                out.push(n.text.clone());
+            }
+        }
+    }
+    out
 }
 
 /// Build with arities known from beyond this file -- the driver collects them

@@ -1,6 +1,14 @@
 # Changelog
 
-## 0.1.8 — 2026-09-18
+## 0.1.9 — 2026-09-18
+
+- **A `match` is opened by `\`**, in both forms: `match v\` with the arms beneath, or `match v\ p => e, q => f` inline. A match's arms are a specification block in use — comma-separated in the Rust, like a literal's fields — so they take the specification marker. `match v:` and `match v do:` are refused, naming the spelling. `hrs fmt` lays a multi-line match out as it does a literal — `let r =` on its line, `match n\` beneath, the arms one unit past it. The corpus, the Book, the guide, the exercises and `hrs-from` all moved.
+
+**From an audit of the macro work**: hygiene now covers every binding a transcriber can write — closure parameters, `for` bindings, `match` arm patterns and `fn` parameters, not `let` alone (each of those had silently captured the caller's expression); `#![recursion_limit = "…"]` is read; **`hrs expand <file>`** prints a file with its Harsh macros unfolded, as Harsh; `neg~ -5` matches a `literal`; `struct P do` and `impl P do` are refused by name, since those constructs take no opener; `match x do:` is a match; a `\` literal as a `match` scrutinee is parenthesised; and every example in the corpus is now compiled by a test, not only transpiled.
+
+**Six fixes found by running the guide's own macro corpus** (`examples/guide/17_macro_bodies.hrs`), all in the new expander: a matcher's delimiters may be `[` or `{` as well as `(`, and a call written `m~ [ … ]` hands its contents to the matcher; a fragment stops at the next literal token the matcher names, so `$k:expr => $v:expr` works; a repetition may span lines (`$(` on its own line, the body beneath, `)*` closing it), and its lines land where the `$(` stood; a call's arguments stop at a `,` or `;` that belongs to whatever encloses the call, so `(twice~ 4, 0)` passes `4`; a `$` in an expansion is still Harsh's call marker, so `Vec.new$` becomes a call; and an expansion's out-of-order spans no longer panic the emitter.
+
+A `~` call may hand its arguments as a **block** — `m~ do:` with the body beneath, or `m~\` with its entries — as a `!` call does. The opener belongs to the call; what the matcher sees is the block's own tokens, written as written (a `\` block's entries arrive one per line, with no comma, since nothing has been emitted yet).
 
 - **Harsh expands its own macros.** A `macro_rules~` definition unfolds *into Harsh* before anything is transpiled: the definition leaves no trace, a call becomes what its transcriber says, and the generated Rust holds no macro of ours at all. A repetition on its own line yields one line per round; inside a line it yields its rounds in place with the separator you wrote. Nothing is inserted on your behalf.
 - **Hygiene, as in Rust.** Every token carries a syntax context: a name the macro introduces and a name the caller passed in are different names even when spelled alike. Where both would stand in one scope, the macro's own local is respelled — and only then, so an expansion reads as its author wrote it. A name the caller is to use must be passed in as `$name:ident`.

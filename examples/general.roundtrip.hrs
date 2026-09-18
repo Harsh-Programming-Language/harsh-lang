@@ -33,7 +33,7 @@ fn parse_all<'a, I> (items: I) -> Result<Vec<i64>, ParseErr> where I: Iterator<I
             return Err ParseErr.Empty
         let mut n: i64 = 0
         for c in s <- chars$:
-            match c <- to_digit 10:
+            match c <- to_digit 10\
                 Some d => n = n * 10 + d as i64
                 None => return Err (ParseErr.BadDigit c)
         out <- push n
@@ -51,12 +51,12 @@ fn main$:
     let v = geometry.Vec2\ x = 1.0, y = 2.0
     println! "dot = {}" (v <- dot v)
     println! "{} up to depth {}" GREETING MAX_DEPTH
-    match parse_all (["12", "34", "5"] <- into_iter$):
+    match parse_all (["12", "34", "5"] <- into_iter$)\
         Ok ns =>
             let total: i64 = ns <- iter$ <- sum$
             println! "parsed {:?} total {}" ns total
         Err e => println! "error: {:?}" e
-    match parse_all (["7", "x9"] <- into_iter$):
+    match parse_all (["7", "x9"] <- into_iter$)\
         Ok ns => println! "unexpected {:?}" ns
         Err e => println! "rejected as {:?}" e
     let squares: Vec<i64> =

@@ -1,16 +1,16 @@
 // Both sides of a macro are Harsh: the matcher a parameter list, the
 // transcriber a block.
-macro_rules~ twice:
+macro_rules~ twice
     ($e:expr) => do: $e * 2
 
-macro_rules~ my_vec:
+macro_rules~ my_vec
     ( $( ($x:expr) )* ) => do:
         do:
             let mut v = Vec.new$
             $(v <- push $x)*
             v
 
-macro_rules~ hashmap:
+macro_rules~ hashmap
     ( $( ($k:expr => $v:expr) )* ) => do:
         do:
             let mut m = std.collections.HashMap.new$
@@ -20,16 +20,16 @@ macro_rules~ hashmap:
             )*
             m
 
-macro_rules~ log:
+macro_rules~ log
     ( ($level:expr) $($arg:tt)* ) => do:
         println! "[{}] {}" $level (format! $($arg)*)
 
-macro_rules~ filled:
+macro_rules~ filled
     [ $elem:expr ; $n:expr ] => do:
         vec! [$elem; $n]
 
-// A macro body: `name! do:`, a Harsh block by default.
-macro_rules~ first_of:
+// A macro body: `name~ do:`, a Harsh block handed to the macro as tokens.
+macro_rules~ first_of
     ( $($t:tt)* ) => do:
         match ($($t)*): (a, _) => a
 

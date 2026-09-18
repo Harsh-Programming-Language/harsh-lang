@@ -97,6 +97,86 @@ fn fmt_is_idempotent() {
 /// a no-op. Files that would change are listed with their first differing
 /// line; the count is the number to bring to zero.
 #[test]
+/// Every corpus file must transpile — except the ones the Book tags
+/// `!error`, which exist to fail.
+///
+/// A file that does not transpile is invisible to several checks: `hrs fmt`
+/// leaves it alone, so the no-op test passes over it, and the round trip
+/// skips it. On 2026-09-18 a macro corpus file was refused by the new arm
+/// reader and quietly stopped exercising six shapes; this is the guard.
+#[test]
+fn every_corpus_file_transpiles() {
+    const DELIBERATELY_BROKEN: [&str; 1] = ["pipe_too_many.hrs"];
+    let mut bad = Vec::new();
+    for f in corpus() {
+        let name = f.file_name().unwrap().to_string_lossy().to_string();
+        if DELIBERATELY_BROKEN.contains(&name.as_str()) {
+            continue;
+        }
+        let src = fs::read_to_string(&f).unwrap();
+        let toks = match harsh_lang::lex::lex(&src) {
+            Ok(t) => t,
+            Err(e) => {
+                bad.push(format!("{}: {}", f.display(), e.msg));
+                continue;
+            }
+        };
+        let taken = harsh_lang::layout::names_in_scope(&toks);
+        let toks = match harsh_lang::mac::expand_all(toks, &taken) {
+            Ok(t) => t,
+            Err(e) => {
+                bad.push(format!("{}: {}", f.display(), e.msg));
+                continue;
+            }
+        };
+        if let Err(e) = harsh_lang::layout::build(toks) {
+            bad.push(format!("{}: {}", f.display(), e.msg));
+        }
+    }
+    assert!(bad.is_empty(), "{} corpus file(s) do not transpile:\n{}", bad.len(), bad.join("\n"));
+}
+
+/// Every corpus example must not only transpile but **compile**. `check.sh`
+/// transpiles the corpus; three guide examples transpiled to invalid Rust for
+/// days before anyone ran `rustc` on them (2026-09-18). Examples that need a
+/// dependency are listed and skipped.
+#[test]
+fn every_example_compiles() {
+    const NEEDS_DEPENDENCIES: [&str; 1] = ["hello.hrs"];
+    const DELIBERATELY_BROKEN: [&str; 1] = ["pipe_too_many.hrs"];
+    let tmp = std::env::temp_dir().join(format!("harsh-compile-{}", std::process::id()));
+    fs::create_dir_all(&tmp).unwrap();
+    let hrs = env!("CARGO_BIN_EXE_hrs");
+    let mut bad = Vec::new();
+    for f in corpus() {
+        let name = f.file_name().unwrap().to_string_lossy().to_string();
+        if NEEDS_DEPENDENCIES.contains(&name.as_str()) || DELIBERATELY_BROKEN.contains(&name.as_str()) {
+            continue;
+        }
+        let stem = name.trim_end_matches(".hrs").replace('.', "_");
+        let rs = tmp.join(format!("{stem}.rs"));
+        let t = std::process::Command::new(hrs).arg(&f).arg("-o").arg(&rs).output().unwrap();
+        if !t.status.success() {
+            bad.push(format!("{}: does not transpile", f.display()));
+            continue;
+        }
+        let c = std::process::Command::new("rustc")
+            .args(["--edition", "2021", "-A", "warnings", "--crate-type", "bin", "-o"])
+            .arg(tmp.join(format!("{stem}.bin")))
+            .arg(&rs)
+            .output()
+            .unwrap();
+        if !c.status.success() {
+            let err = String::from_utf8_lossy(&c.stderr);
+            let first = err.lines().find(|l| l.starts_with("error")).unwrap_or("").to_string();
+            bad.push(format!("{}: {first}", f.display()));
+        }
+    }
+    let _ = fs::remove_dir_all(&tmp);
+    assert!(bad.is_empty(), "{} example(s) do not compile:\n{}", bad.len(), bad.join("\n"));
+}
+
+#[test]
 fn fmt_is_a_no_op_over_the_corpus() {
     let mut changed = Vec::new();
     for f in corpus() {
@@ -117,7 +197,7 @@ fn fmt_shapes() {
     let cases: &[(&str, &str)] = &[
         // Block bodies indent one unit past the line holding the construct.
         ("fn main$:\n  let x = 1\n  x\n", "fn main$:\n    let x = 1\n    x\n"),
-        ("fn main$:\n    let g = match n:\n            1 => 2\n            _ => 3\n", "fn main$:\n    let g = match n:\n        1 => 2\n        _ => 3\n"),
+        ("fn main$:\n    let g = match n\\\n            1 => 2\n            _ => 3\n", "fn main$:\n    let g =\n        match n\\\n            1 => 2\n            _ => 3\n"),
         // `let x =` / `if c:` on the next line: the body from the `if` line;
         // the `else` under the `if`.
         (

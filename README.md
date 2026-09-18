@@ -129,6 +129,8 @@ Stage one is complete: layout, token substitution, source map, diagnostic remapp
 
 Deferred, because each requires an expression parser rather than a layout pass: juxtaposed application at call sites (`f x y`), indentation-form struct literals (`Point:`), and `<-` for type paths (`Router <- new()`).
 
+Procedural macros and support for foreign DSLs (`view!`, `rsx!`, `sql!`) are still in development. Declarative macros are finished: Harsh's own `macro_rules~`, which unfolds into Harsh, and Rust's `macro_rules!`, copied verbatim.
+
 ## Licence
 
 Copyright (c) 2026 Bahiminin Benoit Dah. Source code is under the **Mozilla Public License 2.0** (`LICENSE`). File-level copyleft: modifications to Harsh's own files must be published, but there is **no obligation on code you write in Harsh, nor on the Rust it generates**. Build proprietary software with it freely.

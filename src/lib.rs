@@ -16,6 +16,7 @@ pub mod driver;
 pub mod emit;
 pub mod juxt;
 pub mod layout;
+pub mod mac;
 pub mod lex;
 pub mod remap;
 pub mod rawzone;

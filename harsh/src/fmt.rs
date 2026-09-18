@@ -347,6 +347,10 @@ fn rebreak(src: &str) -> String {
                     // User\` with the fields beneath puts `User\` on its own
                     // line, so the fields sit one unit past the literal's own
                     // column and it is plain what belongs to what.
+                    // A match is a specification block in use, like a
+                    // literal: `let r =` ends its line, `match n\` starts the
+                    // next, and the arms sit one unit past it (the user's
+                    // rule, 2026-09-18).
                     let block_literal = layout::opens(t).is_some()
                         && (first..line_end).rev().find(|&i| !t[i].is_comment()).map_or(false, |i| t[i].kind == Tk::Backslash);
                     if open_past_line || vertical_chain || vertical_args || block_literal {

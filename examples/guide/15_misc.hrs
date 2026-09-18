@@ -12,7 +12,7 @@ fn uses_question (n: i32) -> Result<i32, String>:
     Ok (v + 1)
 
 fn scrutinee_literal$ -> i32:
-    match Config\ verbose: true:
+    match (Config\ verbose: true)\
         Config\ verbose: true => 1
         _ => 0
 

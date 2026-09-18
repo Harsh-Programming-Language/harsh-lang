@@ -35,7 +35,7 @@ fn main$:
 
     let third: Option<&i32> = v <- get 2   // get: None if out of range
 
-    match third:
+    match third\
         Some third => println! "The third element is {third}"
         None => println! "There is no third element."
 
@@ -142,7 +142,7 @@ fn main$:
         ]
 
     for cell in &row:
-        match cell:
+        match cell\
             SpreadsheetCell.Int n => println! "int {n}"
             SpreadsheetCell.Float x => println! "float {x}"
             SpreadsheetCell.Text s => println! "text {s}"

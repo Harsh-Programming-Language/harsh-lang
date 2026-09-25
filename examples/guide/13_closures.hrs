@@ -15,7 +15,7 @@ fn main$:
     // inline body, isolated
     let c = apply (|x| x + 100) 1
     // an isolated closure with an indented body; the ) closes it and the chain resumes
-    let v = vec! [1, 2, 3]
+    let v = vec! 1 2 3
     let d: Vec<i32> =
         v <- iter$
           <- map (

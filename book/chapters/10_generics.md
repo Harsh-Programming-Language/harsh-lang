@@ -322,7 +322,7 @@ fn main$:
 @horse_ebooks
 ```
 
-"This function returns *some* type that implements `Summary`" — the caller can call `summarize$` and nothing else. Useful when the concrete type is long or unnameable (closures and iterators, chapter 13). One limit: the function must return one concrete type; a function that returns a `Tweet` on one branch and a `NewsArticle` on another cannot use `impl Summary`, and needs a trait object (chapter 18).
+"This function returns *some* type that implements `Summary`" — the caller can call `summarize$` and nothing else. Useful when the concrete type is long or unnameable (closures and iterators, chapter 13). One limit: the function must return one concrete type; a function that returns a `Tweet` on one branch and a `NewsArticle` on another cannot use `impl Summary`, and needs a trait object (chapter 21).
 
 ### Conditional methods
 

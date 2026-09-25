@@ -28,5 +28,5 @@ fn main$:
     println! "{}" (total (&[1, 2, 3]) (&[10, 20]))
     println! "{}" (apply (| n | n + 1) 41)
     println! "{}" (commas 2 3)
-    println! "{}" (generic "vals" (vec![1, 2]))
+    println! "{}" (generic "vals" (vec! 1 2))
     println! "{}" (takes_unit () 21)

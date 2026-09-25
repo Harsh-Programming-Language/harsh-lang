@@ -122,15 +122,38 @@ pub fn fn_param_groups(toks: &[Token]) -> Option<Vec<(usize, usize)>> {
     Some(groups)
 }
 
-/// Indices of the commas that sit directly inside a group (depth one).
-pub fn top_level_commas(toks: &[Token], open: usize, close: usize) -> Vec<usize> {
+/// Indices of the commas that separate one parameter from the next in a
+/// `fn` parameter group -- **for parameter lists only**.
+///
+/// A comma is a separator only at depth zero of every node, and the nodes
+/// compose from small bricks, each applied recursively (the user's framing,
+/// 2026-09-21):
+///
+/// - the lexer's own: a string, a char, `->` and `>>` are single tokens, so
+///   the `<` in `"<div "` never reaches here as a `<`;
+/// - brackets: `()`, `[]`, `{}` hold their commas;
+/// - generic lists: `<…>` holds its commas, `>>` closing two.
+///
+/// The third brick is safe **only here**. After `:` a parameter holds a type,
+/// and in a type `<` can only open a list -- never compare -- so every `<`
+/// counts, spaced or not, `Result <i32, String>` as much as `Result<…>`. In
+/// an expression `<` may be less-than, and `f (a < b, c > d)` would be
+/// misread by this rule; do not call it there. A `>` never takes the depth
+/// below zero. Until 2026-09-21 the generic brick was missing, so
+/// `(r: Result<i32, String>)` was refused and `hrs-from` split Rust's
+/// `fn f(r: Result<i32, String>)` into `(r: Result<i32) (String>)`.
+pub fn param_list_commas(toks: &[Token], open: usize, close: usize) -> Vec<usize> {
     let mut d = 0i32;
+    let mut angle = 0i32;
     let mut out = Vec::new();
     for i in open + 1..close {
         match toks[i].kind {
             Tk::Open(_) => d += 1,
             Tk::Close(_) => d -= 1,
-            Tk::Comma if d == 0 => out.push(i),
+            Tk::Lt => angle += 1,
+            Tk::Gt => angle = (angle - 1).max(0),
+            Tk::Punct if toks[i].text == ">>" => angle = (angle - 2).max(0),
+            Tk::Comma if d == 0 && angle == 0 => out.push(i),
             _ => {}
         }
     }

@@ -31,6 +31,41 @@ Early in the work, Claude asked the author to justify removing braces from Rust 
 
 > *Braces are for the compiler; indentation is for humans.* — Claude
 
+**Rust without braces.**
+**Rust with pipes, partial application, comprehensions and linear algebra.**
+**Rust for functional programming, data science and machine learning.**
+
+## What Harsh adds
+
+Braces are where Harsh starts, not where it stops. It adds four things Rust has no syntax for — and they are the reason to use it. Each below is Harsh, then the Rust it replaces.
+
+**Pipes and partial application.** Give a function fewer arguments than it takes, and you get a function waiting for the rest:
+
+```
+let double = 2.0 |> scale
+let doubled: Vec<f64> = readings <- iter$ <- map (|&x| double x) <- collect$
+```
+
+**Generator comprehensions.** Say what a collection holds, not how to fill it:
+
+```
+let triples =
+    list~ (a, b, c)
+        for a in 1..20
+        for b in a..20
+        for c in b..20 if a * a + b * b == c * c
+```
+
+**Linear algebra, as in Julia.** Julia's matrix literal, Julia's `*`, and Julia's `X \ y`, here fitting a line by least squares:
+
+```
+let x = m~ [1.0 1.0; 1.0 2.0; 1.0 3.0]
+let y = v~ [1.0, 2.0, 2.9]
+let beta = x <- solve (&y)
+```
+
+Chapters 14, 15 and 16 teach them properly, once closures and iterators — chapter 13 — have given you what they are built from.
+
 ## Who this is for
 
 You have programmed before — in Python, JavaScript, Elixir, anything — and you have not programmed in Rust. This book teaches you Rust, using Harsh as the notation.

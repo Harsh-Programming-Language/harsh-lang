@@ -1,6 +1,59 @@
 # Start here
 
-**Harsh.** *Rust without the braces.*
+**Harsh.**
+
+**Rust without braces.**
+**Rust with pipes, partial application, comprehensions and linear algebra.**
+**Rust for functional programming, data science and machine learning.**
+
+## What Harsh adds
+
+Braces are where Harsh starts, not where it stops. It adds four things Rust has no syntax for — and they are the reason to use it. Each below is Harsh, then the Rust it replaces.
+
+**Pipes and partial application.** Give a function fewer arguments than it takes, and you get a function waiting for the rest:
+
+```
+let double = 2.0 |> scale
+let doubled: Vec<f64> = readings <- iter$ <- map (|&x| double x) <- collect$
+```
+
+```rust
+let double = |x| scale(2.0, x);
+let doubled: Vec<f64> = readings.iter().map(|&x| double(x)).collect();
+```
+
+**Generator comprehensions.** Say what a collection holds, not how to fill it:
+
+```
+let triples =
+    list~ (a, b, c)
+        for a in 1..20
+        for b in a..20
+        for c in b..20 if a * a + b * b == c * c
+```
+
+```rust
+let triples: Vec<_> = (1..20)
+    .flat_map(|a| (a..20).flat_map(move |b| (b..20).map(move |c| (a, b, c))))
+    .filter(|&(a, b, c)| a * a + b * b == c * c)
+    .collect();
+```
+
+**Linear algebra, as in Julia.** Julia's matrix literal, Julia's `*`, and Julia's `X \ y`, here fitting a line by least squares:
+
+```
+let x = m~ [1.0 1.0; 1.0 2.0; 1.0 3.0]
+let y = v~ [1.0, 2.0, 2.9]
+let beta = x <- solve (&y)
+```
+
+```rust
+let x = DMatrix::from_row_slice(3, 2, &[1.0, 1.0, 1.0, 2.0, 1.0, 3.0]);
+let y = DVector::from_vec(vec![1.0, 2.0, 2.9]);
+let beta = x.svd(true, true).solve(&y, 1e-12).unwrap();
+```
+
+The Book, chapters 14 to 16, teaches all four; so do the Guide, *Harsh by Example* and Harshlings.
 
 Harsh is Rust with indentation instead of braces. This bundle contains the complete toolchain, the language documentation, and working examples.
 
@@ -11,6 +64,7 @@ Harsh is Rust with indentation instead of braces. This bundle contains the compl
 | `docs/page-head.html`, `docs/page-tail.html` | The rendered pages' chrome: the CSS and the contents-panel script. Edited by hand; every page is built from them. |
 | `docs/build.py` | Verifies the guide's code blocks (`docs/check-guide.py`), then renders every document in `docs/` and the book to `.ipynb` and `.html` beside its `.md`. The `.md` is the source; the rendered forms are never edited by hand. Run after any document change (`book/build.py` runs it too). |
 | `book/HARSH-BOOK.md`, `book/harsh-book.html`, `book/harsh-book.ipynb` | The Book, in its three forms — the whole thing as text, as a page, as a notebook. What a reader reads. |
+| `by-example/HARSH-BY-EXAMPLE.md`, `by-example/pages/` | *Harsh by Example*: short programs, one idea each, with what each one prints. The lookup book. Its `sources/` (pages, snippets, harness) is development only, as the Book's is. |
 | `book/sources/` | The Book's **sources**: the numbered chapter files (prose with `@@ name` where a snippet goes), `src/` (every snippet, one file or one project each) and `build.py`, the harness. Development only — the public tree carries the book, not what makes it. |
 | `` | Regenerates `language.ipynb` and `language.html` from `docs/LANGUAGE.md`. The `.md` is the source; the rendered forms are never edited by hand. Run after any guide change. Development bundle only. |
 | `README.md` | What the project is, how to build it, how to run the examples. |

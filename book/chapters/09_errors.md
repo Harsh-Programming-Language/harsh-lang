@@ -24,7 +24,7 @@ Most panics are not written; they are hit:
 
 ```
 fn main$:
-    let v = vec! [1, 2, 3]
+    let v = vec! 1 2 3
     v[99];                          // the `;` discards the value; the index still runs
 ```
 
@@ -260,7 +260,7 @@ opened: false
 42
 ```
 
-`fn main$ -> Result<(), Box<dyn Error>>:` — a `main` that either succeeds with nothing or fails with some error. `Box<dyn Error>` is "any error at all", a trait object (chapter 18) that `?` can convert any error into, so this `main` can use `?` on a file operation and a parse in the same body. `Ok ()` at the end is the success value — `()` is the unit value, and it is passed to `Ok` as an ordinary argument. If `main` returns an `Err`, the program prints it and exits with a nonzero code, which is what a shell expects of a failed program.
+`fn main$ -> Result<(), Box<dyn Error>>:` — a `main` that either succeeds with nothing or fails with some error. `Box<dyn Error>` is "any error at all", a trait object (chapter 21) that `?` can convert any error into, so this `main` can use `?` on a file operation and a parse in the same body. `Ok ()` at the end is the success value — `()` is the unit value, and it is passed to `Ok` as an ordinary argument. If `main` returns an `Err`, the program prints it and exits with a nonzero code, which is what a shell expects of a failed program.
 
 ## 9.3 To panic or not
 

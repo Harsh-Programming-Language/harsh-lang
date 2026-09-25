@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Regenerate the rendered forms: docs/language.{ipynb,html} from docs/LANGUAGE.md, and book/harsh-book.{ipynb,html} from book/HARSH-BOOK.md. Run from anywhere.
+"""Regenerate the rendered forms: docs/language.{ipynb,html} from docs/LANGUAGE.md, book/harsh-book.{ipynb,html} from book/HARSH-BOOK.md, and by-example/harsh-by-example.{ipynb,html} from by-example/HARSH-BY-EXAMPLE.md. Run from anywhere.
 
 The .md is the source; the two rendered forms are derived and must never be
 edited by hand. The page chrome (the <head> with the CSS, the trailing
@@ -9,6 +9,46 @@ import json, re, html, sys, os
 import markdown
 DOCS = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(DOCS)
+
+def unique(slugs):
+  """Each anchor once: a repeated heading's gets `-1`, `-2`, … in order, as
+  mdBook and GitHub number them. Two parts of the macros chapter share their
+  subsection names, and every link under the second went to the first
+  (found 2026-09-24)."""
+  seen, out = {}, []
+  for s in slugs:
+      n = seen.get(s, 0)
+      out.append(s if n == 0 else f"{s}-{n}")
+      seen[s] = n + 1
+  return out
+
+def headings(lines):
+  """The navigation's entries: (depth, text) for every heading from `#` to
+  `####`, outside code blocks, after the document's own title (its first
+  `#` line). Depth 0 is the highest level present -- a book's chapters, a
+  guide's sections -- so every document's navigation starts at its top
+  (found 2026-09-24: the Book's chapters, `#`, were missing from it)."""
+  every = all_headings(lines)
+  found = [(lvl, text) for lvl, text in every if lvl <= 4]
+  top = min((lvl for lvl, _ in found), default=1)
+  return [(lvl - top, text) for lvl, text in found]
+
+def all_headings(lines):
+  """Every heading, `#` to `######`, outside code blocks, after the
+  document's title -- in order, as the body renders them."""
+  found, fence, titled = [], False, False
+  for ln in lines:
+      if ln.startswith("```"):
+          fence = not fence
+          continue
+      m = None if fence else re.match(r"^(#{1,6}) (.*)$", ln)
+      if not m:
+          continue
+      if len(m.group(1)) == 1 and not titled:
+          titled = True
+          continue
+      found.append((len(m.group(1)), m.group(2).strip()))
+  return found
 
 def render(SRC, IPYNB, HTML, TITLE, TAG):
   md = open(SRC, encoding="utf-8").read()
@@ -30,12 +70,10 @@ def render(SRC, IPYNB, HTML, TITLE, TAG):
   if cur:
       cells.append("\n".join(cur).strip("\n"))
 
+  heads = headings(lines)
   toc = ["## Contents", ""]
-  for ln in lines:
-      if ln.startswith("## "):
-          toc.append(f"- {ln[3:]}")
-      elif ln.startswith("### "):
-          toc.append(f"    - {ln[4:]}")
+  for depth, text in heads:
+      toc.append(f"{'    ' * depth}- {text}")
   cells.insert(1, "\n".join(toc))
 
   nb = {
@@ -95,18 +133,27 @@ def render(SRC, IPYNB, HTML, TITLE, TAG):
   body_md = re.sub(r"^# [^\n]*\n", "", body_md, count=1)
   body = markdown.markdown(body_md, extensions=["tables"])
   body = re.sub(r"<p>FENCEBLOCK(\d+)</p>", lambda m: blocks[int(m.group(1))], body)
-  # ids on h2/h3 for the TOC
+  # One H1 for the whole document -- the page's title -- and every other
+  # heading shifted down from it (the user's styling rule). A document with
+  # chapters, the Book, has `#` headings of its own; they become h2.
+  if re.search(r"<h1>", body):
+      body = re.sub(r"<(/?)h([1-5])>", lambda m: f"<{m.group(1)}h{int(m.group(2)) + 1}>", body)
+  # ids on every heading, for the navigation
+  # Anchors for every heading, in document order, each unique; the body and
+  # the navigation take them from the same list.
+  every = all_headings(lines)
+  anchors = unique([slug(text) for _, text in every])
+  body_ids = iter(anchors)
   def add_id(m):
       lvl, text = m.group(1), m.group(2)
-      return f'<h{lvl} id="{slug(re.sub("<[^>]+>", "", text))}">{text}</h{lvl}>'
-  body = re.sub(r"<h([23])>(.*?)</h\1>", add_id, body)
+      return f'<h{lvl} id="{next(body_ids, slug(html.unescape(re.sub("<[^>]+>", "", text))))}">{text}</h{lvl}>'
+  body = re.sub(r"<h([2-6])>(.*?)</h\1>", add_id, body)
 
+  top = min((lvl for lvl, _ in every if lvl <= 4), default=1)
   nav = ['<nav class="toc"><p class="toc-h">Contents</p><ul>']
-  for ln in lines:
-      if ln.startswith("## "):
-          nav.append(f'<li class="l2"><a href="#{slug(ln[3:])}">{html.escape(ln[3:])}</a></li>')
-      elif ln.startswith("### "):
-          nav.append(f'<li class="l3"><a href="#{slug(ln[4:])}">{html.escape(ln[4:])}</a></li>')
+  for (lvl, text), anchor in zip(every, anchors):
+      if lvl <= 4:
+          nav.append(f'<li class="d{lvl - top}"><a href="#{anchor}">{html.escape(text)}</a></li>')
   nav.append("</ul></nav>")
 
   # The page chrome -- the CSS in the head and the script at the end -- is
@@ -174,3 +221,7 @@ if __name__ == "__main__":
   if os.path.exists(b("HARSH-BOOK.md")):
     render(b("HARSH-BOOK.md"), b("harsh-book.ipynb"), b("harsh-book.html"), "The Harsh Programming Language",
            "The Harsh Programming Language")
+  e = lambda f: os.path.join(ROOT, "by-example", f)
+  if os.path.exists(e("HARSH-BY-EXAMPLE.md")):
+    render(e("HARSH-BY-EXAMPLE.md"), e("harsh-by-example.ipynb"), e("harsh-by-example.html"),
+           "Harsh by Example", "Harsh by Example")

@@ -37,6 +37,59 @@ Early in the work, Claude asked the author to justify removing braces from Rust 
 
 > *Braces are for the compiler; indentation is for humans.* — Claude
 
+**Rust without braces.**
+**Rust with pipes, partial application, comprehensions and linear algebra.**
+**Rust for functional programming, data science and machine learning.**
+
+## What Harsh adds
+
+Braces are where Harsh starts, not where it stops. It adds four things Rust has no syntax for — and they are the reason to use it. Each below is Harsh, then the Rust it replaces.
+
+**Pipes and partial application.** Give a function fewer arguments than it takes, and you get a function waiting for the rest:
+
+```
+let double = 2.0 |> scale
+let doubled: Vec<f64> = readings <- iter$ <- map (|&x| double x) <- collect$
+```
+
+```rust
+let double = |x| scale(2.0, x);
+let doubled: Vec<f64> = readings.iter().map(|&x| double(x)).collect();
+```
+
+**Generator comprehensions.** Say what a collection holds, not how to fill it:
+
+```
+let triples =
+    list~ (a, b, c)
+        for a in 1..20
+        for b in a..20
+        for c in b..20 if a * a + b * b == c * c
+```
+
+```rust
+let triples: Vec<_> = (1..20)
+    .flat_map(|a| (a..20).flat_map(move |b| (b..20).map(move |c| (a, b, c))))
+    .filter(|&(a, b, c)| a * a + b * b == c * c)
+    .collect();
+```
+
+**Linear algebra, as in Julia.** Julia's matrix literal, Julia's `*`, and Julia's `X \ y`, here fitting a line by least squares:
+
+```
+let x = m~ [1.0 1.0; 1.0 2.0; 1.0 3.0]
+let y = v~ [1.0, 2.0, 2.9]
+let beta = x <- solve (&y)
+```
+
+```rust
+let x = DMatrix::from_row_slice(3, 2, &[1.0, 1.0, 1.0, 2.0, 1.0, 3.0]);
+let y = DVector::from_vec(vec![1.0, 2.0, 2.9]);
+let beta = x.svd(true, true).solve(&y, 1e-12).unwrap();
+```
+
+Each has its section below: [Pipes and partial application](#partial-application-with-the-pipes), [Generator comprehensions](#generator-comprehensions), [Matrices and linear algebra](#matrices-and-linear-algebra).
+
 ## The mark
 
 ```
@@ -358,17 +411,16 @@ Partial application (the pipes), inline blocks on one line, `while let`, labelle
 
 ## Blocks
 
-### The four kinds, and what opens each
+### The three kinds, and what opens each
 
-A block's opener says how its entries end. There are four kinds, and every
+A block's opener says how its entries end. There are three kinds, and every
 block in Harsh is one of them:
 
 | opener | the body | separator Harsh writes |
 |---|---|---|
 | *(no mark)* | items, after a header that ends itself — `struct`, `enum`, `union`, `impl`, `trait`, `mod`, `extern` | none (or `,` for a declaration's fields) |
-| `\` | a comma-separated list: a literal's fields, an inline declaration, a `match`'s arms, a macro's entries | `,` |
+| `\` | a comma-separated list: a literal's fields, an inline declaration, a `match`'s arms | `,` |
 | `:` / `do:` | statements, and a tail value | `;` |
-| `#:` | a grouping whose grammar is its author's | none |
 
 `impl`, `trait`, `mod` and `extern` take no mark because nothing but a name
 can follow them, exactly as for `struct` and `enum`: the header ends itself,
@@ -382,10 +434,9 @@ impl Point                          impl Point {
                                     }
 ```
 
-`#:` is for a grouping Harsh does not define — a macro's DSL, most often. A
-construct that already has a spelling keeps it: `struct Point #:` is refused,
-naming the spelling it should have used, since there is one spelling per
-construct.
+A grouping whose grammar is not Harsh's — a macro's DSL — is not a block at
+all: it is written in the macro's braces, as Rust, with Harsh in its holes
+(*A macro's own language*, below). `#:`, which once served it, is retired.
 
 ### Opening a block
 
@@ -562,14 +613,14 @@ let d: Vec<i32> =                 not      let d: Vec<i32>
       <- collect$
 ```
 
-Every bracket group — the parentheses isolating an argument, a tuple's, a list's brackets, a macro's — has an **anchor**: the callee when a name precedes the bracket (`map (`, `foo.bar (`, `vec![`), the bracket itself when nothing does (`let t = (`). The group's contents are one unit past the anchor, and its closer stands on its own line under the anchor. The group then has one shape wherever it sits, and the shape survives a rename, since no column depends on the length of a name. Inside the brackets, Rust's rules hold as always — a tuple or array spelled one element per line keeps its commas:
+Every bracket group — the parentheses isolating an argument, a tuple's, a list's brackets, a macro's — has an **anchor**: the callee when a name precedes the bracket (`map (`, `foo.bar (`), the bracket itself when nothing does (`let t = (`). The group's contents are one unit past the anchor, and its closer stands on its own line under the anchor. The group then has one shape wherever it sits, and the shape survives a rename, since no column depends on the length of a name. Inside the brackets, Rust's rules hold as always — a tuple or array spelled one element per line keeps its commas:
 
 ```fragment
-let t =                           let xs =                          let ys =
-    (                                 [                                 vec![
-        1,                                1,                                1,
-        2                                 2                                 2
-    )                                 ]                                 ]
+let t =                           let xs =
+    (                                 [
+        1,                                1,
+        2                                 2
+    )                                 ]
 ```
 
 A call with several arguments does not use parentheses this way — a parenthesised group is one argument — so it breaks by juxtaposition, each argument a continuation line one unit past the callee, and there is no closer:
@@ -712,7 +763,7 @@ A colon that is **not** the last token on a line opens an inline block. It ends 
 
 | Block kind | Separator | Inline form |
 |---|---|---|
-| match arms | `,` | `match x: A => 1, B => 2` |
+| match arms | `,` | `match x\ A => 1, B => 2` |
 | fields | `,` | `struct P: x: i32, y: i32` |
 | statements | — | one expression: `do: a * 2`, `if c: f$ else: g$` |
 
@@ -739,11 +790,11 @@ The inline and indented forms of the same program emit identical Rust; this is e
 ```
 if t: 1 else: 2
 if let Some n = v: n else: -1
-match n: 0 => "zero", 1 | 2 => "small", _ => "big"
+match n\ 0 => "zero", 1 | 2 => "small", _ => "big"
 for i in 0..3: s += i
 while let Some top = st <- pop$: popped += top
 { let a = 1; a * 2 }
-struct P: x: i32, y: i32
+struct P\ x: i32, y: i32
 ```
 
 - A `let` binding may take an inline block as its value: `let r = if let Some n = v: n * 2 else: 0`.
@@ -900,7 +951,7 @@ fn total(xs: &[i64]) -> i64 {
 
 ### The three rules
 
-- A statement ends at a newline, unless an unclosed bracket or a deeper-indented next line carries it on. `let x = vec![1,` followed by `2]` on the next line is one statement.
+- A statement ends at a newline, unless an unclosed bracket or a deeper-indented next line carries it on. `let xs = [1,` followed by `2]` on the next line is one statement.
 - A `;` is written in Harsh in exactly one place: at the end of a block's last statement, where it means *emit one*. That discards the tail value, as it does in Rust. A `;` anywhere else is rejected, since the newline already ended that statement.
 - In the Rust, every statement ends with `;` except the last in its block, which gets one only if the Harsh had one. This applies at every nesting level independently — a closure body is a block and is governed by the same rule at its own level.
 
@@ -1194,7 +1245,7 @@ An inline literal reads to the end of its line or to the `)` that isolates it, w
 match (Point\ x = 1.0, y = 4.0)\            match (Point { x: 1.0, y: 4.0 }) {
     Point\ x, .. => x
 if p == (Point\ x = 1.0):                   if p == (Point { x: 1.0 }) {
-let v = vec! [(Point\ x = 1), (Point\ x = 2)]
+let v = vec! (Point\ x = 1) (Point\ x = 2)
 (Point\ x = 1, y = 0) + (Point\ x = 2, y = 3)
 ```
 
@@ -1364,7 +1415,7 @@ format! "Hello, {name}"       →  format!("Hello, {name}")
 ```
 
 - Rust call syntax written into a macro — `println!("{}", greet("Ben"))` — is rejected, since under these rules it passes a single tuple.
-- A macro with a pattern argument juxtaposes like anything else, the pattern isolated as one argument: `matches! x (Some n if n > 1)`. The bracket and brace forms are Rust's and pass through: `vec! [0; 4]`, `quote! { … }`.
+- A macro with a pattern argument juxtaposes like anything else, the pattern isolated as one argument: `matches! x (Some n if n > 1)`. A stream that is not a list of expressions is written in braces and kept as written: `vec! { 0; 4 }`, `quote! { … }`.
 - Braces are opaque to application.
 
 ### What is and is not an atom
@@ -1541,7 +1592,7 @@ match s\    // indented arms
         format! "rect {area}"
     Shape.Named { name, sides } => format! "{name}/{sides}"
 
-match n: 0 => "zero", 1 | 2 => "small", _ => "big"    // inline arms
+match n\ 0 => "zero", 1 | 2 => "small", _ => "big"    // inline arms
 
 match n { 0 => "zero", _ => "other" }    // braced
 ```
@@ -1572,7 +1623,7 @@ match n\    // bindings
     v @ 1..=5 => format! "low {v}"
     v => format! "hi {v}"
 
-match n: 0 => "zero", 1 | 2 => "small", _ => "big"    // or-patterns
+match n\ 0 => "zero", 1 | 2 => "small", _ => "big"    // or-patterns
 ```
 
 ### Match as a value and nested matches
@@ -1772,29 +1823,13 @@ async fn main$:
 
 ## Macros
 
-### Invocation forms
+A macro is code that writes code before the program is compiled. Which macro you are looking at depends on who wrote it, in what, and whether it is yours: the mark says whether it is written in Harsh or in Rust, `name~` or `name!`, and it is either your own or imported from a library. The four parts below follow that: **Harsh macros (~)**, your own, written in Harsh; **Rust macros (!)**, your own, written in Rust inside a Harsh project; **Harsh DSLs (~)**, imported from Harsh libraries; **Rust DSLs (!)**, imported from Rust libraries. Your own macros, Harsh's and Rust's, come in Rust's two families, declarative and procedural, and a procedural macro in Rust's three kinds -- custom derive, attribute-like and function-like -- as the Rust Book presents them; Harsh's own mirror Rust's.
 
-```
-println! "{} {}" a (twice~ 4)      →  println!("{} {}", a, twice!(4))      juxtaposed
-let s = format! "value={a}"        →  let s = format!("value={a}")                 a single argument
-let v = vec! [1, 2, 3]             →  let v = vec![1, 2, 3]                        bracket form, untouched
-let z = vec! [0u8; 4]              →  let z = vec![0u8; 4]                         `;` form, untouched
-let m1 = matches! a (1..=9)        →  let m1 = matches!(a, 1..=9)                   a pattern is one argument
-let m2 = matches! a (n if n > 3)   →  let m2 = matches!(a, n if n > 3)              a guarded pattern, isolated
-let m3 = matches! r (Ok 7)         →  let m3 = matches!(r, Ok(7))                   the pattern juxtaposes inside
-assert_eq! a 5                     →  assert_eq!(a, 5)
-```
+### Harsh macros (~)
 
-- Macros follow the function rule exactly, with no exemption: one atom per argument, isolate anything that is not one. A pattern with a guard or an or-pattern is a multi-token argument like any other, so it is isolated — `matches! a (n if n > 3)` — and inside the isolating parens the ordinary rules apply, which is why `(Ok 7)` becomes `Ok(7)`.
-- This is the reason Rust and Julia give macros the same syntax as the language, where C gives them a foreign one: a macro call written in Harsh is checked against Harsh's rules, and whether the result means what the macro wants is the macro's business in Rust. The transpiler removes the parens and commas and puts them back; it does not need to know what `matches!` expects.
-- Rust call syntax written into a macro — `println!("{}", 1)` — is rejected, since under these rules it passes a single tuple. So is `matches! (a, n if n > 3)`, for the same reason.
-- The bracket and brace forms are Rust's and pass through: `vec! [0; 4]`, `quote! { … }`; inside a brace body nothing juxtaposes. A macro with a body of its own is written `name~ do:` — see "Macro bodies" below.
+Your own macros, written in Harsh. `hrs` expands them into Harsh before anything is transpiled, so the generated Rust holds none of them.
 
-### Definitions
-
-**Procedural macros and foreign DSLs are still in development.** Declarative macros are finished — Harsh's own and Rust's both. A proc macro *defined* in Harsh transpiles to an ordinary Rust proc macro, and a call with simple arguments reaches it as ordinary Rust tokens, but this is not verified end to end; and a call whose arguments carry a top-level operator is read as an expression (`my_macro! a | b | c` emits `my_macro!(a) | b | c`), so isolate the tokens — `my_macro! (a | b | c)` — until it is settled. A DSL from someone else's crate works only where the shapes Harsh emits match what its parser wants; the general answer, a spelling map shipped by the crate, is designed and not built.
-
-A `macro_rules!` — with Rust's `!` — is a zone of Rust: the transpiler copies it out byte for byte and `hrs-from` copies one in the same way. It carries no Harsh opener, since its `{` … `}` delimit it and its body is laid out as Rust, not as Harsh. Its calls are still Harsh calls (`my_vec! 1 2 3` → `my_vec!(1, 2, 3)`); only the definition is foreign.
+#### Declarative macros
 
 Both sides of a `macro_rules~` are written in Harsh, and both follow rules already stated: a matcher is a parameter list, a transcriber is a block. The macro unfolds **into Harsh** before anything is transpiled, so the generated Rust holds no macro at all — only what the expansion came to.
 
@@ -1815,57 +1850,307 @@ fn main$:
     println! "{}" (twice~ 21)
 ```
 
-- `macro_rules~ name:` opens a block whose lines are arms; each arm ends where the next begins, and the `;` Rust wants between them comes from the layout. A written `;` or `,` after an arm is rejected, as a written `,` after a match arm is.
-- **The matcher is a parameter list.** A parenthesised fragment `($x:expr)` is one parameter; two or more are all grouped, `( ($a:expr) ($b:expr) )` → `( $a:expr, $b:expr )`; a repetition of groups is a comma-separated repetition, `( $( ($k:expr => $v:expr) )* )` → `( $( $k:expr => $v:expr ),* )`. It is the rule for `fn f (a: T) (b: U)`, applied a third time, and it is what makes the call `m~ a b` and the matcher meet in Rust. The mapping applies to a matcher with a group at its top level; `( $x:expr )` and a `tt` matcher `( $( $arg:tt )* )` are the same in both languages, since `tt` matches anything, the commas a Harsh call produces included. A bracketed or braced matcher — `[ $elem:expr ; $n:expr ]` — is Rust's, exactly as `vec! [0u8; 4]` is on the call side.
+- `macro_rules~ name` takes no mark; its lines are arms, each `( matcher ) => do:` with the transcriber beneath (or inline after `do:`). The matcher's outer parens are its own delimiter; a DSL's brackets go inside them, `([ ($e:expr) ; ($n:expr) ])`.
+- **A call is a stream, not an application.** Everything after `name~` — the rest of its line and every following line indented deeper than the line the call sits on, or to the close of the group the call sits in, whichever comes first — reaches the matcher exactly as written. So `lst~ 1 2` with `3 4` indented beneath it passes four tokens, and `(lst~ 1 2) <- len$` chains on the result. A `\` after the mark is a token like any other. A Rust `!` macro whose stream is not a list of values takes it in braces, `m! { a => x, b => y }`; the `m!\` spelling is retired. A comma is the DSL's token, not Harsh's; a `(…)` is a group, one token, so a tuple is written once: `pair~ (1, 2)`. A call inside a larger expression is isolated, `((twice~ 4), 0)`, as any application is.
+- **A fragment's extent follows the matcher's shape.** It runs to the next literal the matcher names or the repetition's separator; when another fragment follows directly — `($a:expr) ($b:expr)` — it takes one atom, as an application's argument does; when nothing follows, it runs to the stream's end. So a Harsh macro juxtaposes its arguments, `my_macro~ (1+3) "more"`, and writes commas only where its DSL spells a construct that owns them.
+- Arms are tried in order and the first that fits wins, so the more specific arm comes first: to `$( ($x:expr) ),*`, a paren group is one expression.
+- **A metavariable is written in its parentheses**, `($name:spec)` (the user's ruling, 2026-09-25): the parentheses are part of the construct, as `$( … )*`'s are the repetition's, and a bare `$name:spec` is refused, naming the form. Every other token in a matcher is literal, further parentheses included: `(($k:expr))` requires `( )` in the call. A specifier gives its capture meaning: to `($v:expr)`, `(1+2)` and `((1+2))` are one expression; `:ident` is one identifier token, as in Rust, so `(adding)` is none. The transcriber stays bare, `$v $( $x )*`. A bracketed or braced matcher inside the arm's parentheses -- `([ ($elem:expr) ; ($n:expr) ])` -- is Rust's syntax, its tokens literal, exactly as `vec! [0u8; 4]` is on the call side.
 - **The transcriber is a block**, `=> do:` with the body beneath or `=> do: expr` inline. Its lines follow the block rules: statements take `;`, a line with a top-level `=>` is an arm and takes `,`, and `$x` is an atom, so `push $x` is a call. A transcriber's braces are Rust's *delimiters*, not a block: an expansion that is several statements with a value writes its block, the inner `do:` above, as Rust writes `{ { … } }`. A transcriber may also be Rust's delimited group, `=> { … }`, for a DSL of its own (`quote!`'s output, say); that form is for such transcribers, not a place to write Rust's `if` and `match`. A bare `=> $e * 2` is an error naming the forms.
 - **A repetition** `$( … )*` that is the whole of its line repeats what its block holds — statements, each with its `;` — and may span lines: `$(` line-final, the body beneath, `)*` as its own line. One inside an expression follows the matcher's brick from the other side: `$( ($x) )*` is a list of arguments and becomes `$($x),*`; a repetition of bare tokens, `$($arg)*`, forwards `tt`s and is copied as it stands. A written separator, `$( … );*`, is an error.
 
-### Macro bodies
+#### Procedural macros
 
-A macro invoked with a body — `tokio.select!`, a framework's `view!` or `rsx!` — is written `name~ do:` with the body beneath, and is emitted `name~ { … }`. What the body is depends on the shape of its first line.
+A procedural macro is a program: a function that receives tokens and returns the code to put in their place. Harsh's are written in Harsh, in a crate of their own marked `proc-macro = true` under `[package.metadata.harsh]`, which the crate that calls them lists by path, `proc-macros = ["../hello"]`; `hrs` runs them when it transpiles the code that calls them. Each is a `pub fn` from a `TokenStream` to a `TokenStream`, marked with an attribute that names its kind -- the Rust Book's general shape, `#[some_attribute~]` above `pub fn some_name (input: TokenStream) -> TokenStream:` -- in Rust's three kinds, below; the recipe and rules are in *Macros* (`docs/MACROS.md`).
 
-```
-let winner = tokio.select! do:           let winner = tokio::select! {
-    n = slow "slow" => n                      n = slow("slow") => n,
-    n = fast "fast" => n                      n = fast("fast") => n,
-                                          };
-```
+##### Custom derive Macros
 
-- **A Harsh block** is the default: statements and arms, as in a transcriber. `select!`'s arms are lines with `=>`.
-- **Markup**, when the body is markup — its first tag may follow a hole or a string, `{panel}` / `<button …>` (Leptos, Yew, Sycamore): the lines are copied through as written — tags, attributes, quoted text, whitespace — with only the token substitutions applied (a `.` in a component path is a path separator), and only the Rust in it is Harsh: the contents of every `{ … }` — a child `{count}`, an attribute value `on:click={move |_| …}`. **Braces are the spelling**, the same as a Dioxus tree's holes; they are RSX's own block form and reach the Rust. An attribute value may also be isolated in parens, `on:click=(|| body)` — parens are grouping and don't change the nature of what they hold — and those are not emitted, so the bare `on:click=|| body` comes out; accepted, not preferred. A hole may span lines and holds layout, `{move |_|:` with the body beneath and `}` closing it. The same holds in the one-line brace form, `view! { <p>{count}</p> }`, inside a closure's braces or anywhere else.
+A **derive** mirrors Rust's: `#[proc_macro_derive~ Describe]` registers
+it (`#[proc_macro_derive~ Describe (attributes describe)]` declares a helper
+attribute it reads), and `#[derive~ Describe]` above a `struct`, an `enum`
+or a `union` runs it on that item, beside Rust's own `#[derive Debug]` if
+you like. It receives the item as written, with every derive attribute
+removed; what it returns is added after the item, which it cannot change;
+and its helper attributes leave the item once it has run.
 
-```
-view! do:
-    <div class="app">
-        <p>{count}</p>
-        <button on:click={move |_| set_count <- update (|n| *n += 1)}>"+"</button>
-        <Greeting name={"World" <- to_string$} />
-    </div>
-```
+##### Attribute-Like Macros
 
-- **A brace tree**, when the first line is a name followed by `:` (Dioxus): `div:` opens an element and its block is a tree again; an attribute takes its value through `=`, since `:` opens blocks here, and is emitted `class: "app",`; a string, a `{ … }` or a `..spread` is a child; `for … in …:`, `if …:` and `else:` are the framework's own, their headers copied with the token substitutions and their bodies trees. As in markup, the Harsh is in the holes. Only attributes take commas, which is what the framework's parser accepts; an attribute's hole loses its braces on emission, so the framework sees the `move |_|` that marks an event handler.
+An attribute-like macro is placed on any item -- a function, a module, a `struct` -- and what it returns *replaces* the item. It is a `pub fn` marked `#[proc_macro_attribute~]` taking two streams, as Rust's takes them: `(attr: TokenStream) (item: TokenStream)`. `#[route~ GET "/"]` above `fn index$:` hands it the arguments as written, `GET "/"`, and the function; `#[route~]`, without arguments, an empty first stream. The shape of the arguments is the macro's author's to decide -- written with Harsh in mind, usually juxtaposed, with isolation parentheses around one of several tokens, `#[route~ GET "/" (some_attr = some_value)]`. The macro receives the item with every other attribute it carries, above and below its own, and its output is all that remains of it. `hrs_syn`'s `ItemFn` parses a function into its signature, name and body:
 
 ```
-rsx! do:                                              rsx! {
-    div:                                                  div {
-        class = "app"                                         class: "app",
-        onclick = {move |_| count <- set (count$ + 1)}        onclick: move |_| count.set(count() + 1),
-        "Hello {count}"                                       "Hello {count}"
-        for item in items:                                    for item in items {
-            li: "{item}"                                          li { "{item}" }
-        Button:                                               }
-            onclick = {move |_|:                              Button {
-                let n = count * 2                                 onclick: move |_| {
-                reset n                                               let n = count * 2;
-            }                                                         reset(n)
-            "Reset"                                               },
-                                                                  "Reset"
-                                                              }
-                                                          }
-                                                      }
+#[proc_macro_attribute~]
+pub fn route (attr: TokenStream) (item: TokenStream) -> TokenStream:
+    let route = attr <- to_string$
+    let f = parse_macro_input! { item as ItemFn }
+    let vis = &f <- vis
+    let sig = &f <- sig
+    let name = f <- ident <- to_string$
+    let body = &f <- block
+    quote~ do:
+        #vis #sig:
+            println! "[ROUTE LOG] Dispatched handler '{}' for {}" #name #route
+            #body
 ```
 
-- **Braces**, `name~ { … }`, are the one-line form, as braces are everywhere: the body is Harsh, layout off, and it juxtaposes — `quote! { fn #name$ -> u32 { #body } }` emits `fn #name() -> u32 { #body }`, and `tokio.select! { n = slow "slow" => n, }` the call it names. There is no exemption: `f(x)` is an error inside a macro's braces as anywhere.
+##### Function-Like Macros
+
+A proc macro is an ordinary Harsh function marked `#[proc_macro~]`, taking
+and returning a `TokenStream` -- text, in this version:
+
+```
+use hrs_proc_macro.TokenStream
+
+#[proc_macro~]
+pub fn hello_macro (input: TokenStream) -> TokenStream:
+    let input_str = input <- to_string$
+    let output = format! "\"Hello, {}!\"" input_str
+    output <- parse$ <- unwrap$
+```
+
+It is called like any `~` macro, `hello_macro~ world`, and runs when `hrs`
+transpiles the caller: what it returns is Harsh, put where the call stood,
+so the generated Rust holds no macro -- here `println!("{}", "Hello,
+world!")`. The macro lives in its own crate, marked `proc-macro = true`
+under `[package.metadata.harsh]`; the crate that calls it lists it,
+`proc-macros = ["../hello"]`. The recipe and the rules are in *Macros*
+(`docs/MACROS.md`). `hrs expand` shows a file with its proc macros
+expanded.
+
+### Rust macros (!)
+
+Your own macros, written in Rust inside a Harsh project, are still supported, and are called with Rust's mark by the rules of *Rust DSLs* below.
+
+#### Declarative macros
+
+A `macro_rules!` — with Rust's `!` — is a zone of Rust: the transpiler copies it out byte for byte and `hrs-from` copies one in the same way. It carries no Harsh opener, since its `{` … `}` delimit it and its body is laid out as Rust, not as Harsh. Its calls are still Harsh calls (`my_vec! 1 2 3` → `my_vec!(1, 2, 3)`); only the definition is foreign.
+
+#### Procedural macros
+
+A Rust procedural macro lives in a Rust crate that says `proc-macro = true` under `[lib]`, Rust's own setting; a Harsh crate depends on it as on any crate and brings the macro in with `use`. It is written in Rust, with `syn` and `quote` if you like. Each kind is a function from a token stream to a token stream, marked with the Rust attribute that names it.
+
+##### Custom derive Macros
+
+A function marked with Rust's `proc_macro_derive` attribute, naming the derive, called `#[derive Name]`: `use hello_macro_derive.HelloMacro`, then `#[derive HelloMacro]` above the type.
+
+##### Attribute-Like Macros
+
+A function marked with Rust's `proc_macro_attribute` takes two streams -- the attribute's arguments and the item -- and what it returns replaces the item. A framework's `route`, called `#[route GET "/"]` above `fn index$:` -- Rust's `#[route(GET, "/")]`, its arguments juxtaposed -- receives `GET, "/"` and the function; called `#[route]`, an empty first stream. (`#[route (GET, "/")]` would hand it one tuple, `#[route((GET, "/"))]`: parentheses isolate a single argument.) It takes two even then: rustc refuses the function with one.
+
+##### Function-Like Macros
+
+A function marked with Rust's `proc_macro` attribute, called from Harsh as any Rust macro: `name! a b`, or `name! { … }` when its stream is a language of its own.
+
+### Harsh DSLs (~)
+
+Macros imported from Harsh libraries are Harsh throughout: each call follows the grammar the library's guide describes, and what it expands to is Harsh. There is nothing to learn beyond that guide.
+
+- **The prelude.** `g~` (a comprehension, `g~ x * 2 for x in xs if x > 1`), `list~`, `set~` and `dict~` need no definition and no `use`. A file's own macro of the same name shadows them; `hrs_std.g~` always reaches the prelude's.
+
+### Rust DSLs (!)
+
+Macros imported from Rust libraries -- `println!` and `vec!` from the standard library, a framework's `view!`, serde's `#[derive Serialize]`, Tokio's `#[tokio.main]` -- are called by Harsh's rules.
+
+#### Calling one
+
+```
+println! "{} {}" a (twice~ 4)      →  println!("{} {}", a, twice!(4))      juxtaposed
+let s = format! "value={a}"        →  let s = format!("value={a}")                 a single argument
+let v = vec! 1 2 3                 →  let v = vec!(1, 2, 3)                        juxtaposed, like any macro
+let z = vec! { 0u8; 4 }            →  let z = vec! { 0u8; 4 }                      not a list: braces, kept
+let m1 = matches! a (1..=9)        →  let m1 = matches!(a, 1..=9)                   a pattern is one argument
+let m2 = matches! a (n if n > 3)   →  let m2 = matches!(a, n if n > 3)              a guarded pattern, isolated
+let m3 = matches! r (Ok 7)         →  let m3 = matches!(r, Ok(7))                   the pattern juxtaposes inside
+assert_eq! a 5                     →  assert_eq!(a, 5)
+```
+
+- Macros follow the function rule exactly, with no exemption: one atom per argument, isolate anything that is not one. A pattern with a guard or an or-pattern is a multi-token argument like any other, so it is isolated — `matches! a (n if n > 3)` — and inside the isolating parens the ordinary rules apply, which is why `(Ok 7)` becomes `Ok(7)`.
+- This is the reason Rust and Julia give macros the same syntax as the language, where C gives them a foreign one: a macro call written in Harsh is checked against Harsh's rules, and whether the result means what the macro wants is the macro's business in Rust. The transpiler removes the parens and commas and puts them back; it does not need to know what `matches!` expects.
+- Rust call syntax written into a macro — `println!("{}", 1)` — is rejected, since under these rules it passes a single tuple. So is `matches! (a, n if n > 3)`, for the same reason.
+- **The delimiter is the caller's choice, not the macro's.** Rust hands a macro the stream inside its delimiter, so `vec![a, b]`, `vec!(a, b)` and `vec!{a, b}` are one call. Harsh gives the delimiters meanings of its own: a macro whose stream is a comma-separated list of expressions is applied, `vec! 1 2 3`, and emitted in parentheses; any other stream is written in braces, `vec! { 0; 4 }`, `quote! { … }`, and kept as written — inside a brace body nothing juxtaposes. A bracket after `!` is an ordinary argument, an array: `m! [a, b] c` is `m!([a, b], c)`. Rust's `vec![1, 2, 3]` written as is would therefore mean a vector holding one array, and is refused with the Harsh spelling named; `vec! ([1, 2, 3])` passes one array on purpose. A macro with a body of its own is written `name~ do:` — see "Macro bodies" below.
+
+#### Derives and attributes
+
+Rust's own derives are written as any attribute, by juxtaposition: `#[derive Debug Clone]` is `#[derive(Debug, Clone)]`. The two kinds may sit on one item. Rust's attribute macros take Harsh between their brackets, by the application and path rules: `#[tokio.main]`, `#[route "/api/:id"]` → `#[route("/api/:id")]`, `#[tokio.main (flavor = "multi_thread")]` → `#[tokio::main(flavor = "multi_thread")]`.
+
+#### A macro's own language: braces and holes
+
+A Rust macro whose stream is not a list of values — `tokio.select!`'s arms, a framework's `view!` markup or `rsx!` tree, a `quote!` template — takes it in braces, and **what is inside the braces is Rust**, or the macro's own language, written exactly as its documentation shows. Harsh reads none of it and changes none of it. The only Harsh inside is what you mark: a **hole** opens with `@:` and **always closes** with `:@`, and between the two is ordinary Harsh, transpiled in place.
+
+```
+let winner = tokio.select! {              let winner = tokio::select! {
+    n = @: slow "slow" :@ => n,               n = slow("slow") => n,
+    n = @: fast "fast" :@ => n,               n = fast("fast") => n,
+}                                         };
+
+view! {                                   view! {
+    <div class="app">                         <div class="app">
+        <p>{count}</p>                            <p>{count}</p>
+        <button on:click={@: move |_|             <button on:click={move |_|
+            println! "+1" :@}>"+"</button>            println!("+1")}>"+"</button>
+    </div>                                    </div>
+}                                         }
+```
+
+- **A hole is Harsh; everything else is the macro's.** `{count}` needs no mark — a name reads the same in both languages — while a handler written in Harsh sits in a hole. A hole may span lines: `@:` where it opens, the Harsh beneath at that line's indentation, `:@` where it ends. It may hold a macro call with braces of its own, and holes inside those.
+- **Braces may span lines**, as in Rust: the body is the macro's, so Harsh's layout never applies to it. The formatter leaves it byte for byte.
+- `@@:` is a literal `@:` in the body's text. `@:` anywhere else is refused.
+- **`hrs-from` writes the holes.** Converting a Leptos, Dioxus or Tokio file keeps each body's DSL as written and turns every piece of Rust code in it into a hole of Harsh: a `{ … }` group, an attribute's value (`name=value`, `name: value`), a `for`/`if` expression, a `select!` arm's pattern, future and handler. A literal stays as written. A piece it cannot write as Harsh stops the conversion, named by line — never silently left as Rust.
+- A block passed to a macro *as an argument* is isolated like any argument, `m! (do: …) x`. `m! do:` as the macro's body, and `#:`, are retired (2026-09-23); each is refused with the braces named.
+
+## Generator comprehensions
+
+`g~` is the **generator comprehension**, in Harsh's prelude: every file may use it with no `use`, and a file that never calls it is untouched. The names are Python's — `g~` is lazy, as a generator is; `list~`, `set~` and `dict~` are the list, set and dict comprehensions that collect it. (A generator here is a lazy iterator, not Rust's unstable feature of that name.)
+
+```fragment
+g~ value for pattern in iterable if condition … for pattern in iterable if condition …
+```
+
+- **Each `if` belongs to the `for` before it.** A condition sees every name bound up to that point and nothing after, and a condition on an outer `for` filters before the inner one runs. So a test goes after the last `for` whose name it uses:
+
+```
+fn main$:
+    let triples =
+        list~ (a, b, c)
+            for a in 1..20        // only a is available for the condition
+            for b in a..20        // only a, b are available for the condition
+            for c in b..20        // a, b, c are available for the condition
+            if a * a + b * b == c * c
+```
+
+  Attached to `for a`, the same test fails: *cannot find value `b` in this scope*, reported on the Harsh line.
+- **Each `for` is one closure**, its `if`s folded into one test under `bool::then`, and every level but the innermost is flattened:
+
+```fragment
+g~ x * 2 for x in xs if x > 1 if x < 9
+    →  (xs).into_iter().flat_map(move |x| ((true && (x > 1) && (x < 9)).then(|| x * 2)))
+
+g~ (x, y) for x in 0..3 for y in 0..3 if y > x
+    →  (0..3).into_iter().flat_map(move |x| ((true).then(||
+           ((0..3).into_iter().flat_map(move |y| ((true && (y > x)).then(|| (x, y))))))))
+       .flatten()
+```
+
+(Spacing tidied; the structure is exactly what `hrs` emits.) In Harsh, as `hrs expand` shows it:
+
+```fragment
+g~ x * 10 + y
+    for x in (0..6) if x % 2 == 0 if x > 0
+    for y in (0..6) if y > x if y % 2 == 1
+
+    →  (0..6) <- into_iter$
+       <- flat_map (move |x|
+           ((true && (x % 2 == 0) && (x > 0)) <- then (||
+               (0..6) <- into_iter$
+               <- flat_map (move |y|
+                   ((true && (y > x) && (y % 2 == 1)) <- then (|| x * 10 + y))))))
+       <- flatten$
+```
+
+- **`flatten$` is part of the generator; `collect$` is not.** Every level but the innermost ends in `flatten$`, so it is never written by hand — `(g~ …) <- flatten$` fails, trying to flatten the values. And a generator is lazy, so it collects nothing: write `(g~ …) <- collect$`, or use `list~`, `set~` or `dict~`.
+
+- **It is a lazy iterator.** Nothing runs until it is consumed, so `for n in 1..` with a `take` after it is fine.
+- **`for` takes its iterable by value**, as the language's `for` does (`IntoIterator`): pass `(xs <- iter$)` to borrow.
+- **The call takes the rest of its line and every line indented beneath it**, so a long comprehension is laid out one clause per line; isolate the whole call to chain on it, `(g~ …) <- collect$`.
+- **Shorthands** collect: `list~ …` into a `Vec`, `set~ …` into a `HashSet`, `dict~ key => value for …` into a `HashMap` — where a repeated key keeps its last value, as `insert` does.
+
+```
+fn main$:
+    let evens = list~ x for x in 0..10 if x % 2 == 0
+    let pairs = list~ (x, y) for x in 1..4 for y in 1..4 if y > x
+    let squares: Vec<u64> = (g~ n * n for n in 1..) <- take 5 <- collect$
+    println! "{evens:?} {pairs:?} {squares:?}"
+```
+
+- **Shadowing.** A file's own `macro_rules~ g` (or `list`, `set`, `dict`) replaces the prelude's in that file; `hrs_std.g~` always reaches the prelude's, and the shorthands call it by that name, so they keep working.
+
+## Matrices and linear algebra
+
+Julia's notation, for Julia's operations. The literals `m~` and `v~` are in the prelude; the types they build, `hrs_std::Matrix<T>` and `hrs_std::Vector<T>`, are in the `hrs_std` crate, which a project lists once. `hrs` stops a project that calls `m~` without it, and names the line to add.
+
+```toml
+[dependencies]
+hrs_std = "0.1"
+```
+
+**The literal.** Julia's three rules, composed:
+
+- a space is `hcat`, side by side;
+- a `;` or a line break is `vcat`, one above another;
+- a comma makes the entries of a vector, a column.
+
+Every entry is a *block*: a number is 1×1, a matrix is itself, and a nested bracket is built by the same rules.
+
+```fragment
+m~ [1 2 3; 4 5 6]             →  hrs_std::Matrix::from_rows(vec!(vec!(1, 2, 3), vec!(4, 5, 6)))
+m~ [1 2 3                        the same: a line break is a `;`
+    4 5 6]
+m~ [[1, 4] [2, 5] [3, 6]]     →  the same, from three columns side by side
+m~ [1, 2, 3]                  →  a 3×1 matrix
+v~ [1, 2, 3]                  →  hrs_std::Vector::from_vec(vec!(1, 2, 3))
+m~ [(&a) (&b)]                →  hrs_std::vcat(vec!(hrs_std::hcat(vec!(hrs_std::block(&a), hrs_std::block(&b)))))
+m~ [[1 2], [3 4]]                refused: in Julia a vector of two matrices — commas never join
+v~ [1 2 3]                       refused: spaces make a row, which is a matrix
+```
+
+An entry with an operator in it is isolated, `(k + 1)`, as any argument is; a negative number is one entry, `[1 -2]`, as in Julia.
+
+**The operations** — Julia's names wherever Julia has one:
+
+```fragment
+&a * &b            the matrix product          k * a        scaling
+&a * &x            matrix × vector: a vector   &a + &b      entrywise, as is -
+a <- solve (&b)    Julia's a \ b: exact for a square matrix, least squares for a tall one
+a <- inv$          a <- det$         a <- transpose$        a <- size$
+x <- norm$         x <- dot (&y)     x[0]                   a[0, 1]
+&a + UniformScaling 2                 &a + I                  Julia's identity
+```
+
+- **`*` is chosen by the operand types**, at compile time — the dispatch Julia does at run time. `&a * &b` borrows; `a * b` consumes, by Rust's ownership rule.
+- **Sizes are values, not types**: `Matrix<i64>` is any size. A mismatch stops the program with Julia's message — `DimensionMismatch: matrix A has dimensions (2, 3), matrix B has dimensions (2, 3)` — reported at the caller's line; a singular matrix, with `SingularException`.
+- **Indexes start at 0**, as for every collection in Harsh; Julia counts from 1.
+- **The formatter** aligns a matrix's rows under its first entry, as they are written in Julia, and never adds or removes a line break inside a `~` call — there a line break may mean something, as it does in `m~`, where it is a row.
+- **Not yet**: `.^` and the dotted comparisons as operators (write `f64.powf<> a 2.0`, `(|x, y| x > y)<> a b`), Julia's in-place `.=`, and Julia's `A'`, whose `'` begins a character or a lifetime in Rust.
+
+**Slicing** — Julia's `a[1:2, :]`, in Harsh's own ranges: 0-based, the end left out, and `..` alone for Julia's `:`.
+
+```fragment
+a <- slice (0..2) (..)      a copy, as Julia's is: rows 0 and 1, every column
+a <- slice 1 (..)           an axis taken by a number is dropped: a row, as a vector
+&a[0..2, ..]                a view: borrowed, nothing copied, as &v[1..3] is
+a[1.., ..=1] <- copy$       the view made a matrix of its own
+a[1, 1]      a[1, 1] = 50   an element, read and written
+a[2, ..] <- fill 0          a row written through
+```
+
+- **An index takes its axes with a comma**, `a[i, j]`, as Julia writes it. Rust's index takes one value, so the axes are a tuple and `a[(i, j)]` means the same: *a top-level comma in an index makes a tuple.* The rule is the language's, not the matrix's — any type indexed by a tuple may be written so.
+- **The method copies, the index borrows.** Rust's `Index` must hand back a reference, so `a[0..2, ..]` is a *view* and is used behind `&`, exactly as a slice of a `Vec` is; `<- copy$` is Julia's copy. A view prints, stretches and combines like the matrix it looks into.
+- A range past the end stops the program with `BoundsError`, reported at the caller's line.
+
+**Broadcasting** — a dot before an operator applies it element by element, Julia's own spelling: `.*`, `.+`, `.-`, `./`.
+
+```fragment
+&a .* &b             element by element; &a * &b is still the matrix product
+&a .* 2.0 .+ &row    shapes stretch: along an axis two lengths are equal, or one of them is 1
+x + &a .* &b         precedence is the operator's own: the product first
+relu<> a             f<> — apply to each: Julia's relu.(a)
+f64.powf<> a 2.0     two arguments, stretched the same way: Julia's a .^ 2
+(|x, y| x > y)<> a b   a closure in parentheses; the element type may change: a Matrix<bool>
+a |> relu<> |> f64.sqrt<>     it pipes
+a <- map relu        the method beneath f<>, as slice is beneath the index
+```
+
+- **`f<>` is a mark, tight against the function**, as `f$` is *apply to nothing* and `m!` a macro: it says how the name is applied. It borrows its arguments — applying a function to each element consumes nothing — and takes up to three, `f64.clamp<> a 0.0 1.0`.
+- **A dotted operator is two operators round a dot**: `a .* b` is written to Rust as `a * hrs_std::DOT * b`. `a * DOT` is half an operation and `* b` completes it, so Rust's precedence and associativity are Julia's with nothing parsed. `.` is otherwise the path separator, which an operator never follows — except the glob of a `use`, and a `use` is left alone.
+- **Rust's empty generic list is dropped.** `f::<>(x)` and `P<>` mean nothing in Rust; in Harsh `f<>` is the mark, and `hrs-from` leaves Rust's out. It is the one place Harsh is not a superset of Rust.
+- A mismatch is Julia's: `DimensionMismatch: arrays could not be broadcast to a common size; got a dimension with lengths 2 and 3`.
+
+```
+fn main$:
+    let hours = [1.0, 2.0, 3.0, 4.0]
+    let score = v~ [52.0, 55.0, 61.0, 64.0]
+    let x = hrs_std.Matrix.from_rows (list~ (vec! 1.0 h) for h in hours)
+    let beta = x <- solve (&score)
+    println! "score = {:.2} + {:.2} × hours" beta[0] beta[1]
+```
 
 ## Attributes and comments
 
@@ -1935,7 +2220,7 @@ pub fn ServiceCard
 let brand_name =
     (
         if s <- brand_lines <- is_empty$:
-            vec! [s <- name <- clone$]
+            vec! (s <- name <- clone$)
         else:
             s <- brand_lines <- clone$
     ) <- into_iter$ <- map (…) <- collect_view$
@@ -1976,7 +2261,7 @@ Because the transpiler substitutes tokens rather than reconstructing a tree, the
 let x = a::b                           `::` is not valid in Harsh; the path separator is `.`
 println!("{}", 1)                      a macro takes juxtaposed arguments, not a parenthesised list
 matches! (a, n if n > 3)               the same — a parenthesised list is a tuple
-match n:                               `;` is not valid at the end of a match arm
+match n\                               `;` is not valid at the end of a match arm
     1 => 10;
 let a = x |> f y                       after a pipe's function only `<|` may follow; isolate: `x |> (f a)`
 let a = 1 + 2 |> f                     a pipe's arguments are atoms; isolate an expression in parentheses
@@ -1985,7 +2270,7 @@ let a = f $                            `$` applies a name to nothing and is writ
 fn f ():                               `()` is the unit value; a function with no parameters is `fn f$`
 fn f (a: i32, b: i32) -> i32:          a parameter group holds one parameter; write `(a: T) (b: U)`
 use std.io:                            `use` does not open a block; group imports in parentheses
-match n:                               `,` is not written at the end of a match arm
+match n\                               `,` is not written at the end of a match arm
     1 => 10,
 if n == 1: 10                          this `else` has no `if` to attach to
 else: if n == 2: 20
@@ -2060,7 +2345,7 @@ The source map records one entry per token as byte offsets. The remapper rewrite
 | Type alias | `type P = (i32, i32)` | `type P = (i32, i32);` |
 | Tuple struct | `struct T (i32, i32)` / `T 3 4` | `struct T(i32, i32);` / `T(3, 4)` |
 | Record variant | `Rec:` + fields | `Rec { … }` |
-| Macro, bracket form | `vec! [0; 4]` | `vec![0; 4]` |
+| Macro, a stream that is not a list | `vec! { 0; 4 }` | `vec! { 0; 4 }` |
 | Macro definition | `macro_rules~ m:` | `macro_rules~ m {` |
 | Pipe into closure | `x \|> (\|w\| f w)` | `(\|w\| f(w))(x)` |
 | Isolated closure, chained | `map (\|x\|:` + body + `) <- f$` | `map(\|x\| { … }).f()` |

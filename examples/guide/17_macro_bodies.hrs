@@ -1,7 +1,7 @@
 // Both sides of a macro are Harsh: the matcher a parameter list, the
 // transcriber a block.
 macro_rules~ twice
-    ($e:expr) => do: $e * 2
+    (($e:expr)) => do: $e * 2
 
 macro_rules~ my_vec
     ( $( ($x:expr) )* ) => do:
@@ -11,7 +11,7 @@ macro_rules~ my_vec
             v
 
 macro_rules~ hashmap
-    ( $( ($k:expr => $v:expr) )* ) => do:
+    ( $( (($k:expr) => ($v:expr)) )* ) => do:
         do:
             let mut m = std.collections.HashMap.new$
             $(
@@ -21,17 +21,17 @@ macro_rules~ hashmap
             m
 
 macro_rules~ log
-    ( ($level:expr) $($arg:tt)* ) => do:
+    ( ($level:expr) $(($arg:tt))* ) => do:
         println! "[{}] {}" $level (format! $($arg)*)
 
 macro_rules~ filled
-    [ $elem:expr ; $n:expr ] => do:
-        vec! [$elem; $n]
+    ([ ($elem:expr) ; ($n:expr) ]) => do:
+        vec! { @: $elem :@; @: $n :@ }
 
 // A macro body: `name~ do:`, a Harsh block handed to the macro as tokens.
 macro_rules~ first_of
-    ( $($t:tt)* ) => do:
-        match ($($t)*): (a, _) => a
+    ( $(($t:tt))* ) => do:
+        match ($($t)*)\ (a, _) => a
 
 fn main$:
     let v = my_vec~ 1 2 3
@@ -39,5 +39,5 @@ fn main$:
     log~ "info" "{} items, {} keys" (v <- len$) (m <- len$)
     let z = filled~ [0u8; 2]
     let f = first_of~ do:
-        (twice~ 4, 0)
+        ((twice~ 4), 0)
     println! "{v:?} {} {z:?} {f}" (m["b"])

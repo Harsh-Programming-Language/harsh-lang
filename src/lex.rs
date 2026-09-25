@@ -79,6 +79,11 @@ pub struct Token {
     /// exactly where the `$` stood (its span is the `$`'s), so the whitespace
     /// after it is the source's and is copied like any other token's.
     pub dollar: bool,
+    /// The mark of a `~` call, normalised to `!` by
+    /// `layout::normalise_macro_mark` so the pipeline sees one shape. What
+    /// follows it is the `~` macro's own stream (3.1.1 of the macro design
+    /// notes): a rule for Rust's `!` macros never judges it (2026-09-22).
+    pub tilde: bool,
     /// **Syntax context** — the hygiene mark, as in Rust (2026-09-17).
     ///
     /// Source starts at `ctx == 0`, the root. Each expansion of a
@@ -193,6 +198,7 @@ impl<'a> Lexer<'a> {
             line: self.line,
             synthetic: false,
             dollar: false,
+            tilde: false,
         });
     }
 

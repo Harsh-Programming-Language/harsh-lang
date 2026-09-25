@@ -1,0 +1,18 @@
+[package]
+name = "hrs_proc_macro"
+version = "0.2.0"
+edition = "2021"
+authors = ["Bahiminin Benoit Dah"]
+license = "MPL-2.0"
+description = "The runtime of Harsh's own procedural macros: the token stream a `#[proc_macro~]` function receives and returns, and the entry point of the runner `hrs` builds."
+repository = "https://gitlab.com/bahiminin.benoit.dah.opensource/harsh-lang"
+keywords = ["harsh", "macro", "proc-macro", "transpiler"]
+categories = ["development-tools::procedural-macro-helpers"]
+rust-version = "1.75"
+readme = "README.md"
+
+[dependencies]
+# The transpiler's own lexer: one grammar for Harsh, never a second parser
+# (the user's ruling, 2026-09-24). Without default features it has no
+# dependencies. `path` for the tree; `version` for crates.io.
+harsh-lang = { version = "0.1.30", path = "..", default-features = false }

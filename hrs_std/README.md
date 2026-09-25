@@ -1,0 +1,42 @@
+# hrs_std
+
+Harsh's standard library: the types behind the matrix and vector literals of
+[Harsh](https://gitlab.com/bahiminin.benoit.dah.opensource/harsh-lang) —
+*Rust without braces, with pipes, partial application, comprehensions and
+linear algebra*.
+
+```
+let x = m~ [1.0 1.0; 1.0 2.0; 1.0 3.0]
+let y = v~ [1.0, 2.0, 2.9]
+let beta = x <- solve (&y)          // Julia's X \ y: the least-squares fit
+```
+
+`Matrix<T>` and `Vector<T>` follow Julia, over [nalgebra](https://nalgebra.org):
+`*` is the matrix product, scaling or matrix-times-vector, chosen from the
+operand types; `solve` is Julia's `\` (exact for a square matrix, least squares
+for a tall one); `inv`, `det`, `transpose`, `dot`, `norm`, `UniformScaling`,
+`I`, `hcat`, `vcat`. Sizes are values, and a mismatch is a `DimensionMismatch`
+in Julia's words, reported at the caller's line.
+
+**Slicing** keeps Harsh's 0-based ranges, `..` alone being Julia's `:`. The
+method copies, `a <- slice (0..2) (..)`; the index borrows, `&a[0..2, ..]` — a
+*view*, as `&v[1..3]` is of a `Vec` — and an axis taken by a number is dropped,
+as in Julia. **Broadcasting** is Julia's: `a .* b`, `.+`, `.-`, `./`, shapes
+stretched where a length is 1, and `f<> a` for Julia's `f.(a)`. From Rust these
+are `&a * DOT * &b`, `each!(f, a)`, `a.slice(0..2, ..)` and `&a[(0..2, ..)]`.
+
+The views hold their window in the spare word of an unsized reference, the
+technique `bitvec` uses; that is the crate's only `unsafe`, and its argument is
+written once in `src/slicing.rs`.
+
+The literals `m~` and `v~` are part of the language; a Harsh project that uses
+them adds one line:
+
+```toml
+[dependencies]
+hrs_std = "0.1"
+```
+
+The Book's chapter 16 teaches it. From Rust, the types are usable directly.
+
+MPL-2.0.

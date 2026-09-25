@@ -31,7 +31,9 @@ impl Inventory
         if num_red > num_blue: ShirtColor.Red else: ShirtColor.Blue
 
 fn main$:
-    let store = Inventory\ shirts = vec! [ShirtColor.Blue, ShirtColor.Red, ShirtColor.Blue]
+    let store =
+        Inventory\
+            shirts = vec! ShirtColor.Blue ShirtColor.Red ShirtColor.Blue
     let user_pref1 = Some ShirtColor.Red
     println!
         "The user with preference {:?} gets {:?}"
@@ -111,7 +113,7 @@ A closure captures each variable it uses in the least demanding way that works �
 
 ```
 fn main$:
-    let list = vec! [1, 2, 3]
+    let list = vec! 1 2 3
     println! "Before defining closure: {list:?}"
 
     let only_borrows = || println! "From closure: {list:?}"
@@ -131,7 +133,7 @@ After calling closure: [1, 2, 3]
 
 ```
 fn main$:
-    let mut list = vec! [1, 2, 3]
+    let mut list = vec! 1 2 3
     println! "Before defining closure: {list:?}"
 
     let mut borrows_mutably = || list <- push 7
@@ -152,7 +154,7 @@ To make a closure take ownership of what it uses — needed when it will outlive
 use std.thread
 
 fn main$:
-    let list = vec! [1, 2, 3]
+    let list = vec! 1 2 3
     println! "Before defining closure: {list:?}"
 
     thread.spawn (move || println! "From thread: {list:?}")
@@ -165,7 +167,7 @@ Before defining closure: [1, 2, 3]
 From thread: [1, 2, 3]
 ```
 
-`move ||` moves `list` into the closure; the thread may then run after `main`'s frame is gone and still own its data. Without `move`, the closure would borrow `list`, and the compiler would reject the program because the thread might outlive the borrow. (Threads are chapter 16; this is a preview of why `move` exists.)
+`move ||` moves `list` into the closure; the thread may then run after `main`'s frame is gone and still own its data. Without `move`, the closure would borrow `list`, and the compiler would reject the program because the thread might outlive the borrow. (Threads are chapter 19; this is a preview of why `move` exists.)
 
 ### `Fn`, `FnMut`, `FnOnce`
 
@@ -269,7 +271,7 @@ fn main$:
             (Rectangle\ width = 3, height = 5),
         ]
 
-    let mut sort_operations = vec! []
+    let mut sort_operations = vec!$
     let value = String.from "closure called"
 
     list <- sort_by_key |r|:
@@ -345,11 +347,11 @@ pub trait Iterator
     fn next (&mut self) -> Option<Self.Item>
 ```
 
-`next` returns `Some item` until the sequence is finished and `None` after; `Item` is an *associated type* (chapter 20) naming what it yields. Everything else is built on `next`:
+`next` returns `Some item` until the sequence is finished and `None` after; `Item` is an *associated type* (chapter 23) naming what it yields. Everything else is built on `next`:
 
 ```
 fn main$:
-    let v1 = vec! [1, 2, 3]
+    let v1 = vec! 1 2 3
     let mut v1_iter = v1 <- iter$            // nothing happens yet
     assert_eq! (v1_iter <- next$) (Some (&1))
     assert_eq! (v1_iter <- next$) (Some (&2))
@@ -374,7 +376,7 @@ Methods on iterators come in two kinds. A *consumer* calls `next` until the end 
 
 ```
 fn main$:
-    let v1 = vec! [1, 2, 3]
+    let v1 = vec! 1 2 3
     let total: i32 = v1 <- iter$ <- sum$     // a consumer: drives the iterator to the end
     println! "{total}"
 ```
@@ -387,7 +389,7 @@ fn main$:
 
 ```
 fn main$:
-    let v1: Vec<i32> = vec! [1, 2, 3]
+    let v1: Vec<i32> = vec! 1 2 3
     let v2: Vec<_> =
         v1 <- iter$
            <- map (|x| x + 1)
@@ -403,7 +405,7 @@ fn main$:
 
 ```
 fn main$:
-    let v1: Vec<i32> = vec! [1, 2, 3]
+    let v1: Vec<i32> = vec! 1 2 3
     v1 <- iter$ <- map (|x| x + 1);         // an adaptor alone does nothing
 ```
 
@@ -426,11 +428,10 @@ fn shoes_in_size (shoes: Vec<Shoe>) (shoe_size: u32) -> Vec<Shoe>:
 
 fn main$:
     let shoes =
-        vec! [
-            (Shoe\ size = 10, style = String.from "sneaker"),
-            (Shoe\ size = 13, style = String.from "sandal"),
-            (Shoe\ size = 10, style = String.from "boot"),
-        ]
+        vec!
+            (Shoe\ size = 10, style = String.from "sneaker")
+            (Shoe\ size = 13, style = String.from "sandal")
+            (Shoe\ size = 10, style = String.from "boot")
 
     let in_my_size = shoes_in_size shoes 10
     println! "{in_my_size:#?}"
@@ -534,178 +535,9 @@ fn main$:
 
 > **Harsh —** One or two links stay on their line when the line fits in 72 columns; three or more go vertical, one `<-` per line, every arrow under the first. A `=` always ends its line before a vertical chain begins, never starts one. A closure whose body is a block is written as a *paren block*: the `(` ends the arrow's line, the parameters sit on their own line, the body beneath them, and the `)` closes on a line of its own at the closure's column — the parentheses are transparent to the layout, and the block inside ends where they end. `hrs fmt` puts all of this where it belongs; write it however it comes out of your fingers, save, and read the result.
 
-## 13.3 The pipes
+## 13.3 Where the pipes come in
 
-Everything so far has reached into a value with `<-`: a method on the left of the arrow's data. The pipes go the other way. `|>` takes the value on its left and hands it to the *function* on its right; `<|` does the same from the other side. Where a chain says *this value, then this method on it*, a pipe says *this value, into this function*:
-
-```
-fn tokenize text: &str -> Vec<String>:
-    text <- split_whitespace$
-         <- map (|w| w <- to_lowercase$)
-         <- collect$
-
-fn count words: &Vec<String> -> usize:
-    words <- len$
-
-fn shout text: &str -> String:
-    text <- to_uppercase$
-
-fn main$:
-    let text = "the cat sat on the mat"
-
-    // a value flows left to right, into one function after another
-    let n = text |> tokenize |> (|w| count (&w))
-    println! "{n} words"
-
-    // the same, right to left
-    let m = (|w| count (&w)) <| tokenize <| text
-    println! "{m} words"
-
-    // a method reaches into a value; a pipe hands a value to a function
-    let a = text <- to_uppercase$
-    let b = text |> shout
-    println! "{a} / {b}"
-```
-
-```text
-6 words
-6 words
-THE CAT SAT ON THE MAT / THE CAT SAT ON THE MAT
-```
-
-> **Harsh —** `text |> tokenize` is `tokenize` applied to `text`, and the chain reads on: the next `|>` applies the closure to what came out. `<|` is the mirror — `f <| g <| x` applies `g` to `x` and `f` to the result. Both sides of a pipe are *atoms*: a value, a name, an isolated group. That is the one place the pipes and the arrow part company. Chapter 2 said an application binds tighter than `<-` — `tokenize text <- len$` applies `tokenize` first — but `tokenize text |> count` does *not* apply it first: every atom on a pipe's side is an argument, so that line hands `count` two of them, `tokenize` and `text`. To pipe a *result*, isolate it: `(tokenize text) |> count`. The reason is the pipes' own feature — a pipe may carry several values, `2.0 0.5 |> scale` — and a rule that let one of them be an application would have to guess where it ended. So a chain like `raw <- clone$` is isolated before it goes in, `(raw <- clone$) |> trim_ws`, and a closure is isolated the same way, `|> (|w| count (&w))` — the function a pipe applies is one atom too.
-
-### Partial application
-
-The pipes do one more thing, and it is the thing the arrow cannot do. A pipe may carry several values — `2.0 0.5 3.0 |> scale` — and when it carries *fewer* than the function takes, the missing ones are **deferred**: the result is a closure waiting for the rest.
-
-```
-fn scale (factor: f64) (offset: f64) (x: f64) -> f64:
-    x * factor + offset
-
-fn main$:
-    // every parameter given: a plain call
-    let y = 2.0 0.5 3.0 |> scale
-    println! "{y}"
-
-    // fewer given: what is missing is deferred, and the result is a closure
-    let f = 2.0 0.5 |> scale          // waits for x
-    println! "{}" (f 3.0)
-
-    let g = scale <| 10.0             // filled from the right: waits for factor and offset
-    println! "{}" (g 2.0 0.5)
-
-    let h = 2.0 |> scale <| 10.0      // both sides: the hole is in the middle
-    println! "{}" (h 0.5)
-
-    // a partial is a value like any other
-    let doubled: Vec<f64> =
-        vec! [1.0, 2.0, 3.0]
-            <- into_iter$
-            <- map (2.0 0.0 |> scale)
-            <- collect$
-    println! "{doubled:?}"
-```
-
-```text
-6.5
-6.5
-20.5
-20.5
-[2.0, 4.0, 6.0]
-```
-
-> **Harsh —** `|>` fills a function's parameters from the left, `<|` from the right, and the two together leave a hole in the middle. The result is one flat closure over whatever was not filled — a value like any other: bind it, pass it to `map`, return it from a function. There is no placeholder token; the hole is what is left. Harsh knows how many parameters `scale` takes because `scale` is declared in your project; for a function it cannot see into — the standard library, a crate you depend on — a pipe is a plain call with the values you gave, and the compiler says so if the count was wrong. Give a project function *more* than it takes and Harsh itself refuses:
-
-```
-fn sub (a: i32) (b: i32) (c: i32) -> i32:
-    a - b - c
-
-fn main$:
-    let n = 1 2 3 4 |> sub
-    println! "{n}"
-```
-
-```text
-error: `sub` takes 3 parameter(s) and 4 were piped in
-  --> pipe_too_many.hrs:5:21
-   |
-  5|     let n = 1 2 3 4 |> sub
-   |                     ^^
-```
-
-### Pipelines
-
-A pipe's result is a value, so pipes chain: each stage's output is the next stage's input, left to right, and a partial application makes a stage out of a function that needed more than one argument:
-
-```
-fn trim_ws s: String -> String:
-    s <- trim$ <- to_string$
-
-fn shout s: String -> String:
-    s <- to_uppercase$
-
-fn wrap (left: &str) (right: &str) (s: String) -> String:
-    format! "{left}{s}{right}"
-
-fn main$:
-    let raw = String.from "   hello, harsh   "
-
-    // a pipeline: each stage's result is the next stage's argument
-    let out = (raw <- clone$) |> trim_ws |> shout |> ("[" "]" |> wrap)
-    println! "{out}"
-
-    // the same pipeline as a value, with the argument left out
-    let banner = |s: String|:
-        s |> trim_ws |> shout |> ("<" ">" |> wrap)
-    println! "{}" (banner raw)
-```
-
-```text
-[HELLO, HARSH]
-<HELLO, HARSH>
-```
-
-`("[" "]" |> wrap)` is `wrap` with its first two parameters filled — a function of one `String` — and so it is a stage like `trim_ws` and `shout`. `banner` is the whole pipeline as a closure: the same stages, with the argument left for later. Read the line aloud: *raw, trimmed, shouted, wrapped*.
-
-### When a pipe beats a closure
-
-A closure that only forwards its argument is a partial application spelled the long way:
-
-```
-fn discount (rate: f64) (price: f64) -> f64:
-    price * (1.0 - rate)
-
-fn main$:
-    let prices = vec! [10.0, 25.0, 40.0]
-
-    // a closure that only forwards its argument...
-    let a: Vec<f64> =
-        prices <- iter$
-               <- map (|p| discount 0.2 (*p))
-               <- collect$
-    // ...says nothing a partial does not say shorter
-    let b: Vec<f64> =
-        prices <- iter$
-               <- copied$
-               <- map (0.2 |> discount)
-               <- collect$
-    println! "{a:?} {b:?}"
-
-    // where the closure earns its place: the argument is transformed on the way in
-    let c: Vec<f64> =
-        prices <- iter$
-               <- map (|p| discount 0.2 (p + 5.0))
-               <- collect$
-    println! "{c:?}"
-```
-
-```text
-[8.0, 20.0, 32.0] [8.0, 20.0, 32.0]
-[12.0, 24.0, 36.0]
-```
-
-`|p| discount 0.2 (*p)` names `p` twice to say what `0.2 |> discount` says once. When the closure transforms its argument on the way in — `p + 5.0` — it is doing work the pipe cannot, and it stays. That is the whole rule: reach for a partial when the argument passes through untouched, and a closure when it does not.
+Chains reach into a value with `<-`. Harsh has a second way to pass a value along — the *pipes*, `|>` and `<|`, which hand a value to a function rather than call a method on it — and with them, partial application. They are one of the things Harsh adds to Rust, and chapter 14 is theirs.
 
 ## 13.4 Improving `minigrep`
 
@@ -799,6 +631,6 @@ The natural worry is that a chain of closures must be slower than a loop. It is 
 
 ## 13.5 What you have
 
-Closures capture by reference, mutable reference or value, `move` to force the last; they are `Fn`, `FnMut` or `FnOnce` by what they do with their captures, and a function taking one says which it needs. Iterators produce items through `next`; `iter$`, `iter_mut$`, `into_iter$` make them; adaptors like `map` and `filter` are lazy and take closures; consumers like `sum$` and `collect$` run the chain; `for` is a consumer too. Harsh lays a chain out vertically with the arrows aligned and a closure's block body under its parameters. `|>` and `<|` hand a value to a function, from the left or the right; with fewer values than the function takes they defer the rest as a flat closure, which is how a partial application is written.
+Closures capture by reference, mutable reference or value, `move` to force the last; they are `Fn`, `FnMut` or `FnOnce` by what they do with their captures, and a function taking one says which it needs. Iterators produce items through `next`; `iter$`, `iter_mut$`, `into_iter$` make them; adaptors like `map` and `filter` are lazy and take closures; consumers like `sum$` and `collect$` run the chain; `for` is a consumer too. Harsh lays a chain out vertically with the arrows aligned and a closure's block body under its parameters.
 
-Next: cargo — profiles, documentation, publishing, workspaces — before the second half of the book turns to smart pointers and concurrency.
+Next: the three chapters on what Harsh adds to Rust — pipes and partial application, comprehensions, and matrices — then cargo, and the second half of the book.

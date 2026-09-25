@@ -50,7 +50,7 @@ fn main$:
     let r = Record\ a = 1, b = 2
     let o = OneLine\ a = 3, b = 4
     let b = Braced\ a = 5, b = 6
-    let g = Generic\ inner = vec! [1]
+    let g = Generic\ inner = vec! 1
     let p: Pair = (8, 9)
     let es = [E.Unit, (E.Tup 1 2), (E.Rec\ a = 3, b = 4)]
     for e in &es: print! "{} " (e <- describe$)

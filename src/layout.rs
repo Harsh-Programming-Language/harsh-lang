@@ -31,47 +31,28 @@ pub enum BlockKind {
     /// A macro invocation's `do:` body (rule 2): statements take `;`, lines
     /// with a top-level `=>` are arms and take `,`
     Macro,
-    /// A macro invocation's `do:` body whose first line begins with `<`
-    /// (rule 1): markup copied through, `{ .. }` holes transpiled as Harsh
-    Hsx,
     /// A `macro_rules!` body: one arm per line, each ending in `;`
     MacroRules,
     /// The statements of a repetition `$( .. )*` in a transcriber: every one
     /// takes `;`, the last included
     Rep,
-    /// A `#:` block: Harsh writes the braces and the entries by line, and
-    /// **no separator at all** between them -- for a grouping whose grammar
-    /// is its author's, where a comma or a `;` would be refused
-    /// (`quick_error!`'s attribute lists are the case that asked for it;
-    /// 2026-09-17, `docs/dev/MACRO-DESIGN.md`).
-    Bare,
     /// A struct literal, `Point:` in expression position: `field = expr`
     /// lines (emitted `field: expr,`), a bare `field` (shorthand), `..base`
     Lit,
-    /// A macro invocation's `do:` body whose first line is `name:` (rule 6):
-    /// a brace tree, each `:` block a pair of braces, attributes with `,`,
-    /// holes Harsh
-    Tree,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Node {
     Line(Line),
     Block(Block),
-    /// A run of markup inside an HSX block, emitted token by token with its
-    /// source whitespace and nothing else changed.
-    Markup(Vec<Token>),
     /// A delimited Harsh fragment inside a macro body: a `{ .. }` hole in
     /// markup, or a repetition `$( .. )*` that is the whole of its line. The
     /// body is laid out on its own, with the line holding the opener as its
     /// baseline.
     Group(Group),
-    /// One line of a brace tree (rule 6): markup runs and holes, as an HSX
-    /// body, but a line -- an attribute, a child, or an inline element.
-    Tree(Vec<Node>),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Group {
     /// `{`, or `$` `(`.
     pub open: Vec<Token>,
@@ -88,7 +69,7 @@ pub struct Group {
     pub bare: bool,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Line {
     pub toks: Vec<Token>,
     pub comments: Vec<Token>,
@@ -97,12 +78,9 @@ pub struct Line {
     /// This line is the rest of the statement whose block just closed: it
     /// begins with the `)` that closed a paren opened before the block's `:`.
     pub tail_of_block: bool,
-    /// This line is inside a DSL body -- markup (rule 1) or a brace tree
-    /// (rule 6): the layout's continuation checks do not apply to it.
-    pub dsl: bool,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Block {
     /// Header line with the trailing `:` (or including `=>`) still attached.
     pub header: Line,
@@ -196,7 +174,29 @@ fn opens_block(toks: &[Token]) -> Option<bool> {
 /// A `struct` / `enum` / `union` header line -- after `pub`, `pub(crate)`
 /// and the other modifiers -- that does not end in `;` or a mark of its own.
 fn decl_header(toks: &[Token]) -> bool {
-    let sig: Vec<&Token> = toks.iter().filter(|t| !t.is_comment()).collect();
+    let mut sig: Vec<&Token> = toks.iter().filter(|t| !t.is_comment()).collect();
+    // Attributes written on the header's own line come before it:
+    // `#[derive Debug] struct P` is a declaration header as `struct P` is
+    // (found 2026-09-24: its fields came out as `x { i32, }`).
+    while sig.len() >= 2 && sig[0].kind == Tk::Hash && sig[1].kind == Tk::Open('[') {
+        let mut d = 0i32;
+        let mut end = None;
+        for (k, t) in sig.iter().enumerate().skip(1) {
+            match t.kind {
+                Tk::Open(_) => d += 1,
+                Tk::Close(_) => {
+                    d -= 1;
+                    if d == 0 {
+                        end = Some(k);
+                        break;
+                    }
+                }
+                _ => {}
+            }
+        }
+        let Some(e) = end else { break };
+        sig.drain(..=e);
+    }
     let mut i = 0;
     // `extern "C"` is a header in its own right, but `extern` is also a
     // modifier (`extern crate`, `pub extern fn`), so it is recognised before
@@ -369,7 +369,6 @@ fn logical_lines(pls: Vec<(PLine, usize)>) -> Vec<Line> {
                     comments: std::mem::take(&mut pending_comments),
                     blank_before: pl.blank_before + std::mem::take(&mut pending_blank),
                     tail_of_block: false,
-                    dsl: false,
                 });
             }
             // Did this line open a block inside a paren? Then it is complete
@@ -428,7 +427,6 @@ fn logical_lines(pls: Vec<(PLine, usize)>) -> Vec<Line> {
                 comments: Vec::new(),
                 blank_before: 0,
                 tail_of_block: true,
-                dsl: false,
             });
             // The tail may itself open a paren block -- `) <- map (|line|
             // view! do:` -- and then it is a header too.
@@ -466,7 +464,6 @@ fn logical_lines(pls: Vec<(PLine, usize)>) -> Vec<Line> {
             comments: Vec::new(),
             blank_before: pending_blank,
             tail_of_block: false,
-            dsl: false,
         });
     }
     out
@@ -480,16 +477,6 @@ fn logical_lines(pls: Vec<(PLine, usize)>) -> Vec<Line> {
 fn classify(header: &[Token], outer: BlockKind) -> BlockKind {
     let sig: Vec<&Token> = header.iter().filter(|t| !t.is_comment()).collect();
 
-    // `#:` first: it is a mark on the header, so it decides the kind before
-    // any keyword in the line does. A construct that has its own spelling is
-    // refused by `check_hash_colon_head`, not read as a `#:` block.
-    if sig.len() >= 2
-        && sig[sig.len() - 1].kind == Tk::Colon
-        && sig[sig.len() - 2].text == "#"
-        && sig[sig.len() - 2].span.hi == sig[sig.len() - 1].span.lo
-    {
-        return BlockKind::Bare;
-    }
 
     // `macro_rules! name:` holds arms; `name! do:` is a macro body written in
     // Harsh (HSX when its first line begins with `<`, decided by the caller).
@@ -502,10 +489,6 @@ fn classify(header: &[Token], outer: BlockKind) -> BlockKind {
     // The transcriber of a `macro_rules!` arm is a macro body too.
     if outer == BlockKind::MacroRules {
         return BlockKind::Macro;
-    }
-    // Every block of a brace tree -- an element, a `for`, an `if` -- is one.
-    if outer == BlockKind::Tree {
-        return BlockKind::Tree;
     }
 
 
@@ -608,6 +591,223 @@ fn classify(header: &[Token], outer: BlockKind) -> BlockKind {
     BlockKind::Stmts
 }
 
+/// A `\` opens a *specification block* -- Rust's `{ a, b }` groupings: a
+/// declaration's fields, a literal's or a pattern's, a match's arms, a `!`
+/// macro's brace call -- and such a block always belongs to the construct
+/// written before it: `Point\ x = 1`, `match v\`, `struct P\ a: T`, `hm!\`.
+/// Alone it means nothing (the user's ruling, 2026-09-20): `let x = \ 4 * 2`
+/// used to emit `{ 4 * 2, }` without a word. It has nothing to do with calls,
+/// and it is not `do:`, which opens a block of *statements*.
+fn check_backslash_head(sig: &[&Token]) -> Result<(), LayoutError> {
+    // A declaration owns its `\` whatever its header ends in -- a name, the
+    // `>` of its generics, or the `]` of a bracketed where clause:
+    // `struct Wrapper<T> [where T: Display]\ field: T`.
+    let mut k = 0;
+    while k < sig.len() && sig[k].kind == Tk::Ident && crate::rules::MODIFIERS.contains(&sig[k].text.as_str()) && !sig[k].is_kw("const") {
+        k += 1;
+        if k < sig.len() && sig[k].kind == Tk::Open('(') {
+            while k < sig.len() && sig[k].kind != Tk::Close(')') {
+                k += 1;
+            }
+            k += 1;
+        }
+    }
+    let declaration = k + 1 < sig.len()
+        && sig[k].kind == Tk::Ident
+        && matches!(sig[k].text.as_str(), "struct" | "enum" | "union")
+        && sig[k + 1].kind == Tk::Ident;
+    if declaration {
+        return Ok(());
+    }
+    for i in (0..sig.len()).filter(|&i| sig[i].kind == Tk::Backslash) {
+        // A match's arms: whatever the scrutinee ends in.
+        let mut d = 0i32;
+        let mut open_match: Option<i32> = None;
+        for t in &sig[..i] {
+            match t.kind {
+                Tk::Open(_) => d += 1,
+                Tk::Close(_) => {
+                    d -= 1;
+                    if open_match.map_or(false, |m| d < m) {
+                        open_match = None;
+                    }
+                }
+                Tk::FatArrow | Tk::Backslash if open_match == Some(d) => open_match = None,
+                Tk::Ident if t.is_kw("match") => open_match = Some(d),
+                _ => {}
+            }
+        }
+        if open_match == Some(d) {
+            continue;
+        }
+        let headed = match i.checked_sub(1).map(|p| sig[p]) {
+            // A name or the end of a path: a type, a variant, a declaration.
+            Some(p) if p.kind == Tk::Ident => p.text == "Self" || !crate::rules::is_keyword(&p.text),
+            // `Wrapper<T>\`: generics close the head.
+            Some(p) if p.kind == Tk::Gt => true,
+            // `hm!\`: a `!` macro's brace call.
+            Some(p) if p.text == "!" => i >= 2 && sig[i - 2].kind == Tk::Ident && sig[i - 2].span.hi == p.span.lo,
+            _ => false,
+        };
+        if !headed {
+            return Err(LayoutError {
+                msg: "`\\` opens a specification block and follows the construct it specifies: `Point\\ x = 1`, `match v\\ p => e`, `struct P\\ a: T`; alone it means nothing (a block of statements is `do:`)".into(),
+                span: sig[i].span,
+            });
+        }
+    }
+    Ok(())
+}
+
+/// The same retired spellings written on one line: `match x: a => 1, b => 2`,
+/// `match x do: …`, `struct P: a: T`, `enum E: A, B`, `union U: a: T`.
+///
+/// Each migration refused the header that *ends* in `:` and left the inline
+/// form standing, so two spellings emitted the same Rust (found 2026-09-20 by
+/// reading the Book, which taught one of them in a snippet that compiled).
+/// A specification block is opened by `\\` in both forms; the mid-line `:`
+/// is refused here with the message its line-final twin gets.
+fn check_inline_old_marks(sig: &[&Token]) -> Result<(), LayoutError> {
+    // `m!\` -- a Rust macro's brace call with a Harsh body -- retired
+    // 2026-09-22 (A2): a stream that is not a list of expressions is written
+    // in braces, `m! { … }`. After a `~` call's mark a `\` is only a token of
+    // the macro's stream, and stays.
+    // `m! do:` and `#:` retired 2026-09-23, with the DSL modes they opened
+    // (HSX markup, the brace tree): a Rust macro's stream is Rust, in braces,
+    // with Harsh only in its holes (the user's principle 2). `do:` after a
+    // macro was the macro's body; a block passed as an argument is isolated
+    // like any other argument (his case 1).
+    for w in sig.windows(4) {
+        let bang = w[1].kind == Tk::Punct && w[1].text == "!" && !w[1].tilde && w[0].kind == Tk::Ident && w[0].span.hi == w[1].span.lo;
+        if bang && w[2].is_kw("do") && w[3].kind == Tk::Colon {
+            let name = &w[0].text;
+            return Err(LayoutError {
+                msg: format!(
+                    "`{name}! do:` is retired: the macro's own stream is written in braces, as Rust expects it, `{name}! {{ … }}`, with Harsh in holes `@: … :@`; a block passed as an argument is isolated, `{name}! (do: …)`"
+                ),
+                span: w[2].span,
+            });
+        }
+    }
+    for w in sig.windows(2) {
+        if w[0].kind == Tk::Punct && w[0].text == "#" && w[1].kind == Tk::Colon && w[0].span.hi == w[1].span.lo {
+            return Err(LayoutError {
+                msg: "`#:` is retired: a grouping whose grammar is its author's is a macro's, written in its braces, `m! { … }`".into(),
+                span: w[0].span,
+            });
+        }
+    }
+    for w in sig.windows(3) {
+        let bang = w[1].kind == Tk::Punct && w[1].text == "!" && !w[1].tilde && w[0].kind == Tk::Ident && w[0].span.hi == w[1].span.lo;
+        if bang && w[2].kind == Tk::Backslash && w[1].span.hi == w[2].span.lo {
+            let name = &w[0].text;
+            return Err(LayoutError {
+                msg: format!(
+                    "`{name}!\\` is retired: a macro's stream is written as Rust expects it, in braces, `{name}! {{ … }}`; a list of values is applied, `{name}! a b`"
+                ),
+                span: w[2].span,
+            });
+        }
+    }
+    // `@: … :@` marks a hole of Harsh inside a macro's `{ … }` body (ruling
+    // 16, B1, 2026-09-22). A body is a verbatim zone the layout never sees,
+    // so a mark that reaches here is outside one, and is refused. `n @ 1..=5`
+    // is a pattern binding: its `@` is never tight against a `:`.
+    // Refused only where no `name! { … }` encloses the mark: in source every
+    // such body is set aside before the layout runs, so a mark inside one
+    // comes from a `~` transcriber, whose author writes the holes its
+    // expansion needs (2026-09-23).
+    let mut enclosing: Vec<bool> = Vec::new();
+    for (i, w) in sig.windows(2).enumerate() {
+        match w[0].kind {
+            Tk::Open(c) => enclosing.push(c == '{' && i > 0 && sig[i - 1].text == "!"),
+            Tk::Close(_) => {
+                enclosing.pop();
+            }
+            _ => {}
+        }
+        if enclosing.iter().any(|&b| b) {
+            continue;
+        }
+        let open = w[0].kind == Tk::Punct && w[0].text == "@" && w[1].kind == Tk::Colon;
+        let close = w[0].kind == Tk::Colon && w[1].kind == Tk::Punct && w[1].text == "@";
+        if (open || close) && w[0].span.hi == w[1].span.lo {
+            let mark = if open { "@:" } else { ":@" };
+            return Err(LayoutError {
+                msg: format!("`{mark}` marks a hole of Harsh inside a macro's `{{ … }}` body; outside one it means nothing"),
+                span: w[0].span,
+            });
+        }
+    }
+    let last = sig.len().saturating_sub(1);
+    // A declaration: modifiers, then `struct` / `enum` / `union`.
+    let mut k = 0;
+    while k < sig.len() && sig[k].kind == Tk::Ident && crate::rules::MODIFIERS.contains(&sig[k].text.as_str()) && !sig[k].is_kw("const") {
+        k += 1;
+        if k < sig.len() && sig[k].kind == Tk::Open('(') {
+            while k < sig.len() && sig[k].kind != Tk::Close(')') {
+                k += 1;
+            }
+            k += 1;
+        }
+    }
+    if k < sig.len() && sig[k].kind == Tk::Ident && matches!(sig[k].text.as_str(), "struct" | "enum" | "union") {
+        let name = sig.get(k + 1).map(|t| t.text.clone()).unwrap_or_default();
+        // Up to the `\\`: a `:` inside generics (`<T: Clone>`) or a bracketed
+        // `[where …]` is a bound's, and after the `\\` it is a field's.
+        let (mut d, mut a) = (0i32, 0i32);
+        for (i, t) in sig.iter().enumerate().skip(k + 1) {
+            match t.kind {
+                Tk::Open(_) => d += 1,
+                Tk::Close(_) => d -= 1,
+                Tk::Lt => a += 1,
+                Tk::Gt if a > 0 => a -= 1,
+                Tk::Punct if t.text == ">>" && a > 0 => a = (a - 2).max(0),
+                Tk::Backslash if d == 0 => break,
+                Tk::Colon if d == 0 && a == 0 && i != last => {
+                    return Err(LayoutError {
+                        msg: format!(
+                            "a declaration's body follows its name with no mark: `{kw} {name}` with the fields beneath, or `{kw} {name}\\ a: T, b: U` inline",
+                            kw = sig[k].text
+                        ),
+                        span: t.span,
+                    });
+                }
+                _ => {}
+            }
+        }
+        return Ok(());
+    }
+    // A match, at any depth (parens are transparent to layout): the first
+    // `:` at the keyword's own depth, before its `\\` or its first `=>`, is
+    // the old opener (with or without `do`).
+    for m in (0..sig.len()).filter(|&i| sig[i].is_kw("match")) {
+        let mut d = 0i32;
+        for (i, t) in sig.iter().enumerate().skip(m + 1) {
+            match t.kind {
+                Tk::Open(_) => d += 1,
+                Tk::Close(_) if d == 0 => break,
+                Tk::Close(_) => d -= 1,
+                Tk::Backslash | Tk::FatArrow if d == 0 => break,
+                Tk::Colon if d == 0 && i != last => {
+                    let end = if i > m + 1 && sig[i - 1].is_kw("do") { i - 1 } else { i };
+                    let head: Vec<&str> = sig[m..end].iter().map(|t| t.text.as_str()).collect();
+                    return Err(LayoutError {
+                        msg: format!(
+                            "a match's arms are opened by `\\`: inline `{}\\ p => e, q => f`, or `{}\\` with the arms beneath it",
+                            head.join(" "),
+                            head.join(" ")
+                        ),
+                        span: t.span,
+                    });
+                }
+                _ => {}
+            }
+        }
+    }
+    Ok(())
+}
+
 /// The spellings this language does not have, each named with its
 /// replacement: a declaration header ending in `:` (its body follows the
 /// name, no mark), a record variant `Name:` (bare `Name`), and a literal
@@ -615,6 +815,8 @@ fn classify(header: &[Token], outer: BlockKind) -> BlockKind {
 fn check_old_marks(ln: &Line, outer: BlockKind) -> Result<(), LayoutError> {
     let sig: Vec<&Token> = ln.toks.iter().filter(|t| !t.is_comment()).collect();
     let Some(last) = sig.last() else { return Ok(()) };
+    check_inline_old_marks(&sig)?;
+    check_backslash_head(&sig)?;
     // A declaration or item header may end in neither `:` nor `do` (nor
     // `do:`): those constructs take no opener at all. `struct P do` is the
     // old `struct P:` with the other opener, and is refused the same way.
@@ -723,38 +925,6 @@ fn check_old_marks(ln: &Line, outer: BlockKind) -> Result<(), LayoutError> {
         return Err(LayoutError {
             msg: format!("a struct is built with `{name}\\`: `{name}\\ x = 1, y = 2` inline, or `{name}\\` with one field per line"),
             span: last.span,
-        });
-    }
-    Ok(())
-}
-
-/// The same for an inline `Point: x = 1` in a line: every colon that reads
-/// as a literal's opener names `\`.
-/// `#:` is for a grouping Harsh does not define. A construct that already has
-/// a spelling keeps it -- one spelling per construct -- so `struct Point #:`
-/// is refused, naming the spelling it should have used (2026-09-17).
-fn check_hash_colon_head(ln: &Line) -> Result<(), LayoutError> {
-    let sig: Vec<&Token> = ln.toks.iter().filter(|t| !t.is_comment()).collect();
-    if sig.len() < 3 {
-        return Ok(());
-    }
-    let (colon, hash) = (sig[sig.len() - 1], sig[sig.len() - 2]);
-    if colon.kind != Tk::Colon || hash.text != "#" || hash.span.hi != colon.span.lo {
-        return Ok(());
-    }
-    const OWN: [&str; 14] = [
-        "fn", "struct", "enum", "union", "impl", "trait", "mod", "extern", "macro_rules",
-        "if", "match", "while", "for", "loop",
-    ];
-    if let Some(kw) = sig.iter().find(|t| t.kind == Tk::Ident && OWN.contains(&t.text.as_str())) {
-        let how = match kw.text.as_str() {
-            "struct" | "enum" | "union" => "the fields beneath it, or `\\` for an inline list",
-            "impl" | "trait" | "mod" | "extern" | "macro_rules" => "the items beneath it",
-            _ => "`:` and the block beneath it",
-        };
-        return Err(LayoutError {
-            msg: format!("`{}` already has a spelling: write {how}", kw.text),
-            span: hash.span,
         });
     }
     Ok(())
@@ -999,6 +1169,38 @@ pub fn pattern_backslash(toks: &[Token], from: usize, to: usize, i: usize) -> bo
     if binder {
         return true;
     }
+    // The `\\` that opens a match's arms, or a `!` macro's brace call
+    // (`hm!\\ 1 => "a", 2 => "b"`), has `=>` after it too -- its arms' -- and is
+    // an opener, not a pattern's. It was read as a pattern until 2026-09-20,
+    // so an inline `match n\\` only worked where the pattern path happened to
+    // emit the same braces, and closed early at an or-pattern's `|`.
+    {
+        let mut d = 0i32;
+        let mut open_match: Option<i32> = None;
+        for &k in &sig[..pos] {
+            match toks[k].kind {
+                Tk::Open(_) => d += 1,
+                Tk::Close(_) => {
+                    d -= 1;
+                    if open_match.map_or(false, |m| d < m) {
+                        open_match = None;
+                    }
+                }
+                Tk::FatArrow | Tk::Backslash if open_match == Some(d) => open_match = None,
+                Tk::Ident if toks[k].is_kw("match") => open_match = Some(d),
+                _ => {}
+            }
+        }
+        if open_match == Some(d) {
+            return false;
+        }
+        if pos >= 2 {
+            let (bang, name) = (&toks[sig[pos - 1]], &toks[sig[pos - 2]]);
+            if bang.text == "!" && name.kind == Tk::Ident && name.span.hi == bang.span.lo {
+                return false;
+            }
+        }
+    }
     // A `=>` after it at depth zero: a match arm's pattern.
     let mut d = 0i32;
     for &k in &sig[pos + 1..] {
@@ -1069,9 +1271,6 @@ fn expand_item(toks: &[Token], from: usize, to: usize, outer: BlockKind, proto: 
     };
     let header = sub_line(toks, from, colon + 1, proto);
     let kind = classify(&header.toks, outer);
-    if kind == BlockKind::Bare {
-        check_hash_colon_head(&header)?;
-    }
 
     // Where the body ends: at `else` for an `if`, at a foreign separator, or at
     // the end of the item.
@@ -1172,7 +1371,6 @@ fn sub_line(toks: &[Token], from: usize, to: usize, proto: &Line) -> Line {
         blank_before: 0,
         indent: proto.indent,
         tail_of_block: false,
-        dsl: false,
     }
 }
 
@@ -1181,10 +1379,9 @@ fn sub_line(toks: &[Token], from: usize, to: usize, proto: &Line) -> Line {
 /// point for tools that read structure from a buffer that may be mid-edit --
 /// the language server -- and must see the same lines the transpiler sees.
 pub fn lines(toks: Vec<Token>) -> Vec<Line> {
-    let mut lines = logical_lines(physical_lines(toks));
+    let lines = logical_lines(physical_lines(toks));
     // Markup and brace-tree bodies are flagged here too, so the formatter
     // and the editor leave them alone.
-    mark_hsx(&mut lines);
     lines
 }
 
@@ -1221,6 +1418,7 @@ pub fn normalise_macro_mark(toks: &mut [Token]) {
         let after_name = toks[i - 1].kind == Tk::Ident;
         if toks[i].text == "~" && after_name && (tight || toks[i - 1].is_kw("macro_rules")) {
             toks[i].text = "!".to_string();
+            toks[i].tilde = true;
         }
     }
 }
@@ -1266,13 +1464,19 @@ pub fn build_with(
     let mut partials = std::collections::HashMap::new();
     for l in &mut lines {
         // `f$` first: it is a synthetic `()` by the time the pipes look.
-        let toks = crate::juxt::rewrite_dollar(&l.toks)
+        // `a .* b` first: what it becomes is ordinary tokens to all the rest.
+        let toks = crate::juxt::rewrite_dotted(&l.toks);
+        // `a[i, j]`: the axes become the tuple Rust's `Index` takes.
+        let toks = crate::juxt::rewrite_comma_index(&toks);
+        let toks = crate::juxt::rewrite_dollar(&toks)
             .map_err(|e| LayoutError { msg: e.msg, span: e.span })?;
-        l.toks = crate::juxt::rewrite_pipes(&toks, arities, &mut partials)
+        let toks = crate::juxt::rewrite_pipes(&toks, arities, &mut partials)
+            .map_err(|e| LayoutError { msg: e.msg, span: e.span })?;
+        // `f<>` last: the pipes have treated it as the one function it is.
+        l.toks = crate::juxt::rewrite_each(&toks)
             .map_err(|e| LayoutError { msg: e.msg, span: e.span })?;
     }
-    let mut lines = lines;
-    mark_hsx(&mut lines);
+    let lines = lines;
     let lines = lines;
     check_braces(&lines)?;
     check_group_lines(&lines)?;
@@ -1295,64 +1499,6 @@ const STATEMENT_KEYWORDS: [&str; 12] = [
     "let", "fn", "struct", "enum", "impl", "trait", "mod", "use", "pub", "const", "static", "type",
 ];
 
-/// The body lines of a `name! do:` block whose first line begins with `<`
-/// are markup, and those of one whose first line is `name:` are a brace
-/// tree: their words mean nothing to the layout's statement
-/// checks, so they are flagged before any check reads them.
-fn mark_hsx(lines: &mut [Line]) {
-    let mut i = 0;
-    while i < lines.len() {
-        // The body's first line, past any comment-only lines.
-        let first_body = (i + 1..lines.len()).find(|&k| lines[k].toks.iter().any(|t| !t.is_comment()));
-        let is_dsl_header = macro_do_header(&lines[i].toks)
-            && first_body.map_or(false, |k| {
-                let n = &lines[k];
-                n.indent > lines[i].indent && (body_is_markup(lines, i, k) || tree_first_line(&n.toks))
-            });
-        if is_dsl_header {
-            let col = lines[i].indent;
-            let mut k = i + 1;
-            while k < lines.len() && lines[k].indent > col {
-                lines[k].dsl = true;
-                k += 1;
-            }
-            i = k;
-        } else {
-            i += 1;
-        }
-    }
-}
-
-/// Is the body of the macro `do:` block at `header` markup? Judged over the
-/// whole body, since it may open with a hole or a string before its first
-/// tag: `{panel}` / `<button ..>`.
-fn body_is_markup(lines: &[Line], header: usize, first_body: usize) -> bool {
-    let col = lines[header].indent;
-    let mut toks: Vec<Token> = Vec::new();
-    let mut k = first_body;
-    while k < lines.len() && lines[k].indent > col {
-        toks.extend(lines[k].toks.iter().cloned());
-        k += 1;
-    }
-    crate::juxt::is_markup(&toks, 0, toks.len())
-}
-
-/// `name:` -- a block opened by a non-keyword name, or a path of them -- is
-/// the first line of a brace tree: a tree begins with an element. (`name =`
-/// is not the test, since `select!`'s arms have that shape.)
-fn tree_first_line(toks: &[Token]) -> bool {
-    let sig: Vec<&Token> = toks.iter().filter(|t| !t.is_comment()).collect();
-    let mut i = 0;
-    if sig.get(i).map_or(true, |t| t.kind != Tk::Ident || crate::rules::is_keyword(&t.text) || crate::rules::BLOCK_KEYWORDS.contains(&t.text.as_str())) {
-        return false;
-    }
-    i += 1;
-    while i + 1 < sig.len() && sig[i].kind == Tk::Dot && sig[i + 1].kind == Tk::Ident {
-        i += 2;
-    }
-    matches!(sig.get(i).map(|t| &t.kind), Some(Tk::Colon))
-}
-
 /// Braces hold a block on one line. A `{ .. }` that opens and closes on
 /// different lines is an error naming `:` / `do:` -- two syntaxes for one
 /// block across files is the drift the language rejects. Two exemptions,
@@ -1363,15 +1509,10 @@ fn tree_first_line(toks: &[Token]) -> bool {
 /// even on one line; a pattern, `let Name { x, y } = p`, keeps its braces.
 fn check_braces(lines: &[Line]) -> Result<(), LayoutError> {
     for l in lines {
-        if l.dsl {
-            continue;
-        }
         let t = &l.toks;
-        let markup = crate::juxt::markup_brace_spans(t);
-        let in_markup = |i: usize| markup.iter().any(|&(a, b)| i > a && i < b);
         let mut i = 0;
         while i < t.len() {
-            if t[i].kind != Tk::Open('{') || t[i].synthetic || in_markup(i) {
+            if t[i].kind != Tk::Open('{') || t[i].synthetic {
                 i += 1;
                 continue;
             }
@@ -1510,9 +1651,6 @@ fn literal_brace(t: &[Token], open: usize, close: usize) -> bool {
 /// and their insides are not read.
 fn check_group_lines(lines: &[Line]) -> Result<(), LayoutError> {
     for l in lines {
-        if l.dsl {
-            continue;
-        }
         // Each open bracket with the indent of the line it was opened on.
         let mut stack: Vec<(char, usize)> = Vec::new();
         let mut line_indent = l.indent;
@@ -1547,13 +1685,6 @@ fn check_group_lines(lines: &[Line]) -> Result<(), LayoutError> {
 
 fn check_continuations(lines: &[Line]) -> Result<(), LayoutError> {
     for l in lines {
-        if l.dsl {
-            continue;
-        }
-        // Markup in brace form, `view! { .. }` spanning lines: its lines
-        // are not statements either.
-        let markup = crate::juxt::markup_brace_spans(&l.toks);
-        let in_markup = |i: usize| markup.iter().any(|&(a, b)| i > a && i < b);
         let mut d = 0i32;
         for (i, t) in l.toks.iter().enumerate() {
             match t.kind {
@@ -1561,7 +1692,7 @@ fn check_continuations(lines: &[Line]) -> Result<(), LayoutError> {
                 Tk::Close(_) => d -= 1,
                 _ => {}
             }
-            if i == 0 || d != 0 || t.line_start.is_none() || t.kind != Tk::Ident || in_markup(i) {
+            if i == 0 || d != 0 || t.line_start.is_none() || t.kind != Tk::Ident {
                 continue;
             }
             if !STATEMENT_KEYWORDS.contains(&t.text.as_str()) {
@@ -1642,7 +1773,6 @@ fn check_bare_closure_chain(nodes: &[Node]) -> Result<(), LayoutError> {
                 }
                 prev_bare_closure = false;
             }
-            Node::Markup(_) | Node::Tree(_) => prev_bare_closure = false,
             Node::Group(g) => {
                 check_bare_closure_chain(&g.body)?;
                 prev_bare_closure = false;
@@ -1680,10 +1810,6 @@ fn check_else(nodes: &[Node]) -> Result<(), LayoutError> {
         let toks = match n {
             Node::Line(l) => &l.toks,
             Node::Block(b) => &b.header.toks,
-            Node::Markup(_) | Node::Tree(_) => {
-                prev_opens_if = false;
-                continue;
-            }
             Node::Group(g) => {
                 check_else(&g.body)?;
                 prev_opens_if = false;
@@ -1728,9 +1854,7 @@ fn check_juxt(nodes: &[Node], kind: BlockKind) -> Result<(), LayoutError> {
                 }
                 check_juxt(&b.body, b.kind)?;
             }
-            Node::Markup(_) => {}
             Node::Group(g) => check_juxt(&g.body, g.kind)?,
-            Node::Tree(parts) => check_juxt(parts, BlockKind::Hsx)?,
         }
     }
     Ok(())
@@ -1759,7 +1883,7 @@ fn check_fn_params(toks: &[Token]) -> Result<(), LayoutError> {
                 span: Span { lo: toks[o].span.lo, hi: toks[c].span.hi },
             });
         }
-        if let Some(&i) = crate::rules::top_level_commas(toks, o, c).first() {
+        if let Some(&i) = crate::rules::param_list_commas(toks, o, c).first() {
             return Err(LayoutError {
                 msg: "a parameter group holds one parameter; write `(a: T) (b: U)`, one group each".into(),
                 span: toks[i].span,
@@ -1857,15 +1981,12 @@ fn check_semis(nodes: &[Node], kind: BlockKind) -> Result<(), LayoutError> {
         let toks = match n {
             Node::Line(l) => &l.toks,
             Node::Block(b) => &b.header.toks,
-            Node::Markup(_) | Node::Tree(_) => return true,
             Node::Group(_) => return true,
         };
         toks.iter().any(|t| !t.is_comment() && t.kind != Tk::Hash)
     });
     for (i, n) in nodes.iter().enumerate() {
         match n {
-            Node::Markup(_) => {}
-            Node::Tree(parts) => check_semis(parts, BlockKind::Hsx)?,
             Node::Group(g) => check_semis(&g.body, g.kind)?,
             Node::Line(l) => {
                 let trailing = l.toks.iter().rev().find(|t| !t.is_comment());
@@ -1969,13 +2090,8 @@ fn build_block(lines: &[Line], idx: &mut usize, min_indent: usize, outer: BlockK
                         }
                         // The tail may open a markup or tree block as a
                         // header does: `) <- map (|line| view! do:`.
-                        let kind = dsl_kind(lines, *idx, kind);
-                        let block = if kind == BlockKind::Hsx {
-                            hsx_block(lines, idx, ln, arrow)?
-                        } else {
-                            let body = build_block(lines, idx, body_indent, kind, open)?;
-                            Block { header: clone_line(ln), arrow_opener: arrow, kind, body, tail: Vec::new() }
-                        };
+                        let body = build_block(lines, idx, body_indent, kind, open)?;
+                        let block = Block { header: clone_line(ln), arrow_opener: arrow, kind, body, tail: Vec::new() };
                         closed = Some(body_indent);
                         closed_header_cols = ln.toks.iter().filter_map(|t| t.line_start).collect();
                         vec![Node::Block(block)]
@@ -2011,8 +2127,28 @@ fn build_block(lines: &[Line], idx: &mut usize, min_indent: usize, outer: BlockK
         };
         match opens {
             None => {
-                check_hash_colon_head(ln)?;
                 check_old_inline_literal(ln, outer)?;
+                {
+                    let sig: Vec<&Token> = ln.toks.iter().filter(|t| !t.is_comment()).collect();
+                    // A declaration's where clause stands on its header line,
+                    // `struct W<T> [where T: Clone]`; on a line of its own
+                    // beneath -- a function's multi-line form -- it was
+                    // emitted as a field, `where T: Clone,`, invalid Rust
+                    // (found 2026-09-24).
+                    let where_line = outer == BlockKind::Fields
+                        && sig.len() >= 3
+                        && sig[0].kind == Tk::Open('[')
+                        && sig[1].is_kw("where")
+                        && sig[sig.len() - 1].kind == Tk::Close(']');
+                    if where_line {
+                        return Err(LayoutError {
+                            msg: "a declaration's where clause stands on its header line: `struct W<T> [where T: Clone]` with the fields beneath".into(),
+                            span: sig[0].span,
+                        });
+                    }
+                    check_inline_old_marks(&sig)?;
+                    check_backslash_head(&sig)?;
+                }
                 if inline_colon(&ln.toks, 0, ln.toks.len(), outer).is_some() {
                     let mut nodes = expand_item(&ln.toks, 0, ln.toks.len(), outer, ln)?;
                     if let Some(Node::Block(b)) = nodes.first_mut() {
@@ -2030,12 +2166,6 @@ fn build_block(lines: &[Line], idx: &mut usize, min_indent: usize, outer: BlockK
                     if outer == BlockKind::MacroRules {
                         check_macro_arm(&ln.toks)?;
                     }
-                    if outer == BlockKind::Tree {
-                        let mut all: Vec<Token> = ln.comments.clone();
-                        all.extend(ln.toks.iter().cloned());
-                        out.push(Node::Tree(hsx_parts(&all)?));
-                        continue;
-                    }
                     check_fn_params(&ln.toks)?;
                     out.push(Node::Line(clone_line(ln)))
                 }
@@ -2051,7 +2181,6 @@ fn build_block(lines: &[Line], idx: &mut usize, min_indent: usize, outer: BlockK
                 }
                 check_fn_params(&ln.toks)?;
                 check_old_marks(ln, outer)?;
-                check_hash_colon_head(ln)?;
                 let kind = classify(&ln.toks, outer);
                 let body_indent = lines.get(*idx).map(|l| l.indent).unwrap_or(0);
                 if *idx >= lines.len() || body_indent <= ln.indent {
@@ -2060,13 +2189,6 @@ fn build_block(lines: &[Line], idx: &mut usize, min_indent: usize, outer: BlockK
                         msg: "expected an indented block after this".into(),
                         span: sp,
                     });
-                }
-                let kind = dsl_kind(lines, *idx, kind);
-                if kind == BlockKind::Hsx {
-                    let b = hsx_block(lines, idx, ln, arrow)?;
-                    closed = Some(body_indent);
-                    out.push(Node::Block(b));
-                    continue;
                 }
                 let body = build_block(lines, idx, body_indent, kind, open)?;
                 closed = Some(body_indent);
@@ -2103,36 +2225,6 @@ fn innermost_tail_block(b: &mut Block) -> &mut Block {
     }
 }
 
-/// A macro `do:` body's kind, from the shape of its lines: markup, a brace
-/// tree, or the Harsh block `kind` says.
-fn dsl_kind(lines: &[Line], idx: usize, kind: BlockKind) -> BlockKind {
-    if kind != BlockKind::Macro || idx >= lines.len() || !lines[idx].dsl {
-        return kind;
-    }
-    let first_body = (idx..lines.len()).find(|&k| lines[k].toks.iter().any(|t| !t.is_comment())).unwrap_or(idx);
-    if tree_first_line(&lines[first_body].toks) {
-        return BlockKind::Tree;
-    }
-    if body_is_markup(lines, idx - 1, first_body) {
-        return BlockKind::Hsx;
-    }
-    kind
-}
-
-/// HSX: the body lines are markup, flagged by `mark_hsx`. They are taken
-/// flat, whatever their columns, and split into markup runs and holes.
-fn hsx_block(lines: &[Line], idx: &mut usize, header: &Line, arrow: bool) -> Result<Block, LayoutError> {
-    let mut toks: Vec<Token> = Vec::new();
-    while *idx < lines.len() && lines[*idx].dsl {
-        toks.extend(lines[*idx].comments.iter().cloned());
-        toks.extend(lines[*idx].toks.iter().cloned());
-        *idx += 1;
-    }
-    toks.sort_by_key(|t| t.span.lo);
-    let body = hsx_parts(&toks)?;
-    Ok(Block { header: clone_line(header), arrow_opener: arrow, kind: BlockKind::Hsx, body, tail: Vec::new() })
-}
-
 /// Lay out a delimited fragment -- the tokens strictly inside a hole or a
 /// repetition -- on its own. The first token takes the column of the line
 /// holding the opener as its own, so the body indents past that line and the
@@ -2146,8 +2238,7 @@ fn fragment(toks: &[Token], opener_line_indent: usize, kind: BlockKind) -> Resul
         v[0].line_start = Some(opener_line_indent);
     }
     let base_line = v[0].line.saturating_sub(1);
-    let mut lines = logical_lines(physical_lines_from(v, base_line));
-    mark_hsx(&mut lines);
+    let lines = logical_lines(physical_lines_from(v, base_line));
     check_braces(&lines)?;
     check_group_lines(&lines)?;
     check_continuations(&lines)?;
@@ -2170,11 +2261,6 @@ fn fragment(toks: &[Token], opener_line_indent: usize, kind: BlockKind) -> Resul
     Ok(nodes)
 }
 
-/// The column of the physical line holding `toks[i]`.
-fn line_indent_of(toks: &[Token], i: usize) -> usize {
-    (0..=i).rev().find_map(|k| toks[k].line_start).unwrap_or(0)
-}
-
 /// The index of the bracket closing the one opened at `i`.
 fn matching_close(toks: &[Token], i: usize) -> Option<usize> {
     let mut d = 0i32;
@@ -2191,44 +2277,6 @@ fn matching_close(toks: &[Token], i: usize) -> Option<usize> {
         }
     }
     None
-}
-
-/// Split an HSX body into markup runs and `{ .. }` holes (rule 1). The
-/// contents of a hole are Harsh and are laid out as a fragment.
-fn hsx_parts(toks: &[Token]) -> Result<Vec<Node>, LayoutError> {
-    let mut out = Vec::new();
-    let mut run: Vec<Token> = Vec::new();
-    let mut i = 0usize;
-    while i < toks.len() {
-        // A `{ .. }` hole, or an attribute value isolated in parens after
-        // `=`: `on:click=(|| body)`.
-        let paren_value = toks[i].kind == Tk::Open('(') && i > 0 && toks[i - 1].kind == Tk::Eq;
-        if toks[i].kind == Tk::Open('{') || paren_value {
-            let Some(c) = matching_close(toks, i) else {
-                return Err(LayoutError { msg: "unclosed bracket in markup".into(), span: toks[i].span });
-            };
-            if !run.is_empty() {
-                out.push(Node::Markup(std::mem::take(&mut run)));
-            }
-            let body = fragment(&toks[i + 1..c], line_indent_of(toks, i), BlockKind::Stmts)?;
-            out.push(Node::Group(Group {
-                open: vec![toks[i].clone()],
-                body,
-                close: vec![toks[c].clone()],
-                kind: BlockKind::Stmts,
-                body_own_line: toks[i + 1].line_start.is_some(),
-                bare: paren_value,
-            }));
-            i = c + 1;
-            continue;
-        }
-        run.push(toks[i].clone());
-        i += 1;
-    }
-    if !run.is_empty() {
-        out.push(Node::Markup(run));
-    }
-    Ok(out)
 }
 
 /// A repetition that is the whole of its line, `$( .. )*`, in a macro body
@@ -2340,6 +2388,5 @@ fn clone_line(l: &Line) -> Line {
         blank_before: l.blank_before,
         indent: l.indent,
         tail_of_block: l.tail_of_block,
-        dsl: l.dsl,
     }
 }

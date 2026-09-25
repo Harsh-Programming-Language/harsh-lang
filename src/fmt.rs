@@ -40,6 +40,47 @@ pub const UNIT: usize = 4;
 /// Format Harsh source. Returns the source unchanged on a lex error: a file
 /// that does not lex has nothing to format, and the transpiler will report it.
 pub fn format(src: &str) -> String {
+    // A Rust macro's brace body is the macro's, not Harsh: set aside before
+    // formatting and put back byte for byte (E1, 2026-09-22). The formatter
+    // may move the call; it never touches what is inside the braces.
+    let dz = crate::dslzone::zones(src);
+    if !dz.is_empty() {
+        return format_around_bodies(src, &dz);
+    }
+    format_harsh(src)
+}
+
+/// Format a file whose bodies are set aside. The bodies' lines come back from
+/// the source, line for line, so this only applies when the formatter kept
+/// the file's line structure; otherwise the file is left as it is -- the
+/// conservative choice Rule 0 makes too.
+fn format_around_bodies(src: &str, dz: &[crate::dslzone::Zone]) -> String {
+    let work = crate::dslzone::blank_out(src, dz);
+    let out = format_harsh(&work);
+    let (wl, ol): (Vec<&str>, Vec<&str>) = (work.split('\n').collect(), out.split('\n').collect());
+    if wl.len() != ol.len() {
+        return src.to_string();
+    }
+    let sl: Vec<&str> = src.split('\n').collect();
+    let line_of = |at: usize| src[..at].matches('\n').count();
+    let mut lines: Vec<String> = ol.iter().map(|l| l.to_string()).collect();
+    for (n, z) in dz.iter().enumerate() {
+        let (first, last) = (line_of(z.open), line_of(z.close));
+        let ph = format!("{{/*Z{n}*/}}");
+        let Some(at) = lines[first].find(&ph) else { return src.to_string() };
+        // The first line: the formatter's text up to the call, the source's
+        // from the body's `{` to the end of that line.
+        let col = z.open - (src[..z.open].rfind('\n').map_or(0, |k| k + 1));
+        let tail = &sl[first][col..];
+        lines[first] = format!("{}{}", &lines[first][..at], tail);
+        for k in first + 1..=last {
+            lines[k] = sl[k].to_string();
+        }
+    }
+    lines.join("\n")
+}
+
+fn format_harsh(src: &str) -> String {
     // Two passes: re-break (adds line breaks, never joins), then indent.
     let broken = rebreak(src);
     if std::env::var("HRS_FMT_DEBUG").is_ok() {
@@ -110,7 +151,7 @@ fn rebreak(src: &str) -> String {
     // vertical chain of one or two links joined onto its receiver's line.
     let mut joins: std::collections::HashSet<u32> = std::collections::HashSet::new();
     for (li, l) in lines.iter().enumerate() {
-        if l.dsl || l.toks.is_empty() {
+        if l.toks.is_empty() {
             continue;
         }
         let t = &l.toks;
@@ -136,8 +177,12 @@ fn rebreak(src: &str) -> String {
         // same logical line (or the block's end): ranges do not overlap, so
         // several breaks on one line do not compound.
         let mut noted: Vec<(u32, isize)> = Vec::new();
+        // The user's rule (2026-09-21): the formatter never adds or removes a
+        // line break inside a `~` call's stream. The stream's syntax belongs
+        // to the DSL, and for `m~` a line break *is* syntax -- a row.
+        let streams = tilde_streams(t);
         let mut note = |tok: &Token, ind: usize, breaks: &mut std::collections::HashMap<u32, usize>| {
-            if breaks.contains_key(&tok.span.lo) {
+            if breaks.contains_key(&tok.span.lo) || in_stream(&streams, tok) {
                 return;
             }
             breaks.insert(tok.span.lo, ind);
@@ -241,7 +286,7 @@ fn rebreak(src: &str) -> String {
                     note(&t[recv], cont, &mut breaks);
                 }
                 for &a in &run {
-                    if t[a].line_start.is_some() {
+                    if t[a].line_start.is_some() && !in_stream(&streams, &t[a]) {
                         joins.insert(t[a].span.lo);
                     }
                 }
@@ -421,6 +466,46 @@ fn rebreak(src: &str) -> String {
     }
     out.push_str(&src[prev_hi..]);
     out
+}
+
+/// The token streams of the `~` calls in a logical line, as byte ranges: from
+/// the token after the mark to the end of the line, or to the closer of the
+/// group the call was written in, whichever is first -- the extent rule of
+/// `MACRO-DESIGN.md`. Wrapping an over-long `m~ [1 2 3 …]` put one entry on
+/// each line, and a row of ten became a column of ten, silently.
+fn tilde_streams(t: &[Token]) -> Vec<(u32, u32)> {
+    let mut out = Vec::new();
+    for k in 1..t.len() {
+        let mark = t[k].kind == Tk::Punct && t[k].text == "~" && t[k - 1].kind == Tk::Ident && t[k - 1].span.hi == t[k].span.lo;
+        if !mark || k + 1 >= t.len() {
+            continue;
+        }
+        let mut d = 0i32;
+        let mut end = t.len() - 1;
+        for j in k + 1..t.len() {
+            match t[j].kind {
+                Tk::Open(_) => d += 1,
+                Tk::Close(_) => {
+                    d -= 1;
+                    if d < 0 {
+                        end = j - 1;
+                        break;
+                    }
+                }
+                _ => {}
+            }
+        }
+        if end > k {
+            // The first token of the stream may still be moved *with* its
+            // call; what may not happen is a break between two of its tokens.
+            out.push((t[k + 1].span.hi, t[end].span.hi));
+        }
+    }
+    out
+}
+
+fn in_stream(streams: &[(u32, u32)], tok: &Token) -> bool {
+    streams.iter().any(|&(lo, hi)| tok.span.lo >= lo && tok.span.lo < hi)
 }
 
 /// Code width past which a chain of one or two links goes vertical.
@@ -927,10 +1012,6 @@ fn is_kw_text(s: &str) -> bool {
         || matches!(s, "do" | "macro_rules" | "loop" | "break" | "continue" | "ref" | "mut" | "dyn" | "self" | "Self" | "super" | "crate")
 }
 
-fn is_markup_first(l: &Line) -> bool {
-    l.toks.first().map_or(false, |t| t.kind == Tk::Lt)
-}
-
 /// One open block, as the walk sees it.
 struct Frame {
     /// Indent of the header in the original source: structure is read from
@@ -948,10 +1029,6 @@ struct Frame {
     /// The column a chain link continuing the header's statement takes,
     /// once the paren block has closed.
     chain_new: Option<usize>,
-    /// The header opened an HSX body: markup lines keep their shape.
-    hsx: bool,
-    /// Shift applied to markup lines under this header.
-    hsx_shift: Option<isize>,
 }
 
 fn plan(src: &str, lines: &[Line]) -> Plan {
@@ -962,7 +1039,7 @@ fn plan(src: &str, lines: &[Line]) -> Plan {
     // The frame the last tail line closed.
     let mut closed: Option<Frame>;
 
-    for (li, l) in lines.iter().enumerate() {
+    for l in lines.iter() {
         if l.toks.is_empty() {
             continue;
         }
@@ -993,19 +1070,6 @@ fn plan(src: &str, lines: &[Line]) -> Plan {
                     inherited_anchor = f.anchor_new;
                     stack.pop();
                 }
-            }
-        }
-
-        // Markup inside an HSX body: keep its shape, shifted with the header.
-        if let Some(f) = stack.last_mut() {
-            if f.hsx {
-                let shift = *f.hsx_shift.get_or_insert(f.body_new as isize - l.indent as isize);
-                for t in l.comments.iter().chain(l.toks.iter()) {
-                    if let Some(c) = t.line_start {
-                        set(&mut indent, t.line, (c as isize + shift).max(0) as usize);
-                    }
-                }
-                continue;
             }
         }
 
@@ -1097,6 +1161,24 @@ fn plan(src: &str, lines: &[Line]) -> Plan {
                         let prev_orig = l.toks[prev_start].line_start.unwrap_or(0);
                         (prev_new.unwrap_or(0) as isize + orig_indent as isize - prev_orig as isize).max(0) as usize
                     }
+                    // Inside an open `[`, past its first entry: under that
+                    // entry. A bracket holds data -- an array, a matrix's
+                    // rows -- and its lines are siblings, not arguments of
+                    // the first one: `m~ [1 2 3` / `4 5 6]` put the second
+                    // row one unit past `1`, as if `4` were an argument of
+                    // it, and rows written beneath `m~ [` became a staircase
+                    // (the user's rule, from his own Julia layout,
+                    // 2026-09-21). Parens keep the rule below.
+                    // `[where …]` is a clause, not data: its bounds keep
+                    // the unit indent.
+                    Some(o) if l.toks[o].kind == Tk::Open('[')
+                        && o + 1 < start
+                        && !l.toks[o + 1].is_kw("where")
+                        && !matches!(t.kind, Tk::Close(_))
+                        && innermost_open(&l.toks, start) == Some(o) =>
+                    {
+                        new_col[o + 1]
+                    }
                     _ => {
                         if matches!(t.kind, Tk::Close(_)) {
                             // A closer first on its line: under its anchor.
@@ -1157,7 +1239,6 @@ fn plan(src: &str, lines: &[Line]) -> Plan {
             let opener_idx = opener_token(&l.toks).unwrap_or(last_phys);
             let opener_new = new_col[opener_idx];
             let anchor_new = innermost_open(&l.toks, l.toks.len()).map(|i| new_col[anchor_index(&l.toks, i)]).or(inherited_anchor);
-            let hsx = macro_do_header(&l.toks) && lines.get(li + 1).map_or(false, |n| n.indent > l.indent && is_markup_first(n));
             let opener_orig = orig_col(&l.toks[opener_idx], &starts);
             let chain_new = if innermost_open(&l.toks, l.toks.len()).is_some() {
                 Some(tail_link.unwrap_or_else(|| link_col(&l.toks, &new_col, l.toks.len(), first_new)))
@@ -1171,8 +1252,6 @@ fn plan(src: &str, lines: &[Line]) -> Plan {
                 body_new: first_new_body(&l.toks, opener_new, first_new),
                 anchor_new,
                 chain_new,
-                hsx,
-                hsx_shift: None,
             });
         }
     }
@@ -1257,12 +1336,6 @@ fn receiver_is_long(toks: &[Token], a: usize) -> bool {
 /// Where a block's body goes: one unit past the opener.
 fn first_new_body(_toks: &[Token], opener_new: usize, _line_new: usize) -> usize {
     opener_new + UNIT
-}
-
-fn macro_do_header(toks: &[Token]) -> bool {
-    let sig: Vec<&Token> = toks.iter().filter(|t| !t.is_comment()).collect();
-    let n = sig.len();
-    n >= 4 && sig[n - 1].kind == Tk::Colon && sig[n - 2].is_kw("do") && sig[n - 3].kind == Tk::Punct && sig[n - 3].text == "!" && sig[n - 4].kind == Tk::Ident
 }
 
 /// The `(` / `[` / `{` closed by the closer at `i`.

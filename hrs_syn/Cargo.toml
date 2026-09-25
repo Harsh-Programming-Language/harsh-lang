@@ -1,0 +1,16 @@
+[package]
+name = "hrs_syn"
+version = "0.1.0"
+edition = "2021"
+authors = ["Bahiminin Benoit Dah"]
+license = "MPL-2.0"
+description = "Harsh's `syn`: parse a Harsh item -- a struct, an enum, a union -- into a syntax tree, for procedural macros written in Harsh."
+repository = "https://gitlab.com/bahiminin.benoit.dah.opensource/harsh-lang"
+keywords = ["harsh", "macro", "syn", "proc-macro", "parser"]
+categories = ["development-tools::procedural-macro-helpers"]
+rust-version = "1.75"
+readme = "README.md"
+
+[dependencies]
+hrs_proc_macro = { version = "0.2", path = "../hrs_proc_macro" }
+hrs_quote = { version = "0.1", path = "../hrs_quote" }

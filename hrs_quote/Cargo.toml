@@ -1,0 +1,15 @@
+[package]
+name = "hrs_quote"
+version = "0.1.0"
+edition = "2021"
+authors = ["Bahiminin Benoit Dah"]
+license = "MPL-2.0"
+description = "Harsh's `quote`: build a token stream from a template written in Harsh, laid out as the output reads, with `#name` interpolation. The `quote~` form is expanded by `hrs`."
+repository = "https://gitlab.com/bahiminin.benoit.dah.opensource/harsh-lang"
+keywords = ["harsh", "macro", "quote", "proc-macro"]
+categories = ["development-tools::procedural-macro-helpers"]
+rust-version = "1.75"
+readme = "README.md"
+
+[dependencies]
+hrs_proc_macro = { version = "0.2", path = "../hrs_proc_macro" }

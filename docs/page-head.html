@@ -52,10 +52,16 @@ body.nav-hidden .toc{display:none}
 .toc li{margin:.22em 0}
 .toc a{color:var(--fg);text-decoration:none;display:block;padding:1px 0}
 .toc a:hover{color:var(--acc)}
-.toc .l3{padding-left:14px;font-size:13.5px;color:#c5d2db}
-.toc .l3 a{color:#c5d2db}
-.toc .l4{padding-left:28px;font-size:13px}
-.toc .l4 a{color:var(--dim)}
+/* depth from the document's top level: a book's chapters, then sections,
+   subsections, and theirs */
+.toc .d0{font-weight:600;margin-top:.7em}
+.toc .d0:first-child{margin-top:0}
+.toc .d1{padding-left:14px;font-size:13.5px}
+.toc .d1 a{color:#c5d2db}
+.toc .d2{padding-left:28px;font-size:13px}
+.toc .d2 a{color:var(--dim)}
+.toc .d3{padding-left:42px;font-size:12.5px}
+.toc .d3 a{color:var(--dim)}
 main{min-width:0}
 h2{font-size:25px;margin:52px 0 14px;padding-top:8px;letter-spacing:-.01em;
    border-top:1px solid var(--line)}

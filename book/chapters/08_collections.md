@@ -9,7 +9,7 @@ A `Vec<T>` is a list of values of one type, stored next to each other, growable:
 ```
 fn main$:
     let v: Vec<i32> = Vec.new$          // empty: the type must be written
-    let w = vec! [1, 2, 3]              // from values: the type is inferred
+    let w = vec! 1 2 3              // from values: the type is inferred
     let mut u = Vec.new$
 
     u <- push 5                         // and now u is a Vec<i32>
@@ -21,7 +21,7 @@ fn main$:
 [] [1, 2, 3] [5, 6]
 ```
 
-`Vec.new$` makes an empty one, and since nothing has been put in it, its type has to be written: `Vec<i32>`. `vec! [1, 2, 3]` is a macro that builds one from values — the brackets are Rust's, and pass through — and infers the type. `Vec.new$` followed by `push` also infers it, from the first thing pushed: the compiler waits to see what `u` holds. Pushing requires `mut`, as changing anything does.
+`Vec.new$` makes an empty one, and since nothing has been put in it, its type has to be written: `Vec<i32>`. `vec! 1 2 3` is a macro that builds one from values, applied like a function — one argument per value — and infers the type; `vec! { 0; 4 }` repeats one value four times, in braces because that stream is not a list. `Vec.new$` followed by `push` also infers it, from the first thing pushed: the compiler waits to see what `u` holds. Pushing requires `mut`, as changing anything does.
 
 ### Reading elements
 
@@ -29,7 +29,7 @@ There are two ways to read an element, and the difference is what happens when i
 
 ```
 fn main$:
-    let v = vec! [1, 2, 3, 4, 5]
+    let v = vec! 1 2 3 4 5
     let third: &i32 = &v[2]             // index: panics if out of range
     println! "The third element is {third}"
 
@@ -52,7 +52,7 @@ None Some(1)
 
 ```
 fn main$:
-    let v = vec! [1, 2, 3, 4, 5]
+    let v = vec! 1 2 3 4 5
     let does_not_exist = v <- get 100
     println! "{:?}" does_not_exist
 
@@ -74,7 +74,7 @@ Chapter 4's rule applies, and the vector is where it first surprises people:
 
 ```
 fn main$:
-    let mut v = vec! [1, 2, 3, 4, 5]
+    let mut v = vec! 1 2 3 4 5
     let first = &v[0]
     v <- push 6
     println! "The first element is: {first}"
@@ -87,7 +87,7 @@ error[E0502]: cannot borrow `v` as mutable because it is also borrowed as immuta
  3 |     let first = &v[0]
    |                  - immutable borrow occurs here
  4 |     v <- push 6
-   |     ^^^^^^^^^^^ mutable borrow occurs here
+   |     ^^^^^^^^^^^^ mutable borrow occurs here
  5 |     println! "The first element is: {first}"
    |                                     ------- immutable borrow later used here
 ```
@@ -100,12 +100,12 @@ To visit every element, borrow the vector and loop:
 
 ```
 fn main$:
-    let v = vec! [100, 32, 57]
+    let v = vec! 100 32 57
 
     for i in &v:
         println! "{i}"
 
-    let mut v = vec! [100, 32, 57]
+    let mut v = vec! 100 32 57
 
     for i in &mut v:
         *i += 50                        // dereference to reach the number
@@ -135,11 +135,10 @@ enum SpreadsheetCell
 
 fn main$:
     let row =
-        vec! [
-            SpreadsheetCell.Int 3,
-            SpreadsheetCell.Text (String.from "blue"),
-            SpreadsheetCell.Float 10.12,
-        ]
+        vec!
+            (SpreadsheetCell.Int 3)
+            (SpreadsheetCell.Text (String.from "blue"))
+            (SpreadsheetCell.Float 10.12)
 
     for cell in &row:
         match cell\
@@ -154,7 +153,7 @@ text blue
 float 10.12
 ```
 
-`Vec<SpreadsheetCell>` holds ints, floats and strings, each wrapped in the variant that says which; taking one out is a `match`, so every kind is handled. This is how Rust does a heterogeneous list without giving up on knowing what is in it: the set of possibilities is fixed at compile time and written down in the enum. When the set is *not* known ahead of time, the answer is a trait object, in chapter 18.
+`Vec<SpreadsheetCell>` holds ints, floats and strings, each wrapped in the variant that says which; taking one out is a `match`, so every kind is handled. This is how Rust does a heterogeneous list without giving up on knowing what is in it: the set of possibilities is fixed at compile time and written down in the enum. When the set is *not* known ahead of time, the answer is a trait object, in chapter 21.
 
 ## 8.2 Strings
 
@@ -378,6 +377,6 @@ fn main$:
 
 ## 8.4 What you have
 
-`Vec<T>`: `Vec.new$` or `vec! [...]`, `push`, `&v[i]` to panic or `get i` for an `Option`, `for x in &v` and `&mut v` with `*x` to write, and an enum when the elements differ. `String`: UTF-8 bytes, `push_str`/`push`, `+` moves its left side and `format!` moves nothing, no indexing, byte-range slices, `chars$` or `bytes$`. `HashMap<K, V>`: `insert` moves, `get` takes `&key` and returns an `Option`, `entry … or_insert` for insert-or-update, no order.
+`Vec<T>`: `Vec.new$` or `vec! a b c`, `push`, `&v[i]` to panic or `get i` for an `Option`, `for x in &v` and `&mut v` with `*x` to write, and an enum when the elements differ. `String`: UTF-8 bytes, `push_str`/`push`, `+` moves its left side and `format!` moves nothing, no indexing, byte-range slices, `chars$` or `bytes$`. `HashMap<K, V>`: `insert` moves, `get` takes `&key` and returns an `Option`, `entry … or_insert` for insert-or-update, no order.
 
 Next: error handling — `panic!` for the bugs, `Result` for everything else, and the `?` operator that makes the second bearable.

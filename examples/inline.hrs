@@ -11,7 +11,7 @@ fn outer (a: bool) (b: bool) -> i32:
     if a: if b { 1 } else { 0 } else: 2
 
 fn arms (x: E) -> i32:
-    match x: E.A => 1, E.B => 2
+    match x\ E.A => 1, E.B => 2
 
 fn scoped$ -> i32:
     { let a = 1; a * 2 }

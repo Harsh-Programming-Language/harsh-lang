@@ -70,7 +70,7 @@ fn main$:
     counts <- sort$
     for (w, n) in &counts:
         println! "  {w:>6} {n}"
-    let mut stack = vec![1, 2, 3]
+    let mut stack = vec! 1 2 3
     while let Some top = stack <- pop$:
         print! "{top} "
     println!$

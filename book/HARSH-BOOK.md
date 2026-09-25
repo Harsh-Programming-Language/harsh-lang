@@ -31,6 +31,41 @@ Early in the work, Claude asked the author to justify removing braces from Rust 
 
 > *Braces are for the compiler; indentation is for humans.* — Claude
 
+**Rust without braces.**
+**Rust with pipes, partial application, comprehensions and linear algebra.**
+**Rust for functional programming, data science and machine learning.**
+
+## What Harsh adds
+
+Braces are where Harsh starts, not where it stops. It adds four things Rust has no syntax for — and they are the reason to use it. Each below is Harsh, then the Rust it replaces.
+
+**Pipes and partial application.** Give a function fewer arguments than it takes, and you get a function waiting for the rest:
+
+```
+let double = 2.0 |> scale
+let doubled: Vec<f64> = readings <- iter$ <- map (|&x| double x) <- collect$
+```
+
+**Generator comprehensions.** Say what a collection holds, not how to fill it:
+
+```
+let triples =
+    list~ (a, b, c)
+        for a in 1..20
+        for b in a..20
+        for c in b..20 if a * a + b * b == c * c
+```
+
+**Linear algebra, as in Julia.** Julia's matrix literal, Julia's `*`, and Julia's `X \ y`, here fitting a line by least squares:
+
+```
+let x = m~ [1.0 1.0; 1.0 2.0; 1.0 3.0]
+let y = v~ [1.0, 2.0, 2.9]
+let beta = x <- solve (&y)
+```
+
+Chapters 14, 15 and 16 teach them properly, once closures and iterators — chapter 13 — have given you what they are built from.
+
 ## Who this is for
 
 You have programmed before — in Python, JavaScript, Elixir, anything — and you have not programmed in Rust. This book teaches you Rust, using Harsh as the notation.
@@ -301,7 +336,7 @@ fn main$:
     let z = nothing$                 // applied to nothing: `$`, never `()`
     let u = ()                       // `()` is a value -- the unit -- and only ever that
 
-    let v = vec! [1, 2, 3]           // a macro applies the same way
+    let v = vec! 1 2 3           // a macro applies the same way
     let len = v <- len$              // `<-` reaches into a value: a method, a field
     let text = String.from "abc"     // `.` walks a path: a module, a type, an item
 
@@ -317,7 +352,7 @@ fn main$:
 hello, harsh 5 52 42 () 3 abc HELLO, HARSH 6 hello, ABC
 ```
 
-> **Harsh —** A function is applied by writing its arguments after it, separated by spaces: `add 2 3`. Parentheses around an argument mean *this is one argument* — `add (n * 2) (nothing$)` — and never *these are the arguments*; an argument that is a single token needs none. Applying a function to nothing is `nothing$`, because `()` is a value, the unit, and only ever that. The same rule declares a function: `fn add (a: i32) (b: i32)` is one group per parameter, and a lone parameter may drop its parentheses, `fn greet name: &str`. A block's opener says how its entries end, and there are only four kinds. A header that ends itself — `struct Point`, `impl Point`, `mod geometry`, `extern "C"` — needs no mark at all, since nothing but a name can follow it and what comes deeper can only be the body. A `\` opens a comma-separated list — a literal's fields, or a `match`'s arms. A `:` or `do:` opens statements. And `#:` opens a grouping whose grammar belongs to someone else — a macro's DSL — where Harsh writes the braces and the lines and nothing between them. A construct that already has a spelling keeps it: `struct Point #:` is refused rather than read a second way.
+> **Harsh —** A function is applied by writing its arguments after it, separated by spaces: `add 2 3`. Parentheses around an argument mean *this is one argument* — `add (n * 2) (nothing$)` — and never *these are the arguments*; an argument that is a single token needs none. Applying a function to nothing is `nothing$`, because `()` is a value, the unit, and only ever that. The same rule declares a function: `fn add (a: i32) (b: i32)` is one group per parameter, and a lone parameter may drop its parentheses, `fn greet name: &str`. A block's opener says how its entries end, and there are only three kinds. A header that ends itself — `struct Point`, `impl Point`, `mod geometry`, `extern "C"` — needs no mark at all, since nothing but a name can follow it and what comes deeper can only be the body. A `\` opens a comma-separated list — a literal's fields, or a `match`'s arms. A `:` or `do:` opens statements. A grouping whose grammar belongs to someone else — a macro's own language — is not a block at all: it goes in the macro's braces, as Rust, and the Harsh inside is marked `@: … :@` (chapter 23).
 
 An index written tight, `arr[1]`, is part of its atom, so `f arr[1]` passes the element — the same way `t.0` is part of `t`; brackets never apply, and an array passed as an argument is isolated, `f ([1, 2, 3])`. Two arrows share the work of reaching into things: `<-` reaches into a *value* — a field, a method, `v <- len$` — and `.` walks a *path* — a module, a type, an item, `String.from`. A macro applies like a function, with its `!` glued to its name: `vec! [1, 2, 3]`, `println! "{s}"`. And when an application and an arrow meet, **the application binds tighter**: in `greet "harsh" <- to_uppercase$` the function is applied first and the arrow takes its result, and the next arrow, or an operator, ends the arguments. The parentheses you will be tempted to write, `(greet "harsh") <- to_uppercase$`, are not wrong; they are not needed. Parentheses are needed the other way round — when the arrow belongs *inside* an argument, `greet (&(text <- to_uppercase$))`.
 
@@ -598,7 +633,7 @@ fn main$:
             0 => "none"
             1..=5 => "few"
             _ => "many"
-    let sign = match n: 0 => 0, _ if n > 0 => 1, _ => -1
+    let sign = match n\ 0 => 0, _ if n > 0 => 1, _ => -1
 
     // `else` answers the `if` above it, and may sit under the `if`...
     let kind =
@@ -2513,7 +2548,7 @@ A `Vec<T>` is a list of values of one type, stored next to each other, growable:
 ```
 fn main$:
     let v: Vec<i32> = Vec.new$          // empty: the type must be written
-    let w = vec! [1, 2, 3]              // from values: the type is inferred
+    let w = vec! 1 2 3              // from values: the type is inferred
     let mut u = Vec.new$
 
     u <- push 5                         // and now u is a Vec<i32>
@@ -2525,7 +2560,7 @@ fn main$:
 [] [1, 2, 3] [5, 6]
 ```
 
-`Vec.new$` makes an empty one, and since nothing has been put in it, its type has to be written: `Vec<i32>`. `vec! [1, 2, 3]` is a macro that builds one from values — the brackets are Rust's, and pass through — and infers the type. `Vec.new$` followed by `push` also infers it, from the first thing pushed: the compiler waits to see what `u` holds. Pushing requires `mut`, as changing anything does.
+`Vec.new$` makes an empty one, and since nothing has been put in it, its type has to be written: `Vec<i32>`. `vec! 1 2 3` is a macro that builds one from values, applied like a function — one argument per value — and infers the type; `vec! { 0; 4 }` repeats one value four times, in braces because that stream is not a list. `Vec.new$` followed by `push` also infers it, from the first thing pushed: the compiler waits to see what `u` holds. Pushing requires `mut`, as changing anything does.
 
 ### Reading elements
 
@@ -2533,7 +2568,7 @@ There are two ways to read an element, and the difference is what happens when i
 
 ```
 fn main$:
-    let v = vec! [1, 2, 3, 4, 5]
+    let v = vec! 1 2 3 4 5
     let third: &i32 = &v[2]             // index: panics if out of range
     println! "The third element is {third}"
 
@@ -2556,7 +2591,7 @@ None Some(1)
 
 ```
 fn main$:
-    let v = vec! [1, 2, 3, 4, 5]
+    let v = vec! 1 2 3 4 5
     let does_not_exist = v <- get 100
     println! "{:?}" does_not_exist
 
@@ -2578,7 +2613,7 @@ Chapter 4's rule applies, and the vector is where it first surprises people:
 
 ```
 fn main$:
-    let mut v = vec! [1, 2, 3, 4, 5]
+    let mut v = vec! 1 2 3 4 5
     let first = &v[0]
     v <- push 6
     println! "The first element is: {first}"
@@ -2591,7 +2626,7 @@ error[E0502]: cannot borrow `v` as mutable because it is also borrowed as immuta
  3 |     let first = &v[0]
    |                  - immutable borrow occurs here
  4 |     v <- push 6
-   |     ^^^^^^^^^^^ mutable borrow occurs here
+   |     ^^^^^^^^^^^^ mutable borrow occurs here
  5 |     println! "The first element is: {first}"
    |                                     ------- immutable borrow later used here
 ```
@@ -2604,12 +2639,12 @@ To visit every element, borrow the vector and loop:
 
 ```
 fn main$:
-    let v = vec! [100, 32, 57]
+    let v = vec! 100 32 57
 
     for i in &v:
         println! "{i}"
 
-    let mut v = vec! [100, 32, 57]
+    let mut v = vec! 100 32 57
 
     for i in &mut v:
         *i += 50                        // dereference to reach the number
@@ -2639,11 +2674,10 @@ enum SpreadsheetCell
 
 fn main$:
     let row =
-        vec! [
-            SpreadsheetCell.Int 3,
-            SpreadsheetCell.Text (String.from "blue"),
-            SpreadsheetCell.Float 10.12,
-        ]
+        vec!
+            (SpreadsheetCell.Int 3)
+            (SpreadsheetCell.Text (String.from "blue"))
+            (SpreadsheetCell.Float 10.12)
 
     for cell in &row:
         match cell\
@@ -2658,7 +2692,7 @@ text blue
 float 10.12
 ```
 
-`Vec<SpreadsheetCell>` holds ints, floats and strings, each wrapped in the variant that says which; taking one out is a `match`, so every kind is handled. This is how Rust does a heterogeneous list without giving up on knowing what is in it: the set of possibilities is fixed at compile time and written down in the enum. When the set is *not* known ahead of time, the answer is a trait object, in chapter 18.
+`Vec<SpreadsheetCell>` holds ints, floats and strings, each wrapped in the variant that says which; taking one out is a `match`, so every kind is handled. This is how Rust does a heterogeneous list without giving up on knowing what is in it: the set of possibilities is fixed at compile time and written down in the enum. When the set is *not* known ahead of time, the answer is a trait object, in chapter 21.
 
 ## 8.2 Strings
 
@@ -2882,7 +2916,7 @@ fn main$:
 
 ## 8.4 What you have
 
-`Vec<T>`: `Vec.new$` or `vec! [...]`, `push`, `&v[i]` to panic or `get i` for an `Option`, `for x in &v` and `&mut v` with `*x` to write, and an enum when the elements differ. `String`: UTF-8 bytes, `push_str`/`push`, `+` moves its left side and `format!` moves nothing, no indexing, byte-range slices, `chars$` or `bytes$`. `HashMap<K, V>`: `insert` moves, `get` takes `&key` and returns an `Option`, `entry … or_insert` for insert-or-update, no order.
+`Vec<T>`: `Vec.new$` or `vec! a b c`, `push`, `&v[i]` to panic or `get i` for an `Option`, `for x in &v` and `&mut v` with `*x` to write, and an enum when the elements differ. `String`: UTF-8 bytes, `push_str`/`push`, `+` moves its left side and `format!` moves nothing, no indexing, byte-range slices, `chars$` or `bytes$`. `HashMap<K, V>`: `insert` moves, `get` takes `&key` and returns an `Option`, `entry … or_insert` for insert-or-update, no order.
 
 Next: error handling — `panic!` for the bugs, `Result` for everything else, and the `?` operator that makes the second bearable.
 
@@ -2912,7 +2946,7 @@ Most panics are not written; they are hit:
 
 ```
 fn main$:
-    let v = vec! [1, 2, 3]
+    let v = vec! 1 2 3
     v[99];                          // the `;` discards the value; the index still runs
 ```
 
@@ -3148,7 +3182,7 @@ opened: false
 42
 ```
 
-`fn main$ -> Result<(), Box<dyn Error>>:` — a `main` that either succeeds with nothing or fails with some error. `Box<dyn Error>` is "any error at all", a trait object (chapter 18) that `?` can convert any error into, so this `main` can use `?` on a file operation and a parse in the same body. `Ok ()` at the end is the success value — `()` is the unit value, and it is passed to `Ok` as an ordinary argument. If `main` returns an `Err`, the program prints it and exits with a nonzero code, which is what a shell expects of a failed program.
+`fn main$ -> Result<(), Box<dyn Error>>:` — a `main` that either succeeds with nothing or fails with some error. `Box<dyn Error>` is "any error at all", a trait object (chapter 21) that `?` can convert any error into, so this `main` can use `?` on a file operation and a parse in the same body. `Ok ()` at the end is the success value — `()` is the unit value, and it is passed to `Ok` as an ordinary argument. If `main` returns an `Err`, the program prints it and exits with a nonzero code, which is what a shell expects of a failed program.
 
 ## 9.3 To panic or not
 
@@ -3521,7 +3555,7 @@ fn main$:
 @horse_ebooks
 ```
 
-"This function returns *some* type that implements `Summary`" — the caller can call `summarize$` and nothing else. Useful when the concrete type is long or unnameable (closures and iterators, chapter 13). One limit: the function must return one concrete type; a function that returns a `Tweet` on one branch and a `NewsArticle` on another cannot use `impl Summary`, and needs a trait object (chapter 18).
+"This function returns *some* type that implements `Summary`" — the caller can call `summarize$` and nothing else. Useful when the concrete type is long or unnameable (closures and iterators, chapter 13). One limit: the function must return one concrete type; a function that returns a `Tweet` on one branch and a `NewsArticle` on another cannot use `impl Summary`, and needs a trait object (chapter 21).
 
 ### Conditional methods
 
@@ -4300,7 +4334,7 @@ safe, fast, productive.
 Pick three.
 Duct tape."
         assert_eq!
-            (vec! ["safe, fast, productive."])
+            (vec! "safe, fast, productive.")
             (search query contents)
 
     #[test]
@@ -4313,7 +4347,7 @@ safe, fast, productive.
 Pick three.
 Trust me."
         assert_eq!
-            (vec! ["Rust:", "Trust me."])
+            (vec! "Rust:" "Trust me.")
             (search_case_insensitive query contents)
 ```
 
@@ -4421,7 +4455,7 @@ safe, fast, productive.
 Pick three.
 Duct tape."
         assert_eq!
-            (vec! ["safe, fast, productive."])
+            (vec! "safe, fast, productive.")
             (search query contents)
 
     #[test]
@@ -4434,7 +4468,7 @@ safe, fast, productive.
 Pick three.
 Trust me."
         assert_eq!
-            (vec! ["Rust:", "Trust me."])
+            (vec! "Rust:" "Trust me.")
             (search_case_insensitive query contents)
 ```
 
@@ -4535,7 +4569,7 @@ safe, fast, productive.
 Pick three.
 Duct tape."
         assert_eq!
-            (vec! ["safe, fast, productive."])
+            (vec! "safe, fast, productive.")
             (search query contents)
 
     #[test]
@@ -4548,7 +4582,7 @@ safe, fast, productive.
 Pick three.
 Trust me."
         assert_eq!
-            (vec! ["Rust:", "Trust me."])
+            (vec! "Rust:" "Trust me.")
             (search_case_insensitive query contents)
 ```
 
@@ -4651,7 +4685,7 @@ safe, fast, productive.
 Pick three.
 Duct tape."
         assert_eq!
-            (vec! ["safe, fast, productive."])
+            (vec! "safe, fast, productive.")
             (search query contents)
 
     #[test]
@@ -4664,7 +4698,7 @@ safe, fast, productive.
 Pick three.
 Trust me."
         assert_eq!
-            (vec! ["Rust:", "Trust me."])
+            (vec! "Rust:" "Trust me.")
             (search_case_insensitive query contents)
 ```
 
@@ -4770,7 +4804,7 @@ safe, fast, productive.
 Pick three.
 Duct tape."
         assert_eq!
-            (vec! ["safe, fast, productive."])
+            (vec! "safe, fast, productive.")
             (search query contents)
 
     #[test]
@@ -4783,7 +4817,7 @@ safe, fast, productive.
 Pick three.
 Trust me."
         assert_eq!
-            (vec! ["Rust:", "Trust me."])
+            (vec! "Rust:" "Trust me.")
             (search_case_insensitive query contents)
 ```
 
@@ -4833,7 +4867,9 @@ impl Inventory
         if num_red > num_blue: ShirtColor.Red else: ShirtColor.Blue
 
 fn main$:
-    let store = Inventory\ shirts = vec! [ShirtColor.Blue, ShirtColor.Red, ShirtColor.Blue]
+    let store =
+        Inventory\
+            shirts = vec! ShirtColor.Blue ShirtColor.Red ShirtColor.Blue
     let user_pref1 = Some ShirtColor.Red
     println!
         "The user with preference {:?} gets {:?}"
@@ -4913,7 +4949,7 @@ A closure captures each variable it uses in the least demanding way that works �
 
 ```
 fn main$:
-    let list = vec! [1, 2, 3]
+    let list = vec! 1 2 3
     println! "Before defining closure: {list:?}"
 
     let only_borrows = || println! "From closure: {list:?}"
@@ -4933,7 +4969,7 @@ After calling closure: [1, 2, 3]
 
 ```
 fn main$:
-    let mut list = vec! [1, 2, 3]
+    let mut list = vec! 1 2 3
     println! "Before defining closure: {list:?}"
 
     let mut borrows_mutably = || list <- push 7
@@ -4954,7 +4990,7 @@ To make a closure take ownership of what it uses — needed when it will outlive
 use std.thread
 
 fn main$:
-    let list = vec! [1, 2, 3]
+    let list = vec! 1 2 3
     println! "Before defining closure: {list:?}"
 
     thread.spawn (move || println! "From thread: {list:?}")
@@ -4967,7 +5003,7 @@ Before defining closure: [1, 2, 3]
 From thread: [1, 2, 3]
 ```
 
-`move ||` moves `list` into the closure; the thread may then run after `main`'s frame is gone and still own its data. Without `move`, the closure would borrow `list`, and the compiler would reject the program because the thread might outlive the borrow. (Threads are chapter 16; this is a preview of why `move` exists.)
+`move ||` moves `list` into the closure; the thread may then run after `main`'s frame is gone and still own its data. Without `move`, the closure would borrow `list`, and the compiler would reject the program because the thread might outlive the borrow. (Threads are chapter 19; this is a preview of why `move` exists.)
 
 ### `Fn`, `FnMut`, `FnOnce`
 
@@ -5071,7 +5107,7 @@ fn main$:
             (Rectangle\ width = 3, height = 5),
         ]
 
-    let mut sort_operations = vec! []
+    let mut sort_operations = vec!$
     let value = String.from "closure called"
 
     list <- sort_by_key |r|:
@@ -5147,11 +5183,11 @@ pub trait Iterator
     fn next (&mut self) -> Option<Self.Item>
 ```
 
-`next` returns `Some item` until the sequence is finished and `None` after; `Item` is an *associated type* (chapter 20) naming what it yields. Everything else is built on `next`:
+`next` returns `Some item` until the sequence is finished and `None` after; `Item` is an *associated type* (chapter 23) naming what it yields. Everything else is built on `next`:
 
 ```
 fn main$:
-    let v1 = vec! [1, 2, 3]
+    let v1 = vec! 1 2 3
     let mut v1_iter = v1 <- iter$            // nothing happens yet
     assert_eq! (v1_iter <- next$) (Some (&1))
     assert_eq! (v1_iter <- next$) (Some (&2))
@@ -5176,7 +5212,7 @@ Methods on iterators come in two kinds. A *consumer* calls `next` until the end 
 
 ```
 fn main$:
-    let v1 = vec! [1, 2, 3]
+    let v1 = vec! 1 2 3
     let total: i32 = v1 <- iter$ <- sum$     // a consumer: drives the iterator to the end
     println! "{total}"
 ```
@@ -5189,7 +5225,7 @@ fn main$:
 
 ```
 fn main$:
-    let v1: Vec<i32> = vec! [1, 2, 3]
+    let v1: Vec<i32> = vec! 1 2 3
     let v2: Vec<_> =
         v1 <- iter$
            <- map (|x| x + 1)
@@ -5205,7 +5241,7 @@ fn main$:
 
 ```
 fn main$:
-    let v1: Vec<i32> = vec! [1, 2, 3]
+    let v1: Vec<i32> = vec! 1 2 3
     v1 <- iter$ <- map (|x| x + 1);         // an adaptor alone does nothing
 ```
 
@@ -5228,11 +5264,10 @@ fn shoes_in_size (shoes: Vec<Shoe>) (shoe_size: u32) -> Vec<Shoe>:
 
 fn main$:
     let shoes =
-        vec! [
-            (Shoe\ size = 10, style = String.from "sneaker"),
-            (Shoe\ size = 13, style = String.from "sandal"),
-            (Shoe\ size = 10, style = String.from "boot"),
-        ]
+        vec!
+            (Shoe\ size = 10, style = String.from "sneaker")
+            (Shoe\ size = 13, style = String.from "sandal")
+            (Shoe\ size = 10, style = String.from "boot")
 
     let in_my_size = shoes_in_size shoes 10
     println! "{in_my_size:#?}"
@@ -5336,178 +5371,9 @@ fn main$:
 
 > **Harsh —** One or two links stay on their line when the line fits in 72 columns; three or more go vertical, one `<-` per line, every arrow under the first. A `=` always ends its line before a vertical chain begins, never starts one. A closure whose body is a block is written as a *paren block*: the `(` ends the arrow's line, the parameters sit on their own line, the body beneath them, and the `)` closes on a line of its own at the closure's column — the parentheses are transparent to the layout, and the block inside ends where they end. `hrs fmt` puts all of this where it belongs; write it however it comes out of your fingers, save, and read the result.
 
-## 13.3 The pipes
+## 13.3 Where the pipes come in
 
-Everything so far has reached into a value with `<-`: a method on the left of the arrow's data. The pipes go the other way. `|>` takes the value on its left and hands it to the *function* on its right; `<|` does the same from the other side. Where a chain says *this value, then this method on it*, a pipe says *this value, into this function*:
-
-```
-fn tokenize text: &str -> Vec<String>:
-    text <- split_whitespace$
-         <- map (|w| w <- to_lowercase$)
-         <- collect$
-
-fn count words: &Vec<String> -> usize:
-    words <- len$
-
-fn shout text: &str -> String:
-    text <- to_uppercase$
-
-fn main$:
-    let text = "the cat sat on the mat"
-
-    // a value flows left to right, into one function after another
-    let n = text |> tokenize |> (|w| count (&w))
-    println! "{n} words"
-
-    // the same, right to left
-    let m = (|w| count (&w)) <| tokenize <| text
-    println! "{m} words"
-
-    // a method reaches into a value; a pipe hands a value to a function
-    let a = text <- to_uppercase$
-    let b = text |> shout
-    println! "{a} / {b}"
-```
-
-```text
-6 words
-6 words
-THE CAT SAT ON THE MAT / THE CAT SAT ON THE MAT
-```
-
-> **Harsh —** `text |> tokenize` is `tokenize` applied to `text`, and the chain reads on: the next `|>` applies the closure to what came out. `<|` is the mirror — `f <| g <| x` applies `g` to `x` and `f` to the result. Both sides of a pipe are *atoms*: a value, a name, an isolated group. That is the one place the pipes and the arrow part company. Chapter 2 said an application binds tighter than `<-` — `tokenize text <- len$` applies `tokenize` first — but `tokenize text |> count` does *not* apply it first: every atom on a pipe's side is an argument, so that line hands `count` two of them, `tokenize` and `text`. To pipe a *result*, isolate it: `(tokenize text) |> count`. The reason is the pipes' own feature — a pipe may carry several values, `2.0 0.5 |> scale` — and a rule that let one of them be an application would have to guess where it ended. So a chain like `raw <- clone$` is isolated before it goes in, `(raw <- clone$) |> trim_ws`, and a closure is isolated the same way, `|> (|w| count (&w))` — the function a pipe applies is one atom too.
-
-### Partial application
-
-The pipes do one more thing, and it is the thing the arrow cannot do. A pipe may carry several values — `2.0 0.5 3.0 |> scale` — and when it carries *fewer* than the function takes, the missing ones are **deferred**: the result is a closure waiting for the rest.
-
-```
-fn scale (factor: f64) (offset: f64) (x: f64) -> f64:
-    x * factor + offset
-
-fn main$:
-    // every parameter given: a plain call
-    let y = 2.0 0.5 3.0 |> scale
-    println! "{y}"
-
-    // fewer given: what is missing is deferred, and the result is a closure
-    let f = 2.0 0.5 |> scale          // waits for x
-    println! "{}" (f 3.0)
-
-    let g = scale <| 10.0             // filled from the right: waits for factor and offset
-    println! "{}" (g 2.0 0.5)
-
-    let h = 2.0 |> scale <| 10.0      // both sides: the hole is in the middle
-    println! "{}" (h 0.5)
-
-    // a partial is a value like any other
-    let doubled: Vec<f64> =
-        vec! [1.0, 2.0, 3.0]
-            <- into_iter$
-            <- map (2.0 0.0 |> scale)
-            <- collect$
-    println! "{doubled:?}"
-```
-
-```text
-6.5
-6.5
-20.5
-20.5
-[2.0, 4.0, 6.0]
-```
-
-> **Harsh —** `|>` fills a function's parameters from the left, `<|` from the right, and the two together leave a hole in the middle. The result is one flat closure over whatever was not filled — a value like any other: bind it, pass it to `map`, return it from a function. There is no placeholder token; the hole is what is left. Harsh knows how many parameters `scale` takes because `scale` is declared in your project; for a function it cannot see into — the standard library, a crate you depend on — a pipe is a plain call with the values you gave, and the compiler says so if the count was wrong. Give a project function *more* than it takes and Harsh itself refuses:
-
-```
-fn sub (a: i32) (b: i32) (c: i32) -> i32:
-    a - b - c
-
-fn main$:
-    let n = 1 2 3 4 |> sub
-    println! "{n}"
-```
-
-```text
-error: `sub` takes 3 parameter(s) and 4 were piped in
-  --> pipe_too_many.hrs:5:21
-   |
-  5|     let n = 1 2 3 4 |> sub
-   |                     ^^
-```
-
-### Pipelines
-
-A pipe's result is a value, so pipes chain: each stage's output is the next stage's input, left to right, and a partial application makes a stage out of a function that needed more than one argument:
-
-```
-fn trim_ws s: String -> String:
-    s <- trim$ <- to_string$
-
-fn shout s: String -> String:
-    s <- to_uppercase$
-
-fn wrap (left: &str) (right: &str) (s: String) -> String:
-    format! "{left}{s}{right}"
-
-fn main$:
-    let raw = String.from "   hello, harsh   "
-
-    // a pipeline: each stage's result is the next stage's argument
-    let out = (raw <- clone$) |> trim_ws |> shout |> ("[" "]" |> wrap)
-    println! "{out}"
-
-    // the same pipeline as a value, with the argument left out
-    let banner = |s: String|:
-        s |> trim_ws |> shout |> ("<" ">" |> wrap)
-    println! "{}" (banner raw)
-```
-
-```text
-[HELLO, HARSH]
-<HELLO, HARSH>
-```
-
-`("[" "]" |> wrap)` is `wrap` with its first two parameters filled — a function of one `String` — and so it is a stage like `trim_ws` and `shout`. `banner` is the whole pipeline as a closure: the same stages, with the argument left for later. Read the line aloud: *raw, trimmed, shouted, wrapped*.
-
-### When a pipe beats a closure
-
-A closure that only forwards its argument is a partial application spelled the long way:
-
-```
-fn discount (rate: f64) (price: f64) -> f64:
-    price * (1.0 - rate)
-
-fn main$:
-    let prices = vec! [10.0, 25.0, 40.0]
-
-    // a closure that only forwards its argument...
-    let a: Vec<f64> =
-        prices <- iter$
-               <- map (|p| discount 0.2 (*p))
-               <- collect$
-    // ...says nothing a partial does not say shorter
-    let b: Vec<f64> =
-        prices <- iter$
-               <- copied$
-               <- map (0.2 |> discount)
-               <- collect$
-    println! "{a:?} {b:?}"
-
-    // where the closure earns its place: the argument is transformed on the way in
-    let c: Vec<f64> =
-        prices <- iter$
-               <- map (|p| discount 0.2 (p + 5.0))
-               <- collect$
-    println! "{c:?}"
-```
-
-```text
-[8.0, 20.0, 32.0] [8.0, 20.0, 32.0]
-[12.0, 24.0, 36.0]
-```
-
-`|p| discount 0.2 (*p)` names `p` twice to say what `0.2 |> discount` says once. When the closure transforms its argument on the way in — `p + 5.0` — it is doing work the pipe cannot, and it stays. That is the whole rule: reach for a partial when the argument passes through untouched, and a closure when it does not.
+Chains reach into a value with `<-`. Harsh has a second way to pass a value along — the *pipes*, `|>` and `<|`, which hand a value to a function rather than call a method on it — and with them, partial application. They are one of the things Harsh adds to Rust, and chapter 14 is theirs.
 
 ## 13.4 Improving `minigrep`
 
@@ -5601,15 +5467,1011 @@ The natural worry is that a chain of closures must be slower than a loop. It is 
 
 ## 13.5 What you have
 
-Closures capture by reference, mutable reference or value, `move` to force the last; they are `Fn`, `FnMut` or `FnOnce` by what they do with their captures, and a function taking one says which it needs. Iterators produce items through `next`; `iter$`, `iter_mut$`, `into_iter$` make them; adaptors like `map` and `filter` are lazy and take closures; consumers like `sum$` and `collect$` run the chain; `for` is a consumer too. Harsh lays a chain out vertically with the arrows aligned and a closure's block body under its parameters. `|>` and `<|` hand a value to a function, from the left or the right; with fewer values than the function takes they defer the rest as a flat closure, which is how a partial application is written.
+Closures capture by reference, mutable reference or value, `move` to force the last; they are `Fn`, `FnMut` or `FnOnce` by what they do with their captures, and a function taking one says which it needs. Iterators produce items through `next`; `iter$`, `iter_mut$`, `into_iter$` make them; adaptors like `map` and `filter` are lazy and take closures; consumers like `sum$` and `collect$` run the chain; `for` is a consumer too. Harsh lays a chain out vertically with the arrows aligned and a closure's block body under its parameters.
 
-Next: cargo — profiles, documentation, publishing, workspaces — before the second half of the book turns to smart pointers and concurrency.
+Next: the three chapters on what Harsh adds to Rust — pipes and partial application, comprehensions, and matrices — then cargo, and the second half of the book.
 
-# 14. More about cargo
+# 14. Pipes and partial application
+
+Harsh adds three things to Rust that Rust has no syntax for, and this chapter and the next two are about them. The first is the pipes: `|>` hands a value to a function, `<|` does the same from the other side, and together they give *partial application* — calling a function with only some of its arguments and getting back a function that waits for the rest. They are borrowed from the functional languages, F#, OCaml and Elm, where they are how most code is written.
+
+## 14.1 The pipes
+
+Everything so far has reached into a value with `<-`: a method on the left of the arrow's data. The pipes go the other way. `|>` takes the value on its left and hands it to the *function* on its right; `<|` does the same from the other side. Where a chain says *this value, then this method on it*, a pipe says *this value, into this function*:
+
+```
+fn tokenize text: &str -> Vec<String>:
+    text <- split_whitespace$
+         <- map (|w| w <- to_lowercase$)
+         <- collect$
+
+fn count words: &Vec<String> -> usize:
+    words <- len$
+
+fn shout text: &str -> String:
+    text <- to_uppercase$
+
+fn main$:
+    let text = "the cat sat on the mat"
+
+    // a value flows left to right, into one function after another
+    let n = text |> tokenize |> (|w| count (&w))
+    println! "{n} words"
+
+    // the same, right to left
+    let m = (|w| count (&w)) <| tokenize <| text
+    println! "{m} words"
+
+    // a method reaches into a value; a pipe hands a value to a function
+    let a = text <- to_uppercase$
+    let b = text |> shout
+    println! "{a} / {b}"
+```
+
+```text
+6 words
+6 words
+THE CAT SAT ON THE MAT / THE CAT SAT ON THE MAT
+```
+
+> **Harsh —** `text |> tokenize` is `tokenize` applied to `text`, and the chain reads on: the next `|>` applies the closure to what came out. `<|` is the mirror — `f <| g <| x` applies `g` to `x` and `f` to the result. Both sides of a pipe are *atoms*: a value, a name, an isolated group. That is the one place the pipes and the arrow part company. Chapter 2 said an application binds tighter than `<-` — `tokenize text <- len$` applies `tokenize` first — but `tokenize text |> count` does *not* apply it first: every atom on a pipe's side is an argument, so that line hands `count` two of them, `tokenize` and `text`. To pipe a *result*, isolate it: `(tokenize text) |> count`. The reason is the pipes' own feature — a pipe may carry several values, `2.0 0.5 |> scale` — and a rule that let one of them be an application would have to guess where it ended. So a chain like `raw <- clone$` is isolated before it goes in, `(raw <- clone$) |> trim_ws`, and a closure is isolated the same way, `|> (|w| count (&w))` — the function a pipe applies is one atom too.
+
+## 14.2 Partial application
+
+The pipes do one more thing, and it is the thing the arrow cannot do. A pipe may carry several values — `2.0 0.5 3.0 |> scale` — and when it carries *fewer* than the function takes, the missing ones are **deferred**: the result is a closure waiting for the rest.
+
+```
+fn scale (factor: f64) (offset: f64) (x: f64) -> f64:
+    x * factor + offset
+
+fn main$:
+    // every parameter given: a plain call
+    let y = 2.0 0.5 3.0 |> scale
+    println! "{y}"
+
+    // fewer given: what is missing is deferred, and the result is a closure
+    let f = 2.0 0.5 |> scale          // waits for x
+    println! "{}" (f 3.0)
+
+    let g = scale <| 10.0             // filled from the right: waits for factor and offset
+    println! "{}" (g 2.0 0.5)
+
+    let h = 2.0 |> scale <| 10.0      // both sides: the hole is in the middle
+    println! "{}" (h 0.5)
+
+    // a partial is a value like any other
+    let doubled: Vec<f64> =
+        vec! 1.0 2.0 3.0
+            <- into_iter$
+            <- map (2.0 0.0 |> scale)
+            <- collect$
+    println! "{doubled:?}"
+```
+
+```text
+6.5
+6.5
+20.5
+20.5
+[2.0, 4.0, 6.0]
+```
+
+> **Harsh —** `|>` fills a function's parameters from the left, `<|` from the right, and the two together leave a hole in the middle. The result is one flat closure over whatever was not filled — a value like any other: bind it, pass it to `map`, return it from a function. There is no placeholder token; the hole is what is left. Harsh knows how many parameters `scale` takes because `scale` is declared in your project; for a function it cannot see into — the standard library, a crate you depend on — a pipe is a plain call with the values you gave, and the compiler says so if the count was wrong. Give a project function *more* than it takes and Harsh itself refuses:
+
+```
+fn sub (a: i32) (b: i32) (c: i32) -> i32:
+    a - b - c
+
+fn main$:
+    let n = 1 2 3 4 |> sub
+    println! "{n}"
+```
+
+```text
+error: `sub` takes 3 parameter(s) and 4 were piped in
+  --> pipe_too_many.hrs:5:21
+   |
+  5|     let n = 1 2 3 4 |> sub
+   |                     ^^
+```
+
+## 14.3 From the right, and a hole in the middle
+
+`|>` fills a function's parameters from the left; `<|` fills them from the right. Used together they fill both ends and leave the middle open:
+
+```
+fn label (prefix: &str) (name: &str) (suffix: &str) -> String:
+    format! "{prefix}{name}{suffix}"
+
+fn main$:
+    // `|>` fills the parameters from the left.
+    println! "{}" ("Dr. " "Ada" "," |> label)
+    // `<|` fills them from the right: this waits for a prefix.
+    let with_phd = label <| "Ada" " PhD"
+    println! "{}" (with_phd "Prof. ")
+    // Both together leave a hole in the middle: a function of the name.
+    let formal = "Dr. " |> label <| "."
+    println! "{}" (formal "Ada")
+    println! "{}" (formal "Grace")
+```
+
+```text
+Dr. Ada,
+Prof. Ada PhD
+Dr. Ada.
+Dr. Grace.
+```
+
+`label` takes a prefix, a name and a suffix. `"Dr. " "Ada" "," |> label` fills all three and calls it. `label <| "Ada" " PhD"` fills the last two — the name and the suffix, in order — and waits for the prefix. And `"Dr. " |> label <| "."` fills the first from the left and the last from the right: what is left is a function of the name, and `formal` can be applied to one name after another. No placeholder marks the hole; the hole is simply whatever was not filled.
+
+## 14.4 Pipelines
+
+A pipe's result is a value, so pipes chain: each stage's output is the next stage's input, left to right, and a partial application makes a stage out of a function that needed more than one argument:
+
+```
+fn trim_ws s: String -> String:
+    s <- trim$ <- to_string$
+
+fn shout s: String -> String:
+    s <- to_uppercase$
+
+fn wrap (left: &str) (right: &str) (s: String) -> String:
+    format! "{left}{s}{right}"
+
+fn main$:
+    let raw = String.from "   hello, harsh   "
+
+    // a pipeline: each stage's result is the next stage's argument
+    let out = (raw <- clone$) |> trim_ws |> shout |> ("[" "]" |> wrap)
+    println! "{out}"
+
+    // the same pipeline as a value, with the argument left out
+    let banner = |s: String|:
+        s |> trim_ws |> shout |> ("<" ">" |> wrap)
+    println! "{}" (banner raw)
+```
+
+```text
+[HELLO, HARSH]
+<HELLO, HARSH>
+```
+
+`("[" "]" |> wrap)` is `wrap` with its first two parameters filled — a function of one `String` — and so it is a stage like `trim_ws` and `shout`. `banner` is the whole pipeline as a closure: the same stages, with the argument left for later. Read the line aloud: *raw, trimmed, shouted, wrapped*.
+
+## 14.5 Partials as arguments
+
+A partial application is a value, so it goes wherever a function may go — above all, into an iterator's adaptors:
+
+```
+fn scale (factor: f64) (x: f64) -> f64:
+    factor * x
+
+fn clamp (lo: f64) (hi: f64) (x: f64) -> f64:
+    x <- max lo <- min hi
+
+fn main$:
+    let readings = vec! 0.4 1.2 2.6 3.1
+    // A partial application is a function value: hand it to `map`.
+    let doubled: Vec<f64> =
+        readings <- iter$
+                 <- map (|&x| (2.0 |> scale) x)
+                 <- collect$
+    let bounded: Vec<f64> =
+        doubled <- iter$
+                <- map (|&x| (0.0 5.0 |> clamp) x)
+                <- collect$
+    println! "{doubled:?}"
+    println! "{bounded:?}"
+```
+
+```text
+[0.8, 2.4, 5.2, 6.2]
+[0.8, 2.4, 5.0, 5.0]
+```
+
+`2.0 |> scale` is "multiply by two", and `0.0 5.0 |> clamp` is "keep between 0 and 5", each built from a general function by fixing its first arguments. A predicate works the same way: in the next program `2.0 |> above` is "greater than two", passed to `filter` as it is:
+
+```
+fn parse (line: &str) -> Option<f64>:
+    line <- trim$
+         <- parse$
+         <- ok$
+
+fn above (limit: f64) (x: &f64) -> bool:
+    *x > limit
+
+fn mean (xs: &[f64]) -> f64:
+    xs <- iter$ <- sum.<f64>$ / (xs <- len$ as f64)
+
+fn main$:
+    let raw = "3.5\n oops \n7.25\n1.0\n9.5\n"
+    // A small data pipeline: parse, keep what parsed, filter, summarise.
+    let values: Vec<f64> =
+        raw <- lines$
+            <- filter_map parse
+            <- filter (2.0 |> above)
+            <- collect$
+    println! "{values:?}"
+    println! "mean {:.2}" ((&values) |> mean)
+```
+
+```text
+[3.5, 7.25, 9.5]
+mean 6.75
+```
+
+Parse, keep what parsed, keep what is large enough, summarise: the chain reads as the steps. Note `((&values) |> mean)`. `&values` is two tokens, `&` and `values`, so it is isolated to make it one atom before it enters the pipe — the same rule as any argument with an operator in it.
+
+## 14.6 When a pipe beats a closure
+
+A closure that only forwards its argument is a partial application spelled the long way:
+
+```
+fn discount (rate: f64) (price: f64) -> f64:
+    price * (1.0 - rate)
+
+fn main$:
+    let prices = vec! 10.0 25.0 40.0
+
+    // a closure that only forwards its argument...
+    let a: Vec<f64> =
+        prices <- iter$
+               <- map (|p| discount 0.2 (*p))
+               <- collect$
+    // ...says nothing a partial does not say shorter
+    let b: Vec<f64> =
+        prices <- iter$
+               <- copied$
+               <- map (0.2 |> discount)
+               <- collect$
+    println! "{a:?} {b:?}"
+
+    // where the closure earns its place: the argument is transformed on the way in
+    let c: Vec<f64> =
+        prices <- iter$
+               <- map (|p| discount 0.2 (p + 5.0))
+               <- collect$
+    println! "{c:?}"
+```
+
+```text
+[8.0, 20.0, 32.0] [8.0, 20.0, 32.0]
+[12.0, 24.0, 36.0]
+```
+
+`|p| discount 0.2 (*p)` names `p` twice to say what `0.2 |> discount` says once. When the closure transforms its argument on the way in — `p + 5.0` — it is doing work the pipe cannot, and it stays. That is the whole rule: reach for a partial when the argument passes through untouched, and a closure when it does not.
+
+## 14.7 What you have
+
+`|>` hands the values on its left to the function on its right; `<|` hands the values on its right to the function on its left. Each side of a pipe is a list of atoms, so anything with an operator in it — a chain, an `&`, a closure — is isolated first. Give a function fewer values than it takes and the rest are deferred: `|>` fills from the left, `<|` from the right, both at once leave a hole in the middle, and the result is a closure over what was not filled — a value to bind, pass to `map` or `filter`, or return. Give it more and Harsh refuses. Harsh counts the parameters of the functions in your project; for functions it cannot see, a pipe is a plain call.
+
+Next: generator comprehensions — building a collection by saying what goes in it.
+
+# 15. Generator comprehensions
+
+A *comprehension* builds a sequence by describing its contents: *the square of every x from 1 to 5*, *every pair (x, y) with y greater than x*. Python, Haskell and Julia have them, and data work leans on them, because they say what a collection holds instead of how to fill it. Rust has none. Harsh has four, named as Python names them: `g~`, the **generator comprehension**, which is lazy and yields its values one at a time; and the **list**, **set** and **dict comprehensions**, `list~`, `set~` and `dict~`, which collect it. The `g` is for *generator*. (A generator here means a lazy iterator; it is not Rust's unstable feature of the same name, now called coroutines.)
+
+All four are in Harsh's *prelude*: every file can use them with no `use`. They are macros — the `~` says so — written in Harsh and expanded by `hrs`, so what they become is ordinary Rust iterator code, with nothing added at run time.
+
+## 15.1 The shape
+
+```
+fn main$:
+    // The value first, then where it comes from.
+    let squares: Vec<i32> = (g~ x * x for x in 1..6) <- collect$
+    println! "{squares:?}"
+
+    // Any pattern a `for` accepts, any iterable.
+    let pairs = vec! ("ada", 36) ("alan", 41)
+    let names: Vec<String> = (g~ (name <- to_uppercase$) for (name, _) in pairs) <- collect$
+    println! "{names:?}"
+```
+
+```text
+[1, 4, 9, 16, 25]
+["ADA", "ALAN"]
+```
+
+Read `g~ x * x for x in 1..6` aloud and it says what it means: *x times x, for x in 1 to 6*. The value comes first, then `for` a pattern `in` an iterable. The pattern is any pattern a `for` loop accepts — `(name, _)` takes a tuple apart — and the iterable is anything a `for` loop accepts.
+
+The whole call is in parentheses because the result is chained on: `(g~ …) <- collect$`. A macro call takes the rest of its line, so without the parentheses `<- collect$` would be read as part of the comprehension.
+
+## 15.2 Conditions
+
+```
+fn main$:
+    // `if`s filter, and every `if` belongs to the `for` before it.
+    let picked: Vec<i32> = (g~ x for x in 0..30 if x % 3 == 0 if x % 2 == 1) <- collect$
+    println! "{picked:?}"
+
+    // A condition sees every name bound so far: `y > x` uses both.
+    let rising: Vec<(i32, i32)> = (g~ (x, y) for x in 1..4 for y in 1..4 if y > x) <- collect$
+    println! "{rising:?}"
+```
+
+```text
+[3, 9, 15, 21, 27]
+[(1, 2), (1, 3), (2, 3)]
+```
+
+`if` keeps only the values that satisfy it. There may be several, and they all hold: `if x % 3 == 0 if x % 2 == 1` is odd multiples of three.
+
+Each `if` belongs to the `for` it follows. That is the one rule of the syntax, and everything else follows from it. A condition can use every name bound up to that point — `if y > x` sees both `x` and `y` — and nothing bound after it.
+
+## 15.3 Several `for`s
+
+```
+fn main$:
+    // Three `for`s: every right triangle with sides under 30.
+    let triangles: Vec<(u32, u32, u32)> =
+        (g~ (a, b, c)
+            for a in 1..30
+            for b in a..30
+            for c in b..30 if a * a + b * b == c * c
+        ) <- collect$
+    println!
+        "{} triangles, the first {:?}"
+        (triangles <- len$)
+        triangles[0]
+
+    // A condition on an outer `for` filters before the inner one runs.
+    let grid: Vec<String> = (g~ (format! "{r}{c}") for r in 'a'..='c' if r != 'b' for c in 1..=2) <- collect$
+    println! "{grid:?}"
+```
+
+```text
+10 triangles, the first (3, 4, 5)
+["a1", "a2", "c1", "c2"]
+```
+
+Each `for` runs inside the one before it, so three of them visit every `a`, then every `b` from `a` on, then every `c` from `b` on. The condition at the end sees all three. Written one clause per line, the comprehension reads like the definition it implements.
+
+Because an `if` belongs to its `for`, where you put it decides when it runs. In the grid, `if r != 'b'` is attached to the outer loop, so the letter `b` is rejected once, before any of its numbers are looked at. Put a condition as early as its names allow and the inner loops do less work.
+
+## 15.4 Where a condition may go
+
+The rule that each `if` belongs to the `for` before it has a consequence: every `for` makes one more name available, and a condition can use only the names bound up to its place.
+
+```
+fn main$:
+    let triples =
+        list~ (a, b, c)
+            for a in 1..20        // only a is available for the condition
+            for b in a..20        // only a, b are available for the condition
+            for c in b..20        // a, b, c are available for the condition
+            if a * a + b * b == c * c
+    println! "{triples:?}"
+```
+
+```text
+[(3, 4, 5), (5, 12, 13), (6, 8, 10), (8, 15, 17), (9, 12, 15)]
+```
+
+The test needs `a`, `b` and `c`, so it goes after the `for` that binds `c`. This, though it looks as if it says the same thing, does not compile:
+
+```
+fn main$:
+    // The test needs b and c, but it is attached to `for a`,
+    // where neither exists yet.
+    let triples =
+        list~ (a, b, c)
+            for a in 1..20 if a * a + b * b == c * c
+            for b in a..20
+            for c in b..20
+    println! "{triples:?}"
+```
+
+```text
+error[E0425]: cannot find value `b` in this scope
+  --> comp_too_early.hrs:6:39
+   |
+ 6 |             for a in 1..20 if a * a + b * b == c * c
+   |                                       ^
+   = help: a local variable with a similar name exists (hrs 6:39)
+
+error[E0425]: cannot find value `b` in this scope
+  --> comp_too_early.hrs:6:43
+   |
+ 6 |             for a in 1..20 if a * a + b * b == c * c
+   |                                           ^
+   = help: a local variable with a similar name exists (hrs 6:43)
+
+error[E0425]: cannot find value `c` in this scope
+  --> comp_too_early.hrs:6:48
+   |
+ 6 |             for a in 1..20 if a * a + b * b == c * c
+   |                                                ^
+   = help: a local variable with a similar name exists (hrs 6:48)
+
+error[E0425]: cannot find value `c` in this scope
+  --> comp_too_early.hrs:6:52
+   |
+ 6 |             for a in 1..20 if a * a + b * b == c * c
+   |                                                    ^
+   = help: a local variable with a similar name exists (hrs 6:52)
+```
+
+Attached to `for a`, the test runs once per `a`, before `b` and `c` have been chosen, so there is no `b` for it to read. The compiler says so on the Harsh line, with the caret under the `b`. The fix is not to rewrite the test but to move it to a `for` that comes after every name it uses — here the last one. The same rule tells you where a condition *should* go when it could go in several places: as early as its names allow, because a test on an outer `for` skips whole inner loops.
+
+## 15.5 Lazy, and by value
+
+```
+fn main$:
+    // `g~` is an iterator: nothing runs until something asks for values.
+    // So an endless source is fine, as long as something stops asking.
+    let first: Vec<u64> =
+        (g~ n * n for n in 1.. if n % 7 == 3) <- take 4 <- collect$
+    println! "{first:?}"
+
+    // `for` takes its iterable by value, as it does everywhere in Rust.
+    // Borrow to keep the collection.
+    let words = vec! (String.from "pipe") (String.from "matrix")
+    let lengths: Vec<usize> = (g~ (w <- len$) for w in (words <- iter$)) <- collect$
+    println! "{lengths:?} -- and still {words:?}"
+```
+
+```text
+[9, 100, 289, 576]
+[4, 6] -- and still ["pipe", "matrix"]
+```
+
+`g~` is an iterator, and like every iterator it is lazy: nothing is computed until something asks for a value. That is why `for n in 1..` — an endless range — is fine: `take 4` asks for four values and then stops asking.
+
+`for` takes its iterable by value, as a `for` loop does. Given the vector `words`, it would consume it. To keep the collection, give the comprehension a borrow: `for w in (words <- iter$)`. The rule is Rust's; the comprehension adds nothing to it.
+
+## 15.6 Collecting: `list~`, `set~`, `dict~`
+
+```
+use std.collections.(HashMap, HashSet)
+
+fn main$:
+    // The shorthands collect: a Vec, a HashSet, a HashMap.
+    let evens = list~ x for x in 0..10 if x % 2 == 0
+    let digits: HashSet<u32> = set~ n % 10 for n in [12, 22, 35, 45]
+    let ages: HashMap<&str, u32> = dict~ name => age for (name, age) in [("ada", 36), ("alan", 41)]
+
+    println! "{evens:?}"
+    let mut d: Vec<_> = digits <- into_iter$ <- collect$
+    d <- sort$
+    println! "{d:?}"
+    println! "{}" ages["alan"]
+
+    // A repeated key keeps the last value, as HashMap's insert does.
+    let last = dict~ (w <- len$) => w for w in ["one", "two", "three"]
+    println! "{}" last[&3]
+```
+
+```text
+[0, 2, 4, 6, 8]
+[2, 5]
+41
+two
+```
+
+`list~` collects into a `Vec`, `set~` into a `HashSet`, `dict~` into a `HashMap`. They take everything `g~` takes, and a result that is collected straight away needs no parentheses: the call is the whole value.
+
+`dict~` takes its entry as `key => value`. A key that turns up twice keeps its last value — that is what a `HashMap` does when a key is inserted again. Here "one" and "two" both have length 3, so the entry for 3 is "two". If you want every value for a key, you want a grouping, which is a different thing from a map.
+
+`g~` with `collect$` does the same as any of them, with the type chosen by the annotation: `let v: Vec<i32> = (g~ …) <- collect$`.
+
+## 15.7 What it stands for
+
+A generator comprehension is a chain written another way. Here is what `g~` writes for a two-level comprehension — the Harsh that `hrs expand` shows, laid out:
+
+```
+g~ x * 10 + y
+    for x in (0..6) if x % 2 == 0 if x > 0
+    for y in (0..6) if y > x if y % 2 == 1
+```
+
+becomes
+
+```
+(0..6) <- into_iter$
+<- flat_map (move |x|
+    ((true && (x % 2 == 0) && (x > 0)) <- then (||
+        (0..6) <- into_iter$
+        <- flat_map (move |y|
+            ((true && (y > x) && (y % 2 == 1)) <- then (|| x * 10 + y))))))
+<- flatten$
+```
+
+Each `for` becomes a `flat_map` whose closure binds the pattern. That level's `if`s are folded into one test, and `then` turns the test into an `Option`: the value when it holds, nothing when it does not. A `for` nested inside another lives in the outer closure's `then` — which is why its conditions can see `x`. The leading `true &&` is what makes a level with no `if` at all still read as a test.
+
+Two things are easy to misplace. **The `flatten$` is part of the generator.** The outer level yields one inner sequence per `x`, and `g~` flattens its own levels — every level but the innermost ends with it — so you never write it; `(g~ …) <- flatten$` would try to flatten the numbers themselves, and the compiler stops it. **The `collect$` is not part of it.** A generator is lazy, so it collects nothing; you write `(g~ …) <- collect$`, or use `list~`, `set~` or `dict~`, which collect for you.
+
+The proof that the two are the same:
+
+```
+fn main$:
+    let wanted: Vec<i32> =
+        (g~ x * 10 + y
+            for x in (0..6) if x % 2 == 0 if x > 0
+            for y in (0..6) if y > x if y % 2 == 1
+        ) <- collect$
+
+    // The same by hand: one `flat_map` per `for`, each level's conditions
+    // folded into one test, and the outer level flattened.
+    let inner =
+        |x: i32| (0..6) <- into_iter$
+            <- flat_map (move |y| ((true && (y > x) && (y % 2 == 1)) <- then (|| x * 10 + y)))
+    let written: Vec<i32> =
+        (0..6) <- into_iter$
+               <- flat_map (move |x| ((true && (x % 2 == 0) && (x > 0)) <- then (|| inner x)))
+               <- flatten$
+               <- collect$
+
+    println! "{wanted:?} {}" (wanted == written)
+```
+
+```text
+[23, 25, 45] true
+```
+
+And for a single level, the chain you would have written by hand:
+
+```
+fn main$:
+    let scores = vec! 72 45 91 60 88
+
+    // A comprehension...
+    let a: Vec<i32> = (g~ s + 5 for s in (scores <- iter$) if *s >= 60) <- collect$
+    // ...and the chain it stands for.
+    let b: Vec<i32> =
+        scores <- iter$
+               <- filter (|s| **s >= 60)
+               <- map (|s| s + 5)
+               <- collect$
+    println! "{a:?} {}" (a == b)
+```
+
+```text
+[77, 96, 65, 93] true
+```
+
+The expansion is exactly what you would write yourself, so a comprehension costs nothing that the chain does not.
+
+Which to write is a question of reading. A comprehension says what the result contains; a chain says what is done to the input, step by step. Nested loops, a filter on each level, a value built from several names — those read better as a comprehension. A long pipeline of transformations reads better as a chain.
+
+## 15.8 Your own `g`
+
+The prelude's names are defaults, not reserved words. If a file defines its own `macro_rules~ g`, that one is used in the file. The prelude's is still there under its full name, `hrs_std.g~`. The shorthands use the full name themselves, so they keep working whatever you define.
+
+## 15.9 What you have
+
+`g~ value for pattern in iterable if condition for pattern in iterable if condition …`, the generator comprehension — as many `for`s as you like, each with its own `if`s, each condition seeing only the names bound before it, so a test goes after the last `for` whose name it uses. It is a lazy iterator: it flattens its own levels, and it collects nothing until asked. `for` takes its iterable by value. `list~`, `set~` and `dict~ key => value for …` collect into a `Vec`, a `HashSet` and a `HashMap`. A comprehension is written on one line or one clause per line, and is isolated in parentheses when chained on.
+
+Next: matrices, and the linear algebra that makes Harsh a language for data.
+
+# 16. Matrices and linear algebra
+
+The third thing Harsh adds is linear algebra that reads like Julia's. A matrix literal with the same grammar, `*` meaning the matrix product, `A \ b` solving a system, and the same errors when sizes do not fit. If you have written Julia, nothing here will surprise you; if you have not, it is the notation of the textbooks, which is why Julia chose it.
+
+The literals, `m~` and `v~`, are part of the language — they are in the prelude, like `g~`. The types they build, `Matrix` and `Vector`, live in `hrs_std`, Harsh's standard library, a crate you add to a project once:
+
+```toml
+[dependencies]
+hrs_std = "0.1"
+```
+
+A project that uses `m~` without it is stopped by `hrs`, with that line to add.
+
+## 16.1 Writing a matrix
+
+`Cargo.toml`
+
+```text
+[dependencies]
+hrs_std = "0.1"
+```
+
+`src/main.hrs`
+
+```
+fn main$:
+    // Spaces between entries, `;` between rows.
+    let a = m~ [1 2 3; 4 5 6]
+    println! "{a}"
+
+    // A line break is a `;`: write a matrix as it reads.
+    let b =
+        m~ [1 2 3
+            4 5 6]
+    // A bracket inside is a block: here, three columns side by side.
+    let c = m~ [[1, 4] [2, 5] [3, 6]]
+    println! "{} {}" (a == b) (a == c)
+
+    // Commas make a vector, which is a column.
+    let v = v~ [0.5, 1.5, 2.5]
+    println! "{v}"
+```
+
+```text
+$ hrs run
+2×3 Matrix<i32>:
+ 1 2 3
+ 4 5 6
+true true
+3-element Vector<f64>:
+ 0.5
+ 1.5
+ 2.5
+```
+
+Three rules build every matrix literal, and they compose:
+
+- a **space** puts things side by side;
+- a **`;`** or a **line break** puts them one above another;
+- a **comma** makes the entries of a vector, which is a column.
+
+A bracket inside the literal is a *block*, built by the same rules: `[1, 4]` is a column, so `[[1, 4] [2, 5] [3, 6]]` is three columns side by side — the same matrix as `[1 2 3; 4 5 6]`. The rules are Julia's, and so are the refusals: `m~ [[1 2], [3 4]]` is not a matrix, because a comma never joins — in Julia it is a vector holding two matrices — and `v~ [1 2 3]` is not a vector, because spaces make a row, which is a matrix.
+
+A matrix prints its size and the type of its entries, as Julia's do. Sizes are values, not part of the type: a `Matrix<i32>` may be any size, and its size is known when the program runs.
+
+## 16.2 Arithmetic
+
+`Cargo.toml`
+
+```text
+[dependencies]
+hrs_std = "0.1"
+```
+
+`src/main.hrs`
+
+```
+fn main$:
+    let a = m~ [1.0 2.0; 3.0 4.0]
+    let b = m~ [0.0 1.0; 1.0 0.0]
+    let x = v~ [1.0, 1.0]
+
+    println! "{}" (&a * &b)
+    println! "{}" (2.0 * (&a + &b))
+    println! "{}" (&a * &x)
+    println! "{:?}" (a <- size$)
+    println! "{}" (a <- transpose$)
+```
+
+```text
+$ hrs run
+2×2 Matrix<f64>:
+ 2 1
+ 4 3
+2×2 Matrix<f64>:
+ 2 6
+ 8 8
+2-element Vector<f64>:
+ 3
+ 7
+(2, 2)
+2×2 Matrix<f64>:
+ 1 3
+ 2 4
+```
+
+`*` between two matrices is the matrix product. Between a number and a matrix it scales every entry. Between a matrix and a vector it gives a vector. Nothing marks which is meant: the compiler chooses from what is being multiplied, the way Julia chooses when the program runs.
+
+`&a * &b` borrows the two matrices, so they can be used again; `a * b` would consume them. That is Rust's ownership rule, and the one visible difference from Julia. `size$` gives the rows and the columns, and `transpose$` is Julia's `transpose` — the `A'` of Julia is not available, because `'` begins a character or a lifetime in Rust.
+
+## 16.3 The identity
+
+`Cargo.toml`
+
+```text
+[dependencies]
+hrs_std = "0.1"
+```
+
+`src/main.hrs`
+
+```
+use hrs_std.(UniformScaling, I)
+
+fn main$:
+    let a = m~ [1 2; 3 4]
+    let u = UniformScaling 2
+    println! "{}" (&a + u)
+    println! "{}" (&a * u)
+    println! "{}" (&a + I)
+```
+
+```text
+$ hrs run
+2×2 Matrix<i32>:
+ 3 2
+ 3 6
+2×2 Matrix<i32>:
+ 2 4
+ 6 8
+2×2 Matrix<i32>:
+ 2 2
+ 3 5
+```
+
+`UniformScaling k` is Julia's: `k` times an identity matrix of whatever size the other side needs. `I` is the identity itself. `a + I` adds one along the diagonal; `a * u` scales by `k`.
+
+## 16.4 Joining matrices
+
+`Cargo.toml`
+
+```text
+[dependencies]
+hrs_std = "0.1"
+```
+
+`src/main.hrs`
+
+```
+fn main$:
+    let a = m~ [1 2; 3 4]
+    let z = m~ [0 0; 0 0]
+    println! "{}" (m~ [(&a) (&z)])
+    println! "{}" (m~ [(&a) (&z)
+                       (&z) (&a)])
+```
+
+```text
+$ hrs run
+2×4 Matrix<i32>:
+ 1 2 0 0
+ 3 4 0 0
+4×4 Matrix<i32>:
+ 1 2 0 0
+ 3 4 0 0
+ 0 0 1 2
+ 0 0 3 4
+```
+
+A block can be any matrix, not only a number, so the literal that builds a matrix from numbers also joins matrices: side by side with a space, one above another with a `;` or a new line. Here a 2×2 block matrix and a 4×4 one. Each block is isolated in parentheses, `(&a)`, as any argument with an operator in it is.
+
+## 16.5 Solving
+
+`Cargo.toml`
+
+```text
+[dependencies]
+hrs_std = "0.1"
+```
+
+`src/main.hrs`
+
+```
+fn main$:
+    // 2x + y = 5 and x + y = 3, as a matrix and a vector.
+    let a = m~ [2.0 1.0; 1.0 1.0]
+    let b = v~ [5.0, 3.0]
+    // Julia's `a \ b`.
+    let x = a <- solve (&b)
+    println! "x = {}, y = {}" x[0] x[1]
+
+    println! "det {}" (a <- det$)
+    println! "{}" (a <- inv$)
+
+    let v = v~ [3.0, 4.0]
+    println! "length {}, dot {}" (v <- norm$) (v <- dot (&v))
+```
+
+```text
+$ hrs run
+x = 2, y = 1
+det 1
+2×2 Matrix<f64>:
+ 1 -1
+ -1 2
+length 5, dot 25
+```
+
+`a <- solve (&b)` is Julia's `a \ b`: the `x` for which `a * x` equals `b`. Harsh cannot use `\` for it — `\` opens a specification block — so the method is named for what it does. `det$` and `inv$` are the determinant and the inverse, with Julia's names. Asking for the inverse of a matrix that has none stops the program with Julia's `SingularException`.
+
+A vector has a length, `norm$`, and a dot product, `dot`. Entries are read by index: `v[0]` for a vector and `a[(0, 1)]` for a matrix. Indexes start at 0, as they do for every collection in Harsh — this is the one place Harsh departs from Julia, which counts from 1.
+
+## 16.6 Fitting a line
+
+`Cargo.toml`
+
+```text
+[dependencies]
+hrs_std = "0.1"
+```
+
+`src/main.hrs`
+
+```
+use hrs_std.Matrix
+
+fn main$:
+    // Hours studied, and the score each student got.
+    let hours = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0]
+    let score = v~ [52.0, 55.0, 61.0, 64.0, 70.0, 73.0]
+
+    // The design matrix, one row per student: a 1 for the intercept,
+    // then the hours. A comprehension builds the rows.
+    let x = Matrix.from_rows (list~ (vec! 1.0 h) for h in hours)
+
+    // Julia's `β = X \ y`: for a tall matrix, the least-squares fit.
+    let beta = x <- solve (&score)
+    println! "score = {:.2} + {:.2} × hours" beta[0] beta[1]
+
+    let fitted = &x * &beta
+    println! "residual {:.2}" ((&score - &fitted) <- norm$)
+    println! "7 hours: {:.1}" (beta[0] + beta[1] * 7.0)
+```
+
+```text
+$ hrs run
+score = 47.20 + 4.37 × hours
+residual 1.76
+7 hours: 77.8
+```
+
+This is linear regression: a straight line through data that does not lie on one. Given students' hours and scores, find the intercept and slope that fit best.
+
+Each student is a row of the *design matrix*: a 1, which will be multiplied by the intercept, and their hours, which will be multiplied by the slope. A comprehension builds those rows from the data. The matrix has six rows and two columns — more equations than unknowns — so no line fits every point exactly, and `solve` returns the *least-squares* line: the one that makes the total squared error smallest. That is what Julia's `X \ y` does for a tall matrix, and it is the first step of most statistics and machine learning. The residual measures what the line leaves unexplained, and the line predicts a score for seven hours.
+
+## 16.7 Taking a part
+
+`Cargo.toml`
+
+```text
+[dependencies]
+hrs_std = "0.1"
+```
+
+`src/main.hrs`
+
+```
+fn main$:
+    // Three days of readings from three sensors: a row a day.
+    let mut readings = m~ [21 22 19; 22 24 21; 18 19 17]
+    let first_two_days = readings <- slice (0..2) (..)
+    println! "{first_two_days}"
+    let day_one = readings <- slice 1 (..)
+    println! "{day_one}"
+    // The index borrows: a view, nothing copied.
+    println! "{}" (&readings[1.., ..=1])
+    let kept = readings[1.., ..=1] <- copy$
+    // An element, then a whole row, written through.
+    readings[0, 0] = 20
+    readings[2, ..] <- fill 0
+    println! "{readings}"
+    println! "{kept}"
+```
+
+```text
+$ hrs run
+2×3 Matrix<i32>:
+ 21 22 19
+ 22 24 21
+3-element Vector<i32>:
+ 22
+ 24
+ 21
+2×2 view of Matrix<i32>:
+ 22 24
+ 18 19
+3×3 Matrix<i32>:
+ 20 22 19
+ 22 24 21
+ 0 0 0
+2×2 Matrix<i32>:
+ 22 24
+ 18 19
+```
+
+A matrix is rarely wanted whole. `readings <- slice (0..2) (..)` takes rows 0 and 1 and every column, as a matrix of its own. The ranges are the ones you know from chapter 8 — counted from 0, the end left out — and `..` by itself means *all of it*. Name an axis with a single number and that axis disappears: `slice 1 (..)` is one day, a vector, not a 1×3 matrix.
+
+The index does the same without copying. `&readings[1.., ..=1]` is a *view*: a window onto `readings`, borrowed, exactly as `&names[1..3]` is a window onto a vector in chapter 4 — and the borrow checker guards it in the same way, so a view cannot outlive or be written under the matrix it looks into. `<- copy$` turns a view into a matrix you own. What can be read this way can be written: `readings[0, 0] = 20` sets one element, and `readings[2, ..] <- fill 0` a whole row.
+
+An index with several axes is written with a comma, `readings[0, 0]`. The comma makes the axes one value, a tuple, so `readings[(0, 0)]` means the same; the rule is the language's, not the matrix's, and any type indexed by a tuple may be written so.
+
+Julia writes a part `readings[2:3, 1:2]`, counting from 1 and including the end. Harsh keeps the ranges of every other collection, so there is one way to count in a program.
+
+## 16.8 Element by element
+
+`Cargo.toml`
+
+```text
+[dependencies]
+hrs_std = "0.1"
+```
+
+`src/main.hrs`
+
+```
+fn relu (x: f64) -> f64:
+    x <- max 0.0
+
+fn main$:
+    let scores = m~ [1.0 -2.0; -3.0 4.0]
+    let weights = m~ [10.0 20.0; 30.0 40.0]
+    let bias = m~ [100.0 200.0]
+    // The product, and then the same two matrices element by element.
+    println! "{}" (&scores * &weights)
+    println! "{}" (&scores .* &weights)
+    // A number and a row stretch to fit.
+    println! "{}" (&scores .* 2.0 .+ &bias)
+    // A function applied to each element; two arguments; a closure.
+    println! "{}" (relu<> scores)
+    println! "{}" (f64.powf<> scores 2.0)
+    println! "{}" ((|s, w| s > 0.0 && w > 15.0)<> scores weights)
+    // In a pipeline, and `scores` is still ours afterwards.
+    println! "{}" (scores |> relu<> |> f64.sqrt<>)
+    println! "{} by {}" (scores <- nrows$) (scores <- ncols$)
+```
+
+```text
+$ hrs run
+2×2 Matrix<f64>:
+ -50 -60
+ 90 100
+2×2 Matrix<f64>:
+ 10 -40
+ -90 160
+2×2 Matrix<f64>:
+ 102 196
+ 94 208
+2×2 Matrix<f64>:
+ 1 0
+ 0 4
+2×2 Matrix<f64>:
+ 1 4
+ 9 16
+2×2 Matrix<bool>:
+ false false
+ false true
+2×2 Matrix<f64>:
+ 1 0
+ 0 2
+2 by 2
+```
+
+`*` between two matrices is the matrix product. With a dot before it, `.*`, the operation is applied *element by element*: the first with the first, the second with the second. `.+`, `.-` and `./` are the same. The two sides need not be the same size, as long as they can be *stretched* to it: along each axis the two lengths must be equal, or one of them 1. So a number combines with a matrix, and so does a single row — `bias` is added to every row of the result. A size that cannot stretch stops the program, as in the next section.
+
+`relu<> scores` applies the function `relu` to each element. `<>` is a mark written tight against a function, like the `$` of chapter 3: `f$` applies `f` to nothing, `f<>` applies it to each. It takes up to three arguments and stretches them as the dotted operators do, so `f64.powf<> scores 2.0` squares every element; it works on a closure in parentheses; the elements may change type, as the comparison does, giving a matrix of `bool`; and it takes its place in a pipeline. It only ever borrows: `scores` is still there at the end.
+
+Beneath the mark is a method, `scores <- map relu`, as `slice` is beneath the index.
+
+A dotted operator keeps the rank of the operator it is made from: `x + a .* b` multiplies first, and `a * b .* c` works from left to right. Julia writes these `a .* b` and `f.(a)`. The first is the same in Harsh; the second could not be, because `f.(a)` already begins a group of paths, as in a `use`.
+
+## 16.9 When the sizes do not fit
+
+`Cargo.toml`
+
+```text
+[dependencies]
+hrs_std = "0.1"
+```
+
+`src/main.hrs`
+
+```
+fn main$:
+    let a = m~ [1 2 3; 4 5 6]
+    // A 2×3 matrix times a 2×3 matrix: the inner sizes, 3 and 2, differ.
+    println! "{}" (&a * &a)
+```
+
+```text
+$ hrs run
+thread 'main' panicked at src/main.hrs:4:20:
+DimensionMismatch: matrix A has dimensions (2, 3), matrix B has dimensions (2, 3)
+```
+
+A product needs the columns of the left matrix to match the rows of the right. Sizes are known when the program runs, not when it compiles, so a mismatch is caught then and reported in Julia's words: `DimensionMismatch`, with the two sizes.
+
+## 16.10 What you have
+
+`m~ [1 2; 3 4]` — spaces for side by side, `;` or a new line for one above another, brackets for blocks — and `v~ [1, 2, 3]` for a vector. `*` is the product, scaling or matrix-times-vector by what it multiplies; `+` and `-` are entrywise. `UniformScaling k` and `I` for the identity. `solve` for Julia's `\`, exact for a square matrix and least squares for a tall one; `inv$`, `det$`, `transpose$`, `norm$`, `dot`. Sizes are values checked at run time, and indexes start at 0. The types come from `hrs_std`.
+
+`slice` copies a part and an index with ranges borrows one; `.*` and its kin work element by element, and `f<>` applies a function to each.
+
+Next: back to Rust's own ground — cargo, and the second half of the book.
+
+# 17. More about cargo
 
 Cargo has done the building so far, and it does more: release builds, documentation, publishing, and workspaces for a project of several crates. This chapter is short and mostly about commands, because there is little to show that compiles — but one thing, documentation comments, is code in your files and worth seeing through the transpiler.
 
-## 14.1 Build profiles
+## 17.1 Build profiles
 
 `cargo build` (and `hrs build`) uses the *dev* profile: fast to compile, unoptimised, with debug assertions and overflow checks on. `cargo build --release` uses the *release* profile: slow to compile, optimised, checks off, and this is the binary you ship or benchmark. The profiles are configurable in `Cargo.toml`:
 
@@ -5623,7 +6485,7 @@ opt-level = 3
 
 `opt-level` runs from 0 to 3; those are the defaults, and you change them when you have a reason — a dev build of a program that is too slow to test unoptimised, for instance. Harsh adds nothing here: `hrs build --release` passes the flag through.
 
-## 14.2 Documentation comments
+## 17.2 Documentation comments
 
 Rust has a comment form that becomes documentation. `///` documents the item that follows; `//!` documents the enclosing item, and at the top of a file that is the crate or module itself:
 
@@ -5656,7 +6518,7 @@ $ hrs test
 running 1 test
 test target/hrs/lib.rs - add_one (line 10) ... ok
 
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.17s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.18s
 ```
 
 `cargo doc --open` renders every `///` and `//!` in the crate as HTML, with the Markdown inside them — headings, code blocks, links — laid out. The conventional sections are `# Examples`, `# Panics` (when the function can), `# Errors` (what `Err`s it returns) and `# Safety` (for `unsafe` functions). The example in the `///` is Harsh, like everything else in the file, and `cargo test` *runs it* — every code block in a doc comment is a test, so documentation cannot drift from the code without failing the build.
@@ -5714,11 +6576,11 @@ Orange
 
 Inside, `PrimaryColor` lives in `kinds` and `mix` in `utils`, which is a sensible arrangement for the authors. A user does not care, and without the re-exports would have to write `art.utils.mix` and `art.kinds.PrimaryColor` and know which was where. The three `pub use` lines put all of them at the top of the crate; `cargo doc` lists the re-exports on the front page, and the user's `use art.(mix, PrimaryColor)` is the whole of what they learn about the layout.
 
-## 14.3 Publishing
+## 17.3 Publishing
 
 `crates.io` is the registry `cargo` fetches dependencies from, and publishing to it is `cargo publish` after `cargo login` once with a token from the site. `Cargo.toml` needs `name` (unique on the registry), `version`, `description` and `license` before the registry will accept it; a publish is permanent, since other crates may depend on it — versions can be *yanked* (`cargo yank --vers 1.0.1`) to stop new projects picking them up, but never deleted. For a Harsh crate, `hrs export` writes the transpiled Rust as a plain crate under `target/export`, which is what you publish: the registry, and the people who depend on you, see Rust.
 
-## 14.4 Workspaces
+## 17.4 Workspaces
 
 A *workspace* is a set of packages sharing one `Cargo.lock` and one `target/` directory, for a project that has grown to several crates — a binary and the libraries it is split into, say. The root `Cargo.toml` lists the members:
 
@@ -5729,21 +6591,21 @@ members = ["adder", "add_one"]
 
 and each member is an ordinary package in its own directory, depending on its siblings by path (`add_one = { path = "../add_one" }`). `cargo build` at the root builds them all; `cargo test -p add_one` tests one. `hrs` walks each member's `src/` in turn.
 
-## 14.5 Installing binaries
+## 17.5 Installing binaries
 
 `cargo install crate_name` fetches a crate from the registry, builds its binary and puts it in `~/.cargo/bin`, which is on your `PATH` once Rust is installed — it is how command-line tools written in Rust get distributed, and how `hrs` itself is installed from its repository (`cargo install --path .`). Any binary named `cargo-something` on the `PATH` also becomes a subcommand, `cargo something`, which is how cargo's own set of commands is extended.
 
-## 14.6 What you have
+## 17.6 What you have
 
 `--release` for the optimised build; `///` and `//!` for documentation that `cargo doc` renders and `cargo test` runs; `pub use` to give a crate a public shape; `cargo publish` for the registry, from `hrs export`'s Rust; workspaces for several crates; `cargo install` for tools. None of it is Harsh's, and all of it works on the transpiled tree.
 
 Next: smart pointers — `Box`, `Rc` and `RefCell`, which are how Rust does the data structures a garbage-collected language takes for granted.
 
-# 15. Smart pointers
+# 18. Smart pointers
 
 A reference, `&T`, points at a value it does not own. A *smart pointer* is a struct that points at a value and *does* own it, with some rule about that ownership: `Box<T>` puts a value on the heap; `Rc<T>` lets several owners share one; `RefCell<T>` moves the borrow rules from compile time to run time. `String` and `Vec` are smart pointers too, by this definition — they own heap memory and know its length. What makes the three in this chapter worth a chapter is that between them they build the data structures that seem impossible under chapter 4's rules: recursive lists, shared graphs, values changed through a shared reference.
 
-## 15.1 `Box<T>`
+## 18.1 `Box<T>`
 
 A `Box` is the simplest: one value, on the heap, owned by the box:
 
@@ -5757,7 +6619,7 @@ fn main$:
 b = 5
 ```
 
-`Box.new 5` allocates and returns the box; `b` is used like the `i32` it holds, and freed when `b` goes out of scope. On its own that is pointless — an `i32` is happier on the stack — and boxes are for three situations: a type whose size is not known at compile time, a large value you want to move without copying, and a value you own but only care about the trait it implements (chapter 18). The first is the classic:
+`Box.new 5` allocates and returns the box; `b` is used like the `i32` it holds, and freed when `b` goes out of scope. On its own that is pointless — an `i32` is happier on the stack — and boxes are for three situations: a type whose size is not known at compile time, a large value you want to move without copying, and a value you own but only care about the trait it implements (chapter 21). The first is the classic:
 
 ```
 enum List
@@ -5804,7 +6666,7 @@ Cons(1, Cons(2, Cons(3, Nil)))
 
 `Cons (i32, Box<List>)` is an `i32` and a pointer, a fixed size, and the rest of the list is on the heap behind it. `use List.(Cons, Nil)` brings the variants in so the construction reads as `Cons 1 (Box.new (Cons 2 …))` — each `Cons` applied to a value and a boxed tail, each argument that is a call isolated. `Box` does nothing but own and point, which is why it is the pointer to reach for first.
 
-## 15.2 `Deref`: treating a pointer like a reference
+## 18.2 `Deref`: treating a pointer like a reference
 
 `*b` on a `Box` gives the value inside, as `*r` on a reference does. That works because `Box` implements the `Deref` trait, and you can implement it for a type of your own:
 
@@ -5846,7 +6708,7 @@ Hello, Rust!
 
 The second half is *deref coercion*: `hello` takes `&str`, and is passed `&m`, a `&MyBox<String>`. The compiler applies `Deref` as many times as needed to make the types meet — `&MyBox<String>` to `&String` to `&str` — so the call compiles as written. The last line spells out what the coercion did: `&(*m)[..]`. This is the mechanism behind every `&String` that was passed where a `&str` was wanted since chapter 4; it was never a special case, only `Deref`.
 
-## 15.3 `Drop`: code that runs on cleanup
+## 18.3 `Drop`: code that runs on cleanup
 
 A smart pointer's other half is what happens when it goes away. The `Drop` trait is a method the compiler calls when a value goes out of scope:
 
@@ -5879,7 +6741,7 @@ Dropping CustomSmartPointer with data `other stuff`!
 
 `impl Drop for CustomSmartPointer` with `fn drop (&mut self)` — the body runs at the end of the owner's scope, in reverse order of creation, which is why `d` is dropped after `c` would have been. `Box` uses `Drop` to free its heap memory, `File` to close the file, a lock guard to release the lock. You cannot call `x <- drop$` yourself — that would leave `x` in scope, to be dropped again — but you can call the function `drop x`, which takes the value and ends it now; the example does, and `c`'s message appears before the last `println!`. Deterministic cleanup with no `finally` and no garbage collector is what `Drop` gives, and it is most of the reason Rust needs no `defer`.
 
-## 15.4 `Rc<T>`: shared ownership
+## 18.4 `Rc<T>`: shared ownership
 
 Chapter 4 said a value has exactly one owner. Sometimes that is the wrong model — a node in a graph belongs to every edge that reaches it — and `Rc<T>`, the *reference-counted* pointer, is how Rust expresses it:
 
@@ -5919,11 +6781,11 @@ count after creating c = 3
 count after c goes out of scope = 2
 ```
 
-`a` is a list held in an `Rc`; `b` and `c` are lists that each *share* `a` as their tail, by `Rc.clone (&a)`. `Rc.clone` does not copy the list; it increments a count and returns another pointer to the same allocation, and `Rc.strong_count` shows the count going 1, 2, 3 and back to 2 when `c` is dropped. The value is freed when the count reaches zero — when the last owner is gone — and that is the whole rule. Two things to know: `Rc.clone` is the conventional spelling precisely because it is *not* a deep copy, so a reader can tell the cheap clones from the expensive ones; and `Rc` is for a single thread — chapter 16 has `Arc` for the rest.
+`a` is a list held in an `Rc`; `b` and `c` are lists that each *share* `a` as their tail, by `Rc.clone (&a)`. `Rc.clone` does not copy the list; it increments a count and returns another pointer to the same allocation, and `Rc.strong_count` shows the count going 1, 2, 3 and back to 2 when `c` is dropped. The value is freed when the count reaches zero — when the last owner is gone — and that is the whole rule. Two things to know: `Rc.clone` is the conventional spelling precisely because it is *not* a deep copy, so a reader can tell the cheap clones from the expensive ones; and `Rc` is for a single thread — chapter 19 has `Arc` for the rest.
 
 An `Rc<T>` only hands out *shared* references to its value. Several owners and one of them writing would be the data race of chapter 4, so through an `Rc` the value is read-only. Which leaves the question of how to change something that is shared.
 
-## 15.5 `RefCell<T>`: borrowing checked at run time
+## 18.5 `RefCell<T>`: borrowing checked at run time
 
 The borrow rules — one `&mut` or many `&`, never both — are enforced by the compiler, on what it can prove:
 
@@ -5996,7 +6858,7 @@ already borrowed: BorrowMutError
 
 Two `borrow_mut$` guards alive at once is exactly what the compiler forbids for `&mut`, and `RefCell` panics with `already borrowed`. The rules did not change; only when they are checked did. Use `RefCell` when you know the code respects the rules and the compiler cannot see it — a value mutated through shared handles, a mock object recording calls in a test — and accept that the check has moved from build time to the first run that violates it.
 
-## 15.6 Reference cycles
+## 18.6 Reference cycles
 
 `Rc` frees when the count reaches zero; two `Rc`s that point at each other never reach zero, and the memory leaks. Rust does not prevent this — a leak is safe, just wasteful — so structures with pointers in both directions use a `Weak<T>` for one direction. A weak pointer does not count toward ownership, and to use it you `upgrade$` it into an `Option<Rc<T>>` that is `None` if the value is gone:
 
@@ -6015,7 +6877,7 @@ fn main$:
         Rc.new (Node\
             value = 3
             parent = RefCell.new (Weak.new$)
-            children = RefCell.new (vec! [])
+            children = RefCell.new (vec!$)
         )
     println!
         "leaf strong = {}, weak = {}"
@@ -6027,7 +6889,7 @@ fn main$:
             Rc.new (Node\
                 value = 5
                 parent = RefCell.new (Weak.new$)
-                children = RefCell.new (vec! [Rc.clone (&leaf)])
+                children = RefCell.new (vec! (Rc.clone (&leaf)))
             )
         *leaf <- parent <- borrow_mut$ = Rc.downgrade (&branch)
         println!
@@ -6061,17 +6923,17 @@ leaf strong = 1, weak = 0
 
 A tree: a `Node` owns its children (`Rc`) and *knows* its parent (`Weak`). `leaf` starts with no parent; inside the block `branch` is made with `leaf` as a child, and `leaf`'s parent is set with `Rc.downgrade (&branch)` — a weak pointer, so `branch`'s strong count stays 1 and its weak count becomes 1. When the block ends `branch` is dropped, the strong count hits zero, the node is freed, and `leaf`'s `upgrade$` afterwards returns `None`: the parent is gone and the child knows it. No cycle, no leak, and the counts printed at each step show exactly why.
 
-## 15.7 What you have
+## 18.7 What you have
 
 `Box<T>` owns one heap value and makes a recursive type finite. `Deref` makes a pointer usable as a reference and drives the coercion from `&String` to `&str`. `Drop` runs cleanup at the end of scope, in order, and `drop x` runs it early. `Rc<T>` gives a value several owners and frees it when the last is gone; `RefCell<T>` moves the borrow rules to run time so a shared value can be changed; together they make shared mutable structures; and `Weak<T>` breaks the cycles that would otherwise leak.
 
 Next: concurrency — threads, channels and the `Mutex`, and how the ownership rules make data races a compile error.
 
-# 16. Fearless concurrency
+# 19. Fearless concurrency
 
 Concurrent code — several things happening at once, on threads — is where most languages' worst bugs live: data races, where two threads touch one value with no ordering; deadlocks; values used after the thread that owned them is gone. Rust makes the first of those a compile error, using nothing new: the ownership and borrowing rules of chapter 4, plus two traits that say which types may cross a thread boundary. The result is what the Rust community calls *fearless* concurrency — not that it is easy, but that the compiler catches the class of mistake that is otherwise found in production at three in the morning. This chapter is threads, message passing, shared state, and the two traits.
 
-## 16.1 Threads
+## 19.1 Threads
 
 `thread.spawn` runs a closure on a new thread and returns a handle:
 
@@ -6106,7 +6968,7 @@ Usually it captures something, and this is where ownership meets threads:
 use std.thread
 
 fn main$:
-    let v = vec! [1, 2, 3]
+    let v = vec! 1 2 3
 
     let handle = thread.spawn ||:
         println! "Here's a vector: {v:?}"
@@ -6132,7 +6994,7 @@ The closure borrows `v`, and the compiler asks a question the language forces: h
 use std.thread
 
 fn main$:
-    let v = vec! [1, 2, 3]
+    let v = vec! 1 2 3
 
     let handle = thread.spawn move ||:
         println! "Here's a vector: {v:?}"
@@ -6146,7 +7008,7 @@ Here's a vector: [1, 2, 3]
 
 `move ||:` — chapter 13's `move`, moving `v` into the closure, which then owns it for as long as the thread runs. This is the one place `move` is not optional, and the error when it is missing is precise.
 
-## 16.2 Message passing
+## 19.2 Message passing
 
 One way to share data between threads is not to share it: send it. A *channel* has a transmitter and a receiver, and a value sent down it is moved from one thread to the other:
 
@@ -6236,7 +7098,7 @@ fn main$:
 
 `tx <- clone$` makes a second transmitter for the second thread. `rx <- iter$` yields each message as it arrives and ends when *every* transmitter has been dropped — both threads finish, their `tx`s go out of scope, the iterator stops, and `collect$` has all eight words. (They are sorted before printing because the two threads' messages interleave in an order the scheduler decides, and the book's output has to be the same every build.)
 
-## 16.3 Shared state
+## 19.3 Shared state
 
 The other way is to share the data and take turns. A `Mutex` — *mutual exclusion* — holds a value and gives out access to one thread at a time:
 
@@ -6258,9 +7120,9 @@ fn main$:
 m = Mutex { data: 6, poisoned: false, .. }
 ```
 
-`m <- lock$` blocks until the lock is free and returns a *guard* that derefs to the value: `*num = 6` writes through it. The guard implements `Drop`, and dropping it releases the lock — which happens at the end of the `do:` block here, and would happen at the end of any scope, so a lock cannot be forgotten. This is chapter 15's `Deref` and `Drop` doing the work: the API that makes a mutex hard to misuse is made of two traits.
+`m <- lock$` blocks until the lock is free and returns a *guard* that derefs to the value: `*num = 6` writes through it. The guard implements `Drop`, and dropping it releases the lock — which happens at the end of the `do:` block here, and would happen at the end of any scope, so a lock cannot be forgotten. This is chapter 18's `Deref` and `Drop` doing the work: the API that makes a mutex hard to misuse is made of two traits.
 
-To share a mutex between threads, it needs several owners, and chapter 15's answer to that was `Rc`:
+To share a mutex between threads, it needs several owners, and chapter 18's answer to that was `Rc`:
 
 ```
 use std.rc.Rc
@@ -6269,7 +7131,7 @@ use std.thread
 
 fn main$:
     let counter = Rc.new (Mutex.new 0)
-    let mut handles = vec! []
+    let mut handles = vec!$
 
     for _ in 0..10:
         let counter = Rc.clone (&counter)
@@ -6307,7 +7169,7 @@ use std.thread
 
 fn main$:
     let counter = Arc.new (Mutex.new 0)
-    let mut handles = vec! []
+    let mut handles = vec!$
 
     for _ in 0..10:
         let counter = Arc.clone (&counter)
@@ -6330,7 +7192,7 @@ Result: 10
 
 `Arc.new (Mutex.new 0)`, `Arc.clone (&counter)` for each thread, `move` the clone into the closure, lock, increment; join all ten; read the result. Ten threads incremented one counter and the answer is ten, and any attempt to write the program without the lock — an `Arc<i32>` and `+= 1` — would not compile, because `Arc` only hands out shared references. The pattern `Arc<Mutex<T>>` is the standard shape of shared mutable state across threads, and every piece of it is a chapter you have read.
 
-## 16.4 `Send` and `Sync`
+## 19.4 `Send` and `Sync`
 
 The rejection of `Rc` came from two *marker traits* — traits with no methods, that a type implements to make a claim:
 
@@ -6339,17 +7201,17 @@ The rejection of `Rc` came from two *marker traits* — traits with no methods, 
 
 Both are implemented automatically for any type made entirely of `Send`/`Sync` parts, so you rarely write them; you meet them as the bound `spawn` puts on its closure, and as the error when a type does not qualify. They are the whole of Rust's concurrency guarantee: the rules of chapter 4 decide who may touch what, and these two traits decide which types may cross the line, and the compiler checks both.
 
-## 16.5 What you have
+## 19.5 What you have
 
 `thread.spawn` with a `move` closure and `join$` on the handle. Channels — `mpsc.channel$`, `send` moves a value across, `recv$` and `rx <- iter$` receive, clone the transmitter for more producers — for sharing by not sharing. `Mutex` for taking turns, with a guard that unlocks on drop; `Arc` for owning one across threads; `Arc<Mutex<T>>` as the pattern. `Send` and `Sync`, which are what make the compiler refuse the unsafe versions.
 
 Next: `async` — concurrency without threads, for the programs that wait on the network more than they compute.
 
-# 17. Async
+# 20. Async
 
-Chapter 16's threads are the right tool when the work is computation. When the work is *waiting* — for a network reply, a file, a timer — a thread spends its time blocked, and a program with ten thousand connections cannot have ten thousand threads. `async` is Rust's answer: functions that can pause at the points where they would wait, and a *runtime* that runs many of them on a few threads, switching between them at those points. This chapter is `async`/`await`, tasks, joining and racing futures, and the one rule about blocking. The examples use the `tokio` runtime, because the language provides the syntax and the `Future` trait but deliberately no runtime; each example is a small project with a dependency, run with `hrs run`.
+Chapter 19's threads are the right tool when the work is computation. When the work is *waiting* — for a network reply, a file, a timer — a thread spends its time blocked, and a program with ten thousand connections cannot have ten thousand threads. `async` is Rust's answer: functions that can pause at the points where they would wait, and a *runtime* that runs many of them on a few threads, switching between them at those points. This chapter is `async`/`await`, tasks, joining and racing futures, and the one rule about blocking. The examples use the `tokio` runtime, because the language provides the syntax and the `Future` trait but deliberately no runtime; each example is a small project with a dependency, run with `hrs run`.
 
-## 17.1 `async` and `await`
+## 20.1 `async` and `await`
 
 `Cargo.toml`
 
@@ -6382,7 +7244,7 @@ hello, async
 
 Two things to hold: an `async fn` does nothing until awaited — calling it builds the future and returns immediately — and `await` can only appear inside an `async` function or block, because only those can pause.
 
-## 17.2 Tasks
+## 20.2 Tasks
 
 A *task* is the async counterpart of a thread: a future handed to the runtime to run independently:
 
@@ -6421,7 +7283,7 @@ hi number 2 from the first task!
 hi number 3 from the first task!
 ```
 
-`tokio.spawn async:` — `spawn` takes a future, and `async:` opens a block that is one, with its body beneath, laid out as a closure's would be. The two loops run interleaved on one thread: each `sleep <- await` is a point where the runtime switches to the other. `handle <- await` waits for the task, as `join$` did for a thread. The order of the lines is fixed here because a `current_thread` runtime switches only at awaits, deterministically; on a multi-threaded runtime it would vary, as chapter 16's did.
+`tokio.spawn async:` — `spawn` takes a future, and `async:` opens a block that is one, with its body beneath, laid out as a closure's would be. The two loops run interleaved on one thread: each `sleep <- await` is a point where the runtime switches to the other. `handle <- await` waits for the task, as `join$` did for a thread. The order of the lines is fixed here because a `current_thread` runtime switches only at awaits, deterministically; on a multi-threaded runtime it would vary, as chapter 19's did.
 
 ### Joining futures
 
@@ -6463,11 +7325,11 @@ hi number 2 from the first task!
 hi number 3 from the first task!
 ```
 
-`async:` blocks assigned to `let` are futures that have not started. `tokio.join! fut1 fut2` polls both, alternating whenever one waits, and finishes when both have — returning a tuple of their results, discarded here with a `;`. The difference from `spawn`: a joined future runs inside the current task and can borrow from it, where a spawned task is independent and must own what it uses (`move`, chapter 16 again).
+`async:` blocks assigned to `let` are futures that have not started. `tokio.join! fut1 fut2` polls both, alternating whenever one waits, and finishes when both have — returning a tuple of their results, discarded here with a `;`. The difference from `spawn`: a joined future runs inside the current task and can borrow from it, where a spawned task is independent and must own what it uses (`move`, chapter 19 again).
 
-## 17.3 Message passing
+## 20.3 Message passing
 
-Chapter 16's channel has an async twin, whose `recv` is a future:
+Chapter 19's channel has an async twin, whose `recv` is a future:
 
 `Cargo.toml`
 
@@ -6518,7 +7380,7 @@ received 'you'
 
 Three futures joined: two producers sending with delays and a receiver looping `while let Some value = rx <- recv$ <- await:`. The producers are `async move:` blocks — `move` so that each owns its transmitter — and the receiver ends when both transmitters have been dropped, which happens when the producer blocks finish. The messages interleave at the awaits, and because the runtime is single-threaded and the delays are equal, the order is fixed. With threads this program needed `Arc` for nothing and a `join` for each thread; here it is three blocks and one `join!`.
 
-## 17.4 Racing and timeouts
+## 20.4 Racing and timeouts
 
 Sometimes the first future to finish is the one you want:
 
@@ -6544,9 +7406,11 @@ async fn fast name: &str -> &str:
 
 #[tokio.main (flavor = "current_thread")]
 async fn main$:
-    let winner = tokio.select! do:        // a macro body written in Harsh\ arms, no commas
-        n = slow "slow" => n
-        n = fast "fast" => n
+    // The macro's own grammar, in braces; the Harsh is in the holes.
+    let winner = tokio.select! {
+        n = @: slow "slow" :@ => n,
+        n = @: fast "fast" :@ => n,
+    }
     println! "{winner} finished first"
 
     let result =
@@ -6561,9 +7425,9 @@ fast finished first
 true
 ```
 
-`tokio.select!` polls its arms and returns the first to complete, dropping the others — `fast` wins, and `slow` is cancelled mid-sleep. Its body is written like any Harsh block, `tokio.select! do:` with the arms beneath: a line with a `=>` in it is an arm and takes the comma Rust wants, and `slow "slow"` is a call as everywhere else. `tokio.time.timeout` is the common special case — a future and a limit, `Err` if the limit comes first — and here it does.
+`tokio.select!` polls its arms and returns the first to complete, dropping the others — `fast` wins, and `slow` is cancelled mid-sleep. Its arms are `select!`'s own grammar, written in braces as its documentation shows; the two futures, written in Harsh, sit in holes, `@: slow "slow" :@`.
 
-## 17.5 The one rule
+## 20.5 The one rule
 
 An async program shares its threads among all its tasks, so a task that *blocks* — a CPU-bound loop, a `std.thread.sleep`, a synchronous file read — stalls every other task on that thread. The rule is: never block in async code. When the work is blocking, hand it to a thread:
 
@@ -6597,17 +7461,17 @@ $ hrs run
 
 `spawn_blocking` runs the closure on a thread from a pool kept for the purpose, and returns a future that resolves to the closure's result; the runtime keeps turning while the thread works. The closure is a trailing `||:` with its body beneath, as in chapter 13. Everything in the standard library that blocks — `std.fs`, `std.thread.sleep`, `Mutex` held across an await — has this shape in async code: either an async version from the runtime (`tokio.fs`, `tokio.time.sleep`, `tokio.sync.Mutex`) or a `spawn_blocking`.
 
-## 17.6 What you have
+## 20.6 What you have
 
-`async fn` returns a future; `<- await` drives one and pauses the caller; a runtime — `#[tokio.main]` — drives `main`. `tokio.spawn async:` for an independent task, `async:` and `async move:` blocks as values, `tokio.join!` to run several to completion together, `tokio.select! do:` to take the first, `timeout` for a limit, async channels for messages between tasks, and `spawn_blocking` for anything that would block. Harsh lays out an `async:` block as it does a closure's body; everything else is Rust's.
+`async fn` returns a future; `<- await` drives one and pauses the caller; a runtime — `#[tokio.main]` — drives `main`. `tokio.spawn async:` for an independent task, `async:` and `async move:` blocks as values, `tokio.join!` to run several to completion together, `tokio.select! { … }` to take the first, `timeout` for a limit, async channels for messages between tasks, and `spawn_blocking` for anything that would block. Harsh lays out an `async:` block as it does a closure's body; everything else is Rust's.
 
 Next: the object-oriented features Rust has and the ones it deliberately lacks — and trait objects, which is how a `Vec` holds values of different types.
 
-# 18. Object-oriented features
+# 21. Object-oriented features
 
 Is Rust object-oriented? It has objects in the sense that matters — data with methods, encapsulated behind a public interface — and it has polymorphism, through traits. It does not have inheritance, on purpose, and this chapter is about what it offers instead: *trait objects*, which let a collection hold values of different types and call the same method on each, and the design consequences of choosing that over a class hierarchy.
 
-## 18.1 Encapsulation
+## 21.1 Encapsulation
 
 A struct with private fields and public methods is an object in the classic sense:
 
@@ -6618,7 +7482,7 @@ pub struct AveragedCollection
 
 impl AveragedCollection
     pub fn new$ -> Self:
-        Self\ list = vec! [], average = 0.0
+        Self\ list = vec!$, average = 0.0
 
     pub fn add (&mut self) (value: i32):
         self <- list <- push value
@@ -6659,7 +7523,7 @@ fn main$:
 
 `list` and `average` are private; `add`, `remove` and `average` are the interface; `update_average` is an implementation detail no caller can see. The cached average can never be stale, because every path that changes the list goes through a method that recomputes it — and the representation can change (a `HashSet`, say) without any caller noticing. This is chapter 7's privacy doing the job classes do elsewhere, and it needs no new feature.
 
-## 18.2 Trait objects
+## 21.2 Trait objects
 
 Chapter 8 held several types in one `Vec` by wrapping them in an enum, which works when the set of types is known when you write the enum. A GUI library cannot know what components its users will define. It needs "a vector of anything that can draw itself":
 
@@ -6702,21 +7566,23 @@ impl Draw for SelectBox
             (self <- options)
 
 fn main$:
+    let select_box =
+        SelectBox\
+            width = 75
+            height = 10
+            options =
+                vec!
+                    (String.from "Yes")
+                    (String.from "Maybe")
+                    (String.from "No")
+    let button =
+        Button\
+            width = 50
+            height = 10
+            label = String.from "OK"
     let screen =
         Screen\
-            components =
-                vec! [
-                    (Box.new (SelectBox\
-                        width = 75
-                        height = 10
-                        options = vec! [String.from "Yes", String.from "Maybe", String.from "No"]
-                     )),
-                         (Box.new (Button\
-                             width = 50
-                             height = 10
-                             label = String.from "OK"
-                          )),
-                          ]
+            components = vec! (Box.new select_box) (Box.new button)
     screen <- run$
 ```
 
@@ -6739,7 +7605,7 @@ pub struct Screen
 fn main$:
     let screen =
         Screen\
-            components = vec! [Box.new (String.from "Hi")]
+            components = vec! (Box.new (String.from "Hi"))
     let _ = screen
 ```
 
@@ -6747,7 +7613,7 @@ fn main$:
 error[E0277]: the trait bound `String: Draw` is not satisfied
   --> not_draw.hrs:10:32
    |
-10 |             components = vec! [Box.new (String.from "Hi")]
+10 |             components = vec! (Box.new (String.from "Hi"))
    |                                ^^^^^^^^^^^^^^^^^^^^^^^^^^ the trait `Draw` is not implemented for `String`
    = help: this trait has no implementations, consider adding one (hrs 1:1)
    = note: required for the cast from `Box<String>` to `Box<dyn Draw>`
@@ -6779,7 +7645,12 @@ impl Draw for Label
         println! "label '{}'" (self.0)
 
 fn main$:
-    let screen = Screen\ components = vec! [Label (String.from "a"), Label (String.from "b")]
+    let screen =
+        Screen\
+            components =
+                vec!
+                    (Label (String.from "a"))
+                    (Label (String.from "b"))
     screen <- run$
 ```
 
@@ -6792,7 +7663,7 @@ label 'b'
 
 One limit: not every trait can be a trait object. The method signatures must not mention `Self` as a return type or have type parameters — the compiler needs to know the method's calling convention without knowing the concrete type. `Clone` is the usual casualty (`fn clone (&self) -> Self`); a trait like that is *not object safe* and the error says so when you try.
 
-## 18.3 The state pattern
+## 21.3 The state pattern
 
 An object-oriented design pattern, done in Rust to see what fits and what does not. A blog post is a draft, then pending review, then published; its behaviour — what `content` returns, what `approve` does — depends on which. In the classic pattern each state is an object, and the post delegates to whichever it holds:
 
@@ -6925,17 +7796,17 @@ Now `Post.new$` returns a `DraftPost`, which has `add_text` and `request_review`
 
 That is the chapter's real lesson. Rust can express the object-oriented patterns, and sometimes they are right; but a pattern that exists to make invalid states unrepresentable at run time is often better expressed as types that make them unrepresentable at compile time. Chapter 9 said the same about `Guess`. Reach for the type first.
 
-## 18.4 What you have
+## 21.4 What you have
 
 Structs with private fields and public methods are encapsulated objects. `Box<dyn Trait>` is a trait object — any type implementing the trait, dispatched at run time, sized by the pointer — for collections of mixed types, checked at the cast. Generics for one type chosen at compile time. `self: Box<Self>` for a method that consumes a boxed value and returns a replacement. And the state pattern, done twice: as trait objects, and as types that make the invalid transitions uncompilable.
 
 Next: patterns — every place they appear and every form they take, since you have been using them since chapter 2.
 
-# 19. Patterns and matching
+# 22. Patterns and matching
 
 You have been writing patterns since chapter 2: `Ok n`, `Some max`, `(key, value)`, `Point { x, y }`. A *pattern* is a shape that a value is tested against and, when it fits, taken apart into names. This chapter collects every place a pattern can appear and every form one can take, so that the next time a value has a shape you can write the shape directly instead of reaching for it with methods. Harsh's contribution is the one you know: a variant with fields is matched by juxtaposition, `Coin.Quarter state`, the way it is constructed.
 
-## 19.1 Where patterns appear
+## 22.1 Where patterns appear
 
 ```
 fn main$:
@@ -6961,13 +7832,13 @@ fn main$:
         println! "Using blue as the background color"
     // while let
 
-    let mut stack = vec! [1, 2, 3]
+    let mut stack = vec! 1 2 3
 
     while let Some top = stack <- pop$:
         println! "{top}"
     // for
 
-    let v = vec! ['a', 'b', 'c']
+    let v = vec! 'a' 'b' 'c'
 
     for (index, value) in v <- iter$ <- enumerate$:
         println! "{value} is at index {index}"
@@ -6998,7 +7869,7 @@ Current location: (3, 5)
 
 Six places. `match` arms, where every case must be covered. `if let`, for one case, with `else if` and `else if let` chaining conditions and patterns freely — the example mixes a plain boolean between two pattern tests. `while let`, looping while a pattern keeps matching — popping a stack until it is empty. `for`, whose loop variable is a pattern: `(index, value)` takes apart the pairs `enumerate$` yields. `let`, whose left side is a pattern: `let (a, b, c) = …` is three bindings at once, and the plain `let x = 5` you have written a thousand times is a pattern too, one that matches anything. And function parameters, which are patterns as well: `&(x, y): &(i32, i32)` takes a reference to a tuple apart in the signature. The nested `fn` is legal Rust — an item inside a function, visible only there.
 
-## 19.2 Refutability
+## 22.2 Refutability
 
 A pattern that can fail to match is *refutable*; one that always matches is *irrefutable*. `Some x` is refutable, `x` and `(a, b)` are not. `let`, `for` and function parameters need an irrefutable pattern, because they have nothing to do when it fails; `if let`, `while let` and `match` arms accept a refutable one, because failing is what their `else`, their end, and their next arm are for:
 
@@ -7014,7 +7885,7 @@ error[E0005]: refutable pattern in local binding
   --> refutable.hrs:3:9
    |
  3 |     let Some x = some_option_value
-   |         ^^^^^^^^ pattern `None` not covered
+   |         ^^^^^^^ pattern `None` not covered
    = note: `let` bindings require an "irrefutable pattern", like a `struct` or an `enum` with only one variant
    = note: for more information, visit https://doc.rust-lang.org/book/ch18-02-refutability.html
    = note: the matched value is of type `Option<i32>`
@@ -7023,7 +7894,7 @@ error[E0005]: refutable pattern in local binding
 
 `let Some x = value` has nowhere to go when `value` is `None`, and the help offers the fix from chapter 6, `let … else`. The other direction is a warning rather than an error: `if let x = 5` is legal and pointless, and the compiler says so.
 
-## 19.3 The forms
+## 22.3 The forms
 
 ### Literals, names, ranges, alternatives
 
@@ -7203,7 +8074,7 @@ Some numbers: 2, 32
 
 `_` matches anything and binds nothing. In a parameter it is a value the function ignores (useful when a trait signature requires it); nested, it tests a shape without taking it apart — `(Some _, Some _)` is "both set" without caring what to; in a tuple it skips positions. `_` and a name starting with `_` differ in one way that matters: `_x` *binds* (and only silences the unused-variable warning), so `if let Some _s = s` would move the `String` out of `s`, while `if let Some _ = s` does not, and `s` is still printable after. `..` ignores *all remaining* parts: `Point { x, .. }` for a struct, `(first, .., last)` for a tuple, and it must be unambiguous — `(.., second, ..)` is an error, since the compiler cannot tell which position `second` means.
 
-## 19.4 Guards and bindings
+## 22.4 Guards and bindings
 
 ```
 enum Message
@@ -7256,17 +8127,17 @@ A *match guard* is an `if` after the pattern: the arm matches only if the patter
 
 `@` binds a name to a value *while* testing it: `id_variable @ 3..=7` matches ids from 3 to 7 and gives the arm the actual id, where `3..=7` alone would test without binding and `id` alone would bind without testing. It is the form for "I want to know it is in this range, and I want the value".
 
-## 19.5 What you have
+## 22.5 What you have
 
 Patterns appear in `match`, `if let`, `while let`, `for`, `let` and parameters; `let`, `for` and parameters need irrefutable ones. The forms: literals, names (which shadow), `|`, `..=` ranges, tuple and struct and variant destructuring to any depth, `_` and `_name` and `..` to ignore, `if` guards, and `x @ pattern` to bind and test. Harsh writes a variant's payload by juxtaposition and isolates a nested pattern in parentheses, exactly as it writes the constructing expression.
 
 Next: the advanced features — `unsafe`, the corners of traits and types, function pointers and returned closures, and macros — which most programs never need and every Rust programmer eventually meets.
 
-# 20. Advanced features
+# 23. Advanced features
 
-Everything in this chapter is something a Rust program can go a long way without. Each is here because sooner or later you meet it in a library's source or an error message, and because knowing the edges of the language is part of knowing the language. In order: `unsafe`, the parts of the trait system chapter 10 skipped, the corners of the type system, functions as values, and macros.
+Everything in this chapter is something a Rust program can go a long way without. Each is here because sooner or later you meet it in a library's source or an error message, and because knowing the edges of the language is part of knowing the language. In order: `unsafe`, the parts of the trait system chapter 10 skipped, the corners of the type system, functions as values, macros — Harsh's and Rust's, yours and imported — and a last word on parentheses.
 
-## 20.1 Unsafe Rust
+## 23.1 Unsafe Rust
 
 Every guarantee so far — no dangling references, no data races, no out-of-bounds reads — is enforced by the compiler *refusing programs it cannot prove safe*. Some correct programs cannot be proved safe: talking to the operating system, implementing a data structure with raw pointers, calling C. For those, `unsafe` marks a region where the programmer takes over the proof:
 
@@ -7311,7 +8182,7 @@ fn main$:
     unsafe:
         dangerous$
 
-    let mut v = vec! [1, 2, 3, 4, 5, 6]
+    let mut v = vec! 1 2 3 4 5 6
     let (a, b) = split_at_mut (&mut v) 3
     a[0] = 10
     b[0] = 40
@@ -7352,7 +8223,7 @@ COUNTER: 3
 
 `extern "C":` declares functions from another language — a layout block like any other, each foreign signature on its own line with no body — and calling one is unsafe, since Rust cannot check what C does. A `static mut` is a mutable global, and every access to one is unsafe, because two threads could race on it; a `static` without `mut` is safe, and is the usual form. (The `(-3)` is isolated: a negative literal is an operator expression.)
 
-## 20.2 Advanced traits
+## 23.2 Advanced traits
 
 ### Associated types
 
@@ -7526,7 +8397,7 @@ impl fmt.Display for Wrapper
 fn main$:
     (Point\ x = 1, y = 3) <- outline_print$
 
-    let w = Wrapper (vec! [String.from "hello", String.from "world"])
+    let w = Wrapper (vec! (String.from "hello") (String.from "world"))
     println! "w = {w}"
 ```
 
@@ -7543,7 +8414,7 @@ w = [hello, world]
 
 The second half is the *newtype* pattern, the answer to chapter 10's orphan rule. `Display` and `Vec` are both foreign, so `impl Display for Vec<String>` is not allowed; wrap the vector in a local tuple struct, `Wrapper (Vec<String>)`, and implement `Display` for that. The wrapper costs nothing at run time and `self.0` reaches the vector. It is also the way to give a value a distinct type — `Millimeters` and `Meters` above — so the compiler keeps units apart that are the same `u32` underneath.
 
-## 20.3 Advanced types
+## 23.3 Advanced types
 
 ```
 use std.fmt
@@ -7597,7 +8468,7 @@ A *type alias* is a name for an existing type, not a new one: `Kilometers` *is* 
 
 A *dynamically sized type* is one whose size is not known at compile time: `str` (not `&str`), `[T]`, `dyn Trait`. They can only be used behind a pointer that carries the size — `&str` is a pointer and a length, `Box<dyn Trait>` a pointer and a vtable. Every generic `T` is implicitly `T: Sized`; `T: ?Sized` relaxes that, and then `T` must be used through a reference, as `generic` does.
 
-## 20.4 Functions and closures as values
+## 23.4 Functions and closures as values
 
 ```
 fn add_one x: i32 -> i32:
@@ -7634,7 +8505,7 @@ fn main$:
         (0u32..3) <- map Status.Value <- collect$
     println! "{statuses:?} {:?}" Status.Stop
 
-    let handlers = vec! [returns_closure$, returns_closure$]
+    let handlers = vec! returns_closure$ returns_closure$
 
     for h in handlers:
         println! "{}" (h 1)
@@ -7654,17 +8525,17 @@ fn main$:
 
 `fn(i32) -> i32` is a *function pointer* type, and `do_twice` takes one: any named function, or a closure that captures nothing. Prefer the `impl Fn` bounds of chapter 13 in your own signatures, since they accept capturing closures too; `fn` is for interfacing with code that needs a plain pointer, C among it. The two `map` calls show a useful fact: every tuple-struct or enum-variant constructor *is* a function, so `map Status.Value` builds a `Status` from each number, and `map (ToString.to_string)` applies a trait method by its path.
 
-Returning a closure needs a type for it, and a closure's type has no name. `impl Fn(i32) -> i32` in return position is the usual answer: the caller gets *some* closure. When different calls return different closures — the `if` returns one of two, with different captures — they are different types and `impl Fn` cannot name both; box them as `Box<dyn Fn(i32) -> i32>`, a trait object, and the type is the same either way. Chapter 18's rule, applied to closures.
+Returning a closure needs a type for it, and a closure's type has no name. `impl Fn(i32) -> i32` in return position is the usual answer: the caller gets *some* closure. When different calls return different closures — the `if` returns one of two, with different captures — they are different types and `impl Fn` cannot name both; box them as `Box<dyn Fn(i32) -> i32>`, a trait object, and the type is the same either way. Chapter 21's rule, applied to closures.
 
-## 20.5 Macros
+## 23.5 Harsh macros (~)
 
-A macro is code that writes code before your program is compiled. **Harsh has two kinds, and the mark tells you which.**
+A macro is code that writes code before your program is compiled. Which macro you are looking at depends on two things: whether it is written in Harsh or in Rust — the mark says so, `name~` or `name!` — and whether it is yours or comes from a library. This section is about the macros you write in Harsh; 23.6 is about the ones you write in Rust inside a Harsh project, which are still yours to write; 23.7 and 23.8 are about the ones you import, from Harsh libraries and from Rust ones.
 
 A macro written `name~` is **Harsh's**: it is defined with `macro_rules~`, its matchers and its body are Harsh, and `hrs` unfolds it *into Harsh* before anything is transpiled — so what it produces is ordinary Harsh, meeting the rules of this book. A macro written `name!` is **Rust's**: `println!`, `vec!`, `format!` and every macro a Rust crate exports. You call it with Harsh syntax, and Rust unfolds it.
 
-Which you meet depends on where it came from: a Harsh crate may export either kind, a Rust crate exports `!` macros only. (`#[derive …]` and the other attribute forms are Rust's too; the `#[…]` is how you tell those.)
+Harsh's own macros come in two families, as Rust's do. A **declarative** macro is a set of patterns and what each expands to. A **procedural** macro is a program: an ordinary function that receives the call's tokens and returns the code to put in its place. Both are called `name~`, so a call reads the same whichever kind implements it, and a macro may change from one to the other without touching its callers.
 
-This chapter covers **declarative** macros, which are finished. Rust's other family, *procedural* macros — the `#[proc_macro]`, `#[derive]` and attribute forms — and the DSLs built with them are **still in development in Harsh**: a proc macro written in Harsh transpiles to an ordinary Rust one, and simple calls reach it as ordinary Rust tokens, but the shapes are not settled and may change.
+### Declarative macros
 
 A declarative Harsh macro is a set of patterns and what each expands to:
 
@@ -7684,9 +8555,8 @@ macro_rules~ my_vec
 // expansion a block with a value, as the Rust `{ { .. } }` would.
 macro_rules~ sum
     () => do: 0
-    ($h:expr) => do: $h
     ( ($h:expr) $( ($t:expr) )* ) => do:
-        $h + sum~ $( ($t) )*
+        $h + sum~ $( $t )*
 
 fn main$:
     let v: Vec<u32> = my_vec~ 1 2 3
@@ -7701,13 +8571,397 @@ fn main$:
 
 The macro unfolds **into Harsh**, before anything is transpiled: `my_vec~ 1 2 3` becomes the block the transcriber describes, and the generated Rust holds no macro at all — only what the expansion came to. You can see that middle step with `hrs expand`, and any mistake in a macro shows up as a mistake in the Harsh it produced, on lines you can read.
 
-Two rules come with that, and both are Rust's. A name the macro introduces is its own: a `let tmp` in a transcriber never captures the caller's `tmp`, and where both would stand in one scope the macro's is the one that moves. And a name the *caller* is meant to use must be passed in — `$name:ident` — since a macro cannot invent a binding for someone else's code.
+Two rules come with that, and both are Rust's. A name the macro introduces is its own: a `let tmp` in a transcriber never captures the caller's `tmp`, and where both would stand in one scope the macro's is the one that moves. And a name the *caller* is meant to use must be passed in — `($name:ident)` — since a macro cannot invent a binding for someone else's code.
+
+A call to a Harsh macro is a *stream*, not a function call: everything after `name~` to the end of the line reaches the matcher exactly as written — commas, parens, all of it — so a Harsh macro juxtaposes its arguments, `my_macro~ (1+3) "more"`, and writes commas only where its DSL spells a construct that owns them. A repetition in a matcher reads like a regular expression: `$( … )*` zero or more, `$( … )+` one or more, `$( … )?` at most once, with the separator written just before the marker — `$( ($x:expr) ),*` is expressions separated by commas. A trailing separator the caller may or may not write is a second, optional repetition of the bare comma: `$( ($x:expr) ),* $(,)?`. A call inside a larger expression is isolated, `((twice~ 4), 0)`, as any application is.
 
 Both sides of the macro are written in Harsh, and both follow rules you already know. The matcher `( $( ($x:expr) )* )` is a parameter list: one group per fragment, and a repetition of groups is a list of them — the same brick as `fn f (a: T) (b: U)`, applied a third time. The call `my_vec! 1 2 3` is an ordinary application, one atom per argument. The transcriber is a `do:` block; its statements take their `;` from the layout, `$x` is an atom like any other so `push $x` is a call, and a repetition `$( … )*` that is the whole of its line repeats a statement. The inner `do:` is there because a macro's expansion is a run of tokens, not a block: for the expansion to *be* a block with a value, the block must be written, as Rust writes `{ { … } }`. `sum!` shows an arm with nothing to match and a repetition that spans lines, `$(` on one line, its body beneath, `)*` back under it. On the call side, `$( ($t) )*` in an argument position is a list of arguments, the mirror of the matcher; a repetition of bare tokens, `$($arg)*`, is copied as it stands and is how a macro forwards `tt`s.
 
-> **Harsh —** A matcher written in brackets or braces rather than parentheses — `[ $elem:expr ; $n:expr ]` — is left exactly as written, because that is the shape the call side has too: `vec! [0u8; 4]`. The same licence covers a transcriber whose output is a language of its own rather than Harsh.
+> **Harsh —** A matcher may hold brackets or braces inside the arm's own parentheses — `([ ($elem:expr) ; ($n:expr) ])` — and their tokens are matched exactly as written, because that is the shape the call side has too: `filled~ [0u8; 4]`. A metavariable is always written in its parentheses, `($elem:expr)`; every other token of a matcher is literal. The same licence covers a transcriber whose output is a language of its own rather than Harsh.
 
-A macro whose body is markup — the `view!` of a web framework — is written the same way, with one rule of its own: when the first line of the `do:` block begins with `<`, the lines are markup and are copied through, and the contents of every `{ … }` are Harsh:
+### Procedural macros
+
+A procedural macro is a program: a function that receives tokens and returns the code to put in their place. Harsh's are written in Harsh, in a crate of their own marked `proc-macro = true` under `[package.metadata.harsh]`, which the crate that calls them lists by path; `hrs` runs them when it transpiles the code that calls them. Each is a `pub fn` from a `TokenStream` to a `TokenStream`, marked with an attribute that names its kind, as Rust's are — `#[some_attribute~]` above `pub fn some_name (input: TokenStream) -> TokenStream:`, in the Rust Book's words — and there are three kinds, below: custom derive, attribute-like, and function-like.
+
+Two differences from a declarative macro come with running a program. A procedural macro is not hygienic: a name it introduces is visible to the caller, since it produced text rather than patterns. And it lives in a separate crate, because `hrs` must build and run it before it can transpile the code that calls it; `hrs build` does that for you, and does it again only when the macro changes.
+
+#### Custom derive Macros
+
+A custom derive works as Rust's does, and the Rust Book's own example reads almost line for line in Harsh. The trait, `HelloMacro`, is its user's; the derive, in a crate of its own, parses the item it is given into a syntax tree with `hrs_syn` — Harsh's `syn` — and builds the implementation with `quote~` — Harsh's `quote`:
+
+`hello_macro_derive/Cargo.toml`
+
+```text
+[dependencies]
+hrs_proc_macro = "0.2"
+hrs_quote = "0.1"
+hrs_syn = "0.1"
+
+[package.metadata.harsh]
+proc-macro = true
+```
+
+`hello_macro_derive/src/lib.hrs`
+
+```
+use hrs_proc_macro.TokenStream
+use hrs_quote.quote
+use hrs_syn.{parse_macro_input, DeriveInput}
+
+#[proc_macro_derive~ HelloMacro]
+pub fn hello_macro_derive (input: TokenStream) -> TokenStream:
+    // Construct a representation of Harsh code as a syntax tree
+    // that we can manipulate.
+    let ast = parse_macro_input! { input as DeriveInput }
+
+    // Build the trait implementation.
+    impl_hello_macro (&ast)
+
+fn impl_hello_macro (ast: &DeriveInput) -> TokenStream:
+    let name = &ast <- ident
+    let generated = quote~ do:
+        impl HelloMacro for #name
+            fn hello_macro$:
+                println! "Hello, Macro! My name is {}!" (stringify! #name)
+    generated
+```
+
+`app/Cargo.toml`
+
+```text
+[package.metadata.harsh]
+proc-macros = ["../hello_macro_derive"]
+```
+
+`app/src/main.hrs`
+
+```
+trait HelloMacro
+    fn hello_macro$
+
+#[derive~ HelloMacro]
+struct Pancakes
+
+fn main$:
+    Pancakes.hello_macro$
+```
+
+```text
+$ cd app && hrs run
+Hello, Macro! My name is Pancakes!
+```
+
+`parse_macro_input!` turns the tokens into a `DeriveInput`: the item's attributes, its visibility, its name, its generics, and its fields or variants. `quote~ do:` takes a template beneath it, laid out as the output should read, and `#name` puts the value of `name` in its place. What the derive returns is added after the item, which it cannot change. It is registered with `#[proc_macro_derive~ HelloMacro]` on a `pub fn`, and called `#[derive~ HelloMacro]` above a `struct`, an `enum` or a `union`.
+
+A derive usually works field by field. This one lists a struct's fields, leaving out those marked with a *helper attribute* it declares — `(attributes describe)` in its registration, as Rust's derive declares `attributes(describe)`:
+
+`describe/Cargo.toml`
+
+```text
+[dependencies]
+hrs_proc_macro = "0.2"
+hrs_quote = "0.1"
+hrs_syn = "0.1"
+
+[package.metadata.harsh]
+proc-macro = true
+```
+
+`describe/src/lib.hrs`
+
+```
+use hrs_proc_macro.TokenStream
+use hrs_quote.quote
+use hrs_syn.{parse_macro_input, Data, DeriveInput, Error}
+
+/// `describe$`: the type's name and its fields -- all but those marked
+/// `#[describe skip]`.
+#[proc_macro_derive~ Describe (attributes describe)]
+pub fn describe (input: TokenStream) -> TokenStream:
+    let ast = parse_macro_input! { input as DeriveInput }
+    let name = &ast <- ident
+    let fields = match &ast <- data\
+        Data.Struct s => &s <- fields
+        _ => return (Error.new (name <- span$) "`Describe` is for a struct") <- to_compile_error$
+    let shown: Vec<String> =
+        fields <- iter$
+            <- filter (|f| !(f <- attrs <- iter$ <- any (|a| a <- is "describe")))
+            <- map (|f| f <- ident <- as_ref$ <- unwrap$ <- to_string$)
+            <- collect$
+    quote~ do:
+        impl #name
+            pub fn describe$ -> String:
+                let fields: Vec<&str> = vec! #(#shown)*
+                format! "{} {{ {} }}" (stringify! #name) (fields <- join ", ")
+```
+
+`app/Cargo.toml`
+
+```text
+[package.metadata.harsh]
+proc-macros = ["../describe"]
+```
+
+`app/src/main.hrs`
+
+```
+#[derive Debug]
+#[derive~ Describe]
+struct Point
+    x: i32
+    #[describe skip]
+    secret: i32
+    y: i32
+
+fn main$:
+    let p = Point\ x = 1, secret = 7, y = 2
+    println! "{}" (Point.describe$)
+    println! "{:?}" p
+    println! "{}" (p <- x + p <- secret + p <- y)
+```
+
+```text
+$ cd app && hrs run
+Point { x, y }
+Point { x: 1, secret: 7, y: 2 }
+10
+```
+
+`#(#shown)*` is a repetition, from `quote`: it repeats what it encloses once for each element of `shown`, here each field's name, as a string. The helper, `#[describe skip]`, is the derive's to read, and is gone from the item once the derive has run, since the compiler would not know what it means. The derive receives the item as written, with every derive attribute removed — its own and Rust's alike — which is why `#[derive Debug]` sits beside it and still works. Several derives run in the order written, each on the same item.
+
+#### Attribute-Like Macros
+
+An attribute-like macro defines an attribute of its own, and may stand on any item — a function, a module, a `struct` — where a derive stands only on types. What it returns *replaces* the item. The Rust Book's example is a web framework's `route`, which here logs each call of the handler it stands on:
+
+`web/Cargo.toml`
+
+```text
+[dependencies]
+hrs_proc_macro = "0.2"
+hrs_quote = "0.1"
+hrs_syn = "0.1"
+
+[package.metadata.harsh]
+proc-macro = true
+```
+
+`web/src/lib.hrs`
+
+```
+use hrs_proc_macro.TokenStream
+use hrs_quote.quote
+use hrs_syn.{parse_macro_input, ItemFn}
+
+/// Logs each call of the function it stands on, with the route it serves.
+#[proc_macro_attribute~]
+pub fn route (attr: TokenStream) (item: TokenStream) -> TokenStream:
+    let route = attr <- to_string$
+    let f = parse_macro_input! { item as ItemFn }
+    let vis = &f <- vis
+    let sig = &f <- sig
+    let name = f <- ident <- to_string$
+    let body = &f <- block
+    quote~ do:
+        #vis #sig:
+            println! "[ROUTE LOG] Dispatched handler '{}' for {}" #name #route
+            #body
+```
+
+`app/Cargo.toml`
+
+```text
+[package.metadata.harsh]
+proc-macros = ["../web"]
+```
+
+`app/src/main.hrs`
+
+```
+#[route~ POST "/api/v1/submit"]
+fn handle_submit$:
+    println! "Processing payload..."
+
+fn main$:
+    handle_submit$
+```
+
+```text
+$ cd app && hrs run
+[ROUTE LOG] Dispatched handler 'handle_submit' for POST "/api/v1/submit"
+Processing payload...
+```
+
+The function is marked `#[proc_macro_attribute~]` and takes two streams, as Rust's does: the attribute's arguments as written — `POST "/api/v1/submit"` — and the item. With no arguments, `#[route~]`, the first is empty. `hrs_syn`'s `ItemFn` parses the function into its signature, name and body, and the template rebuilds it with the logging line at the top. The macro receives the item with every other attribute it carries, those above its own and those below, and must give back whatever of them it wants to keep, since its output is all that remains. Attribute-like macros run before derives, so a derive on the same item sees what they made of it.
+
+#### Function-Like Macros
+
+A function-like macro is called like a declarative one, `name~ stream`. It is an ordinary Harsh function marked `#[proc_macro~]`, taking the call's tokens and returning the code to put in their place:
+
+`hello/Cargo.toml`
+
+```text
+[dependencies]
+hrs_proc_macro = "0.2"
+
+[package.metadata.harsh]
+proc-macro = true
+```
+
+`hello/src/lib.hrs`
+
+```
+use hrs_proc_macro.TokenStream
+
+#[proc_macro~]
+pub fn hello_macro (input: TokenStream) -> TokenStream:
+    let input_str = input <- to_string$
+    let output = format! "\"Hello, {}!\"" input_str
+    output <- parse$ <- unwrap$
+```
+
+`app/Cargo.toml`
+
+```text
+[package.metadata.harsh]
+proc-macros = ["../hello"]
+```
+
+`app/src/main.hrs`
+
+```
+fn main$:
+    println! "{}" (hello_macro~ world)
+    let greeting = hello_macro~ Harsh readers
+    println! "{}" greeting
+```
+
+```text
+$ cd app && hrs run
+Hello, world!
+Hello, Harsh readers!
+```
+
+`hello_macro~ Harsh readers` hands the function its tokens as text, `Harsh readers`, exactly as written; what it returns is Harsh, which `hrs` reads and puts where the call stood, at the call's column. So the macro runs when `hrs` transpiles the caller, not when the program runs, and the generated Rust holds no macro at all — only the string it produced. `hrs expand` shows a file with its proc macros expanded; if a macro returns something that is not Harsh, or fails, the error names the macro and points at the call.
+
+## 23.6 Rust macros (!)
+
+The macros Rust lets you write are still yours to write in a Harsh project, and they remain Rust macros, written in Rust. Their reference is the Rust Book's chapter on them, [*Macros*](https://doc.rust-lang.org/stable/book/ch20-05-macros.html); each part below links to its section, and adds only what is particular to Harsh — where the code lives, and how Harsh calls it. A Rust macro is always called with Rust's mark, `!`, by the rules of 23.8.
+
+### Declarative macros
+
+The Rust Book: [*Declarative Macros for General Metaprogramming*](https://doc.rust-lang.org/stable/book/ch20-05-macros.html#declarative-macros-for-general-metaprogramming).
+
+In Harsh, a `macro_rules!` may be written inside a Harsh file. It is a zone of Rust there: `hrs` copies it out byte for byte, its braces delimit it, and its body is laid out as Rust, so nothing inside it is Harsh — `#[macro_export]` and the rest mean what they mean in Rust. Only the definition is Rust; its calls are Harsh calls, `square! n`, `square! (n + 1)`:
+
+```
+macro_rules! square {
+    ($x:expr) => { $x * $x };
+}
+
+fn main$:
+    let n = 7
+    println! "{}" (square! n)
+    println! "{}" (square! (n + 1))
+```
+
+```text
+49
+64
+```
+
+### Procedural macros
+
+The Rust Book: [*Procedural Macros for Generating Code from Attributes*](https://doc.rust-lang.org/stable/book/ch20-05-macros.html#procedural-macros-for-generating-code-from-attributes).
+
+In Harsh, a Rust procedural macro lives where Rust puts it, in a Rust crate that says `proc-macro = true` under `[lib]`, written in Rust — with `syn` and `quote` if you like. A Harsh crate lists it under `[dependencies]` as it would any crate, and brings its macros in with `use`: `use hello_macro_derive.HelloMacro`. `hrs` leaves the calls to rustc, which runs the macro as it runs any.
+
+#### Custom derive Macros
+
+The Rust Book: [*Custom `derive` Macros*](https://doc.rust-lang.org/stable/book/ch20-05-macros.html#custom-derive-macros).
+
+In Harsh, a derive is called by juxtaposition, `#[derive HelloMacro]`, beside Rust's own `#[derive Debug]` and Harsh's `#[derive~ …]` if you like. Here is the Rust Book's `HelloMacro`, used from Harsh: the trait is declared in Harsh, the derive written in Rust — reading the type's name from its tokens, where the Rust Book's parses them with `syn` and builds its output with `quote`:
+
+`hello_macro_derive/Cargo.toml`
+
+```text
+[lib]
+proc-macro = true
+```
+
+`hello_macro_derive/src/lib.rs`
+
+```rs
+use proc_macro::TokenStream;
+
+#[proc_macro_derive(HelloMacro)]
+pub fn hello_macro_derive(input: TokenStream) -> TokenStream {
+    // The item's name, read from its tokens; `syn` would parse it properly.
+    let text = input.to_string();
+    let name = text.split_whitespace().skip_while(|w| *w != "struct").nth(1).unwrap();
+    let name = name.trim_end_matches(';');
+    format!(
+        "impl HelloMacro for {name} {{ fn hello_macro() {{ println!(\"Hello, Macro! My name is {name}!\"); }} }}"
+    )
+    .parse()
+    .unwrap()
+}
+```
+
+`app/Cargo.toml`
+
+```text
+[dependencies]
+hello_macro_derive = { path = "../hello_macro_derive" }
+```
+
+`app/src/main.hrs`
+
+```
+use hello_macro_derive.HelloMacro
+
+trait HelloMacro
+    fn hello_macro$
+
+#[derive HelloMacro]
+struct Pancakes
+
+#[derive HelloMacro]
+struct Waffles
+
+fn main$:
+    Pancakes.hello_macro$
+    Waffles.hello_macro$
+```
+
+```text
+$ cd app && hrs run
+Hello, Macro! My name is Pancakes!
+Hello, Macro! My name is Waffles!
+```
+
+#### Attribute-Like Macros
+
+The Rust Book: [*Attribute-Like Macros*](https://doc.rust-lang.org/stable/book/ch20-05-macros.html#attribute-like-macros).
+
+In Harsh, an attribute-like macro is applied as any attribute is, its arguments juxtaposed: `#[route GET "/"]` above `fn index$:` hands the macro two arguments, `GET` and `"/"`, and `#[route]` none. It receives them and the item, and what it returns replaces the item. Parentheses isolate one argument of several tokens, as anywhere: `#[route GET "/" (some_attr = some_value)]` passes three. Around the whole list they would make it one tuple — `#[route (GET, "/")]` hands the macro a single argument, not two.
+
+#### Function-Like Macros
+
+The Rust Book: [*Function-Like Macros*](https://doc.rust-lang.org/stable/book/ch20-05-macros.html#function-like-macros).
+
+In Harsh, a function-like macro whose stream is a list of values is applied like a function, its arguments juxtaposed: `name! a b`. One whose stream is a language of its own — the Rust Book's `sql!` — takes it in braces, with Harsh in holes where it needs any: `sql! { SELECT * FROM posts WHERE id=1 }`. Both are 23.8's rules.
+
+## 23.7 Harsh DSLs (~)
+
+A library written in Harsh exports macros written in Harsh, declarative or procedural, and everything about them is Harsh: each call follows the grammar the library's guide describes, and what it expands to is Harsh, meeting the rules of this book. There is nothing to learn beyond that guide.
+
+The first such library comes with Harsh: the prelude's `g~`, `list~`, `set~` and `dict~` (chapter 15) and `m~` and `v~` (chapter 16) need no `use`. A crate of Harsh procedural macros is listed by path under `proc-macros`, as in 23.5.
+
+## 23.8 Rust DSLs (!)
+
+Most macros you call come from Rust libraries: `println!` and `vec!` from the standard library, a web framework's `view!`, serde's `#[derive Serialize]`, Tokio's `#[tokio.main]`. You call them by Harsh's rules. A macro whose stream is a list of values is applied like a function, its arguments juxtaposed and isolated as any argument is: `vec! 1 2 3`, `matches! a (n if n > 3)`. A derive or an attribute applies by juxtaposition inside its brackets: `#[derive Debug Serialize]`, `#[route "/api/:id"]`, `#[tokio.main (flavor = "multi_thread")]`.
+
+A Rust macro that takes a language of its own — the markup of a web framework's `view!`, the element tree of Dioxus's `rsx!`, a query — takes it in braces, and what is inside the braces is that language, written exactly as its documentation shows. Harsh reads none of it. The only Harsh inside is what you mark: a hole opens with `@:` and always closes with `:@`, and between the two is ordinary Harsh, transpiled in place:
 
 ```
 // A stand-in for a UI framework's `view!`: it swallows the markup and yields
@@ -7719,17 +8973,18 @@ macro_rules! view {
 
 fn main$:
     let count = 3
-    let items = vec! [1, 2, 3]
-    view! do:
+    let items = vec! 1 2 3
+    view! {
         <div class="app">
             <p>{count}</p>
-            <button on:click={move |_| println! "{}" (count + 1)}>"+"</button>
+            <button on:click={@: move |_| println! "{}" (count + 1) :@}>"+"</button>
             <ul>
-                <For each={move || items <- clone$} let:item>
+                <For each={@: move || items <- clone$ :@} let:item>
                     <li>{item * 2}</li>
                 </For>
             </ul>
         </div>
+    }
     println! "rendered {count}"
 ```
 
@@ -7737,9 +8992,7 @@ fn main$:
 rendered 3
 ```
 
-A hole may hold a whole expression, `{move |_| …}`, and it may span lines: `{move |_|:` with the closure's body beneath and `}` closing it. The framework's own rules for markup are unchanged, because Harsh never reads it; only the holes are its business.
-
-Dioxus writes its interface not as markup but as a tree of braces — an element is a name and a brace body holding its attributes and children — and a tree of braces is what Harsh's layout is. So it is written as one. When the first line of a macro's `do:` block is a name followed by `:`, the block is a brace tree: `div:` opens an element, an attribute takes its value through `=` (since `:` opens blocks here) and is emitted `class: "app",`, a string or a `{ … }` is a child, and `for` and `if` are the framework's own, their bodies trees again. As in markup, the Harsh is in the holes:
+The markup's own `{count}` needs no mark — a name is the same in both languages — while the handler, written in Harsh, sits in a hole. A hole may span lines: `@:` on the line where it opens, the Harsh beneath at that line's indentation, `:@` where it ends. The same convention serves a tree of braces as it serves markup, because Harsh never learns either:
 
 ```
 // A stand-in for Dioxus's `rsx!`, as `view!` above: it swallows the tree and
@@ -7750,20 +9003,24 @@ macro_rules! rsx {
 
 fn main$:
     let count = 3
-    let items = vec! [1, 2, 3]
-    rsx! do:
-        div:
-            class = "app"
-            onclick = {move |_| println! "{}" (count + 1)}
+    let items = vec! 1 2 3
+    rsx! {
+        div {
+            class: "app",
+            onclick: @: move |_| println! "{}" (count + 1) :@,
             "Hello {count}"
-            for item in items:
-                li: "{item}"
-            Button\
-                onclick = {move |_|:
+            for item in items {
+                li { "{item}" }
+            }
+            Button {
+                onclick: @: move |_|:
                     let n = count * 2
                     println! "{n}"
-                }
+                :@,
                 "Reset"
+            }
+        }
+    }
     println! "rendered {count}"
 ```
 
@@ -7771,11 +9028,11 @@ fn main$:
 rendered 3
 ```
 
-What the tree becomes follows what `rsx!` itself accepts, read from its source: attributes are separated by commas and elements and text nodes are not, and an event handler is recognised by its leading `move` or `|` — which is why an attribute's hole loses its braces on the way out while a child's keeps them.
+`for item in items { … }` there is `rsx!`'s own, not Harsh's: inside the braces the macro's grammar rules, and a hole is only for what you want written in Harsh. A hole may hold a macro call with braces of its own, and holes inside those.
 
-The other kind, *procedural* macros — `#[derive Debug]`, attribute macros, function-like macros that parse arbitrary tokens — are functions that take a token stream and return one, and live in a crate of their own with `proc-macro = true` in its `Cargo.toml`. Writing one is a project rather than a page: the `syn` crate parses the tokens into a syntax tree, `quote` turns a template back into tokens, and the function in between is ordinary Rust. When you need one, those two crates and their examples are the place to start.
+Holes follow a few conventions. A hole always closes, with `:@`, even at the end of a line. A literal `@:` in the macro's own language is written `@@:`. `hrs-from` writes the holes when it converts a Rust file, turning each piece of Rust inside a body into Harsh. And a Harsh macro whose expansion contains such a call writes the holes too, since what it produces is Harsh.
 
-### Parentheses, once and for all
+## 23.9 Parentheses, once and for all
 
 Every use of parentheses in this book has been one of a short list, and the list is worth stating now that all of it has been seen:
 
@@ -7799,17 +9056,17 @@ fn main$:
 
 > **Harsh —** Parentheses do three things. They **make a tuple** — the comma does it, and `()` with nothing inside is the unit value. They **set precedence** — `(1 + 2) * 3` — which is mandatory and kept. And they **group** — around a whole value, a whole statement, or one argument of an application — which is optional, costs nothing, and is how an argument that is more than one token is marked as one: `double (a + b)`. Nothing else: parentheses never pass an argument list, and a name written tight against a `(` is an error naming the space. Inside a macro's one-line braces the same rules apply, since a macro's body is Harsh — the one earlier exemption for brace bodies was withdrawn when it proved to be a second syntax in disguise.
 
-## 20.6 What you have
+## 23.10 What you have
 
-`unsafe:` for five operations the compiler cannot check, wrapped in safe functions that do the checking; `extern "C"` for foreign functions. Associated types for a trait with one choice per implementation; operator traits in `std.ops` with default type parameters; disambiguation by trait path and `<Type as Trait>`; supertraits; the newtype pattern for the orphan rule and for distinct types. Aliases, `!`, and `?Sized`. `fn` pointers, constructors as functions, `impl Fn` and `Box<dyn Fn>` for returned closures. `macro_rules~` written in Harsh on both sides, markup and brace-tree macros with Harsh holes, and where procedural macros come from.
+`unsafe:` for five operations the compiler cannot check, wrapped in safe functions that do the checking; `extern "C"` for foreign functions. Associated types for a trait with one choice per implementation; operator traits in `std.ops` with default type parameters; disambiguation by trait path and `<Type as Trait>`; supertraits; the newtype pattern for the orphan rule and for distinct types. Aliases, `!`, and `?Sized`. `fn` pointers, constructors as functions, `impl Fn` and `Box<dyn Fn>` for returned closures. Macros by who wrote them: Harsh's own, `macro_rules~` and procedural macros — function-like and derives — written as ordinary Harsh functions; Rust's, `macro_rules!` in a Harsh file and a proc-macro crate beside it; a Rust library's, called by Harsh's rules, its own language in braces with Harsh holes; and a Harsh library's, Harsh throughout.
 
 Next, and last: a multithreaded web server, built from the standard library alone — the book's closing project.
 
-# 21. Final project: a multithreaded web server
+# 24. Final project: a multithreaded web server
 
 The last chapter builds a web server from the standard library alone: a TCP listener, HTTP by hand, a thread pool, and a graceful shutdown. It uses nearly everything in the book — closures, trait objects, channels, `Arc<Mutex<T>>`, `Drop`, `Option.take` — and is the kind of program that in most languages would be a framework. Each stage here is a complete project that runs to completion: the server spawns its own clients, serves a fixed number of requests, and stops, so that the book can show the run. Point a browser at the listening address instead and it is a real server.
 
-## 21.1 A single-threaded server
+## 24.1 A single-threaded server
 
 `404.html`
 
@@ -7901,7 +9158,7 @@ client: /nope -> HTTP/1.1 404 NOT FOUND
 
 The client is a thread that connects three times in a row and prints each status. Watch the order of the log at the end: the third request could not start until the second's sleep was over, because a single thread served them one at a time. A browser tab waiting behind someone else's slow request is what that feels like.
 
-## 21.2 A thread pool
+## 24.2 A thread pool
 
 Spawning a thread per connection would fix that and open a denial-of-service hole — a thousand connections, a thousand threads. A *thread pool* is a fixed number of threads that take jobs from a queue, and it is the shape of most servers:
 
@@ -8073,13 +9330,13 @@ worker 3 shut down
 - `ThreadPool.new` makes a channel, wraps the *receiver* in `Arc<Mutex<…>>` — one receiver, shared by every worker, locked to take a job — and spawns `size` workers each holding a clone of the `Arc`. `assert! (size > 0)` is the documented panic.
 - `execute` boxes the closure and sends it. The bound is in a `[where …]` clause; `self <- sender <- as_ref$ <- unwrap$` reaches the sender inside the `Option`.
 - A `Worker` is a thread in a `loop`: lock the receiver, `recv$` a job, *release the lock* (the guard is dropped at the end of the `let` statement — which is why `recv$` is a separate statement from the `match`, so that other workers can take jobs while this one runs), then run it. `Err` from `recv$` means the sender is gone, and the loop ends.
-- `Drop for ThreadPool` is the graceful shutdown: `take$` the sender out of its `Option` and drop it, so every worker's next `recv$` returns `Err` and it exits its loop; then `join$` each worker's thread, taken out of *its* `Option`. The two `Option`s exist because `drop` has only `&mut self` and cannot move a field out of it — `take$` moves the value and leaves `None`, which is chapter 18's trick with the post's state.
+- `Drop for ThreadPool` is the graceful shutdown: `take$` the sender out of its `Option` and drop it, so every worker's next `recv$` returns `Err` and it exits its loop; then `join$` each worker's thread, taken out of *its* `Option`. The two `Option`s exist because `drop` has only `&mut self` and cannot move a field out of it — `take$` moves the value and leaves `None`, which is chapter 21's trick with the post's state.
 
 `main` now starts four clients *at once*, hands each connection to `pool <- execute move ||:`, and `drop pool` at the end waits for the workers. The slow request no longer delays the others — the clients' statuses arrive in the order the threads finish, which is why the served log is sorted before printing. The four `worker N shut down` lines are the graceful shutdown doing exactly what it says.
 
 Everything in this program is a chapter you have read: channels and `Arc<Mutex<T>>` from 16, `Box<dyn FnOnce>` from 18, `Drop` and `take$` from 15 and 18, the `[where …]` bound from 10, `move ||:` from 13. That is the book's argument, made one last time: the notation stayed out of the way, and Rust was what you learned.
 
-## 21.3 Where to go
+## 24.3 Where to go
 
 The Rust Book this one follows has a chapter of appendices — keywords, operators, derivable traits, the tools — which are Rust's and not repeated here. For Harsh itself, the *language guide* is the reference for every construct in every form, and it is short, because Harsh is short. For Rust, the standard library documentation is the next book: `std` is large and well written, and after twenty-one chapters you can read any page of it. Build something. The compiler will tell you when you are wrong, and you now know how to read what it says.
 
@@ -8183,7 +9440,7 @@ Point { x: 1.0, y: 2.0 } Size { w: 3.0, h: 4.0 } 1.5 9.14 5 12 8 big counts: 2 4
 - A block's opener says how its entries end: **no mark** after a header that ends itself (`struct`, `enum`, `union`, `impl`, `trait`, `mod`, `extern`), **`\`** for a comma-separated list, **`:`** or **`do:`** for statements, **`#:`** for a grouping whose grammar is its author's. A construct that already has a spelling keeps it — `struct Point #:` is refused. (§2.6, §5.1, §20)
 - Brackets index, never apply: `arr[1]` is part of its atom (`f arr[1]` passes the element); `arr [1]` is the same index but is refused inside an application; an array argument is isolated, `f ([1, 2])`. (§2.6)
 - `<-` reaches into a value: a field, a method. `.` walks a path: a module, a type, an item. A tuple index keeps its dot, `d.0`. (§2.6, §5.1)
-- A macro applies like a function, its `!` glued to its name: `vec! [1, 2]`, `println! "{x}"`. (§2.6)
+- A macro applies like a function, its `!` glued to its name: `vec! 1 2`, `println! "{x}"`. (§2.6)
 
 ## Declaring — chapters 3, 5, 6, 10
 
@@ -8208,10 +9465,10 @@ Point { x: 1.0, y: 2.0 } Size { w: 3.0, h: 4.0 } 1.5 9.14 5 12 8 big counts: 2 4
 - A chain of one or two links stays on its line within 72 columns; three or more go vertical, every `<-` under the first, and `=` ends its line before one begins. A block-bodied closure in a chain is a paren block: `(`, the parameters, the body, `)` on its own line. (§13.2)
 - `x |> f` hands `x` to `f`; `f <| x` the same from the right; both sides are atoms, and a chain or a closure is isolated first. Fewer values than the function takes defer the rest as one flat closure — `|>` fills from the left, `<|` from the right, both leave a hole in the middle — and the result is a value. A project function given too many is an error. (§13.3)
 
-## Macros and markup — chapter 20
+## Macros and markup — chapter 23
 
 - `macro_rules! twice:` holds arms; a matcher is a parameter list, `( ($x:expr) )`; a transcriber is a block, `=> do:`. (§20.5)
-- A macro with a body is `name! do:`; markup inside it is copied and its `{ … }` holes are Harsh; a Dioxus tree is written with the layout, `div:` opening an element. (§20.5)
+- A macro's own language — `select!`'s arms, `view!` markup, an `rsx!` tree — goes in braces, as Rust, byte for byte; the Harsh inside is a hole, `@: … :@`, always closed. (chapter 23)
 - A fenced block in a `///` comment is Harsh, and the tool that runs it gets the Rust it expects. (§14.2)
 
 ## The tools — chapters 1, 14

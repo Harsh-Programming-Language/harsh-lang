@@ -10,7 +10,7 @@ fn show t: (i32, i32) -> i32:
     t.0 + t.1
 
 fn main$:
-    let v = vec![1, 2, 3]
+    let v = vec! 1 2 3
 
     // The prescribed chain form: line-final `(`, the closure one unit past
     // the callee, its body one unit past the closure, `)` under the callee.
@@ -41,18 +41,17 @@ fn main$:
             1,
             2
         ]
-    let ys =
-        vec![
-            1,
-            2
-        ]
 
     // A call with several arguments breaks by juxtaposition: one argument
-    // per continuation line, no closer.
+    // per continuation line, no closer. A macro's are the same.
     let s =
         compute
             3
             4
+    let ys =
+        vec!
+            1
+            2
 
     // The wider accepted forms: the anchor mid-line.
     let u =

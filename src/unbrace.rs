@@ -58,11 +58,36 @@ pub fn convert(src: &str) -> Result<String, String> {
 
 fn convert_inner(src: &str) -> Result<String, String> {
     let toks = crate::lex::lex_rust(src).map_err(|e| e.msg)?;
+    // Rust's empty generic list -- `f::<>(x)`, `P<>`, `impl<>` -- means
+    // nothing, and in Harsh `f<>` is *apply to each*. It is dropped here, from
+    // the text, before anything is converted (2026-09-21).
+    let empty: Vec<(usize, usize)> = (0..toks.len().saturating_sub(1))
+        .filter(|&k| toks[k].kind == Tk::Lt && toks[k + 1].kind == Tk::Gt)
+        .map(|k| {
+            let from = if k > 0 && toks[k - 1].kind == Tk::PathSep { k - 1 } else { k };
+            (toks[from].span.lo as usize, toks[k + 1].span.hi as usize)
+        })
+        .collect();
+    if !empty.is_empty() {
+        let mut cleaned = String::with_capacity(src.len());
+        let mut at = 0;
+        for (lo, hi) in empty {
+            cleaned.push_str(&src[at..lo]);
+            at = hi;
+        }
+        cleaned.push_str(&src[at..]);
+        return convert_inner(&cleaned);
+    }
     let classes = classify_all(&toks);
     let pc = param_commas(&toks);
     let ep = empty_params(&toks);
-    let mut w = Writer { out: String::new(), level: 0, at_line_start: true, param_commas: pc, empty_params: ep, src, brace_depth: 0, in_enum_body: false };
+    let mut w = Writer { out: String::new(), level: 0, at_line_start: true, param_commas: pc, empty_params: ep, src, brace_depth: 0, in_enum_body: false, errors: Vec::new() };
     w.emit(&toks, &classes, 0, toks.len(), Kind::Items);
+    // A piece of Rust in a DSL body that could not be written as Harsh stops
+    // the conversion (the user's ruling, 2026-09-23: no silent failure).
+    if !w.errors.is_empty() {
+        return Err(w.errors.join("\n"));
+    }
     let mut s = w.out;
     while s.ends_with('\n') {
         s.pop();
@@ -189,7 +214,7 @@ fn classify_all(toks: &[Token]) -> Classes {
         } else if closure_body {
             Brace::Block(Kind::Stmts)
         } else {
-            classify_brace(toks, i)
+            classify_brace(toks, i, &brace)
         };
     }
     // Layout is suppressed inside braces, so a block nested in a verbatim
@@ -251,7 +276,11 @@ fn closure_before_brace(toks: &[Token], i: usize) -> bool {
             return k > 0 && is_proto(k - 1);
         }
         let type_tok = matches!(t.kind, Tk::Ident | Tk::PathSep | Tk::Lt | Tk::Gt | Tk::Open('[') | Tk::Close(']') | Tk::Open('(') | Tk::Close(')') | Tk::Comma | Tk::Lifetime)
-            || (t.kind == Tk::Punct && matches!(t.text.as_str(), "&" | "*" | "+" | "'"));
+            || (t.kind == Tk::Punct && matches!(t.text.as_str(), "&" | "*" | "+" | "'" | ">>"));
+        // (`>>` closes two generic lists at once, `Option<Vec<u8>>`: it was
+        // missing here, and such a closure's body was isolated as if it were
+        // an argument -- `(do: …)`, which then transpiled to a turbofish in the
+        // return type. Found 2026-09-23 in the converter's own source.)
         if !type_tok {
             return false;
         }
@@ -275,6 +304,107 @@ fn enclosing_open(toks: &[Token], i: usize) -> Option<usize> {
 }
 
 /// A binary operator a block can follow as an operand: `a && { .. }`.
+/// The line with every string and character literal's content replaced by
+/// `_`, so a scan for brackets or words sees only code. A lifetime's `'` has
+/// no partner within three characters and is left alone.
+fn mask_literals(line: &str) -> String {
+    let cs: Vec<char> = line.chars().collect();
+    let mut out = String::with_capacity(line.len());
+    let mut i = 0;
+    while i < cs.len() {
+        let c = cs[i];
+        if c == '"' {
+            out.push('"');
+            i += 1;
+            while i < cs.len() && cs[i] != '"' {
+                if cs[i] == '\\' {
+                    i += 1;
+                }
+                out.push('_');
+                i += 1;
+            }
+            out.push('"');
+            i += 1;
+            continue;
+        }
+        if c == '\'' {
+            let len = if cs.get(i + 1) == Some(&'\\') { 3 } else { 2 };
+            if cs.get(i + len) == Some(&'\'') {
+                out.push_str("'_'");
+                i += len + 1;
+                continue;
+            }
+        }
+        out.push(c);
+        i += 1;
+    }
+    out
+}
+
+/// One piece of Rust code from a DSL body, as Harsh: converted as the body of
+/// a function, then transpiled back and compared token for token with the
+/// original. Anything else is an error, never a silent Rust fallback.
+fn hole_of(frag: &str) -> Result<String, String> {
+    // A hole is a whole expression: one that ends expecting more is a
+    // misread extent, and an error rather than a hole.
+    let toks: Vec<Token> = crate::lex::lex_rust(frag).map_err(|e| e.msg)?.into_iter().filter(|t| !t.is_comment()).collect();
+    let dangling = |t: &Token| {
+        matches!(t.text.as_str(), "if" | "match" | "while" | "for" | "in" | "else" | "move" | "as" | "return" | "=" | "==" | "!=" | "->" | "=>" | "." | "," | "+" | "-" | "*" | "/" | "%" | "&&" | "||" | "<" | "<=" | ">=" | "&" | "|")
+    };
+    if toks.last().map_or(true, dangling) {
+        return Err("the expression is incomplete where the scan ended".into());
+    }
+    let wrapped = format!("fn __hrs_hole() {{\n{}\n}}\n", frag.trim());
+    let harsh = convert(&wrapped).map_err(|e| e.lines().next().unwrap_or("").to_string())?;
+    let mut lines = harsh.lines().skip_while(|l| !l.starts_with("fn __hrs_hole"));
+    lines.next();
+    let body: Vec<&str> = lines.take_while(|l| l.starts_with(' ') || l.is_empty()).filter(|l| !l.trim().is_empty()).collect();
+    let min = body.iter().map(|l| l.len() - l.trim_start().len()).min().unwrap_or(0);
+    let code: String = body.iter().map(|l| &l[min..]).collect::<Vec<_>>().join("\n");
+    if code.is_empty() {
+        return Err("nothing came out".into());
+    }
+    let back = crate::dslzone::transpile_hole(&code, &crate::driver::transpile_str)?;
+    if same_rust(frag, &back) {
+        Ok(code)
+    } else {
+        Err(format!("its Harsh comes back as `{}`", back.split_whitespace().collect::<Vec<_>>().join(" ")))
+    }
+}
+
+/// Two pieces of Rust are the same program text: the same tokens, comments
+/// aside, a macro call's delimiter aside (it means nothing to the macro), and
+/// a trailing comma before a closer aside.
+fn same_rust(a: &str, b: &str) -> bool {
+    // (A nested function: a closure with the return type `Option<Vec<…>>`
+    // did not survive `hrs-from` when this was written -- the `>>`, fixed the
+    // same day in `closure_before_brace`.)
+    fn norm(s: &str) -> Option<Vec<String>> {
+        let mut out: Vec<String> = crate::lex::lex_rust(s).ok()?.into_iter().filter(|t| !t.is_comment()).map(|t| t.text).collect();
+        let mut stack: Vec<bool> = Vec::new();
+        for i in 0..out.len() {
+            if matches!(out[i].as_str(), "(" | "[" | "{") {
+                let bang = i >= 2 && out[i - 1] == "!" && out[i - 2].chars().next().map_or(false, |c| c.is_alphanumeric() || c == '_');
+                stack.push(bang);
+                if bang {
+                    out[i] = "(".into();
+                }
+            } else if matches!(out[i].as_str(), ")" | "]" | "}") && stack.pop() == Some(true) {
+                out[i] = ")".into();
+            }
+        }
+        let mut v: Vec<String> = Vec::new();
+        for t in out {
+            if matches!(t.as_str(), ")" | "]" | "}") && v.last().map_or(false, |l| l == ",") {
+                v.pop();
+            }
+            v.push(t);
+        }
+        Some(v)
+    }
+    matches!((norm(a), norm(b)), (Some(x), Some(y)) if x == y)
+}
+
 fn is_binary_operator(t: &Token) -> bool {
     t.kind == Tk::Punct && matches!(t.text.as_str(), "&&" | "||" | "+" | "-" | "*" | "/" | "%" | "==" | "!=" | "<=" | ">=" | "^" | "<<")
 }
@@ -376,9 +506,49 @@ fn paren_depth_only(toks: &[Token], i: usize, brace: &[Brace]) -> bool {
     })
 }
 
+/// Whether `toks` holds nothing but comments and whole attributes, `#[…]`
+/// or `#![…]` -- so a statement has not begun yet.
+fn only_attributes(toks: &[Token]) -> bool {
+    let mut k = 0;
+    while k < toks.len() {
+        if toks[k].is_comment() {
+            k += 1;
+            continue;
+        }
+        if toks[k].kind != Tk::Hash {
+            return false;
+        }
+        let mut open = k + 1;
+        if toks.get(open).map_or(false, |t| t.text == "!") {
+            open += 1;
+        }
+        if toks.get(open).map_or(true, |t| t.kind != Tk::Open('[')) {
+            return false;
+        }
+        let mut d = 0i32;
+        let mut end = None;
+        for (j, t) in toks.iter().enumerate().skip(open) {
+            match t.kind {
+                Tk::Open(_) => d += 1,
+                Tk::Close(_) => {
+                    d -= 1;
+                    if d == 0 {
+                        end = Some(j);
+                        break;
+                    }
+                }
+                _ => {}
+            }
+        }
+        let Some(e) = end else { return false };
+        k = e + 1;
+    }
+    true
+}
+
 /// Walk back from a `{` to the start of its segment -- the run of tokens since
 /// the last `;`, `{` or `}` at the same depth -- and decide what the brace is.
-fn classify_brace(toks: &[Token], open: usize) -> Brace {
+fn classify_brace(toks: &[Token], open: usize, brace: &[Brace]) -> Brace {
     // A brace right after `(` or a `,` inside parens is an argument. Data
     // -- the object literal of `json!({ .. })`, `"key": value` pairs -- is
     // Rust's, kept; a statement block (a `let`, a `;` at depth one) is a
@@ -414,12 +584,46 @@ fn classify_brace(toks: &[Token], open: usize) -> Brace {
     while start > 0 {
         let t = &toks[start - 1];
         match t.kind {
-            // A `}` at depth zero closes the previous item: the segment ends.
-            Tk::Close('}') if depth == 0 => break,
+            // A `}` at depth zero closes the previous item: the segment ends
+            // -- unless that brace was a literal or a pattern (verbatim),
+            // which is part of this very line: `if let E::G { .. } = &m {`.
+            Tk::Close('}') if depth == 0 => {
+                let is_verbatim = {
+                    // find the partner `{` by walking back
+                    let mut k = start - 1;
+                    let mut dd = 0i32;
+                    let mut found = None;
+                    while k > 0 {
+                        k -= 1;
+                        match toks[k].kind {
+                            Tk::Close('}') => dd += 1,
+                            Tk::Open('{') => {
+                                if dd == 0 {
+                                    found = Some(k);
+                                    break;
+                                }
+                                dd -= 1;
+                            }
+                            _ => {}
+                        }
+                    }
+                    found.map_or(false, |o| matches!(brace.get(o), Some(Brace::Verbatim)))
+                };
+                if !is_verbatim {
+                    break;
+                }
+                depth += 1;
+            }
             Tk::Close(_) => depth += 1,
             Tk::Open(_) if depth == 0 => break,
             Tk::Open(_) => depth -= 1,
             Tk::Semi if depth == 0 => break,
+            // A match arm's `=>` begins the arm's value: a brace inside it
+            // belongs to what follows the arrow, not to the arms before --
+            // whose guard's `if` made `Some(_) => match g(h) {` read as an
+            // `if` block (found 2026-09-24). An arm whose value is the
+            // brace itself, `=> {`, keeps the walk.
+            Tk::FatArrow if depth == 0 && start < open => break,
             _ => {}
         }
         start -= 1;
@@ -464,6 +668,30 @@ fn classify_brace(toks: &[Token], open: usize) -> Brace {
         }
     }
     if let Some(kw) = found {
+        // `if let E::G { body, .. } = &m {`: the first brace is the pattern's,
+        // not the block's -- a `let` at segment depth zero with no `=` after
+        // it means the pattern is still open. Verbatim, so it becomes the
+        // `\` form like any struct literal (2026-09-19).
+        if matches!(kw, "if" | "while" | "let") {
+            let mut d = 0i32;
+            let mut after_let = false;
+            let mut pattern_open = false;
+            for t in seg {
+                match t.kind {
+                    Tk::Open(_) => d += 1,
+                    Tk::Close(_) => d -= 1,
+                    Tk::Ident if d == 0 && t.is_kw("let") => {
+                        after_let = true;
+                        pattern_open = true;
+                    }
+                    Tk::Eq if d == 0 && after_let => pattern_open = false,
+                    _ => {}
+                }
+            }
+            if pattern_open {
+                return Brace::Verbatim;
+            }
+        }
         return Brace::Block(match kw {
             "struct" | "enum" | "union" | "match" => Kind::Commas,
             "impl" | "trait" | "mod" => Kind::Items,
@@ -524,6 +752,8 @@ fn classify_brace(toks: &[Token], open: usize) -> Brace {
 
 struct Writer<'a> {
     out: String,
+    /// Pieces of Rust in a DSL body that could not be written as Harsh.
+    errors: Vec<String>,
     level: usize,
     at_line_start: bool,
     /// Commas that separate parameters of a `fn` declaration, each mapped to
@@ -553,7 +783,7 @@ fn param_commas(toks: &[Token]) -> std::collections::HashMap<usize, usize> {
         // groups of the first declaration it sees, so index from `i`.
         if let Some(groups) = crate::rules::fn_param_groups(&toks[i..]) {
             for (o, c) in groups {
-                for k in crate::rules::top_level_commas(&toks[i..], o, c) {
+                for k in crate::rules::param_list_commas(&toks[i..], o, c) {
                     out.insert(i + k, i + o);
                 }
             }
@@ -973,303 +1203,6 @@ impl<'a> Writer<'a> {
         self.at_line_start = false;
     }
 
-    /// The source whitespace before `toks[k]`, re-based: a line break keeps
-    /// the line's indentation relative to `base_indent`, under this level.
-    fn source_gap(&mut self, toks: &[Token], prev_hi: usize, k: usize, base_indent: usize) {
-        let gap = &self.src[prev_hi..toks[k].span.lo as usize];
-        if let Some(nl) = gap.rfind('\n') {
-            let head = gap[..=nl].trim_end_matches(' ');
-            let head = head.trim_start_matches(' ');
-            while self.out.ends_with(' ') {
-                self.out.pop();
-            }
-            self.out.push_str(head);
-            let ind = gap[nl + 1..].len().saturating_sub(base_indent);
-            for _ in 0..self.level * 4 + ind {
-                self.out.push(' ');
-            }
-        } else {
-            self.out.push_str(gap);
-        }
-        self.at_line_start = false;
-    }
-
-    /// Rule 1, converter side. The markup between `open` and `close` is
-    /// copied with its own line structure; `::` becomes `.`. A `{ .. }` hole
-    /// is converted as a Harsh expression. An attribute value written bare,
-    /// `on:click=move |_| ..`, is wrapped in a hole and converted too -- its
-    /// end is the depth-zero `>` or `/>` that closes the tag, or the next
-    /// `name=` / `ns:name=` attribute; a literal value is left as it is.
-    fn hsx_body(&mut self, toks: &[Token], cl: &Classes, open: usize, close: usize) {
-        let src = self.src;
-        let line_start = src[..toks[open].span.lo as usize].rfind('\n').map(|p| p + 1).unwrap_or(0);
-        let base_indent = src[line_start..toks[open].span.lo as usize].chars().take_while(|c| *c == ' ').count();
-        // The markup's first line sits under `do:` at this level, so the
-        // re-basing uses the first markup line's own indentation.
-        let first = open + 1;
-        let first_ls = src[..toks[first].span.lo as usize].rfind('\n').map(|p| p + 1).unwrap_or(0);
-        let first_indent = src[first_ls..toks[first].span.lo as usize].chars().take_while(|c| *c == ' ').count();
-        let base_indent = if toks[first].span.lo as usize >= first_ls && first_ls > toks[open].span.lo as usize { first_indent } else { base_indent };
-        self.indent();
-        let mut k = open + 1;
-        let mut prev_hi: Option<usize> = None;
-        while k < close {
-            let t = &toks[k];
-            if let Some(ph) = prev_hi {
-                self.source_gap(toks, ph, k, base_indent);
-            }
-            // A hole. Its contents are Harsh, and any block they open lays
-            // out from the markup line holding the `{`: the writer's level
-            // is set from that line's column while the hole is converted.
-            if t.kind == Tk::Open('{') {
-                let c = cl.partner[k];
-                if c != usize::MAX && c < close {
-                    self.out.push('{');
-                    self.at_line_start = false;
-                    let saved = self.level;
-                    self.level = self.current_line_indent() / 4 + 1;
-                    self.run(toks, cl, k + 1, c, Kind::Stmts);
-                    self.level = saved;
-                    while self.out.ends_with(' ') {
-                        self.out.pop();
-                    }
-                    self.out.push('}');
-                    prev_hi = Some(toks[c].span.hi as usize);
-                    k = c + 1;
-                    continue;
-                }
-            }
-            // A bare attribute value: `=` after a name, not followed by a
-            // literal or a hole.
-            if t.kind == Tk::Eq && k > 0 && toks[k - 1].kind == Tk::Ident && k + 1 < close {
-                let v = &toks[k + 1];
-                let literal = matches!(v.kind, Tk::Str | Tk::Int | Tk::Float | Tk::Char) || v.kind == Tk::Open('{');
-                if !literal {
-                    let end = Self::attr_value_end(toks, k + 1, close);
-                    if end > k + 1 {
-                        // Isolated in braces -- the preferred spelling,
-                        // one with a Dioxus tree's holes; RSX's own block
-                        // form, kept on the way back to Rust. Parens are
-                        // accepted too and are dropped.
-                        self.out.push_str("={");
-                        self.at_line_start = false;
-                        let saved = self.level;
-                        self.level = self.current_line_indent() / 4 + 1;
-                        self.run(toks, cl, k + 1, end, Kind::Stmts);
-                        self.level = saved;
-                        while self.out.ends_with(' ') {
-                            self.out.pop();
-                        }
-                        self.out.push('}');
-                        prev_hi = Some(toks[end - 1].span.hi as usize);
-                        k = end;
-                        continue;
-                    }
-                }
-            }
-            match t.kind {
-                Tk::PathSep => self.out.push('.'),
-                _ => self.out.push_str(&t.text),
-            }
-            self.at_line_start = false;
-            prev_hi = Some(t.span.hi as usize);
-            k += 1;
-        }
-    }
-
-    /// Does the body starting at `from` begin with an element, `name {` or
-    /// `a::b::Name {`?
-    fn tree_first(toks: &[Token], from: usize, to: usize) -> bool {
-        let sig: Vec<usize> = (from..to).filter(|&i| !toks[i].is_comment()).collect();
-        let mut i = 0;
-        if sig.get(i).map_or(true, |&k| toks[k].kind != Tk::Ident || crate::rules::is_keyword(&toks[k].text) || BLOCK_KEYWORDS.contains(&toks[k].text.as_str())) {
-            return false;
-        }
-        i += 1;
-        while i + 1 < sig.len() && toks[sig[i]].kind == Tk::PathSep && toks[sig[i + 1]].kind == Tk::Ident {
-            i += 2;
-        }
-        sig.get(i).map_or(false, |&k| toks[k].kind == Tk::Open('{'))
-    }
-
-    /// Rule 6, converter side: the items of a brace tree, one per line.
-    /// `name { .. }` -> `name:` with the body beneath; `name: value,` ->
-    /// `name = value` with a non-literal value in a hole; `for`/`if`/`else`
-    /// headers copied with the token substitutions and their bodies as
-    /// trees; a string, a `{ .. }` hole or a `..spread` copied, the hole's
-    /// contents converted.
-    fn tree_body(&mut self, toks: &[Token], cl: &Classes, from: usize, to: usize) {
-        let mut i = from;
-        while i < to {
-            let t = &toks[i];
-            if t.is_comment() {
-                self.newline();
-                self.word(&t.text, false);
-                self.newline();
-                i += 1;
-                continue;
-            }
-            if t.kind == Tk::Comma {
-                i += 1;
-                continue;
-            }
-            self.newline();
-            self.indent();
-            // A `{ .. }` child hole.
-            if t.kind == Tk::Open('{') {
-                let c = cl.partner[i];
-                self.out.push('{');
-                self.at_line_start = false;
-                self.run(toks, cl, i + 1, c, Kind::Stmts);
-                while self.out.ends_with(' ') {
-                    self.out.pop();
-                }
-                self.out.push('}');
-                i = c + 1;
-                continue;
-            }
-            // A string child.
-            if t.kind == Tk::Str {
-                self.out.push_str(&t.text);
-                i += 1;
-                continue;
-            }
-            // `..spread`
-            if t.kind == Tk::DotDot {
-                let e = Self::tree_item_end(toks, i, to);
-                self.matcher_tokens(toks, i, e);
-                i = e;
-                continue;
-            }
-            // A header: everything up to the `{` of a block at depth zero, or
-            // an attribute `name: value` up to its comma.
-            let mut d = 0i32;
-            let mut k = i;
-            let mut brace: Option<usize> = None;
-            let mut colon: Option<usize> = None;
-            while k < to {
-                match toks[k].kind {
-                    Tk::Open('{') if d == 0 => {
-                        brace = Some(k);
-                        break;
-                    }
-                    Tk::Open(_) => d += 1,
-                    Tk::Close(_) => d -= 1,
-                    Tk::Colon if d == 0 && colon.is_none() && k == i + 1 => colon = Some(k),
-                    Tk::Comma if d == 0 => break,
-                    _ => {}
-                }
-                k += 1;
-            }
-            if let (Some(c), None) = (colon, brace.filter(|&b| b < Self::tree_item_end(toks, i, to))) {
-                // `name: value,` -> `name = value`
-                self.out.push_str(&toks[i].text);
-                self.out.push_str(" = ");
-                let e = Self::tree_item_end(toks, c + 1, to);
-                let v = &toks[c + 1];
-                let literal = matches!(v.kind, Tk::Str | Tk::Int | Tk::Float | Tk::Char) && e == c + 2;
-                if literal {
-                    self.out.push_str(&v.text);
-                } else {
-                    self.out.push('{');
-                    self.run(toks, cl, c + 1, e, Kind::Stmts);
-                    while self.out.ends_with(' ') {
-                        self.out.pop();
-                    }
-                    self.out.push('}');
-                }
-                self.at_line_start = false;
-                i = e;
-                continue;
-            }
-            match brace {
-                Some(b) => {
-                    // `header { .. }`: the header with the substitutions
-                    // (rule 3), then `:` and the body as a tree.
-                    let c = cl.partner[b];
-                    self.matcher_tokens(toks, i, b);
-                    self.out.push(':');
-                    self.at_line_start = false;
-                    if toks[b + 1..c].iter().all(|t| t.is_comment()) {
-                        // An empty element keeps Rust's braces: a block must
-                        // have a body.
-                        while self.out.ends_with(':') {
-                            self.out.pop();
-                        }
-                        self.out.push_str(" {}");
-                    } else {
-                        self.newline();
-                        self.level += 1;
-                        self.tree_body(toks, cl, b + 1, c);
-                        self.level -= 1;
-                    }
-                    i = c + 1;
-                }
-                None => {
-                    // Something else at this level: copied to the comma.
-                    let e = Self::tree_item_end(toks, i, to);
-                    self.matcher_tokens(toks, i, e);
-                    i = e;
-                }
-            }
-        }
-        self.newline();
-    }
-
-    /// The end of a tree item starting at `from`: the next comma at depth
-    /// zero, or the end.
-    fn tree_item_end(toks: &[Token], from: usize, to: usize) -> usize {
-        let mut d = 0i32;
-        for k in from..to {
-            match toks[k].kind {
-                Tk::Open(_) => d += 1,
-                Tk::Close(_) => d -= 1,
-                Tk::Comma if d == 0 => return k,
-                _ => {}
-            }
-        }
-        to
-    }
-
-    /// Where a bare attribute value that starts at `from` ends.
-    fn attr_value_end(toks: &[Token], from: usize, to: usize) -> usize {
-        let mut d = 0i32;
-        let mut i = from;
-        while i < to {
-            let t = &toks[i];
-            match t.kind {
-                Tk::Open(_) => d += 1,
-                Tk::Close(_) => d -= 1,
-                _ if d == 0 => {
-                    // The tag closes.
-                    if t.kind == Tk::Gt || (t.kind == Tk::Punct && t.text == "/" && toks.get(i + 1).map_or(false, |n| n.kind == Tk::Gt)) {
-                        return i;
-                    }
-                    // The next attribute: `name=`, `ns:name=` or `aria-label=`.
-                    if t.kind == Tk::Ident && i > from {
-                        let mut j = i + 1;
-                        while toks.get(j).map_or(false, |n| n.kind == Tk::Punct && n.text == "-")
-                            && toks.get(j + 1).map_or(false, |n| n.kind == Tk::Ident)
-                        {
-                            j += 2;
-                        }
-                        let eq_next = toks.get(j).map_or(false, |n| n.kind == Tk::Eq)
-                            || (toks.get(i + 1).map_or(false, |n| n.kind == Tk::Colon)
-                                && toks.get(i + 2).map_or(false, |n| n.kind == Tk::Ident)
-                                && toks.get(i + 3).map_or(false, |n| n.kind == Tk::Eq));
-                        let after_op = toks[i - 1].kind == Tk::Punct || toks[i - 1].kind == Tk::Dot || toks[i - 1].kind == Tk::PathSep || toks[i - 1].kind == Tk::Eq;
-                        if eq_next && !after_op {
-                            return i;
-                        }
-                    }
-                }
-                _ => {}
-            }
-            i += 1;
-        }
-        to
-    }
-
     /// The arms of a `macro_rules!` body, one per line: the matcher in rule-4
     /// groups, the transcriber as written (rule 3, `::` -> `.`, member `.`
     /// -> `<-`, `()` -> `$`), the `;` between arms dropped.
@@ -1655,6 +1588,272 @@ impl<'a> Writer<'a> {
     /// Is the brace at `open` a struct literal's -- a path of names before
     /// it, in expression position, its body fields -- rather than a pattern
     /// (`let Name { .. } =`, `Name { .. } =>`, `if let`, `for`) or a block?
+    /// A DSL body, `{` to `}`, with every piece of Rust code in it written as
+    /// a hole of Harsh. The pieces are found by shape, knowing no DSL: a
+    /// `{ … }` group, and a value after `=` that ends where Rust itself stops
+    /// reading an expression -- before `>`, `/>`, `;` or a `,` outside a
+    /// closure's parameters, or where two atoms meet with nothing between
+    /// them. A literal stays as written, `type="button"`, `{"active"}`. Each
+    /// hole is checked by transpiling it back; one that does not give the same
+    /// Rust is an error, named with its line.
+    fn dsl_body(&mut self, toks: &[Token], open: usize, close: usize) -> String {
+        let src = self.src;
+        let mut holes: Vec<(usize, usize)> = Vec::new();
+        let is_lit = |t: &Token| matches!(t.kind, Tk::Str | Tk::Int | Tk::Float | Tk::Char) || (t.kind == Tk::Ident && (t.text == "true" || t.text == "false"));
+        let atom_end = |t: &Token| matches!(t.kind, Tk::Ident | Tk::Str | Tk::Int | Tk::Float | Tk::Char | Tk::Close(_)) && !matches!(t.text.as_str(), "move" | "as" | "else" | "in" | "if" | "match" | "return" | "async");
+        // (A `{` never ends an attribute's value: in Rust it continues the
+        // expression, `if c {`, `Point {`. Only a `for`/`if` of the DSL ends
+        // at its body's `{`. Found 2026-09-23: `class=if c { .. }` became a
+        // hole `if c`, the rest left as Rust.)
+        let atom_start = |t: &Token| matches!(t.kind, Tk::Ident | Tk::Str | Tk::Int | Tk::Float | Tk::Char) && !matches!(t.text.as_str(), "as" | "else");
+        let sig = |k: usize| (k..close).find(|&j| !toks[j].is_comment());
+        // A literal, or a bracket group of literals only, `["a", "b"]`: the
+        // same text in both languages, and written as it is.
+        let literal_range = |a: usize, b: usize| {
+            let v: Vec<&Token> = toks[a..=b].iter().filter(|t| !t.is_comment()).collect();
+            !v.is_empty()
+                && v.iter().all(|t| is_lit(t) || matches!(t.kind, Tk::Comma | Tk::Open('[') | Tk::Close(']') | Tk::Open('(') | Tk::Close(')')))
+                && (v.len() == 1 || v[0].kind == Tk::Open('[') || v[0].kind == Tk::Open('('))
+        };
+        // The value after `start`: up to where Rust stops reading an
+        // expression -- `>`, `/>`, `;`, a `,` outside a closure's parameters,
+        // the `}` that closes the element, a DSL body's `{` when `body_brace`,
+        // or two atoms meeting with nothing between them.
+        let value_end = |v: usize, body_brace: bool| -> usize {
+            let (mut dd, mut bars, mut last, mut j) = (0i32, false, v, v);
+            while j < close {
+                let u = &toks[j];
+                if u.is_comment() {
+                    j += 1;
+                    continue;
+                }
+                if dd == 0 && j > v {
+                    let stop = u.kind == Tk::Gt
+                        || (u.text == "/" && toks.get(j + 1).map_or(false, |n| n.kind == Tk::Gt))
+                        || u.kind == Tk::Semi
+                        || (u.kind == Tk::Comma && !bars)
+                        || matches!(u.kind, Tk::Close(_))
+                        || u.kind == Tk::FatArrow
+                        || (body_brace && u.kind == Tk::Open('{'))
+                        || (atom_start(u) && atom_end(&toks[last]));
+                    if stop {
+                        break;
+                    }
+                }
+                match u.kind {
+                    Tk::Open(_) => dd += 1,
+                    Tk::Close(_) => dd -= 1,
+                    _ => {}
+                }
+                if dd == 0 && u.text == "|" {
+                    bars = !bars;
+                }
+                last = j;
+                j += 1;
+            }
+            last
+        };
+        // A `[ … ]` holding `{ "key": … }` objects is the DSL's own array
+        // (`json!`): scanned through, its Rust found at the leaves.
+        let object_array = |k: usize| {
+            toks[k].kind == Tk::Open('[') && {
+                let c = Self::partner_of(toks, k, close);
+                (k + 1..c).any(|j| toks[j].kind == Tk::Open('{') && sig(j + 1).map_or(false, |a| toks[a].kind == Tk::Str) && sig(j + 1).and_then(|a| sig(a + 1)).map_or(false, |b| toks[b].kind == Tk::Colon))
+            }
+        };
+        // An `=` that ends at a `=>` is a `select!` arm's.
+        let arm_eq_of = |k: usize| toks[k].kind == Tk::Eq && sig(k + 1).map_or(false, |v| toks[value_end(v, false) + 1..close].iter().find(|u| !u.is_comment()).map_or(false, |u| u.kind == Tk::FatArrow));
+        // `d` counts brackets that are Rust's; a DSL's own body braces
+        // (`div {`, `for … {`) are transparent, scanned as the body is.
+        let mut d = 0i32;
+        let mut kinds: Vec<bool> = Vec::new();
+        let mut k = open + 1;
+        while k < close {
+            let t = &toks[k];
+            if t.is_comment() {
+                k += 1;
+                continue;
+            }
+            let prev = (open + 1..k).rev().find(|&j| !toks[j].is_comment()).map(|j| &toks[j]);
+            if d == 0 && object_array(k) {
+                kinds.push(true);
+                k += 1;
+                continue;
+            }
+            if d == 0 && t.kind == Tk::Open('{') {
+                // After a name or a `)` it opens the DSL's own nested body;
+                // anywhere else it holds Rust code.
+                let dsl = prev.map_or(false, |p| matches!(p.kind, Tk::Ident | Tk::Close(')')) && !matches!(p.text.as_str(), "move" | "else"))
+                    // `{ "key": value, … }` is the DSL's own object (`json!`),
+                    // never a block of Rust.
+                    || (sig(k + 1).map_or(false, |a| toks[a].kind == Tk::Str) && sig(k + 1).and_then(|a| sig(a + 1)).map_or(false, |c| toks[c].kind == Tk::Colon));
+                if dsl {
+                    kinds.push(true);
+                    k += 1;
+                    continue;
+                }
+                let c = Self::partner_of(toks, k, close);
+                let inner: Vec<&Token> = toks[k + 1..c].iter().filter(|t| !t.is_comment()).collect();
+                if !inner.is_empty() && !literal_range(k + 1, c - 1) {
+                    holes.push((inner[0].span.lo as usize, inner.last().unwrap().span.hi as usize));
+                }
+                k = c + 1;
+                continue;
+            }
+            // `name=value` (markup) and `name: value` (a tree's attribute).
+            // A tree's `:` is followed by a space, `class: "app"`; markup's
+            // namespace is tight, `class:active=` / `on:click=`, and is part
+            // of the attribute's name.
+            let tree_colon = t.kind == Tk::Colon && toks.get(k + 1).map_or(false, |n| n.span.lo > t.span.hi);
+            let attr = (t.kind == Tk::Eq || tree_colon) && (prev.map_or(false, |p| (p.kind == Tk::Ident && !crate::rules::is_keyword(&p.text)) || (tree_colon && p.kind == Tk::Str)) || arm_eq_of(k));
+            // `pattern = future => handler,` (`select!`'s arms): the `=`
+            // follows the arm's start, and a `=>` ends the value. The pattern
+            // is a hole unless it is a bare name; so is the handler.
+            if d == 0 && arm_eq_of(k) {
+                let start = (open + 1..k).rev().take_while(|&j| !(d == 0 && (toks[j].kind == Tk::Comma || toks[j].kind == Tk::Close('}')))).last().unwrap_or(k);
+                let pat: Vec<usize> = (start..k).filter(|&j| !toks[j].is_comment()).collect();
+                if pat.len() > 1 {
+                    holes.push((toks[pat[0]].span.lo as usize, toks[*pat.last().unwrap()].span.hi as usize));
+                }
+            }
+            if d == 0 && t.kind == Tk::FatArrow {
+                if let Some(v) = sig(k + 1) {
+                    if toks[v].kind != Tk::Open('{') {
+                        let last = value_end(v, false);
+                        if !literal_range(v, last) {
+                            holes.push((toks[v].span.lo as usize, toks[last].span.hi as usize));
+                        }
+                        k = last + 1;
+                        continue;
+                    }
+                }
+            }
+            // `for pat in EXPR {` and `if EXPR {`: the DSL's control flow.
+            let flow = t.kind == Tk::Ident && (t.text == "in" || (t.text == "if" && prev.map_or(true, |p| p.text != "else")));
+            if d == 0 && (attr || flow) {
+                if let Some(v) = sig(k + 1) {
+                    if toks[v].kind != Tk::Open('{') && !object_array(v) {
+                        let last = value_end(v, flow);
+                        if !literal_range(v, last) {
+                            holes.push((toks[v].span.lo as usize, toks[last].span.hi as usize));
+                        }
+                        k = last + 1;
+                        continue;
+                    }
+                }
+            }
+            match t.kind {
+                Tk::Open(_) => {
+                    kinds.push(false);
+                    d += 1;
+                }
+                Tk::Close(_) => {
+                    if kinds.pop() == Some(false) {
+                        d -= 1;
+                    }
+                }
+                _ => {}
+            }
+            k += 1;
+        }
+        holes.sort();
+        let (lo, hi) = (toks[open].span.lo as usize, toks[close].span.hi as usize);
+        let mut out = String::new();
+        let mut at = lo;
+        for (a, b) in holes {
+            out.push_str(&src[at..a]);
+            let frag = &src[a..b];
+            let line_start = src[..a].rfind('\n').map_or(0, |n| n + 1);
+            let base = src[line_start..].len() - src[line_start..].trim_start().len();
+            match hole_of(frag) {
+                Ok(h) => {
+                    let lines: Vec<&str> = h.lines().collect();
+                    if lines.len() == 1 {
+                        out.push_str(&format!("@: {} :@", lines[0]));
+                    } else {
+                        out.push_str(&format!("@: {}", lines[0]));
+                        for l in &lines[1..] {
+                            out.push('\n');
+                            out.push_str(&" ".repeat(base));
+                            out.push_str(l);
+                        }
+                        out.push('\n');
+                        out.push_str(&" ".repeat(base));
+                        out.push_str(":@");
+                    }
+                }
+                Err(e) => {
+                    let line = src[..a].matches('\n').count() + 1;
+                    self.errors.push(format!("line {line}: this Rust in a macro's body could not be written as Harsh ({e}): {}", frag.trim()));
+                    out.push_str(frag);
+                }
+            }
+            at = b;
+        }
+        out.push_str(&src[at..hi]);
+        out
+    }
+
+    /// Is the stream between `from` and `to` a comma-separated list of
+    /// expressions -- the one stream Harsh writes by juxtaposition? Read by
+    /// shape, the way Rust reads: a piece is not an expression when two atoms
+    /// meet with nothing between them (`SELECT name`, `p class`), when it
+    /// starts with markup's `<`, or when it is a brace group of `"key": value`
+    /// pairs (`json!`). An empty stream is an empty list.
+    fn is_expression_list(toks: &[Token], from: usize, to: usize) -> bool {
+        let sig: Vec<&Token> = toks[from..to].iter().filter(|t| !t.is_comment()).collect();
+        if sig.first().map_or(false, |t| t.kind == Tk::Lt) {
+            return false;
+        }
+        let ends_atom = |t: &Token| matches!(t.kind, Tk::Ident | Tk::Str | Tk::Int | Tk::Float | Tk::Char | Tk::Close(_)) && !matches!(t.text.as_str(), "move" | "as" | "else" | "in" | "if" | "match" | "return" | "async" | "mut" | "ref" | "dyn" | "impl" | "const" | "unsafe" | "static" | "let");
+        // `if` after a pattern is its guard, `matches!(t, Some(n) if n > 1)`:
+        // part of the expression, like `as` and `else` (the self-host round
+        // trip found it, 2026-09-23).
+        let starts_atom = |t: &Token| matches!(t.kind, Tk::Ident | Tk::Str | Tk::Int | Tk::Float | Tk::Char) && !matches!(t.text.as_str(), "as" | "else" | "if");
+        let mut d = 0i32;
+        for w in 0..sig.len() {
+            let t = sig[w];
+            if d == 0 && w > 0 {
+                if starts_atom(t) && ends_atom(sig[w - 1]) {
+                    return false;
+                }
+                if t.kind == Tk::Comma && sig.get(w + 1).map_or(false, |n| n.kind == Tk::Lt) {
+                    return false;
+                }
+            }
+            // A brace group that is a piece of its own, holding `"key": v`.
+            if t.kind == Tk::Open('{') && (w == 0 || matches!(sig[w - 1].kind, Tk::Comma | Tk::Open(_))) {
+                if sig.get(w + 1).map_or(false, |a| a.kind == Tk::Str) && sig.get(w + 2).map_or(false, |c| c.kind == Tk::Colon) {
+                    return false;
+                }
+            }
+            match t.kind {
+                Tk::Open(_) => d += 1,
+                Tk::Close(_) => d -= 1,
+                _ => {}
+            }
+        }
+        true
+    }
+
+    /// The matching closer of the bracket at `k`, or `end`.
+    fn partner_of(toks: &[Token], k: usize, end: usize) -> usize {
+        let mut d = 0i32;
+        for (j, t) in toks.iter().enumerate().take(end + 1).skip(k) {
+            match t.kind {
+                Tk::Open(_) => d += 1,
+                Tk::Close(_) => {
+                    d -= 1;
+                    if d == 0 {
+                        return j;
+                    }
+                }
+                _ => {}
+            }
+        }
+        end
+    }
+
     fn is_struct_literal(toks: &[Token], open: usize, close: usize) -> bool {
         // The path before the brace.
         let mut k = open;
@@ -1683,8 +1882,19 @@ impl<'a> Writer<'a> {
             if b.kind == Tk::Ident && (crate::rules::is_keyword(&b.text) || BLOCK_KEYWORDS.contains(&b.text.as_str()) || matches!(b.text.as_str(), "in" | "mut" | "ref")) {
                 return false;
             }
-            if b.kind == Tk::Punct && (b.text == "|" || b.text == "&" || b.text == "!") {
+            if b.kind == Tk::Punct && (b.text == "&" || b.text == "!") {
                 return false;
+            }
+            // `|Point { x, y }| ..` is a pattern: the `|` *opens* a closure's
+            // parameters. `|x| Point { x, y: 0 }` is a literal, the closure's
+            // body: the `|` *closes* them, so a parameter stands before it.
+            // An or-pattern, `A | B { .. } =>`, has a name there too, and is
+            // told apart below by what follows it (2026-09-21).
+            if b.kind == Tk::Punct && b.text == "|" {
+                let closes = first >= 2 && matches!(toks[first - 2].kind, Tk::Ident | Tk::Close(_) | Tk::Gt);
+                if !closes {
+                    return false;
+                }
             }
         }
         // A `let` before it, with no `=` between: a pattern, however deep
@@ -2138,7 +2348,13 @@ impl<'a> Writer<'a> {
             // on its own line and the chain after the `)`, it does.
             if expr && t.kind == Tk::Ident && matches!(t.text.as_str(), "if" | "match" | "unsafe" | "loop") {
                 if let Some(end) = Self::block_expr_end(toks, cl, i, to) {
-                    if end < to && matches!(toks[end].kind, Tk::Dot | Tk::LArrow) && toks[end + 1..to].iter().any(|n| n.kind == Tk::Ident) {
+                    let chained = end < to && matches!(toks[end].kind, Tk::Dot | Tk::LArrow) && toks[end + 1..to].iter().any(|n| n.kind == Tk::Ident);
+                    // The same for an operand with more of the expression
+                    // after it, `a && match k { .. } && b`: beneath a
+                    // block nothing can continue the line, so the `&& b` was
+                    // written as a statement of its own (found 2026-09-21).
+                    let operand = end < to && i > from && is_binary_operator(&toks[end]);
+                    if chained || operand {
                         self.indent();
                         if prev.is_some() && !self.out.ends_with(' ') && !self.out.ends_with('\n') {
                             self.out.push(' ');
@@ -2226,7 +2442,74 @@ impl<'a> Writer<'a> {
                             continue;
                         }
                     }
-                    if ae < to && toks[ae].kind == Tk::Open('(') {
+                    // A macro's bracket call is a call like any other (the
+                    // delimiter means nothing to the macro): `vec![1, 2]` ->
+                    // `vec! 1 2`, `vec![]` -> `vec!$`. A stream that is not a
+                    // list of expressions -- `vec![x; n]` -- is a token
+                    // stream, `vec! { x; n }` (ruled 2026-09-22, A1 and D1).
+                    // Its inside is written as Harsh while brace bodies are
+                    // transpiled; when they become verbatim (ruling 16), it
+                    // is copied as Rust.
+                    let bang_bracket = ae < to
+                        && ae > i
+                        && toks[ae].kind == Tk::Open('[')
+                        && toks[ae - 1].kind == Tk::Punct
+                        && toks[ae - 1].text == "!";
+                    if bang_bracket {
+                        if let Some(ce) = Self::atom_end(toks, ae, to) {
+                            let close = ce - 1;
+                            let mut d = 0i32;
+                            let repeat = toks[ae + 1..close].iter().any(|x| {
+                                match x.kind {
+                                    Tk::Open(_) => d += 1,
+                                    Tk::Close(_) => d -= 1,
+                                    _ => {}
+                                }
+                                d == 0 && x.kind == Tk::Semi
+                            });
+                            if repeat {
+                                self.indent();
+                                if prev.is_some() && !self.out.ends_with(' ') && !self.out.ends_with('\n') && !self.out.ends_with('(') {
+                                    self.out.push(' ');
+                                }
+                                self.run_span(toks, cl, i, ae, false);
+                                // Its inside is Rust, copied as written.
+                                let inside = self.src[toks[ae].span.hi as usize..toks[close].span.lo as usize].trim();
+                                self.out.push_str(&format!(" {{ {inside} }}"));
+                                i = ce;
+                                prev = Some(&toks[close]);
+                                continue;
+                            }
+                        }
+                    }
+                    // A macro called with `(…)` or `[…]` whose stream is not a
+                    // list of expressions is a DSL: braces delimit it in Harsh,
+                    // with its Rust in holes, and only the delimiter changes
+                    // (the user's rule, 2026-09-23: parens isolate Harsh code,
+                    // braces delimit a whole stream). `sql!(SELECT name FROM t)`
+                    // -> `sql! { SELECT name FROM t }`.
+                    let bang_call = ae < to && ae > i && toks[ae - 1].kind == Tk::Punct && toks[ae - 1].text == "!" && matches!(toks[ae].kind, Tk::Open('(') | Tk::Open('['));
+                    if bang_call {
+                        if let Some(ce) = Self::atom_end(toks, ae, to) {
+                            let close = ce - 1;
+                            if !Self::is_expression_list(toks, ae + 1, close) {
+                                self.indent();
+                                if prev.is_some() && !self.out.ends_with(' ') && !self.out.ends_with('\n') && !self.out.ends_with('(') {
+                                    self.out.push(' ');
+                                }
+                                self.run_span(toks, cl, i, ae, false);
+                                let body = self.dsl_body(toks, ae, close);
+                                // The stream's own delimiter becomes a brace pair.
+                                let inner = &body[1..body.len() - 1];
+                                self.out.push_str(&format!(" {{{inner}}}"));
+                                self.at_line_start = false;
+                                i = ce;
+                                prev = Some(&toks[close]);
+                                continue;
+                            }
+                        }
+                    }
+                    if ae < to && (toks[ae].kind == Tk::Open('(') || bang_bracket) {
                         if let Some(ce) = Self::atom_end(toks, ae, to) {
                             let close = ce - 1;
                             // Emit the callee, preserving the gap before it.
@@ -2280,7 +2563,14 @@ impl<'a> Writer<'a> {
                                     }
                                     comma && Self::atom_end(toks, *a, *b) == Some(*b)
                                 };
-                                let brace = brace || tuple;
+                                // An array literal, `[1, 2]`, is isolated too:
+                                // brackets always index in Harsh (the user's
+                                // rule, 2026-09-11), so a bare `f [1, 2]` is
+                                // an index of `f`. The converter wrote it bare
+                                // until 2026-09-21, when the self-host round
+                                // trip caught `starts_with(['=', '.'])`.
+                                let array = toks[*a].kind == Tk::Open('[');
+                                let brace = brace || tuple || array;
                                 // A metavariable `$k` is one atom.
                                 let meta = *b - *a == 2 && toks[*a].kind == Tk::Punct && toks[*a].text == "$" && toks[*a + 1].kind == Tk::Ident;
                                 // In a type application (`Fn a b`) only a
@@ -2468,6 +2758,10 @@ impl<'a> Writer<'a> {
                         let is_match = kind == Kind::Commas && {
                             let mut d = 0i32;
                             let mut seen = false;
+                            // A bracket inside a literal is text: `Tk.Open '['`
+                            // before the `match` left the depth at one, and the
+                            // retired `match x:` was written (found 2026-09-21).
+                            let line = mask_literals(&line);
                             for w in line.split_whitespace() {
                                 for c in w.chars() {
                                     match c {
@@ -2541,53 +2835,46 @@ impl<'a> Writer<'a> {
                             prev = None;
                             continue;
                         }
-                        let first_inside = toks[i + 1..close.min(to)].iter().find(|t| !t.is_comment());
-                        let _ = first_inside;
-                        let is_hsx = macro_body && close != usize::MAX && close < to && crate::juxt::is_markup(toks, i + 1, close);
-                        // Inside Rust braces no layout block can open: the
-                        // markup keeps its braces, its holes and attribute
-                        // values still converted (rule 1 in brace form).
-                        if is_hsx && self.brace_depth > 0 && close != usize::MAX && close < to {
-                            self.word("{", true);
-                            self.level += 1;
-                            self.hsx_body(toks, cl, i, close);
-                            self.level -= 1;
-                            self.newline();
-                            self.indent();
-                            self.out.push('}');
+                        // A Rust macro's brace body: the DSL is copied as
+                        // written, and every piece of Rust code in it becomes a
+                        // hole of Harsh, `@: … :@` (principle 2 and the user's
+                        // algorithm, 2026-09-23: the converter writes the holes
+                        // an author would).
+                        if macro_body && !macro_rules && close != usize::MAX && close < to {
+                            if !self.at_line_start && !self.out.ends_with(' ') && !self.out.ends_with('(') {
+                                self.out.push(' ');
+                            }
+                            let body = self.dsl_body(toks, i, close);
+                            // The body's lines follow the converter's layout: each is
+                            // moved by as much as the line it starts on moved. Only
+                            // whitespace at a line's start changes -- never inside a
+                            // string that spans lines.
+                            let orig_line = self.src[..toks[i].span.lo as usize].rsplit('\n').next().unwrap_or("");
+                            let orig_ind = (orig_line.len() - orig_line.trim_start().len()) as isize;
+                            let out_line = self.out.rsplit('\n').next().unwrap_or("");
+                            let out_ind = (out_line.len() - out_line.trim_start().len()) as isize;
+                            let multiline_str = toks[i..close].iter().any(|t| t.kind == Tk::Str && t.text.contains('\n'));
+                            let body = if out_ind == orig_ind || multiline_str {
+                                body
+                            } else {
+                                body.split('\n').enumerate().map(|(n, l)| {
+                                    if n == 0 {
+                                        return l.to_string();
+                                    }
+                                    let ind = (l.len() - l.trim_start().len()) as isize;
+                                    let to = (ind + out_ind - orig_ind).max(0) as usize;
+                                    if l.trim().is_empty() { String::new() } else { format!("{}{}", " ".repeat(to), l.trim_start()) }
+                                }).collect::<Vec<_>>().join("\n")
+                            };
+                            self.out.push_str(&body);
                             self.at_line_start = false;
-                            i = close + 1;
                             prev = Some(&toks[close]);
-                            continue;
-                        }
-                        // `rsx! { div { .. } }`: a brace tree, its first item
-                        // an element `name {` (rule 6).
-                        let is_tree = macro_body && close != usize::MAX && close < to && Self::tree_first(toks, i + 1, close);
-                        if is_tree {
-                            self.word("do:", true);
-                            self.newline();
-                            self.level += 1;
-                            self.tree_body(toks, cl, i + 1, close);
-                            self.level -= 1;
-                            self.newline();
                             i = close + 1;
-                            prev = None;
                             continue;
                         }
-                        if is_hsx && close != usize::MAX && close < to {
-                            // `view! { <markup/> }` -> `view! do:` with the markup
-                            // beneath (rule 1): markup kept line for line, every
-                            // hole and every attribute value converted as Harsh.
-                            self.word("do:", true);
-                            self.newline();
-                            self.level += 1;
-                            self.hsx_body(toks, cl, i, close);
-                            self.level -= 1;
-                            self.newline();
-                            i = close + 1;
-                            prev = None;
-                            continue;
-                        }
+                        // (`hm!{ 1 => "a" }` was written `hm!\\ 1 => "a"` from
+                        // 2026-09-20 to 2026-09-22; `m!\\` is retired, A2, and a
+                        // brace call keeps its braces.)
                         if macro_body && close != usize::MAX && close < to {
                             // `view! { … }`, `quote! { … }`: the body has its own
                             // grammar and its own layout. Keep the author's
@@ -2640,7 +2927,62 @@ impl<'a> Writer<'a> {
                             // Inside `[ .. ]` a literal is isolated in parens
                             // (`vec! [(Point: x = 1)]`): an inline block reads
                             // to its `)`, and brackets are Rust's.
-                            let in_brackets = innermost_open_is_bracket(toks, i)
+                            // A literal that is the last thing in its
+                            // brackets needs none: its field list ends at the
+                            // `]` anyway, and `vec![Arm { m: 1 }]` must come
+                            // back as itself (2026-09-19).
+                            // ... when it is written on one line. A literal
+                            // spanning lines keeps its parens: its fields are
+                            // laid out beneath, and the parens are what hold
+                            // that layout apart from the bracket's.
+                            let one_line = !toks[i + 1..close].iter().any(|t| t.line_start.is_some());
+                            let last_in_brackets = one_line
+                                && toks[close + 1..]
+                                    .iter()
+                                    .find(|t| !t.is_comment())
+                                    .map_or(false, |t| t.kind == Tk::Close(']'));
+                            // A macro's bracket list is juxtaposed now, and
+                            // the call path isolates each argument itself: a
+                            // second pair here would reach the Rust (A1,
+                            // 2026-09-22). The `[x; n]` form still needs it.
+                            // (The innermost opener of any kind: `enclosing_open`
+                            // tracks braces only.)
+                            let innermost = {
+                                let mut stack: Vec<usize> = Vec::new();
+                                for (k, t) in toks[..i].iter().enumerate() {
+                                    match t.kind {
+                                        Tk::Open(_) => stack.push(k),
+                                        Tk::Close(_) => {
+                                            stack.pop();
+                                        }
+                                        _ => {}
+                                    }
+                                }
+                                stack.last().copied()
+                            };
+                            let macro_list = innermost.map_or(false, |o| {
+                                o > 0
+                                    && toks[o].kind == Tk::Open('[')
+                                    && toks[o - 1].kind == Tk::Punct
+                                    && toks[o - 1].text == "!"
+                                    && {
+                                        let mut d = 0i32;
+                                        let mut semi = false;
+                                        for t in &toks[o + 1..] {
+                                            match t.kind {
+                                                Tk::Open(_) => d += 1,
+                                                Tk::Close(_) => d -= 1,
+                                                Tk::Semi if d == 0 => semi = true,
+                                                _ => {}
+                                            }
+                                            if d < 0 {
+                                                break;
+                                            }
+                                        }
+                                        !semi
+                                    }
+                            });
+                            let in_brackets = (innermost_open_is_bracket(toks, i) && !last_in_brackets && !macro_list)
                                 || innermost_open_is_tuple(toks, i);
                             if in_brackets {
                                 // The name is already written: put `(` before it.
@@ -2803,7 +3145,10 @@ impl<'a> Writer<'a> {
                     // a chain), that line is a continuation: one unit in.
                     // (An argument that begins with a comment is mid-statement
                     // too: what precedes it is the `(` or `,` of its list.)
-                    let mid_statement = (toks[from..i].iter().any(|n| !n.is_comment() && n.kind != Tk::Hash)
+                    // Whole attributes before it do not begin the statement:
+                    // `#[inline]` then `/// Second.` then the item put the
+                    // item one level too deep (found 2026-09-24).
+                    let mid_statement = (!only_attributes(&toks[from..i])
                         || (from > 0 && matches!(toks[from - 1].kind, Tk::Comma | Tk::Open('(') | Tk::Open('[')) && innermost_open_char(toks, from).map_or(false, |c| c != '{')))
                         && toks[i + 1..to].iter().any(|n| !n.is_comment());
                     self.indent();

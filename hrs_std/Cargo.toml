@@ -1,0 +1,16 @@
+[package]
+name = "hrs_std"
+version = "0.1.2"
+edition = "2021"
+authors = ["Bahiminin Benoit Dah"]
+license = "MPL-2.0"
+description = "Harsh's standard library: Julia-style matrices and vectors, with slicing, views and broadcasting -- the runtime behind m~, v~, .* and f<>."
+repository = "https://gitlab.com/bahiminin.benoit.dah.opensource/harsh-lang"
+keywords = ["harsh", "matrix", "linear-algebra", "julia"]
+categories = ["mathematics", "science"]
+rust-version = "1.75"
+readme = "README.md"
+
+[dependencies]
+nalgebra = "0.33"
+num-traits = "0.2"

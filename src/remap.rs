@@ -18,12 +18,24 @@ pub struct Entry {
     gen_hi: u32,
     src_lo: u32,
     src_hi: u32,
+    /// The macro expansion the generated text came from, 0 for none.
+    ctx: u32,
+}
+
+/// A Harsh macro expansion recorded by the transpiler: a diagnostic inside
+/// the expanded code is pointed at the definition (through the entries) and
+/// at the call (through this).
+pub struct Expansion {
+    ctx: u32,
+    name: String,
+    call_lo: u32,
 }
 
 pub struct SourceMap {
     source_path: String,
     generated_path: String,
     entries: Vec<Entry>,
+    expansions: Vec<Expansion>,
     src: String,
     line_starts: Vec<usize>,
 }
@@ -44,10 +56,23 @@ impl SourceMap {
                     gen_hi: a[1].as_u64().unwrap_or(0) as u32,
                     src_lo: a[2].as_u64().unwrap_or(0) as u32,
                     src_hi: a[3].as_u64().unwrap_or(0) as u32,
+                    ctx: a.get(4).and_then(|x| x.as_u64()).unwrap_or(0) as u32,
                 });
             }
         }
         entries.sort_by_key(|e| e.gen_lo);
+        let mut expansions = Vec::new();
+        if let Some(arr) = v["expansions"].as_array() {
+            for e in arr {
+                if let Some(a) = e.as_array() {
+                    expansions.push(Expansion {
+                        ctx: a[0].as_u64().unwrap_or(0) as u32,
+                        name: a[1].as_str().unwrap_or("").to_string(),
+                        call_lo: a[2].as_u64().unwrap_or(0) as u32,
+                    });
+                }
+            }
+        }
         let src = std::fs::read_to_string(&source_path)
             .map_err(|e| format!("{}: {}", source_path, e))?;
         let mut line_starts = vec![0usize];
@@ -56,7 +81,36 @@ impl SourceMap {
                 line_starts.push(i + 1);
             }
         }
-        Ok(SourceMap { source_path, generated_path, entries, src, line_starts })
+        Ok(SourceMap { source_path, generated_path, entries, expansions, src, line_starts })
+    }
+
+    /// The generated file this map describes.
+    pub fn generated(&self) -> &str {
+        &self.generated_path
+    }
+
+    /// The Harsh file this map describes.
+    pub fn source(&self) -> &str {
+        &self.source_path
+    }
+
+    /// A 1-based `line:column` in the generated file -- as a panic reports it
+    /// -- back to the 1-based line and column in the Harsh source. Columns
+    /// count characters, as `std::panic::Location` does.
+    pub fn locate(&self, line: usize, col: usize) -> Option<(usize, usize)> {
+        let gen = std::fs::read_to_string(&self.generated_path).ok()?;
+        let start = if line <= 1 {
+            0
+        } else {
+            gen.match_indices('\n').nth(line - 2).map(|(i, _)| i + 1)?
+        };
+        let text = &gen[start..];
+        let off = start + text.char_indices().nth(col.saturating_sub(1)).map_or(text.len(), |(i, _)| i);
+        let src_off = self.remap(off as u32)? as usize;
+        let l = self.line_starts.partition_point(|&s| s <= src_off);
+        let line_start = self.line_starts[l - 1];
+        let c = self.src.get(line_start..src_off).map_or(1, |s| s.chars().count() + 1);
+        Some((l, c))
     }
 
     /// Narrowest entry containing `off`, else the next entry that starts after
@@ -70,6 +124,14 @@ impl SourceMap {
                 let delta = off - e.gen_lo;
                 let width = e.src_hi - e.src_lo;
                 return Some(e.src_lo + delta.min(width));
+            }
+            // Inserted punctuation right after a token -- the `;` the
+            // transpiler wrote after `1 +` -- has no entry. A diagnostic
+            // there is about what precedes it, not what follows: map to the
+            // end of the preceding token unless a real token begins here.
+            let next_starts_here = self.entries.get(i).map_or(false, |n| n.gen_lo == off);
+            if off == e.gen_hi && !next_starts_here {
+                return Some(e.src_hi);
             }
         }
         self.entries.get(i).map(|e| e.src_lo)
@@ -90,6 +152,18 @@ impl SourceMap {
             }
         }
         self.entries.get(i).map(|e| e.src_lo)
+    }
+
+    /// The expansion the generated text at `off` came from, if any.
+    fn expansion_at(&self, off: u32) -> Option<&Expansion> {
+        let i = self.entries.partition_point(|e| e.gen_lo <= off);
+        let e = if i > 0 { &self.entries[i - 1] } else { return None };
+        let next_starts_here = self.entries.get(i).map_or(false, |n| n.gen_lo == off);
+        let inside = off < e.gen_hi || (off == e.gen_hi && !next_starts_here);
+        if e.ctx == 0 || !inside {
+            return None;
+        }
+        self.expansions.iter().find(|x| x.ctx == e.ctx)
     }
 
     fn line_col(&self, off: u32) -> (usize, usize) {
@@ -123,6 +197,8 @@ pub struct Loc {
     col_end: usize,
     label: Option<String>,
     is_primary: bool,
+    /// The offset in the generated file this location came from.
+    gen_off: u32,
 }
 
 pub fn collect(map: &SourceMap, msg: &serde_json::Value, out: &mut Vec<Loc>) {
@@ -151,6 +227,7 @@ pub fn collect(map: &SourceMap, msg: &serde_json::Value, out: &mut Vec<Loc>) {
                 col_end += 1;
             }
             out.push(Loc {
+                gen_off: bs,
                 line,
                 col_start,
                 col_end: col_end.max(col_start + 1),
@@ -178,6 +255,7 @@ pub fn render(map: &SourceMap, msg: &serde_json::Value, w: &mut impl Write) -> i
         None => writeln!(w, "{}: {}", level, text)?,
     }
     let primary = locs.iter().find(|l| l.is_primary).unwrap_or(&locs[0]);
+    let primary_gen = Some(primary.gen_off);
     writeln!(w, "  --> {}:{}:{}", map.source_path, primary.line, primary.col_start)?;
 
     let gutter = locs.iter().map(|l| l.line.to_string().len()).max().unwrap_or(1).max(2);
@@ -197,6 +275,17 @@ pub fn render(map: &SourceMap, msg: &serde_json::Value, w: &mut impl Write) -> i
             }
             _ => writeln!(w, "{:>w$} | {}{}", "", pad, marks, w = gutter)?,
         }
+    }
+
+    // Inside a Harsh macro's expansion: the snippet above is the definition's
+    // line; say which call produced it, so both ends are on the page.
+    if let Some(x) = primary_gen.and_then(|off| map.expansion_at(off)) {
+        let (cl, cc) = map.line_col(x.call_lo);
+        // A derive is recorded as its call is written, `#[derive~ Name]`; a
+        // `~` call by its name.
+        let call = if x.name.starts_with("#[") { x.name.clone() } else { format!("{}~", x.name) };
+        writeln!(w, "{:>w$} = note: in the expansion of `{}` called at {}:{}:{}", "", call, map.source_path, cl, cc, w = gutter)?;
+        writeln!(w, "{:>w$} | {}", cl, map.line_text(cl), w = gutter)?;
     }
 
     // Sub-diagnostics: notes and helps that point into generated code.

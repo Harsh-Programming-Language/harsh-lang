@@ -77,17 +77,52 @@ fn expand(args: &[String]) -> ExitCode {
         }
     };
     let (work, _zones) = harsh_lang::rawzone::prepare(&src);
-    let toks = match harsh_lang::lex::lex(&work) {
+    let (work, regs) = match harsh_lang::procmac::prepare(&work) {
+        Ok(p) => p,
+        Err(e) => {
+            eprintln!("error: {}", e.msg);
+            return ExitCode::from(1);
+        }
+    };
+    let toks = match harsh_lang::procmac::lex(&work, &regs) {
         Ok(t) => t,
         Err(e) => {
             eprintln!("error: {}", e.msg);
             return ExitCode::from(1);
         }
     };
+    // The project the file belongs to decides which proc macros exist: its
+    // runner is built as `hrs build` builds it. A file outside any project,
+    // or in one that uses none, expands without them.
+    let dir = std::path::Path::new(path)
+        .canonicalize()
+        .ok()
+        .and_then(|p| p.parent().map(|d| d.to_path_buf()))
+        .unwrap_or_else(|| PathBuf::from("."));
+    let runner = match driver::Project::find_from(dir).map(|p| p.proc_runner()) {
+        Ok(Ok(r)) => r,
+        Ok(Err(e)) => {
+            eprintln!("hrs: {e}");
+            return ExitCode::from(1);
+        }
+        Err(_) => None,
+    };
+    let procs: &dyn harsh_lang::mac::ProcMacros = match &runner {
+        Some(r) => r,
+        None => &harsh_lang::mac::NoProcMacros,
+    };
     let taken = harsh_lang::layout::names_in_scope(&toks);
-    match harsh_lang::mac::expand_all(toks, &taken) {
-        Ok(out) => {
+    match harsh_lang::mac::expand_all_with(toks, &taken, procs) {
+        Ok((out, _)) => {
             println!("{}", harsh_lang::mac::render_file(&out));
+            // A call nothing defined is printed as written; say so, rather
+            // than let it pass for an expansion.
+            for name in harsh_lang::mac::unexpanded(&out) {
+                eprintln!(
+                    "note: `{name}~` is left as written: it is not a `macro_rules~` of this file or the prelude, \
+                     nor a proc macro of this project (`proc-macros` under [package.metadata.harsh])"
+                );
+            }
             ExitCode::SUCCESS
         }
         Err(e) => {

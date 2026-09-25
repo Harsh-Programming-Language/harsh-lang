@@ -1,6 +1,165 @@
 # Changelog
 
+## 0.1.30 — 2026-09-25  (new: Harsh's standard distribution -- `hrs_std` 0.1.2, `hrs_proc_macro` 0.2.0, `hrs_quote` 0.1.0, `hrs_syn` 0.1.0 -- shipped inside `hrs`; Harshlings 0.1.6)
+
+- **Harsh's standard distribution ships inside `hrs`**, as Rust's `std` and `proc_macro` ship with the toolchain: `hrs_std`, `hrs_proc_macro`, `hrs_quote` and `hrs_syn`. A `Cargo.toml` names them as Rust names `syn` and `quote` -- `hrs_quote = "0.1"` -- and `hrs` serves them from what it carries, never from crates.io, always at its own version. Only `harsh-lang` is published.
+
+- **Harsh's own proc macros are complete, mirroring Rust's in all three kinds** -- custom derive, attribute-like, function-like -- and written with Harsh's `syn` and `quote`. The Rust Book's `HelloMacro` and `route` examples, written in Harsh, run end to end.
+- **`hrs export` is pure Rust** (the user's rule: the Rust translation carries nothing of Harsh): no `[package.metadata.harsh]` in the exported manifest; a Harsh macro crate is refused, having no Rust meaning. The design for the rest -- `hrs_std` tree-shaken into the export, re-exports, two kinds of package -- is in the development notes (`PACKAGING.md`), for the releases after this one.
+- **Harsh declarative macros, the matcher** (the user's ruling): a metavariable is written in its parentheses, `($name:spec)`, part of the construct as `$( … )*`'s are the repetition's; a bare `$name:spec` is refused, naming the form. Every other token in a matcher is literal, further parentheses included; a specifier gives its capture meaning -- to `($v:expr)`, `(1+2)` and `((1+2))` are one expression, while `:ident` is one identifier token, as in Rust. An arm whose matcher is one metavariable is written `(($e:expr))`. The prelude, the Book, the guide, *By Example* and Harshlings are in the new form. **This changes existing macros:** a bare metavariable must now be written in its parentheses.
+- **Known issue -- matrix views and Stacked Borrows.** A borrowed view, `&a[0..2, ..]`, packs its window into a reference to a zero-sized slice that points at the matrix, and widens it back when read. Miri reports that as undefined behaviour under Stacked Borrows, its default model; Tree Borrows accepts it, and every other part of `hrs_std` is clean under both. Released knowingly; making views sound is the first work after this release.
+- **Fixed:** an inline attribute before a `struct` with fields beneath; a `struct`'s `[where …]` on its own line beneath the header, silently emitted as a field, is now refused, naming the header-line form; after an upgrade, unchanged files were retranspiled on every build (a stamp now records which `hrs` last ran); three `hrs-from` converter gaps (a `match` after a guard arm, an attribute between doc comments, an `if` as a macro argument worked around); a macro call at item level; the navigation of every rendered document; Harshlings' `verify.py` leaving a folder behind per program.
+
+- **Macros documented by who wrote them** (the user's architecture): **Harsh macros (~)**, your own in Harsh; **Rust macros (!)**, your own in Rust, still supported; **Rust DSLs (!)**, imported from Rust libraries (calling rules, braces and holes); **Harsh DSLs (~)**, imported from Harsh libraries -- the first two each with declarative and procedural (function-like, derive, attribute). The Book's chapter 23 gives each a numbered section (23.5-23.8; parentheses and the summary move to 23.9-23.10), with two new verified examples: a `macro_rules!` inside a Harsh file, and the Rust Book's `HelloMacro` -- a Rust derive crate used from Harsh. The Language Guide, `docs/MACROS.md` and *Harsh by Example* 7.3 follow the same architecture. Removed on the way: the guide's paragraph saying procedural macros were "still in development". Harshlings 0.1.6 maps its macro exercises onto it, fixes its stale topic list, and `verify.py` no longer leaves a 13 MB folder behind per program.
+- **`hrs_proc_macro` 0.2.0** (step 1 of Harsh's `syn`/`quote`): Rust's token types, with where each token stands, lexed by the transpiler's own lexer; `to_string` and `parse` as before.
+- **Errors at the programmer's token** (step 2): a token a proc macro copies from its input keeps its origin, so rustc's error on it lands on the programmer's code, as in Rust; a macro rejects code with `compile_error!` and an input token's span (`set_span`). A macro's own `parse` gives `call_site` spans, as Rust's does.
+- **Fixed: a macro call at item level** -- `compile_error! "msg"` outside a function -- was left unapplied, invalid Rust.
+- **`quote~`** (step 3): `hrs_quote` 0.1.0, new. In a macro crate that says `use hrs_quote.quote`, `quote~ do:` takes a template laid out as the output reads, with `#name` interpolating anything that implements `ToTokens`; a multi-line value is indented to where its `#name` stands, and an interpolated input token keeps its span. The Rust Book's `HelloMacro` derive, written in Harsh with `quote~`, runs end to end. Repetition (step 4): `#( … )*` and `#( … ),*` iterate every `#name` inside, side by side; a repetition that begins a line repeats as lines at that column, one elsewhere runs inline. Columns are measured when the macro runs, from the text actually assembled.
+- **`hrs_syn`** (step 5): `hrs_syn` 0.1.0, new. `parse_macro_input! { input as DeriveInput }` parses a Harsh item into `syn`'s shapes -- `DeriveInput` with its attributes, visibility, name, `Generics` (`split_for_impl`) and `Data` (a struct's `Fields`, named, unnamed or unit; an enum's `Variant`s; a union) -- from Harsh's item grammar; `Error::to_compile_error` points at the programmer's token. The Rust Book's `HelloMacro`, written in Harsh line for line, runs on a plain and a generic struct.
+- **Harsh attribute-like macros**, mirroring Rust's: `#[proc_macro_attribute~]` on a `pub fn` taking two streams (one is refused, as rustc refuses it), called `#[route~ GET "/"]` on any item; the macro receives the arguments as written and the item with all its other attributes, and its output replaces the item. `hrs_syn` gains `ItemFn`. The Rust Book's `route` example, written in Harsh, runs end to end.
+- **Navigation:** every rendered document lists its headings to four levels -- the Book's chapters were missing -- with one H1 per page and no broken links.
+- **The library builds without its default features**, the pure language with no dependencies; `check.sh` keeps it so.
+
+## 0.1.29 — 2026-09-24  (`hrs_proc_macro` 0.1.0, `hrs_std` 0.1.2, Harshlings 0.1.5, all unchanged)
+
+- **Harsh derives, mirroring Rust's** (the user's rule: for all Harsh proc macros, mirror Rust's). A macro crate registers `#[proc_macro_derive~ Describe]` on a `pub fn` -- `#[proc_macro_derive~ Show (attributes show)]` to declare a helper attribute, Rust's `attributes(…)`. `#[derive~ Describe]` above a `struct`, an `enum` or a `union` runs it on that item: it receives the item with its attributes and doc comments and without any derive attribute, Rust's included; what it returns is added after the item, which it cannot change; its helpers leave the item once it has run. It sits beside Rust's `#[derive Debug]`; several run in the order written. Errors name the derive at its attribute; rustc's say "in the expansion of `#[derive~ Describe]`".
+- **Fixed:** `#[proc_macro~] pub fn f` written inline was refused as over-indented.
+- **The Book** teaches Harsh's proc macros in 23.5, function-like and derives, with two-crate examples (its harness now builds crates side by side).
+- **Known bugs recorded** (each an ignored test, reported by every `cargo test` until fixed): an inline attribute before a `struct` with fields beneath; `hrs-from` writing a `match` after a guard arm; `hrs-from` writing an `if` with a continued string as a field value.
+
+## 0.1.28 — 2026-09-24  (`hrs_proc_macro` 0.1.0, new; `hrs_std` 0.1.2, Harshlings 0.1.5, both unchanged)
+
+- **Harsh's own proc macros, the function-like form** (ruling 17). A proc macro is an ordinary Harsh `pub fn` marked `#[proc_macro~]`, from `hrs_proc_macro.TokenStream` to `TokenStream`; a crate says `proc-macro = true` under `[package.metadata.harsh]`, and a crate that uses it lists `proc-macros = ["../path"]`. `hello_macro~ world` runs the macro when `hrs` transpiles the caller, and its expansion -- Harsh -- is spliced where the call stood, so the generated Rust holds no macro. `hrs` builds a small runner under `target/hrs/proc-macros/` with cargo; later builds are a no-op, and changing a macro retranspiles its callers.
+- **Errors name the macro and the call**, whoever finds them: the macro's own error or panic (`` `boom~` failed: panicked: not yet ``), an expansion that does not read as Harsh, or rustc (mapped back to the call, "in the expansion of `name~`").
+- **`hrs expand`** finds the file's project from the file, expands its proc macros, and names any `name~` nothing defines instead of printing it back silently.
+- **`#[name~ (…)]` and `#[derive~ Name]` are refused** until they are built: they had reached rustc as `#[name!(…)]`, Rust nobody wrote. `#[proc_macro~]` is Harsh's and never reaches rustc.
+- **`hrs_proc_macro` 0.1.0**, the runtime: `TokenStream` (text) and the runner's entry point.
+
+## 0.1.27 — 2026-09-24  (`hrs_std` 0.1.2, Harshlings 0.1.5, both unchanged)
+
+- **A diagnostic inside a hole points at the `.hrs` line and column.** Each restored body maps piece by piece: a DSL segment to itself, a hole's Rust to its Harsh code. `error[E0277] --> src/main.hrs:8:18` is the `+` of `@: count + "x" :@`.
+- **The map stayed right after a body, and after a `macro_rules!` zone.** `dslzone::restore` and `rawzone::restore` now move the map by what they put back (the latter had never done so: any file with a `macro_rules!` zone mapped wrong after it), and a placeholder that outgrew its body's first line no longer pushes every source offset after it.
+
+## 0.1.26 — 2026-09-23  (`hrs_std` 0.1.2, Harshlings 0.1.5, both unchanged)
+
+- **A macro's DSL stream is written in braces** (the user's rule: parens isolate Harsh code, braces delimit a whole stream). `hrs-from` writes `sql!(SELECT name FROM t)` as `sql! {SELECT name FROM t}`, `html!(…)` and `json!(…)` likewise, with their Rust in holes; only the delimiter changes, and `hrs` keeps the braces. Until now such a stream was written in isolating parens and came back `sql!(SELECT(name, FROM, t))`, silently. A comma-separated list of expressions stays juxtaposed, `vec! 1 2 3`, `matches! x (Some 1 | None)`.
+- **`json!` objects and arrays are structure**: only their Rust values become holes, `"text": @: question :@`.
+- **A closure's body is written beneath its prototype** whatever its return type: `-> Option<Vec<String>>:` (the `>>` token had made the converter isolate the body as an argument, which transpiled to a turbofish).
+- **An expansion is read as source** (the user's rule: a `~` macro's author expands to valid Harsh, holes included; anything else is an error). A brace body produced by an expansion is Rust with holes, like a typed one. The guide's `filled~` writes its holes.
+
+## 0.1.25 — 2026-09-23  (`hrs_std` 0.1.2, Harshlings 0.1.5, both unchanged)
+
+- **`hrs-from` writes the holes** (the user's algorithm, 2026-09-23). Converting a Rust file keeps each DSL body as written — `view!` markup, an `rsx!` tree, `select!`'s arms — and turns every piece of Rust code in it into a hole of Harsh: `{@: active :@}`, `class:active=@: move || current <- get$ == i :@`, `onclick: @: move |_| reset$ :@,`, `for item in @: items <- iter$ :@ {`, `@: Some v :@ = @: rx <- recv$ :@ => …`. A literal stays as written. A hole nests, and its body's lines follow the converter's layout.
+- **No silent fallback:** a piece that cannot be written as Harsh stops `hrs-from` with the line named (the user's ruling). Each hole is checked by transpiling it back, and must be a complete expression.
+- The sr-auto site (22 files, 2,693 lines of Leptos): 233 holes, 0 errors, no Rust left outside a hole, every file the same program after the round trip.
+
+## 0.1.24 — 2026-09-23  (`hrs_std` 0.1.2 unchanged; Harshlings 0.1.5)
+
+- **A Rust macro's brace body is Rust, and its holes are Harsh** (ruling 16, the user's principles of 2026-09-23). `view! { … }`, `rsx! { … }`, `tokio.select! { … }`, `quote! { … }`: the body is copied byte for byte, one line or many; a hole `@: … :@` — always closed — holds Harsh, transpiled in place, and may nest. `@@:` is a literal `@:`. `hrs-from` copies brace bodies as Rust; `hrs fmt` never touches them.
+- **Retired:** the old DSL modes — `view! do:` markup ("HSX"), `rsx! do:` brace trees, a macro `do:` body, `#:` blocks, `m!\\` — each refused with the braces named. A block passed as an argument is `m! (do: …)`.
+- **A literal cannot be applied:** `assert_eq! a + 1 b` was `assert_eq!(a) + 1(b)`, silently; it is refused. **`@:` outside a body** is refused. **A turbofished function applies:** `parse_kv.<String> "x"` is `parse_kv::<String>("x")`.
+- **Fixed:** the guide example `(twice~ 4, 0)`; `examples_transpile` now expands macros.
+
+## 0.1.23 — 2026-09-23  (`hrs_std` 0.1.2 unchanged; Harshlings 0.1.4)
+
+- **A bracket after a macro's bang is an argument, an array** (ruled 2026-09-22, A1): `m! [a, b] c` is `m!([a, b], c)`. Rust's bracket call is written as Harsh writes any call — `vec! 1 2 3`, `vec!$`, and `vec! { 0; 4 }` for a stream that is not a list. Written the Rust way, `vec![1, 2, 3]` would now mean a vector of one array, so it is refused with the Harsh spelling named; `vec! ([1, 2, 3])` passes one array on purpose. The corpus, the Book, *by Example*, Harshlings, the guide and the prelude's `m~` and `v~` moved in one step (94 sites).
+- **`hrs-from`** writes a macro's bracket list as juxtaposition and a `;` stream in braces.
+- **Fixed: a block argument followed by another block argument ended the call** — `f (P\ x = 1) (Q\ y = 2)` was `f(P { .. })(Q { .. })`. Plain arguments after a block always worked.
+- **Fixed: a `~` call's stream was judged by rules for Rust's `!` macros** on the path the editor and the formatter's guard read, so the guide's own `pair~ (1, 2)` showed as an error. A `~` stream is its macro's.
+- **Fixed: a crash in the emitter** when an expansion's tokens carried spans past the end of a short file.
+
+## 0.1.22 — 2026-09-21  (`hrs_std` 0.1.2)
+
+- **Ruled, not built (2026-09-22):** foreign DSLs — `view! { … }` and `rsx! { … }` bodies verbatim, Harsh holes `@: … :@`. Ruling 16 in the design notes; first on the roadmap.
+- **The Book teaches slicing and broadcasting:** chapter 16 gains *Taking a part* and *Element by element* (242 snippets). Harshlings 0.1.3 adds `matrices05`–`07`.
+- **`f<>` takes up to three arguments** (`f64.clamp<> a 0.0 1.0`, `f64.mul_add<> a b c`), stretched together.
+- **`hrs` names the missing crate** for a file that uses `.*` or `f<>` without `hrs_std` in its manifest, as it did for `m~` and `v~`.
+- **Fixed: `hrs fmt` could change a matrix.** Past its width it listed the entries of `m~ [ … ]` one per line, and inside `m~` a line break is a row: a row of ten became a column of ten, silently. The formatter now never adds or removes a line break inside a `~` call's stream — the stream's syntax belongs to the macro. An over-long `~` line stays as its author wrote it.
+- **Three converter fixes**, all found by the round trip over the transpiler's own source: a `match` used as an operand with more of the expression after it (`a && match k { .. } && b`) had its tail written as a separate statement, *silently*; a bracket inside a character literal before a `match` (`Tk::Open('[')`) made `hrs-from` write the retired `match x:`; and a struct literal as a closure's body across lines was written as a block.
+
+## 0.1.21 — 2026-09-21  (`hrs_std` 0.1.1)
+
+- **Slicing, Julia's `a[1:2, :]` in Harsh's ranges.** `a <- slice (0..2) (..)` copies; `&a[0..2, ..]` borrows — a view, as `&v[1..3]` is of a `Vec`, with `<- copy$` for the copy. `..` alone is Julia's `:`; an axis taken by a number is dropped, so `a[1, ..]` is a vector; and what is read can be written: `a[1, 1] = 50`, `a[2, ..] <- fill 0`.
+- **A top-level comma in an index makes a tuple:** `a[i, j]` is `a[(i, j)]`. A rule of the language, for any type indexed by a tuple.
+- **Broadcasting, Julia's dotted operators:** `a .* b`, `.+`, `.-`, `./`, shapes stretched as Julia stretches them. Written to Rust as `a * hrs_std::DOT * b`, so precedence is Rust's own and nothing is parsed. A `use` glob is untouched.
+- **`f<>` — apply to each**, Julia's `f.(a)`: `relu<> a`, `f64.powf<> a 2.0`, `(|x, y| x > y)<> a b`, `a |> relu<> |> f64.sqrt<>`. It borrows its arguments. Beneath it, `a <- map f`. Rust's empty generic list (`f::<>(x)`, `P<>`) means nothing and is dropped by `hrs-from`: the one place Harsh is not a superset of Rust.
+- **Fixed in `hrs_std`:** `&a + &a * &b` did not compile (no `&Matrix + Matrix`; every borrowing form of `+`, `-`, `*` now exists), and an element could not be assigned (no `IndexMut`).
+- *Harsh by Example* 17.7 and 17.8; the Guide's matrix section.
+
+## 0.1.20 — 2026-09-21
+
+- **`g~` is the *generator comprehension*,** and `list~`, `set~`, `dict~` the list, set and dict comprehensions — Python's names, and the `g` explained. The Book's chapter 15 is "Generator comprehensions".
+- **Where a condition may go,** taught everywhere: every `for` makes one more name available, and a condition sees only the names bound before it — with the annotated example, and the error a misplaced test gives (*cannot find value `b`*, on the Harsh line).
+- **What `g~` writes, shown in Harsh:** one `flat_map` per `for`, the level's `if`s folded under `then`, the outer levels flattened — and a runnable proof in the Book that the expansion and the comprehension agree. `flatten$` is part of the generator and never written by hand; `collect$` is not, because a generator is lazy.
+- **Fixed: a comment inside a `~` call's lines broke the generated Rust.** It was captured into a fragment and re-emitted in the one-line expansion, commenting out the rest. A macro now never sees a plain comment — Rust's own rule; doc comments still pass.
+- Harshlings 0.1.2: a sixth comprehension exercise, the misplaced condition.
+
+## 0.1.19 — 2026-09-21
+
+- **A panic names the Harsh line.** `hrs run` and `hrs test` read the program's stderr and put every `target/hrs/main.rs:4:20` back on its source, `src/main.hrs:4:19` — in the panic message and in backtrace frames, for every file of the project — through the same source maps as the compiler's errors. The column is the token Rust named. A `DimensionMismatch` from `hrs_std` now points at the Harsh line of the product that failed. Cargo keeps its colours on a terminal.
+
+## 0.1.18 — 2026-09-21
+
+**Harsh's selling points, put forth.** *Rust without braces. Rust with pipes, partial application, comprehensions and linear algebra. Rust for functional programming, data science and machine learning.*
+
+- **`hrs_std`, Harsh's standard library, a second crate.** `Matrix<T>` and `Vector<T>` over nalgebra, Julia's model: `*` is the matrix product, scaling or matrix-times-vector, chosen by the compiler from the operand types; `solve` is Julia's `A \ b` — exact for a square matrix, least squares for a tall one, so linear regression is one line; `inv`, `det`, `transpose`, `dot`, `norm`, indexing from 0; `UniformScaling` and `I`; `hcat`/`vcat`. Sizes are values: `DimensionMismatch` and `SingularException` in Julia's words, reported at the caller's line. Publish it before this `harsh-lang`.
+- **`m~` and `v~` in the prelude**, with Julia's grammar: a space is `hcat`, `;` or a line break is `vcat`, a comma makes a vector, every entry is a block — so `m~ [(&a) (&b)]` concatenates. `m~ [[1 2], [3 4]]` and `v~ [1 2 3]` are refused, as Julia refuses them. `hrs` names the missing dependency when a project uses them without `hrs_std`; `hrs new` does not add it.
+- **The docs lead with the four features.** A "What Harsh adds" showcase — Harsh beside the Rust it replaces, both run — after the braces comparison in the README, the Guide, the Book and START-HERE. The Book gains a part: chapter 14 Pipes and partial application, 15 Comprehensions, 16 Matrices and linear algebra (the old 14–22 are now 17–25). The Guide gains sections on comprehensions and matrices; *Harsh by Example* gains partial application, and pages on comprehensions and matrices grow; Harshlings gains 9 exercises.
+- **The formatter aligns a bracket's lines under its first entry** — a matrix's rows, an array's continuation — as Julia lays them out. Parens and `[where …]` keep their rules.
+- **Fixed, general:** a separator (`,`, `;`, `=>`) or a closer is never a macro atom; a spanning `expr`, `ty`, `pat` or `path` stops at a top-level `,` or `;`; a repetition without a separator takes one atom per round and stops where what follows begins; the converter isolates an array-literal argument, `f ([1, 2])`, which it wrote as an index.
+
+## 0.1.17 — 2026-09-21
+
+- **A comma inside a type's generic list belongs to the list.** `fn f (r: Result<i32, String>)` and `fn f (a: i32) (m: HashMap<K, V>)` were refused with "a parameter group holds one parameter", because the comma inside `<…>` was read as a separator between parameters; only the bare single-parameter form worked. Worse, `hrs-from` silently split Rust's `fn f(r: Result<i32, String>)` into `(r: Result<i32) (String>)`, so valid Rust became broken Harsh. One shared function served both directions and counted brackets but not generics; it now counts `<…>` too (`>>` closing two), spaced or not. A comma list of parameters, `(a: i32, b: i32)`, is still refused.
+
+## 0.1.16 — 2026-09-21
+
+- **`g~`, a comprehension, in Harsh's prelude.** `g~ x * 2 for x in xs if x > 1`, with as many `for`s as you like; each `if` belongs to the `for` it follows, so a condition sees every name bound up to that point. It is lazy -- a plain iterator -- and `for` takes its iterable by value, as everywhere. `list~`, `set~` and `dict~ k => v for …` collect it into a `Vec`, a `HashSet`, a `HashMap`. The prelude needs no definition and no `use`: a file's own macro of the same name shadows it, and `hrs_std.g~` always reaches the prelude's. A file that calls none of them is untouched, and a Rust `g!` beside `g~` is not refused.
+- **A fragment stops at what the matcher names next, including a repetition's first literal.** `$it:expr $(if $c:expr)*` cut `0..4` to `0`; it now stops at the `if`.
+- **Fixed, in every macro, not only the prelude's:** a `$` written in a transcriber kept a span inside the macro's definition, so an expansion with `(|| $x)$` followed by more code pasted the source between the definition and the call into the output -- the expansion, then the original line again; and an expanded turbofish was dropped, so `collect<Vec<_>>$` in a transcriber came out `collect<Vec<_>>()`, which rustc reads as two comparisons.
+- *Harsh by Example* gains a page on comprehensions: 16 pages, 46 programs.
+- Correction: 0.1.15's notes said it built with zero compiler warnings. It had one, an unused variable in `tests/fmt.rs`, now removed.
+
+## 0.1.15 — 2026-09-20
+
+- **A second book: *Harsh by Example*.** Fifteen pages, 43 programs, one idea each, every one transpiled, compiled and run by its harness before it reaches the page — the lookup book, between the Book (which teaches the ideas) and the Guide (which sets each spelling beside its Rust). It follows the topic order of *Rust by Example* (MIT OR Apache-2.0, see `by-example/ATTRIBUTION.md`) but every program and every line of prose is written for Harsh, which is why it can carry a page on what Harsh adds: the pipes and partial application, `macro_rules~` and its token stream, `$`, `do:`, `\` and one group per parameter. `by-example/HARSH-BY-EXAMPLE.md`, a file per page in `by-example/pages/`, and the rendered `.html` and `.ipynb` beside them.
+- **The corpus guards were walking a directory that does not exist.** `tests/fmt.rs` looked in `book/src`, which the Book's sources left on 2026-09-11, so for nine days they covered 43 files instead of 278 and the Book's 223 snippets were invisible to them. (`hrs fmt` *was* a no-op over all of them — the guard was blind, not wrong.) The walks now point at the real trees, take in the new book, and assert the corpus is over 250 files so a future move fails loudly. Which snippets a guard may build alone is read from each page's own `@@ … !error` / `!test` / `!doc` markers rather than a hand-kept list, and the test helper now runs the same macro pass the binary runs.
+
+## 0.1.14 — 2026-09-20
+
+This release removes spellings and adds none.
+
+- **A retired spelling is refused on one line too.** `match x:`, `match x do:`, `struct P:`, `enum E:` and `union U:` were refused across lines and still accepted inline, so `match x: a => 1` and `match x\ a => 1` emitted the same Rust. Each is now refused by name, inside parens as well, with the `\` spelling in the message. A test holds every retired spelling in both forms, so a migration cannot leave half of itself behind again.
+- **`\` follows the construct it specifies.** It opens a specification block -- Rust's `{ a, b }` groupings: a declaration's fields, a literal's or a pattern's, a match's arms -- and alone it means nothing. `let x = \ 4 * 2` used to emit `{ 4 * 2, }`; it is an error. It has nothing to do with calls, and it is not `do:`, which opens a block of statements.
+- **A Harsh macro's stream is bounded by indentation.** The stream of a `~` call is the rest of its line *and every following line indented deeper than the line the call sits on*; an unmatched closing bracket -- the closer of a group the call was written inside -- ends it sooner. So `lst~ 1 2` with `3 4` deeper beneath it passes four tokens, `(lst~ 1 2` … `3 4) <- len$` chains on the result, and `(m~ do:` … `)` works. Until now the stream stopped at the physical newline: a continued call emitted `[1, 2]3(4)` with no Harsh error. A `\` after the mark is a token of the stream, as any other.
+- **For Rust's `!` macros, `\` is a brace call.** `m!{ a => x, b => y }` is `m!\ a => x, b => y`, or `m!\` with one entry per line. The inline form was broken -- it emitted `hm! { 1 } => "a", …` -- and `hrs-from` now writes the `\` form for a flat comma list, keeping Rust's braces for a `;` body, a nested brace, a trailing comma (which `m!\` cannot write and some matchers require), or an entry with two atoms side by side -- a DSL's own tokens, which juxtaposition would misread.
+- Fixed: an inline `match n\` with an or-pattern, `1 | 2 => …`, closed its braces at the `|` -- the `=>` after a match's own `\` had it read as a record pattern's, so the inline form only ever worked by accident. `union U\ a: u32, b: f32` inline emitted `union(U) {`.
+
+## 0.1.13 — 2026-09-20
+
+- **A repetition takes its marker, on both sides of a macro.** `$( … )` is followed by `*`, `+` or `?` — Rust's grammar exactly, as decided on the 19th. The matcher had been accepting a bare `$( … )` as "exactly once", and the transcriber accepted it too, running every round without being told to. Both are now refused, with the caret on the `$(`; a multi-line repetition whose `)` lacks its marker says so, on the `)`, instead of claiming it "is never closed". A group that must appear once is written without the `$( … )`.
+- **A transcriber no longer eats the author's tokens.** Whatever followed a repetition's `)` was taken for a separator, and the token after it skipped unchecked: `[$( $a ) x y]` silently produced `[1(x, 2, x, 3)]`. A token is a separator only when a marker follows it. `?` takes no separator in a transcriber, as in a matcher.
+- An error on a call with no arguments (`one~` alone) is reported at the call, not at line 1.
+- Housekeeping: four functions left behind by the 0.1.9 delimiter rule are gone, with two comments that still described it; a test that was registered twice runs once.
+
+## 0.1.12 — 2026-09-19
+
+- **A Jupyter kernel.** `kernel/` holds `harsh_kernel`, a wrapper kernel: each cell is transpiled with `hrs` and evaluated by the evcxr Rust kernel, with output, values and errors relayed back. A function defined in one cell is callable in the next; a Harsh macro unfolds inside a cell; evcxr's `:dep`-style commands pass through; a Harsh error points at the cell's own line, gutter and caret included. `pip install ./kernel && python3 -m harsh_kernel.install`; needs `hrs` and `evcxr_jupyter`. `docs/JUPYTER.md` is the guide.
+- **The source map through expansion.** An error inside a Harsh macro's expansion now points at the transcriber's line *and* carries a note naming the call that produced it — *in the expansion of `bad~` called at file:6:13* — with the call's line shown. The map records each expansion and the context of every expanded token; `hrs-remap` reads both. A diagnostic at inserted punctuation is blamed on the token before it, not the one after.
+- **Two converter fixes** (`hrs-from`): a brace group in an open `if let`/`while let` pattern is the pattern's, not a block's (`if let E::G { body, .. } = &m {` converts to `if let E.G\ body, .. = &m:`); a struct literal that is the sole one-line element of a bracket group is not isolated in parens (`vec![Arm { m: 1 }]` round-trips as itself), while two in one group still are.
+
+## 0.1.11 — 2026-09-19
+
+- **A Harsh macro call is a stream, not an application.** Everything after `name~` — to the end of the line, to the close of the group the call sits in, or to the end of a `do:` block it opens — reaches the matcher exactly as written. A comma is the DSL's token; a `(…)` is a group, one token, so a tuple is written once, `pair~ (1, 2)`; a call inside a larger expression is isolated as any application is, `((twice~ 4), 0)`. This replaces 0.1.10's `name~\` rule, which decided who owned a comma from a mark — an inference the language does not make.
+- **A fragment's extent follows the matcher's shape.** To the next literal the matcher names or the repetition's separator; one atom when another fragment follows directly (`$a:expr $b:expr` is juxtaposition, as in any Harsh application); the rest of the stream when nothing follows. The Rust idiom `$( … ),* $(,)?` works for DSLs that own commas.
+- **The matcher's outer parens are its own delimiter; a DSL's brackets go inside them**: `([ $e:expr ; $n:expr ])` for `filled~ [0u8; 2]`. The group-per-argument matchers (`(($a:expr) ($b:expr))`) are gone from the corpus, the Book, the guide and the exercises: a Harsh macro juxtaposes, `($a:expr $b:expr)`.
+- Arms are tried in order and the first that fits wins; the more specific arm comes first.
+
+(0.1.10 was built and never published; 0.1.11 supersedes it.)
+
 ## 0.1.9 — 2026-09-18
+
+(0.1.8 was published from an earlier state of the same day's work, before the audit fixes below and before `match v\`; 0.1.9 supersedes it.)
 
 - **A `match` is opened by `\`**, in both forms: `match v\` with the arms beneath, or `match v\ p => e, q => f` inline. A match's arms are a specification block in use — comma-separated in the Rust, like a literal's fields — so they take the specification marker. `match v:` and `match v do:` are refused, naming the spelling. `hrs fmt` lays a multi-line match out as it does a literal — `let r =` on its line, `match n\` beneath, the arms one unit past it. The corpus, the Book, the guide, the exercises and `hrs-from` all moved.
 

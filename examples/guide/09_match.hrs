@@ -17,7 +17,7 @@ fn indented (s: &Shape) -> String:
         Shape.Named\ name, sides => format! "{name}/{sides}"
 
 fn inline (n: i32) -> &'static str:
-    match n: 0 => "zero", 1 | 2 => "small", _ => "big"
+    match n\ 0 => "zero", 1 | 2 => "small", _ => "big"
 
 fn braced (n: i32) -> &'static str:
     match n { 0 => "zero", _ => "other" }
@@ -63,9 +63,11 @@ fn binding (n: i32) -> String:
 
 fn main$:
     let shapes =
-        vec! [Shape.Empty, (Shape.Circle 2.0), (Shape.Rect
-                                                    2.0
-                                                    3.0), (Shape.Named\ name = "hex" <- to_string$, sides = 6)]
+        vec!
+            Shape.Empty
+            (Shape.Circle 2.0)
+            (Shape.Rect 2.0 3.0)
+            (Shape.Named\ name = "hex" <- to_string$, sides = 6)
     for s in &shapes: print! "{} " (indented s)
     println! ""
     println!

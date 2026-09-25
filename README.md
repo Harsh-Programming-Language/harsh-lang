@@ -9,7 +9,60 @@ Development, issues and merge requests live at [gitlab.com/bahiminin.benoit.dah.
      └───── rs
 ```
 
-*Rust without the braces.* Braces are for the compiler; indentation is for humans.
+**Rust without braces.**
+**Rust with pipes, partial application, comprehensions and linear algebra.**
+**Rust for functional programming, data science and machine learning.**
+
+Braces are for the compiler; indentation is for humans.
+
+## What Harsh adds
+
+Braces are where Harsh starts, not where it stops. It adds four things Rust has no syntax for — and they are the reason to use it. Each below is Harsh, then the Rust it replaces.
+
+**Pipes and partial application.** Give a function fewer arguments than it takes, and you get a function waiting for the rest:
+
+```
+let double = 2.0 |> scale
+let doubled: Vec<f64> = readings <- iter$ <- map (|&x| double x) <- collect$
+```
+
+```rust
+let double = |x| scale(2.0, x);
+let doubled: Vec<f64> = readings.iter().map(|&x| double(x)).collect();
+```
+
+**Generator comprehensions.** Say what a collection holds, not how to fill it:
+
+```
+let triples =
+    list~ (a, b, c)
+        for a in 1..20
+        for b in a..20
+        for c in b..20 if a * a + b * b == c * c
+```
+
+```rust
+let triples: Vec<_> = (1..20)
+    .flat_map(|a| (a..20).flat_map(move |b| (b..20).map(move |c| (a, b, c))))
+    .filter(|&(a, b, c)| a * a + b * b == c * c)
+    .collect();
+```
+
+**Linear algebra, as in Julia.** Julia's matrix literal, Julia's `*`, and Julia's `X \ y`, here fitting a line by least squares:
+
+```
+let x = m~ [1.0 1.0; 1.0 2.0; 1.0 3.0]
+let y = v~ [1.0, 2.0, 2.9]
+let beta = x <- solve (&y)
+```
+
+```rust
+let x = DMatrix::from_row_slice(3, 2, &[1.0, 1.0, 1.0, 2.0, 1.0, 3.0]);
+let y = DVector::from_vec(vec![1.0, 2.0, 2.9]);
+let beta = x.svd(true, true).solve(&y, 1e-12).unwrap();
+```
+
+The Book teaches all four in chapters 14 to 16; the Language Guide has a section on each; *Harsh by Example* has a page on each; Harshlings has exercises.
 
 ```
 cargo install harsh-lang            # hrs, hrs-from, hrs-remap, hrs-lsp
@@ -101,10 +154,11 @@ This also serves as the project's test oracle. Converting the transpiler's own s
 ## Learning it
 
 - **[The Harsh Programming Language](book/HARSH-BOOK.md)** — Rust taught in Harsh, from the first program to async, for readers who do not know Rust. One file per chapter in [`book/chapters/`](book/chapters).
+- **[Harsh by Example](by-example/HARSH-BY-EXAMPLE.md)** — short programs, one idea each, for looking up how something is written. One file per page in [`by-example/pages/`](by-example/pages).
 - **[The Harsh Language Guide](docs/LANGUAGE.md)** — every construct beside its Rust spelling, for Rust programmers: the fastest way in.
 - **[Harshlings](https://gitlab.com/bahiminin.benoit.dah.opensource/harshlings)** — fifty small exercises, each a short program with one thing wrong; the compiler points at the line of the `.hrs` file you are editing, you fix it, and the runner moves on. `cargo install harsh-lang`, clone, `hrs run`. ([mirror](https://github.com/Harsh-Programming-Language/harshlings))
 
-Every code sample in all three is transpiled, compiled and run by the build.
+Every code sample in all four is transpiled, compiled and run by the build.
 
 ## Examples
 

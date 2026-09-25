@@ -8,7 +8,7 @@ impl P
 
 fn main$:
     let p = P\ x = 3, y = 4
-    let v = vec! [3, 1, 2]
+    let v = vec! 3 1 2
     // spaced, tight, and mixed are identical
     let a = p <- x
     let b = p<-y

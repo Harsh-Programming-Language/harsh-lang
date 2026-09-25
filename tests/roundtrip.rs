@@ -14,17 +14,10 @@ use std::path::Path;
 fn transpile(harsh: &str) -> String {
     // The same pipeline the driver runs: a Rust `macro_rules!` is blanked out
     // before anything reads it and put back verbatim after.
-    let (work, zones) = harsh_lang::rawzone::prepare(harsh);
-    let toks = harsh_lang::lex::lex(&work).expect("lex");
-    // The driver expands Harsh's own macros before reading the file as a
-    // program; the tests take the same path.
-    let taken = harsh_lang::layout::names_in_scope(&toks);
-    let toks = harsh_lang::mac::expand_all(toks, &taken).expect("expand");
-    let tree = harsh_lang::layout::build(toks).expect("layout");
-    let mut em = harsh_lang::emit::Emitter::new(&work);
-    em.program(&tree);
-    harsh_lang::rawzone::restore(&mut em.out, harsh, &zones);
-    em.out
+    // The driver's path, in memory: Rust zones and a Rust macro's brace
+    // bodies set aside, Harsh's own macros expanded, the rest read as a
+    // program, and the bodies put back with their holes transpiled.
+    harsh_lang::driver::transpile_str(harsh).expect("transpile")
 }
 
 fn convert(rust: &str) -> String {
@@ -39,6 +32,26 @@ fn norm_tokens(s: &str) -> Vec<String> {
         .filter(|t| !t.is_comment())
         .map(|t| t.text)
         .collect();
+    // A macro call's delimiter means nothing to the macro: Rust hands it the
+    // stream inside, so `vec![a]`, `vec!(a)` and `vec!{a}` are one call (the
+    // user's delimiter principle, 2026-09-22). Harsh writes `vec! a` and emits
+    // parens, so the delimiters of a group opened right after `name!` compare
+    // as parens.
+    let mut stack: Vec<bool> = Vec::new();
+    for i in 0..out.len() {
+        let opener = matches!(out[i].as_str(), "(" | "[" | "{");
+        if opener {
+            let bang = i >= 2 && out[i - 1] == "!" && out[i - 2].chars().next().map_or(false, |c| c.is_alphanumeric() || c == '_');
+            stack.push(bang);
+            if bang {
+                out[i] = "(".into();
+            }
+        } else if matches!(out[i].as_str(), ")" | "]" | "}") {
+            if stack.pop() == Some(true) {
+                out[i] = ")".into();
+            }
+        }
+    }
     // Rust accepts a trailing comma before any closer, and after a block-bodied
     // match arm. Both are inserted by the layout rules and carry no meaning.
     let mut i = 0;
@@ -119,10 +132,13 @@ fn examples_transpile() {
             let path = e.path();
             if path.extension().map(|x| x == "hrs").unwrap_or(false) {
                 let src = fs::read_to_string(&path).unwrap();
-                let toks = harsh_lang::lex::lex(&src)
-                    .unwrap_or_else(|e| panic!("{}: {}", path.display(), e.msg));
-                harsh_lang::layout::build(toks)
-                    .unwrap_or_else(|e| panic!("{}: {}", path.display(), e.msg));
+                // The driver's whole path: zones and brace bodies set aside,
+                // Harsh's own macros expanded (an expansion that produced a
+                // brace body read again), the layout, the emitter. Until
+                // 2026-09-23 this walk only lexed and laid out, and a guide
+                // example whose `~` call did not expand went unnoticed.
+                harsh_lang::driver::transpile_str(&src)
+                    .unwrap_or_else(|e| panic!("{}: {}", path.display(), e));
                 n += 1;
             }
         }
@@ -215,11 +231,11 @@ fn tight_index_is_an_atom_and_spaced_index_in_an_application_is_refused() {
         ("fn f$:\n    let a = arr [1]\n", "let a = arr [1];"),
         ("fn f$:\n    let a = v[g l 2]\n", "let a = v[g(l, 2)];"),
         ("fn f$:\n    let b = (v[g (l) 1])\n", "let b = v[g(l, 1)];"),
-        ("fn f$:\n    let c = vec! [g (l + 1) 2]\n", "let c = vec! [g(l + 1, 2)];"),
+        ("fn f$:\n    let c = vec! (g (l + 1) 2)\n", "let c = vec!(g(l + 1, 2));"),
         ("fn f$:\n    assert_eq! v ([1, 2])\n", "assert_eq!(v, [1, 2])"),
     ]);
-    // A macro with an argument before a spaced `[` is refused too; only the
-    // bracket-body form `vec! [..]` -- no argument before the `[` -- stands.
+    // A macro with an argument before a spaced `[` is refused too. A `[`
+    // right after the bang is the first argument, an array (A1, 2026-09-22).
     let toks = harsh_lang::lex::lex("fn f$:\n    assert_eq! v [1, 2]\n").expect("lex");
     assert!(harsh_lang::layout::build(toks).is_err());
     let toks = harsh_lang::lex::lex("fn f$:\n    g arr [1]\n").expect("lex");
@@ -261,7 +277,7 @@ fn semicolon_discipline() {
         "fn a$:\n    let x = 1\n    let y = 2;\n",
         "fn b$:\n    f$\n    g$;\n",
         "fn c$ -> i32:\n    let v = do:\n        1;\n    2\n",
-        "fn d$:\n    let z = vec![0; 4]\n    let w = vec![0; 4]\n    q z w\n",
+        "fn d$:\n    let z = vec! { 0; 4 }\n    let w = vec! { 0; 4 }\n    q z w\n",
         "fn e$:\n    if c:\n        f$;\n    g$;\n",
         "use std.fmt\nfn f$:\n    ()\n",
         "struct P\n    x: i32\n    y: i32\n",
@@ -460,7 +476,7 @@ fn rejects_rust_call_syntax_in_macros() {
 fn inline_blocks() {
     check(&[
         ("fn a (t: bool) -> i32:\n    if t: 1 else: 2\n", "if t {"),
-        ("fn b (x: E) -> i32:\n    match x: A => 1, B => 2\n", "A => 1,"),
+        ("fn b (x: E) -> i32:\n    match x\\ A => 1, B => 2\n", "A => 1,"),
         ("fn c$ -> i32:\n    { let a = 1; a * 2 }\n", "let a = 1;"),
         ("fn d$:\n    for i in 0..3: f i\n", "for i in 0..3 {"),
         ("struct P\\ x: i32, y: i32\n", "x: i32,"),
@@ -492,7 +508,7 @@ fn inline_matches_indented() {
             "fn a (t: bool) -> i32:\n    if t:\n        1\n    else:\n        2\n",
         ),
         (
-            "fn b (x: E) -> i32:\n    match x: A => 1, B => 2\n",
+            "fn b (x: E) -> i32:\n    match x\\ A => 1, B => 2\n",
             "fn b (x: E) -> i32:\n    match x\\\n        A => 1\n        B => 2\n",
         ),
         (
@@ -607,56 +623,22 @@ fn closure_returning_functions() {
     ]);
 }
 
-/// `#:` opens a block whose entries take **no separator at all** — for a
-/// grouping whose grammar is its author's. The case that asked for it is a
-/// `quick_error!` body: its variants are comma-separated (`\`), and each
-/// variant's attribute list takes nothing (`#:`).
-#[test]
-fn hash_colon_writes_no_separator() {
-    let got = transpile(
-        "fn main$:\n    let e = qe!\\\n        Rate #:\n            display \"too many\"\n        Io #:\n            from$\n            cause err\n"
-    );
-    // the outer block: commas between variants
-    assert!(got.contains("Rate {") && got.contains("},"), "{got}");
-    // the inner blocks: nothing between entries, and no `#` left in the header
-    assert!(got.contains("display(\"too many\")\n        }"), "{got}");
-    assert!(got.contains("from()\n            cause(err)\n        }"), "{got}");
-    assert!(!got.contains('#'), "the mark leaked into the output:\n{got}");
-}
 
-/// One spelling per construct: `#:` is for a grouping Harsh does not define,
-/// so a construct that has its own spelling is refused, by name.
-#[test]
-fn hash_colon_is_refused_where_a_spelling_exists() {
-    for (src, want) in [
-        ("impl Foo #:\n    fn a$:\n        1\n", "`impl` already has a spelling"),
-        ("fn main$ #:\n    1\n", "`fn` already has a spelling"),
-        ("mod m #:\n    fn a$:\n        1\n", "`mod` already has a spelling"),
-    ] {
-        let toks = harsh_lang::lex::lex(src).expect("lex");
-        let err = harsh_lang::layout::build(toks).err().expect("refused").msg;
-        assert!(err.contains(want), "{err}");
-    }
-}
 
-/// The call-site forms for a Rust macro, one per shape the macro can take
-/// (2026-09-17). Nothing here is special to macros: each is the ordinary
-/// block kit applied to a call, which is why a Harsh writer can guess them.
+/// The call forms for a Rust macro (2026-09-23): a list is applied, isolated
+/// or not; any other stream is written in braces, as Rust, one line or many;
+/// a block passed as an argument is isolated like any argument.
 #[test]
 fn macro_call_forms() {
     let defs = "macro_rules! m {\n    ( $( $x:expr ),* ) => { 0 };\n}\nmacro_rules! s {\n    ( $( $x:stmt );* ) => { 0 };\n}\n";
     let got = transpile(&format!(
-        "{defs}\nfn main$:\n    let a = m! 1 2 3\n    let b = m! (1) (2)\n    let c = m!\\ 1, 2\n    let d = s! do:\n        let q = 1\n        q\n    let e = s! {{ let q = 1; q }}\n"
+        "{defs}\nfn main$:\n    let a = m! 1 2 3\n    let b = m! (1) (2)\n    let c = m! {{ 1, 2 }}\n    let d = s! {{\n        let q = 1;\n        q\n    }}\n    let e = s! {{ let q = 1; q }}\n    let f = m! (do:\n        let r = 2\n        r\n    ) 3\n"
     ));
-    // juxtaposed arguments, and the same isolated
-    assert!(got.contains("m!(1, 2, 3)"), "{got}");
-    assert!(got.contains("m!(1, 2)"), "{got}");
-    // `\` opens a comma-separated block: entries by line, commas written
-    assert!(got.contains("m! {") && got.contains("1,") && got.contains("2,"), "{got}");
-    // `do:` opens a statement block: entries by line, `;` written
-    assert!(got.contains("s! {") && got.contains("let q = 1;"), "{got}");
-    // braces on one line stay one line
-    assert!(got.contains("s! { let q = 1; q }"), "{got}");
+    let flat: String = got.split_whitespace().collect();
+    for want in ["m!(1, 2, 3)", "m!(1, 2)", "m! { 1, 2 }", "s! {\n        let q = 1;\n        q\n    }", "s! { let q = 1; q }"] {
+        assert!(got.contains(want), "missing `{want}` in:\n{got}");
+    }
+    assert!(flat.contains("letf=m!({letr=2;r},3);"), "{got}");
 }
 
 /// A Rust `macro_rules!` is a zone of Rust inside a Harsh file: the
@@ -703,7 +685,7 @@ fn a_harsh_macro_expands_into_harsh() {
 
     // Hygiene: the macro's own local moves when the caller has that name.
     let got = transpile(
-        "macro_rules~ dbl\n    (($e:expr)) => do:\n        do:\n            let tmp = $e\n            tmp + tmp\n\nfn main$:\n    let tmp = 5\n    let n = dbl~ (tmp + 1)\n",
+        "macro_rules~ dbl\n    (($e:expr)) => do:\n        do:\n            let tmp = $e\n            tmp + tmp\n\nfn main$:\n    let tmp = 5\n    let n = dbl~ tmp + 1\n",
     );
     assert!(got.contains("let tmp = 5;"), "the caller's name moved:\n{got}");
     assert!(got.contains("let tmp__1 = tmp + 1;"), "{got}");
@@ -712,14 +694,13 @@ fn a_harsh_macro_expands_into_harsh() {
     // beneath, or `m~\` with its entries — as a `!` call does. The opener is
     // the call's; what the matcher sees is the block's own tokens.
     let got = transpile(
-        "macro_rules~ first_of\n    ( $($t:tt)* ) => do:\n        match ($($t)*): (a, _) => a\n\nfn main$\\\n    let f = first_of~ do:\n        (4, 0)\n",
+        "macro_rules~ first_of\n    ( $(($t:tt))* ) => do:\n        match ($($t)*)\\ (a, _) => a\n\nfn main$:\n    let f = first_of~ do:\n        (4, 0)\n",
     );
     assert!(got.contains("match((4, 0))"), "{got}");
-    // In a block call the matcher sees what was written: the entries of a
-    // `\` block arrive one per line, with no comma between them, since
-    // nothing has been emitted yet.
+    // A bare call is a stream to the end of its line; juxtaposed atoms are
+    // the arguments, as for any application.
     let got = transpile(
-        "macro_rules~ sum\n    ($( ($x:expr) )*) => do:\n        0 $( + $x )*\n\nfn main$:\n    let n = sum~\\\n        1\n        2\n",
+        "macro_rules~ sum\n    ($( ($x:expr) )*) => do:\n        0 $( + $x )*\n\nfn main$:\n    let n = sum~ 1 2\n",
     );
     assert!(got.contains("let n = 0 + 1 + 2;"), "{got}");
 
@@ -727,13 +708,28 @@ fn a_harsh_macro_expands_into_harsh() {
     // a closure parameter, a `for` binding, a `match` arm binding. Each of
     // these would otherwise capture the caller's expression, silently.
     for (src, want) in [
-        ("macro_rules~ m\n    (($e:expr)) => do:\n        (|x| $e) 5\n\nfn f$:\n    let x = 10\n    let n = m~ (x + 1)\n", "(| x__1 | x + 1)(5)"),
+        ("macro_rules~ m\n    (($e:expr)) => do:\n        (|x| $e) 5\n\nfn f$:\n    let x = 10\n    let n = m~ x + 1\n", "(| x__1 | x + 1)(5)"),
         ("macro_rules~ m\n    (($e:expr)) => do:\n        for i in 0..3:\n            acc += $e\n\nfn f$:\n    let i = 100\n    m~ i\n", "for i__1 in 0 .. 3"),
-        ("macro_rules~ m\n    (($e:expr)) => do:\n        match Some 1\\\n            Some v => $e\n            None => 0\n\nfn f$:\n    let v = 50\n    let n = m~ (v * 2)\n", "Some(v__1) => v * 2"),
+        ("macro_rules~ m\n    (($e:expr)) => do:\n        match Some 1\\\n            Some v => $e\n            None => 0\n\nfn f$:\n    let v = 50\n    let n = m~ v * 2\n", "Some(v__1) => v * 2"),
     ] {
         let got = transpile(src);
         assert!(got.contains(want), "expected {want:?} in:\n{got}");
     }
+
+    // The call is a stream: every token to the end of the line, or to the
+    // close of the group the call sits in, reaches the matcher as written --
+    // commas are the DSL's, not Harsh's. `$(,)?` takes an optional trailing
+    // comma; a `(…)` after the mark is a group, one token, so a tuple is
+    // written once and a matcher that wants it inside writes the parens.
+    // Arms are tried in order, so the arm that takes the tuple apart comes
+    // first: to the second, a paren group is simply one `expr`.
+    let src = "macro_rules~ list\n    (($( ($x:expr) ),* $(,)?)) => do:\n        [$( $x ),*]\n    ($( ($x:expr) ),* $(,)?) => do:\n        [$( $x ),*]\n\nfn main$:\n    let a = list~ 1, 2\n    let b = list~ 1, 2,\n    let c = list~ (1, 2,)\n";
+    let got = transpile(src);
+    assert_eq!(got.matches("[1, 2]").count(), 3, "{got}");
+    // A call inside a tuple is isolated, as any application is: the stream
+    // would otherwise run to the tuple's close.
+    let got = transpile("macro_rules~ twice\n    (($e:expr)) => do:\n        $e * 2\n\nfn main$:\n    let t = ((twice~ 4), 0)\n");
+    assert!(got.contains("((4 * 2), 0)"), "{got}");
 
     // A Rust `macro_rules!` in the same file is untouched by any of this.
     let got = transpile(
@@ -924,7 +920,7 @@ fn rejects_misaligned_lines() {
     let m = layout_err("fn main$:\n    let x = 1\n      fn g$:\n          1\n");
     assert!(m.contains("`fn` starts a statement"), "{m}");
     // A `;` inside an inline block, in an arm and in an `if`.
-    let m = layout_err("fn f x: i32 -> i32:\n    match x: 1 => do: g$; h$, _ => 0\n");
+    let m = layout_err("fn f x: i32 -> i32:\n    match x\\ 1 => do: g$; h$, _ => 0\n");
     assert!(m.contains("inline block holds one expression"), "{m}");
     let m = layout_err("fn f c: bool -> i32:\n    if c: g$; h$ else: 0\n");
     assert!(m.contains("inline block holds one expression"), "{m}");
@@ -946,7 +942,7 @@ fn accepts_aligned_continuations() {
         ("fn m$:\n    if a\n        && let Some x = y:\n        1\n", "&& let Some(x) = y {"),
         // A `;` ending the line discards the tail; braces hold several statements.
         ("fn m$:\n    if c: g$;\n    h$\n", "h()"),
-        ("fn f x: i32 -> i32:\n    match x: 1 => { g$; h$ }, _ => 0\n", "1 => { g(); h() },"),
+        ("fn f x: i32 -> i32:\n    match x\\ 1 => { g$; h$ }, _ => 0\n", "1 => { g(); h() },"),
         ("fn f c: bool -> i32:\n    if c { f$; g$ } else { h$ }\n", "if c { f(); g() } else { h() }"),
         ("fn f$ -> i32:\n    { let a = 1; a * 2 }\n", "{ let a = 1; a * 2 }"),
         // Any deeper column continues: no unit is imposed.
@@ -1029,44 +1025,55 @@ fn rejects_bare_parameter_followed_by_group() {
     assert!(err.msg.contains("`(&self) (`"), "{}", err.msg);
 }
 
-/// A macro's brace body is Harsh in one line, as every brace is: the
-/// substitutions apply and so does juxtaposition. (The earlier rule that
-/// nothing inside juxtaposes was withdrawn with the space rule.)
+/// A Rust macro's brace body is Rust, even in Harsh, and copied verbatim; only
+/// its holes, `@: … :@`, are Harsh (the user's principle 2 and ruling 16,
+/// "always closing", 2026-09-23). It replaced the rule that a brace body was
+/// Harsh on one line.
 #[test]
-fn macro_brace_body_is_harsh() {
+fn a_macro_brace_body_is_rust_and_its_holes_are_harsh() {
     check(&[
-        ("fn m$:\n    let z = m! { f a b }\n", "m! { f(a, b) }"),
-        ("fn m$:\n    let y = quote! { fn #name$ -> u32 { #body } }\n", "quote! { fn #name() -> u32 { #body } }"),
-        ("fn m$:\n    let y = quote! { fn #name (a: T) (b: U) -> u32 { #body } }\n", "quote! { fn #name(a: T, b: U) -> u32 { #body } }"),
-        ("fn m$:\n    let s = tokio.select! { n = slow \"slow\" => n, }\n", "tokio::select! { n = slow(\"slow\") => n, }"),
+        ("fn m$:\n    let z = m! { f a b }\n", "m! { f a b }"),
+        ("fn m$:\n    let z = m! { @: f a b :@ }\n", "m! { f(a, b) }"),
+        ("fn m$:\n    let y = quote! { fn #name() -> u32 { #body } }\n", "quote! { fn #name() -> u32 { #body } }"),
+        ("fn m$:\n    let s = tokio.select! { n = @: slow \"slow\" :@ => n, }\n", "tokio::select! { n = slow(\"slow\") => n, }"),
+        ("fn m$:\n    let b = m! { matches!(a, b) }\n", "m! { matches!(a, b) }"),
+        ("fn m$:\n    let k = key! { server.port }\n", "key! { server.port }"),
+        ("fn m$:\n    let k = key! { @: server.port :@ }\n", "key! { server::port }"),
+        ("fn m$:\n    let t = m! { \"contact @@: us\" }\n", "m! { \"contact @: us\" }"),
     ]);
-    // A name and its group are separated by a space here as everywhere.
-    assert!(layout_err("fn m$:\n    let b = m! { matches!(a, b) }\n").contains("separated by a space"));
     // `!(a && b)` is negation, Rust's, kept.
     check(&[("fn m$:\n    let b = !(a && c)\n", "let b = !(a && c);")]);
+    // The user's sketch: markup verbatim, two holes transpiled, one a block.
+    let out = transpile("fn g (name: String) (age: u32):\n    view! {\n        <p>{@: if age >= 18: \"adult\" else: \"minor\" :@}</p>\n        <button on:click= @: move |_| println! \"{name}\" :@>\"Click\"</button>\n        <ul>\n            {@:\n            (1..=3) <- map (|n| view! { <li>{@: n * 2 :@}</li> })\n            :@}\n        </ul>\n    }\n");
+    for want in [
+        "<p>{if age >= 18 { \"adult\" } else { \"minor\" }}</p>",
+        "<button on:click= move |_| println!(\"{name}\")>\"Click\"</button>",
+        "(1..=3).map(|n|view!{<li>{n*2}</li>})",
+    ] {
+        let flat: String = out.split_whitespace().collect();
+        let w: String = want.split_whitespace().collect();
+        assert!(flat.contains(&w), "missing `{want}` in:\n{out}");
+    }
+    // A hole always closes.
+    let err = harsh_lang::driver::transpile_str("fn m$:\n    let z = m! { @: f a b }\n").unwrap_err();
+    assert!(err.contains("never closed"), "{err}");
 }
 
-/// Rule 2: a macro `do:` block is a Harsh block. Lines with a top-level `=>`
-/// are arms and take `,`; the rest are statements; `$x` is an atom; a
-/// repetition alone on its line holds statements, each with its `;`, and may
-/// span lines as `$(` / body / `)*`; a value-producing transcriber is a `do:`
-/// block inside the arm, as Rust's `{ { .. } }`.
+/// A `~` macro's transcriber is Harsh and so is its expansion; a Rust macro
+/// taking a list is applied. `m! do:` -- a Rust macro's body as a Harsh block
+/// -- is retired (2026-09-23): the macro's stream is written in braces.
 #[test]
-fn macro_do_block_is_harsh() {
+fn harsh_macros_expand_and_rust_macros_apply() {
     check(&[
-        (
-            "fn m$:\n    let w = tokio.select! do:\n        n = slow \"slow\" => n\n        n = fast \"fast\" => n\n    w\n",
-            "let w = tokio::select! {\n        n = slow(\"slow\") => n,\n        n = fast(\"fast\") => n,\n    };",
-        ),
-        ("fn m$:\n    let w = tokio.select! do:\n        n = slow \"slow\" => do:\n            n\n    w\n", "n = slow(\"slow\") => {\n            n\n        },"),
-        // A `~` macro's transcriber is Harsh, and the expansion is Harsh:
-        // the definition emits nothing and the call becomes the block.
         (
             "macro_rules~ my_vec\n    ( $( ($x:expr) )* ) => do:\n        do:\n            let mut tmp = Vec.new$\n            $(tmp <- push $x)*\n            tmp\n\nfn m$:\n    let v = my_vec~ 1 2\n",
             "let v = {\n        let mut tmp = Vec::new();\n        tmp.push(1);\n        tmp.push(2);\n        tmp\n    };",
         ),
         ("fn m$:\n    let v = my_vec! 1 2 3\n    let m = hashmap! (\"a\" => 1) (\"b\" => 2)\n", "my_vec!(1, 2, 3);\n    let m = hashmap!(\"a\" => 1, \"b\" => 2)"),
+        ("fn m$:\n    let w = tokio.select! {\n        n = @: slow \"slow\" :@ => n,\n        n = @: fast \"fast\" :@ => n,\n    }\n    w\n", "let w = tokio::select! {\n        n = slow(\"slow\") => n,\n        n = fast(\"fast\") => n,\n    };"),
     ]);
+    let e = layout_err("fn m$:\n    let w = tokio.select! do:\n        n = slow 1 => n\n");
+    assert!(e.contains("is retired") && e.contains("(do: …)") && e.contains("{ … }"), "{e}");
 }
 
 /// Rules 4 and 5, and the same brick in a transcriber: a parenthesised
@@ -1089,35 +1096,6 @@ fn macro_matchers_are_parameter_groups() {
     assert!(got.contains("let n = 0;"), "{got}");
 }
 
-/// Rule 1: a macro `do:` block whose first line begins with `<` is markup,
-/// copied through with the token substitutions; every `{ .. }` is Harsh, a
-/// hole may span lines and holds layout, and its `}` closes on the generated
-/// block's line so the line count is kept.
-#[test]
-fn hsx_markup_with_harsh_holes() {
-    let src = "fn m$:\n    view! do:\n        <div class=\"app\">\n            <p>{count}</p>\n            <button on:click={move |_| set_count <- update (|n| *n += 1)}>\"+\"</button>\n            <button on:click={move |_|:\n                let step = 2\n                set_count <- update (|n| *n += step)\n            }>\"++\"</button>\n            <Greeting name={\"World\" <- to_string$} />\n            <a href=(\"/\") class=\"x\">\"home\"</a>\n            <leptos_router.A href=\"/\">\"home\"</leptos_router.A>\n        </div>\n";
-    let got = transpile(src);
-    for want in [
-        "view! {\n",
-        "<div class=\"app\">\n",
-        "<p>{count}</p>\n",
-        "<button on:click={move |_| set_count.update(|n| *n += 1)}>\"+\"</button>",
-        "{move |_| {\n",
-        "let step = 2;\n",
-        "set_count.update(|n| *n += step)\n",
-        "}}>\"++\"</button>",
-        "<Greeting name={\"World\".to_string()} />",
-        "<a href=\"/\" class=\"x\">\"home\"</a>",
-        "<leptos_router::A href=\"/\">\"home\"</leptos_router::A>",
-        "</div>\n    }\n",
-    ] {
-        assert!(got.contains(want), "\n  expected: {want:?}\n  got:\n{got}");
-    }
-    // Markup lines are not statements: a `type=` attribute on its own line is
-    // not a misplaced `type` item.
-    let src = "fn m$:\n    view! do:\n        <input\n            type=\"text\"\n            prop:value={name}\n        />\n";
-    assert!(transpile(src).contains("type=\"text\""));
-}
 
 /// The macro rules' errors.
 #[test]
@@ -1140,10 +1118,25 @@ fn rejects_bad_macro_spellings() {
     }
 }
 
+/// Two converter shapes the self-host caught on 2026-09-18, fixed the 19th: a
+/// brace group after a name that is a *pattern* (`if let E::G { .. } = &m`)
+/// or the sole element of a bracket group (`vec![Arm { m: 1 }]`).
+#[test]
+fn converter_brace_after_a_name() {
+    let got = convert("enum E { G { body: Vec<i32> } }\nfn main() {\n    let m = E::G { body: vec![1] };\n    if let E::G { body, .. } = &m {\n        let _ = body.clone();\n    }\n}\n");
+    assert!(got.contains("if let E.G\\ body, .. = &m:"), "{got}");
+    assert!(!got.contains("(do:"), "{got}");
+    let got = convert("struct Arm { m: i32 }\nfn main() {\n    let arms = vec![Arm { m: 1 }];\n    let _ = arms;\n}\n");
+    assert!(got.contains("vec! (Arm\\ m = 1)"), "{got}");
+    // two literals in a macro's list: each is an argument, isolated once
+    // (A1, 2026-09-22; they were a bracket group before)
+    let got = convert("struct A { m: i32 }\nfn main() {\n    let v = vec![A { m: 1 }, A { m: 2 }];\n    let _ = v;\n}\n");
+    assert!(got.contains("vec! (A\\ m = 1) (A\\ m = 2)"), "{got}");
+}
+
 /// The converter side of the macro rules: `macro_rules!` bodies become the
-/// `:` form with rule-4 matchers, `view! { .. }` becomes `view! do:` with
-/// every attribute value and hole converted as Harsh, and both round-trip
-/// back to the Rust they came from.
+/// `:` form with rule-4 matchers; `view! { .. }` keeps its markup, and its
+/// Rust code becomes holes; both round-trip back to the Rust they came from.
 #[test]
 fn converter_macros() {
     let rust = "macro_rules! hashmap {\n    ( $( $k:expr => $v:expr ),* ) => {\n        {\n            let mut m = HashMap::new();\n            $( m.insert($k, $v); )*\n            m\n        }\n    };\n}\n\nmacro_rules! add {\n    ($a:expr, $b:expr) => { $a + $b };\n    ($h:expr, $($t:tt)*) => { $h + add!($($t)*) };\n}\n\nmacro_rules! filled {\n    [ $elem:expr ; $n:expr ] => { vec![$elem; $n] };\n}\n\nfn main() {\n    let m = hashmap!(\"a\" => 1, \"b\" => 2);\n    let s = add!(1, 2, 3);\n    let z = filled![0u8; 4];\n}\n";
@@ -1166,20 +1159,17 @@ fn converter_macros() {
 
     let rust = "fn main() {\n    view! {\n        <div class=\"app\">\n            <p>{count}</p>\n            <button on:click=move |_| set_count.update(|n| *n += 1)>\"+\"</button>\n            <Greeting name={\"World\".to_string()} />\n            <input type=\"text\" prop:value=name.get() on:input=move |ev| set_name(event_target_value(&ev)) />\n            <leptos_router::A href=\"/\">\"home\"</leptos_router::A>\n        </div>\n    }\n}\n";
     let harsh = convert(rust);
+    // The markup is `view!`'s and stays as written; its Rust is in holes.
     for want in [
-        "    view! do:\n        <div class=\"app\">\n            <p>{count}</p>\n",
-        "on:click={move |_| set_count <- update (|n| * n += 1)}>\"+\"</button>",
-        "<Greeting name={\"World\" <- to_string$} />",
-        "prop:value={name <- get$} on:input={move |ev| set_name (event_target_value (&ev))} />",
-        "<leptos_router.A href=\"/\">\"home\"</leptos_router.A>\n        </div>\n",
+        "<p>{@: count :@}</p>",
+        "<button on:click=@: move |_| set_count <- update (|n| * n += 1) :@>\"+\"</button>",
+        "<Greeting name={@: \"World\" <- to_string$ :@} />",
+        "<input type=\"text\" prop:value=@: name <- get$ :@ on:input=@: move |ev| set_name (event_target_value (&ev)) :@ />",
     ] {
         assert!(harsh.contains(want), "\n  expected: {want:?}\n  got:\n{harsh}");
     }
-    // Back to Rust: identical but for the braces the holes gained, RSX's own
-    // block-valued attribute, which rstml reads as the same value.
     let back = transpile(&harsh);
-    let strip = |s: &str| s.replace("={", "=").replace("}>", ">").replace("} ", " ");
-    assert!(same_tokens(&strip(rust), &strip(&back)), "{}", first_diff(&strip(rust), &strip(&back)));
+    assert!(same_tokens(rust, &back), "{}", first_diff(rust, &back));
 }
 
 /// A bare parameter followed by a `[where ..]` clause: the bracket ends the
@@ -1194,32 +1184,23 @@ fn bare_parameter_before_where_clause() {
     ]);
 }
 
-/// Rule 6: a macro `do:` block whose first line is `name:` or `name = ..` is
-/// a brace tree. `name:` opens an element, `name = value` is an attribute
-/// written `name: value,` with a hole's braces dropped, a child keeps its
-/// braces, `for`/`if` headers are the DSL's and are copied, and only
-/// attributes (and spreads) take commas.
-#[test]
-fn brace_tree_macro_body() {
-    let src = "fn m$:\n    rsx! do:\n        div:\n            class = \"app\"\n            onclick = {move |_| count <- set (count$ + 1)}\n            \"Hello {count}\"\n            for item in items <- iter$:\n                li: \"{item}\"\n            if count > 2:\n                p: \"many\"\n            Button:\n                onclick = {move |_|:\n                    let n = count * 2\n                    reset n\n                }\n                \"Reset\"\n            {count}\n            input:\n                type = \"text\"\n                ..attrs\n";
-    let got = transpile(src);
-    for want in [
-        "rsx! {\n        div {\n            class: \"app\",\n            onclick: move |_| count.set(count() + 1),\n            \"Hello {count}\"\n            for item in items.iter() {\n                li { \"{item}\" }\n            }\n            if count > 2 {\n                p { \"many\" }\n            }\n            Button {\n                onclick: move |_| {\n",
-        "let n = count * 2;\n",
-        "reset(n)\n",
-        "},\n                \"Reset\"\n            }\n            {count}\n            input {\n                type: \"text\",\n                ..attrs,\n            }\n        }\n    }\n",
-    ] {
-        assert!(got.contains(want), "\n  expected: {want:?}\n  got:\n{got}");
-    }
-}
 
-/// Rule 6, converter side, and a lexer gap it exposed: raw identifiers.
+/// `rsx!`'s tree through the converter and back: the tree as written, its
+/// Rust in holes (2026-09-23; rule 6's Harsh tree is retired). And a lexer gap
+/// the old test exposed: raw identifiers.
 #[test]
 fn converter_brace_tree() {
     let rust = "fn main() {\n    rsx! {\n        div {\n            class: \"app\",\n            onclick: move |_| count.set(count() + 1),\n            \"Hello {count}\"\n            for item in items.iter() {\n                li { \"{item}\" }\n            }\n            Button {\n                onclick: move |_| reset(),\n                \"Reset\"\n            }\n            {count}\n            input { r#type: \"text\", ..attrs }\n        }\n    }\n}\n";
     let harsh = convert(rust);
+    // The tree is `rsx!`'s and stays as written; every piece of Rust in it
+    // becomes a hole: an attribute's value, a `for`'s expression, a child.
     for want in [
-        "    rsx! do:\n        div:\n            class = \"app\"\n            onclick = {move |_| count <- set (count$ + 1)}\n            \"Hello {count}\"\n            for item in items <- iter$:\n                li:\n                    \"{item}\"\n            Button:\n                onclick = {move |_| reset$}\n                \"Reset\"\n            {count}\n            input:\n                r#type = \"text\"\n                ..attrs\n",
+        "            class: \"app\",\n",
+        "            onclick: @: move |_| count <- set (count$ + 1) :@,\n",
+        "            for item in @: items <- iter$ :@ {\n                li { \"{item}\" }\n",
+        "                onclick: @: move |_| reset$ :@,\n",
+        "            {@: count :@}\n",
+        "            input { r#type: \"text\", ..attrs }\n",
     ] {
         assert!(harsh.contains(want), "\n  expected: {want:?}\n  got:\n{harsh}");
     }
@@ -1295,28 +1276,27 @@ fn leptos_shapes() {
             "#[component]\npub fn Card\n    /// The service.\n    (service: Service)\n    /// Stagger, in seconds.\n    (#[prop (default = 0.0)] delay: f32)\n    -> impl IntoView:\n    delay\n",
             "pub fn Card(/// The service.\n    service: Service,\n    /// Stagger, in seconds.\n    #[prop(default = 0.0)] delay: f32)\n    -> impl IntoView {",
         ),
-        // Rule 1 in brace form, and a body that opens with a hole.
+        // A Rust macro's brace body is Rust: copied verbatim, one line or
+        // many, a hole first or a comment first (principle 2, 2026-09-23;
+        // these were `view! do:` markup blocks until then).
         ("fn m$:\n    let v = view! { <p class=\"x\">{count}</p> }\n    v\n", "view! { <p class=\"x\">{count}</p> }"),
-        ("fn m$:\n    view! do:\n        {panel}\n        <button type=\"button\" class=\"x\">\"+\"</button>\n", "view! {\n                {panel}\n                <button type=\"button\" class=\"x\">\"+\"</button>\n    }"),
-        // A comment line first in the body does not hide the markup.
-        ("fn m$:\n    view! do:\n        // the sheet\n        <Stylesheet id=\"leptos\" href=\"/x\"/>\n", "// the sheet\n                <Stylesheet id=\"leptos\" href=\"/x\"/>"),
-        // A markup block inside a group keeps its tail.
-        ("fn m$:\n    let v = (0..3) <- map (|_| view! do:\n            <i class=\"x\"></i>\n    ) <- collect_view$\n    v\n", "}).collect_view();"),
-        // A paren block inside a paren block, markup inside that.
+        ("fn m$:\n    view! {\n        {panel}\n        <button type=\"button\" class=\"x\">\"+\"</button>\n    }\n", "view! {\n        {panel}\n        <button type=\"button\" class=\"x\">\"+\"</button>\n    }"),
+        ("fn m$:\n    view! {\n        // the sheet\n        <Stylesheet id=\"leptos\" href=\"/x\"/>\n    }\n", "// the sheet\n        <Stylesheet id=\"leptos\" href=\"/x\"/>"),
+        // A body inside a group keeps what follows it.
+        ("fn m$:\n    let v = (0..3) <- map (|_| view! {\n            <i class=\"x\"></i>\n    }) <- collect_view$\n    v\n", ").collect_view();"),
+        // A paren block inside a paren block, a body inside that.
         (
-            "fn m$:\n    let dots = (len > 1) <- then (||:\n            (0..len) <- map (|i|:\n                    view! do:\n                        <button\n                            type=\"button\"\n                        ></button>\n            ) <- collect_view$\n    )\n    dots\n",
+            "fn m$:\n    let dots = (len > 1) <- then (||:\n            (0..len) <- map (|i|:\n                    view! {\n                        <button\n                            type=\"button\"\n                        ></button>\n                    }\n            ) <- collect_view$\n    )\n    dots\n",
             "(0..len).map(|i| {\n            view! {\n",
         ),
         // A `):` tail opens the header's own block.
         ("fn m$:\n    if xs <- iter$ <- any (|x|:\n            *x > 1\n    ):\n        return 1\n    2\n", "if xs.iter().any(|x| {\n        *x > 1\n    }) {\n        return 1\n    }"),
         // A chain hanging off a block expression, isolated in a group.
-        ("fn m$:\n    let b =\n        (\n            if c:\n                vec! [1]\n            else:\n                y <- clone$\n        ) <- into_iter$ <- count$\n    b\n", "}).into_iter().count();"),
+        ("fn m$:\n    let b =\n        (\n            if c:\n                vec! 1\n            else:\n                y <- clone$\n        ) <- into_iter$ <- count$\n    b\n", "}).into_iter().count();"),
         // A brace group is never an atom: `json! ({ .. })` is isolated.
         ("fn m$:\n    let body = json! ({\"a\": 1})\n    body\n", "json!({\"a\": 1})"),
     ]);
-    // Markup lines in brace form are not statements.
-    // (A `view! { .. }` over several lines is now a `do:` block; the
-    // one-line brace form keeps its place.)
+    // A body is never read as Harsh, so its lines are not statements.
     let toks = harsh_lang::lex::lex("fn m$:\n    let v = (0..3) <- map (|_| { view! { <input type=\"text\" /> } })\n").expect("lex");
     assert!(harsh_lang::layout::build(toks).is_ok());
 }
@@ -1328,9 +1308,9 @@ fn converter_leptos_shapes() {
     let harsh = convert(rust);
     for want in [
         "pub fn Card\n    /// The service.\n    (service: Service)\n    /// Stagger.\n    (#[prop (default = 0.0)] delay: f32)\n    -> impl IntoView:\n",
-        "<- map (|item|:\n            let y = item\n            view! do:\n                <li aria-label=\"x\">{y}</li>\n    ) <- collect_view$\n",
-        "<- then (||:\n            view! do:\n                <li>{extra}</li>\n    )\n",
-        "    let b = (\n        if c:\n            vec![1]\n        else:\n            y <- clone$\n    ) <- into_iter$ <- count$\n",
+        "<- map (|item|:\n            let y = item\n            view! { <li aria-label=\"x\">{@: y :@}</li> }\n    ) <- collect_view$\n",
+        "<- then (||:\n            view! { <li>{@: extra :@}</li> }\n    )\n",
+        "    let b = (\n        if c:\n            vec! 1\n        else:\n            y <- clone$\n    ) <- into_iter$ <- count$\n",
         "    do:\n        let z = 1\n        f z;\n",
         "    leptos_routes (&opts) routes (do:\n        let o = o <- clone$\n        move || shell (o <- clone$)\n    )\n",
     ] {
@@ -1345,13 +1325,13 @@ fn converter_leptos_shapes() {
     assert!(same_tokens(&strip(rust), &strip(&back)), "{}", first_diff(&strip(rust), &strip(&back)));
 }
 
-/// From the crate's first real build: a paren block's tail that opens a
-/// markup block, and include paths re-based for the generated tree.
+/// From the crate's first real build: a paren block's tail holding a brace
+/// body, and include paths re-based for the generated tree.
 #[test]
 fn leptos_build_findings() {
     check(&[(
-        "fn m$:\n    let brand_name =\n        (\n            if c:\n                vec! [a]\n            else:\n                b\n        ) <- into_iter$ <- map (|line| view! do:\n                               <span class=\"x\">{line}</span>\n                           ) <- collect_view$\n    brand_name\n",
-        "}).into_iter().map(|line| view! {\n                                       <span class=\"x\">{line}</span>\n    }).collect_view();",
+        "fn m$:\n    let brand_name =\n        (\n            if c:\n                vec! a\n            else:\n                b\n        ) <- into_iter$ <- map (|line| view! {\n                <span class=\"x\">{line}</span>\n        }) <- collect_view$\n    brand_name\n",
+        ".into_iter().map(|line| view! {\n                <span class=\"x\">{line}</span>\n        }",
     )]);
     // Include paths: relative to the source, re-based to where the Rust is
     // written (`src/content.hrs` -> `target/hrs/content.rs` adds one `../`).
@@ -1371,4 +1351,998 @@ fn leptos_build_findings() {
     let _ = std::fs::remove_dir_all(&dir);
     // A single file written beside its source keeps its paths.
     check(&[("fn m$:\n    let s = include_str! \"../content/site.toml\"\n    s\n", "include_str!(\"../content/site.toml\")")]);
+}
+
+/// Every spelling the language has retired is refused, in **both** forms --
+/// across lines and on one line -- and each refusal names its replacement.
+///
+/// This is the guard the migrations lacked. Each of them refused the header
+/// that *ends* in its old mark and left the inline form standing, so for days
+/// `match x: a => 1` and `match x\ a => 1` emitted the same Rust, the Book
+/// taught both on one page, and four fixtures in this very file pinned the
+/// retired one (found 2026-09-20). A corpus that compiles cannot catch this:
+/// a retired spelling the transpiler still accepts builds, runs and
+/// round-trips. When a spelling is retired, its two rows go here first.
+#[test]
+fn retired_spellings_are_refused_in_both_forms() {
+    // (what it was, the source, a phrase the refusal must contain)
+    let table: &[(&str, &str, &str)] = &[
+        ("match x:  across lines", "fn f (x: i32) -> i32:\n    match x:\n        1 => 1\n        _ => 0\n", "opened by `\\`"),
+        ("match x:  on one line", "fn f (x: i32) -> i32:\n    match x: 1 => 1, _ => 0\n", "opened by `\\`"),
+        ("match x do:  across lines", "fn f (x: i32) -> i32:\n    match x do:\n        1 => 1\n        _ => 0\n", "opened by `\\`"),
+        ("match x do:  on one line", "fn f (x: i32) -> i32:\n    match x do: 1 => 1, _ => 0\n", "opened by `\\`"),
+        ("match x:  on one line, in parens", "fn f (x: i32) -> i32:\n    g (match x: 1 => 1, _ => 0)\n", "opened by `\\`"),
+        ("struct P:  across lines", "struct P:\n    x: i32\n", "no mark: `struct P`"),
+        ("struct P:  on one line", "struct P: x: i32, y: i32\n", "`struct P\\ a: T, b: U` inline"),
+        ("enum E:  across lines", "enum E:\n    A\n    B\n", "no mark: `enum E`"),
+        ("enum E:  on one line", "enum E: A, B\n", "`enum E\\ a: T, b: U` inline"),
+        ("union U:  across lines", "union U:\n    a: u32\n", "no mark: `union U`"),
+        ("union U:  on one line", "union U: a: u32, b: f32\n", "`union U\\ a: T, b: U` inline"),
+        ("struct P do", "struct P do\n    x: i32\n", "takes no opener"),
+        ("impl P:", "struct P\n    x: i32\nimpl P:\n    fn get (&self) -> i32:\n        self <- x\n", "impl P"),
+        ("trait T:", "trait T:\n    fn f (&self)\n", "trait T"),
+        ("mod m:", "mod m:\n    fn f$:\n        g$\n", "mod m"),
+        ("macro_rules~ name:", "macro_rules~ tw:\n    (($a:expr)) => do: $a\n", "no mark"),
+        ("fn main ():", "fn main ():\n    g$\n", "fn main$"),
+        // A1, 2026-09-22: a bracket after `!` is an array argument, so Rust's
+        // bracket call written in Harsh would mean something else.
+        ("vec! [1, 2]  spaced", "fn f$:\n    let v = vec! [1, 2]\n", "is `vec! a b` in Harsh"),
+        ("vec![1, 2]  tight", "fn f$:\n    let v = vec![1, 2]\n", "is `vec! a b` in Harsh"),
+        ("vec! [0; 4]", "fn f$:\n    let v = vec! [0; 4]\n", "is `vec! { x; n }` in Harsh"),
+        ("vec![]", "fn f$:\n    let v: Vec<i32> = vec![]\n", "is `vec!$` in Harsh"),
+        ("vec! [..] inside parens", "fn f$:\n    g (vec! [1, 2])\n", "is `vec! a b` in Harsh"),
+        // A2, 2026-09-22: `m!\` retired; the stream goes in braces.
+        ("m!\\  across lines", "fn f$:\n    lazy_static!\\\n        static ref X: u8 = 1\n", "`lazy_static! { … }`"),
+        ("m!\\  on one line", "fn f$:\n    let m = hm!\\ 1 => 2\n", "`hm! { … }`"),
+        // B1, 2026-09-22: `@:` / `:@` belong inside a macro's body.
+        ("@: outside a body", "fn f$:\n    let d = f x@: y :@\n", "`@:` marks a hole"),
+        (":@ outside a body", "fn f$:\n    let d = f y :@\n", "`:@` marks a hole"),
+    ];
+    for (what, src, phrase) in table {
+        let msg = layout_err(src);
+        assert!(msg.contains(phrase), "{what}: refused, but the message does not name the replacement ({phrase:?}):\n  {msg}");
+    }
+    // And the spellings that replaced them are accepted.
+    for src in [
+        "fn f (x: i32) -> i32:\n    match x\\ 1 => 1, _ => 0\n",
+        "fn f (x: i32) -> i32:\n    match x\\ 0 => 0, 1 | 2 => 1, _ => 2\n",
+        "fn f (x: i32) -> i32:\n    g (match x\\ 1 => 1, _ => 0)\n",
+        "struct P\\ x: i32, y: i32\n",
+        "struct W<T: Clone>\\ v: T\n",
+        "enum E\\ A, B\n",
+    ] {
+        transpile(src);
+    }
+    // `union` is a contextual keyword: `union U\` inline was read as the
+    // application `union(U)`; a function that happens to be named `union`
+    // must still be callable.
+    assert!(transpile("union U\\ a: u32, b: f32\n").starts_with("union U {"));
+    assert!(transpile("fn main$:\n    let n = union 1 2\n").contains("union(1, 2)"));
+}
+
+/// Where a `~` call's token stream ends (rulings of 2026-09-19 and 09-20):
+/// the rest of its line **and every following line indented deeper than the
+/// line the call sits on**; an unmatched closing bracket ends it sooner.
+/// The column decides -- the dedent rule that closes any block -- and no
+/// token's kind is consulted. Until 0.1.14 the stream stopped at the physical
+/// newline, so a continued call emitted `[1, 2]3(4)` with no Harsh error and
+/// the isolated multi-line form failed with "1 token(s) were left over".
+#[test]
+fn a_harsh_macros_stream_is_bounded_by_indentation_and_by_its_group() {
+    const LST: &str = "macro_rules~ lst\n    ($( ($x:expr) )*) => do: [$( $x ),*]\n\n";
+    let t = |body: &str| transpile(&format!("{LST}fn main$:\n{body}"));
+
+    // Lines deeper than the call's line belong to the stream.
+    assert!(t("    let v =\n        lst~ 1 2\n            3 4\n").contains("[1, 2, 3, 4]"));
+    assert!(t("    let v = lst~ 1 2\n        3 4\n").contains("[1, 2, 3, 4]"));
+    // A line at the call line's own column does not: the stream is `1 2`.
+    assert!(t("    let v =\n        lst~ 1 2\n        g$\n").contains("[1, 2]"));
+    // The next statement, of course, ends it.
+    assert!(t("    let v = lst~ 1 2\n    let w = lst~ 3\n").contains("[1, 2];"));
+
+    // Isolation: the `)` of a group the call was written *inside* ends the
+    // stream, on one line and across lines...
+    assert!(t("    let t = ((lst~ 4), 0)\n").contains("(([4]), 0)"), "the `, 0` is the tuple's");
+    assert!(t("    let v =\n        (lst~ 1 2\n            3 4)\n").contains("[1, 2, 3, 4]"));
+    // ...and sooner than the indentation would: `<- len$` sits on a deeper
+    // line, but the `)` came first, so it chains on the *result*.
+    assert!(t("    let n =\n        (lst~ 1 2\n            3 4) <- len$\n").contains("([1, 2, 3, 4]).len()"));
+    assert!(t("    let n = (lst~ 1 2) <- len$\n").contains("([1, 2]).len()"));
+    // A bracket opened inside the stream is matched inside it, across lines.
+    assert!(t("    let v = lst~ (1,\n        2) 3\n").contains("[(1, 2), 3]"));
+
+    // A `\` after the mark is a token of the stream, never an opener: a
+    // matcher that names it receives it (the user's ruling, 2026-09-20).
+    let named = "macro_rules~ tw\n    (\\ ($a:expr)) => do: $a * 2\n\nfn main$:\n    let x = tw~\\ 4\n";
+    assert!(transpile(named).contains("let x = 4 * 2"));
+}
+
+/// The block form: `m~ do:` hands the lines beneath as the stream, the opener
+/// dropped; isolated, the group's `)` ends it (it used to be swallowed).
+#[test]
+fn a_harsh_macros_block_form_ends_at_its_dedent_or_its_group() {
+    const TW: &str = "macro_rules~ twice\n    (($b:expr)) => do:\n        $b\n        $b\n\n";
+    let bare = transpile(&format!("{TW}fn main$:\n    twice~ do:\n        g$\n    h$\n"));
+    assert_eq!(bare.matches("g()").count(), 2, "{bare}");
+    assert_eq!(bare.matches("h()").count(), 1, "the next statement is not the stream's:\n{bare}");
+    let isolated = transpile(&format!("{TW}fn main$:\n    (twice~ do:\n        g$)\n    h$\n"));
+    assert_eq!(isolated.matches("g()").count(), 2, "{isolated}");
+    assert_eq!(isolated.matches("h()").count(), 1, "{isolated}");
+}
+
+/// A `\` opens a specification block -- Rust's `{ a, b }` groupings -- and
+/// always belongs to the construct written before it; alone it means nothing
+/// (the user's ruling, 2026-09-20). `let x = \ 4 * 2` used to emit
+/// `{ 4 * 2, }`. Because a Harsh macro's expansion is literal, this is also
+/// what makes a malformed expansion an error instead of invalid Rust.
+#[test]
+fn a_backslash_follows_the_construct_it_specifies() {
+    for src in [
+        "fn main$:\n    let x = \\ 4 * 2\n",
+        "fn main$:\n    f (\\ a = 1)\n",
+        "fn main$:\n    let x = 1 + \\ a = 1\n",
+        // `$a` captures `\ 4`; the expansion `\ 4 * 2` is refused, at the call.
+        "macro_rules~ tw\n    (($a:expr)) => do: $a * 2\n\nfn main$:\n    let x = tw~\\ 4\n",
+        // `\` is a token of the stream, so nothing beneath is a block's entries.
+        "macro_rules~ lst\n    ($( ($x:expr) )*) => do: [$( $x ),*]\n\nfn main$:\n    let v = lst~\\\n        1\n        2\n",
+    ] {
+        let msg = layout_err(src);
+        assert!(msg.contains("follows the construct it specifies"), "{src}\n  {msg}");
+    }
+    // Every construct that owns one still does.
+    for src in [
+        "fn main$:\n    let p = P\\ x = 1, y = 2\n",
+        "fn main$:\n    let p =\n        a.b.P\\\n            x = 1\n",
+        "struct P\n    x: i32\nimpl P\n    fn new$ -> Self:\n        Self\\ x = 1\n",
+        "fn main$:\n    let w = W<i32>\\ v = 1\n",
+        "fn main$:\n    let P\\ x, y = p\n",
+        "fn main$:\n    let a = match f (x)\\ 0 => 0, _ => 1\n",
+        "struct P\\ x: i32, y: i32\n",
+        // A header may end in a bracketed where clause (found by the guide's
+        // own build, which the first version of this check refused).
+        "struct Wrapper<T> [where T: Display]\\ field: T, other: u32\n",
+    ] {
+        transpile(src);
+    }
+}
+
+/// A Rust macro's brace call is written in braces, as Rust writes it, one line
+/// or many (`m!\\` was the spelling until 2026-09-22, A2). The body is Rust.
+#[test]
+fn a_rust_macros_brace_call_is_written_in_braces() {
+    let one = transpile("fn main$:\n    let v = hm! { 1 => \"a\", 2 => \"b\" }\n");
+    assert!(one.contains("hm! { 1 => \"a\", 2 => \"b\" }"), "{one}");
+    let many = transpile("fn main$:\n    let v = hm! {\n        1 => \"a\",\n        2 => \"b\"\n    }\n    let w = 1\n");
+    assert!(many.contains("hm! {\n        1 => \"a\",\n        2 => \"b\"\n    };\n    let w = 1;"), "{many}");
+    // The paren call stays juxtaposed.
+    assert!(transpile("fn main$:\n    let v = lst! 1 2 3\n").contains("lst!(1, 2, 3)"));
+}
+
+/// `hrs-from` copies a Rust macro's brace body byte for byte (principle 2,
+/// 2026-09-23), and `hrs` copies it back: a DSL's own tokens are never read.
+#[test]
+fn converter_copies_a_brace_call_as_rust() {
+    for rust in [
+        "fn main() {\n    let v = hm!{ 1 => \"a\", id(2) => \"b\" };\n}\n",
+        "fn main() {\n    let v = hm! {\n        1 => \"a\",\n        id(2) => \"b\"\n    };\n}\n",
+        "fn main() {\n    let v = hm!{ 1 => \"a\", 2 => \"b\", };\n}\n",
+        "fn main() {\n    let v = sel!{ a => { f() }, b => { g() } };\n}\n",
+        "fn main() {\n    tl!{ static A: i32 = 1; static B: i32 = 2 };\n}\n",
+        "fn main() {\n    let v = calc!{ eval 1 + 2 };\n}\n",
+    ] {
+        let harsh = convert(rust);
+        let back = transpile(&harsh);
+        assert_eq!(norm_tokens(rust), norm_tokens(&back), "through:\n{harsh}\nback:\n{back}");
+    }
+    assert!(convert("fn main() {\n    let v = hm!{ 1 => \"a\", id(2) => \"b\" };\n}\n").contains("id(2)"));
+}
+
+/// A fragment stops at whatever the matcher names **next** -- a follow set,
+/// not a single token (2026-09-20). A repetition that comes next names the
+/// literal its body begins with, and one that may match nothing lets what
+/// follows it count too; inside a repetition, the next round's leading
+/// literal is a stop as well. Before this, a fragment followed by a
+/// repetition took one atom: `$it:expr $(if $c:expr)*` cut `0..4` to `0`
+/// and no arm matched, and a `$c` inside the repetition took `x` from
+/// `x > 1`. It is what a comprehension's matcher needs.
+#[test]
+fn a_fragment_stops_at_what_a_following_repetition_begins_with() {
+    const G: &str = "macro_rules~ g\n    (($e:expr) for ($p:pat) in ($it:expr) $(if ($c:expr))*) => do:\n        ($it) <- into_iter$ <- flat_map (move |$p| ((true $( && ($c) )*) <- then (|| $e)))\n\n";
+    // Expanded tokens are re-spaced, so compare without whitespace.
+    let t = |call: &str| -> String {
+        transpile(&format!("{G}fn main$:\n    let v: Vec<i32> = ({call}) <- collect$\n")).split_whitespace().collect()
+    };
+    // No condition: the range is not cut short.
+    assert!(t("g~ x for x in 0..4").contains("(0..4).into_iter()"), "{}", t("g~ x for x in 0..4"));
+    // One, then several: each condition is a whole expression.
+    assert!(t("g~ x for x in 0..6 if x > 3").contains("true&&(x>3)"));
+    let two = t("g~ x for x in 0..10 if x % 2 == 0 if x > 3");
+    assert!(two.contains("true&&(x%2==0)&&(x>3)"), "{two}");
+    // A repetition that begins with a fragment still takes one atom per
+    // element: `$( $x:expr ),*` is unchanged.
+    let lst = transpile("macro_rules~ lst\n    ($( ($x:expr) ),*) => do: [$( $x ),*]\n\nfn main$:\n    let v = lst~ 1, 2 + 3, 4\n");
+    assert!(lst.contains("[1, 2 + 3, 4]"), "{lst}");
+}
+
+/// A `$` a macro's transcriber wrote carries a span inside the macro's
+/// *definition*. The parens it becomes used to anchor the emitter's gap
+/// copying like a hand-written `$`, so `(|| $x)$` followed by more source
+/// pasted everything from the definition down to the call into the output:
+/// the expansion, then the original line again, unexpanded (found
+/// 2026-09-21 -- a comprehension's levels are closures, so `g~` hit it on
+/// every multi-level call written on one line). Only a source `$` anchors.
+#[test]
+fn an_expanded_dollar_does_not_copy_source_between_definition_and_call() {
+    let src = "macro_rules~ r\n    (($x:expr)) => do: (|| $x)$\n\nfn main$:\n    let v = (r~ 7) + 5\n";
+    let out = transpile(src);
+    assert!(!out.contains("r~"), "the original call leaked into the output:\n{out}");
+    assert!(!out.contains("macro_rules"), "{out}");
+    // A hand-written `$` keeps its source spacing as before.
+    assert!(transpile("fn main$:\n    let v = f$ + 5\n").contains("f() + 5"));
+}
+
+/// `g~`, Harsh's comprehension, and its shorthands, from the prelude
+/// (the user's rulings, 2026-09-20/21). One closure per `for`; the `if`s
+/// that follow a `for` fold into that closure's one condition under
+/// `bool::then`; every level but the innermost is flattened. Lazy, and
+/// `for` means `IntoIterator`, as it does everywhere in the language.
+#[test]
+fn the_prelude_comprehension_and_its_shorthands() {
+    let flat = |src: &str| -> String { transpile(src).split_whitespace().collect() };
+    // Available with no definition and no `use`.
+    let one = flat("fn main$:\n    let v: Vec<i32> = (g~ x * 2 for x in 0..5 if x > 1 if x < 4) <- collect$\n");
+    assert!(one.contains("(0..5).into_iter().flat_map(move|x|((true&&(x>1)&&(x<4)).then(||x*2)))"), "{one}");
+    // Two levels: the outer is flattened, the inner is not.
+    let two = flat("fn main$:\n    let v: Vec<i32> = (g~ x + y for x in 0..3 for y in 0..3 if y > x) <- collect$\n");
+    assert!(two.contains(".flatten()"), "{two}");
+    assert!(!two.contains("g~"), "a recursive expansion leaked its call:\n{two}");
+    // The shorthands collect; their turbofish survives expansion.
+    for (call, want) in [
+        ("list~ x for x in 0..3", "collect::<Vec<_>>()"),
+        ("set~ x for x in 0..3", "collect::<std::collections::HashSet<_>>()"),
+        ("dict~ x => x for x in 0..3", "collect::<std::collections::HashMap<_,_>>()"),
+    ] {
+        let out = flat(&format!("fn main$:\n    let v = {call}\n"));
+        assert!(out.contains(want), "{call}: {out}");
+    }
+}
+
+/// A file's own macro shadows the prelude's, as Rust's prelude is shadowed;
+/// `hrs_std.NAME~` always reaches the prelude's, and the prelude's own
+/// macros recurse through that path so a user's `g` is never picked up from
+/// inside one. A prelude name used with `!` is some Rust macro, not an error.
+#[test]
+fn a_files_own_macro_shadows_the_prelude() {
+    let own = "macro_rules~ g\n    (($x:expr)) => do: $x * 100\n\n";
+    assert!(transpile(&format!("{own}fn main$:\n    let a = g~ 3\n")).contains("3 * 100"));
+    let q = transpile(&format!("{own}fn main$:\n    let v: Vec<i32> = (hrs_std.g~ x for x in 0..3) <- collect$\n"));
+    assert!(q.contains("flat_map") && !q.contains("hrs_std"), "{q}");
+    let l = transpile(&format!("{own}fn main$:\n    let v = list~ x for x in 0..3\n"));
+    assert!(l.contains("flat_map") && !l.contains("* 100"), "list~ must not reach the user's g:\n{l}");
+    let rust = "macro_rules! g { ($x:expr) => { $x + 1 }; }\n\nfn main$:\n    let v: Vec<i32> = (hrs_std.g~ x for x in 0..3) <- collect$\n    let b = g! 1\n";
+    assert!(transpile(rust).contains("g!(1)"));
+}
+
+/// A comma inside a type's generic list belongs to the list, not to the
+/// parameter group (2026-09-21). The rule composes from bricks applied
+/// recursively -- the lexer's atomic tokens, bracket groups, and now `<…>` --
+/// and the last brick is safe only in a parameter list, where after `:` a
+/// type follows and `<` can only open, never compare. Until this, the forward
+/// direction refused `(r: Result<i32, String>)` and `hrs-from` silently split
+/// Rust's `fn f(r: Result<i32, String>)` into `(r: Result<i32) (String>)`.
+#[test]
+fn a_comma_inside_generics_belongs_to_the_generic_list() {
+    for (src, want) in [
+        ("fn f (r: Result<i32, String>) -> i32:\n    0\n", "fn f(r: Result<i32, String>)"),
+        ("fn f (a: i32) (m: HashMap<String, i32>) -> i32:\n    a\n", "fn f(a: i32, m: HashMap<String, i32>)"),
+        ("fn f (m: HashMap<String, Vec<i32>>) -> i32:\n    0\n", "fn f(m: HashMap<String, Vec<i32>>)"),
+        ("fn f (it: impl Iterator<Item = (i32, i32)>) -> i32:\n    0\n", "fn f(it: impl Iterator<Item = (i32, i32)>)"),
+        // Spacing carries no meaning in a type: the lexer gives the same `<`.
+        ("fn f (r: Result <i32, String>) -> i32:\n    0\n", "fn f(r: Result <i32, String>)"),
+    ] {
+        assert!(transpile(src).contains(want), "{src}\n{}", transpile(src));
+    }
+    // A comma between two parameters is still refused: that brick is unchanged.
+    assert!(layout_err("fn f (a: i32, b: i32) -> i32:\n    a\n").contains("one parameter"));
+    // And the converter no longer splits inside the list.
+    for (rust, want) in [
+        ("fn f(r: Result<i32, String>) -> i32 { 0 }\n", "fn f (r: Result<i32, String>) -> i32:"),
+        ("fn f(a: i32, m: HashMap<String, i32>) -> i32 { a }\n", "fn f (a: i32) (m: HashMap<String, i32>) -> i32:"),
+        ("fn f(m: HashMap<String, Vec<i32>>) -> i32 { 0 }\n", "fn f (m: HashMap<String, Vec<i32>>) -> i32:"),
+    ] {
+        let h = convert(rust);
+        assert!(h.contains(want), "{rust}\n{h}");
+    }
+}
+
+/// A repetition with no separator whose body begins with a fragment is
+/// juxtaposition: each round takes one atom, and the repetition ends where
+/// what follows it begins (2026-09-21, found by the first matrix literal).
+/// Before, the follow set made `$( $x:expr )*` span a whole row, emitting
+/// `1.0(2.0)`, and once that was fixed a round took the row's `;` as one more
+/// element -- a one-atom `expr` accepts any single token.
+#[test]
+fn a_juxtaposed_repetition_takes_one_atom_per_round_and_stops_at_what_follows() {
+    let m = "macro_rules~ m\n    ([ $( $( ($x:expr) )* );* ]) => do: vec! $( (vec! $( ($x) )*) )*\n\n";
+    let out: String = transpile(&format!("{m}fn main$:\n    let a = m~ [1.0 2.0; 3.0 4.0]\n")).split_whitespace().collect();
+    assert!(out.contains("vec!(vec!(1.0,2.0),vec!(3.0,4.0))"), "{out}");
+    // A negative entry is one element, as Julia's `[1 -2]` is two.
+    let neg: String = transpile(&format!("{m}fn main$:\n    let a = m~ [1.0 -2.0; 3.0 4.0]\n")).split_whitespace().collect();
+    assert!(neg.contains("vec!(vec!(1.0,-2.0),vec!(3.0,4.0))"), "{neg}");
+    // The separated and the literal-led repetitions are unchanged.
+    assert!(transpile("macro_rules~ l\n    ($( ($x:expr) ),*) => do: [$( $x ),*]\n\nfn main$:\n    let v = l~ 1, 2 + 3, 4\n").contains("[1, 2 + 3, 4]"));
+}
+
+/// Julia's matrix and vector literals, from the prelude (2026-09-21):
+/// `m~ [1 2; 3 4]` -- spaces between entries, `;` between rows -- and
+/// `v~ [1, 2, 3]`, commas making a vector as in Julia. They expand to the
+/// `hrs_std` crate's types, where `*` is the matrix product, as in Julia.
+#[test]
+fn the_prelude_matrix_and_vector_literals() {
+    let flat = |src: &str| -> String { transpile(src).split_whitespace().collect() };
+    let m = flat("fn main$:\n    let a = m~ [1.0 -2.0; 3.0 4.0]\n");
+    assert!(m.contains("hrs_std::Matrix::from_rows(vec!(vec!(1.0,-2.0),vec!(3.0,4.0)))"), "{m}");
+    let v = flat("fn main$:\n    let x = v~ [1.0, 2.0, 3.0]\n");
+    assert!(v.contains("hrs_std::Vector::from_vec(vec!(1.0,2.0,3.0))"), "{v}");
+    // A file's own `m` shadows the prelude's, and needs no crate.
+    let own = transpile("macro_rules~ m\n    (($x:expr)) => do: $x + 1\n\nfn main$:\n    let a = m~ 1\n");
+    assert!(own.contains("1 + 1") && !own.contains("hrs_std"), "{own}");
+}
+
+/// A project that calls `m~` or `v~` without depending on `hrs_std` is told
+/// which line to add, instead of rustc failing on an unresolved crate.
+#[test]
+fn a_matrix_literal_names_the_crate_it_needs() {
+    assert_eq!(harsh_lang::driver::uses_hrs_std("fn main$:\n    let a = m~ [1 2]\n"), Some(("m~".into(), 2)));
+    assert_eq!(harsh_lang::driver::uses_hrs_std("fn main$:\n    let x = v~ [1, 2]\n"), Some(("v~".into(), 2)));
+    // `g~` needs nothing; a variable named `m` is not a call; a shadowing
+    // definition takes the name away from the prelude.
+    assert_eq!(harsh_lang::driver::uses_hrs_std("fn main$:\n    let m = 1\n    let s = list~ x for x in 0..3\n"), None);
+    assert_eq!(harsh_lang::driver::uses_hrs_std("macro_rules~ m\n    (($x:expr)) => do: $x\n\nfn main$:\n    let a = m~ 1\n"), None);
+    // A dotted operator and a function marked `<>` are written to Rust as
+    // `hrs_std::DOT` and `hrs_std::each!`: they need the crate too.
+    assert_eq!(harsh_lang::driver::uses_hrs_std("use std.collections.*\n\nfn f (a: &M) -> M:\n    a .* a\n"), Some((".*".into(), 4)));
+    assert_eq!(harsh_lang::driver::uses_hrs_std("fn f (a: &M) -> M:\n    f64.sqrt<> a\n"), Some(("sqrt<>".into(), 2)));
+    assert_eq!(harsh_lang::driver::uses_hrs_std("use std.collections.*\n\nfn f$:\n    let v = xs <- collect<Vec<_>>$\n"), None);
+}
+
+/// An array literal passed as an argument is isolated: brackets always index
+/// in Harsh (the user's rule, 2026-09-11), so `f [1, 2]` would be an index of
+/// `f`. The converter wrote it bare; the self-host round trip caught it on
+/// `s.starts_with(['=', '.'])`, in code written minutes earlier (2026-09-21).
+#[test]
+fn converter_isolates_an_array_literal_argument() {
+    for (rust, harsh, back) in [
+        ("fn g() -> i32 { let b = f([1, 2]); b }\n", "f ([1, 2])", "f([1, 2])"),
+        ("fn g() -> i32 { let b = f([1, 2], 3); b }\n", "f ([1, 2]) 3", "f([1, 2], 3)"),
+        ("fn g(s: &str) -> bool { s.starts_with(['=', '.']) }\n", "starts_with (['=', '.'])", "starts_with(['=', '.'])"),
+    ] {
+        let h = convert(rust);
+        assert!(h.contains(harsh), "{rust}\n{h}");
+        assert!(transpile(&h).contains(back), "{}", transpile(&h));
+    }
+    // An indexed name is not an array literal and is unaffected: it still
+    // comes back as the same call.
+    assert!(transpile(&convert("fn g(v: Vec<i32>) -> i32 { f(v[0]) }\n")).contains("f(v[0])"));
+}
+
+/// Inside `m~ [ … ]` a line break separates rows as `;` does -- Julia's
+/// grammar for its matrix literal (the user's request, 2026-09-21). Only the
+/// prelude's `m`: a file's own macro, and every other bracket list, see a
+/// line break as nothing at all.
+#[test]
+fn a_matrix_literal_may_take_one_row_per_line() {
+    let flat = |src: &str| -> String { transpile(src).split_whitespace().collect() };
+    let lines = flat("fn main$:\n    let b =\n        m~ [1 2 3\n            4 5 6]\n");
+    let semis = flat("fn main$:\n    let b = m~ [1 2 3; 4 5 6]\n");
+    assert!(lines.contains("from_rows(vec!(vec!(1,2,3),vec!(4,5,6)))"), "{lines}");
+    assert_eq!(lines, semis, "the two layouts are the same matrix");
+    // A `;` at the end of a line is not doubled.
+    let both = flat("fn main$:\n    let b =\n        m~ [1 2 3;\n            4 5 6]\n");
+    assert!(both.contains("vec!(vec!(1,2,3),vec!(4,5,6))"), "{both}");
+    // A file's own `m` gets no rows: the line break is nothing to it.
+    let own = flat("macro_rules~ m\n    ([ $( ($x:expr) )* ]) => do: [$( $x ),*]\n\nfn main$:\n    let b =\n        m~ [1 2\n            3 4]\n");
+    assert!(own.contains("[1,2,3,4]"), "{own}");
+}
+
+/// Julia's grammar for its matrix literal, not a list of shapes (the user's
+/// ruling, 2026-09-21, correcting the Matlab forms Claude had added the same
+/// morning): a space is `hcat`, `;` or a line break is `vcat`, `,` makes the
+/// entries of a vector, and every entry is a block -- a nested bracket built
+/// by the same rules. All-number rows take the direct path, `from_rows`.
+#[test]
+fn a_matrix_literal_follows_julias_grammar() {
+    let flat = |src: &str| -> String { transpile(src).split_whitespace().collect() };
+    let at = |call: &str| flat(&format!("fn main$:\n    let a =\n        {call}\n"));
+    // Numbers: rows by `;` or by line, entries by spaces.
+    for call in ["m~ [1 3 4; 5 6 2]", "m~ [1 3 4\n            5 6 2]"] {
+        assert!(at(call).contains("from_rows(vec!(vec!(1,3,4),vec!(5,6,2)))"), "{call}: {}", at(call));
+    }
+    // A comma list of numbers is a column.
+    assert!(at("m~ [1, 2, 3]").contains("from_rows(vec!(vec!(1),vec!(2),vec!(3)))"));
+    // Blocks: side by side is `hcat`, stacked is `vcat`, each built by `m~`.
+    let cols = at("m~ [[1, 5] [3, 6] [4, 2]]");
+    assert!(cols.contains("hrs_std::vcat(vec!(hrs_std::hcat(vec!(") && cols.contains("vec!(vec!(1),vec!(5))"), "{cols}");
+    let stacked = at("m~ [[1 3 4]\n            [5 6 2]]");
+    assert!(stacked.contains("hrs_std::vcat(vec!(hrs_std::hcat(vec!(") && stacked.matches("hcat").count() == 2, "{stacked}");
+    // A block may be a matrix: concatenation. A paren group's parens go once.
+    let joined = at("m~ [(&a) (&a)]");
+    assert!(joined.contains("hrs_std::block(&a)") && !joined.contains("block((&a))"), "{joined}");
+    // Julia's refusals, in Julia's terms.
+    assert!(at("m~ [[1 3 4], [5 6 2]]").contains("commasneverconcatenate"));
+    assert!(flat("fn main$:\n    let v = v~ [1 2 3]\n").contains("spacesmakearow"));
+    // A vector: a comma list, or one entry per line -- the same tokens.
+    assert_eq!(
+        flat("fn main$:\n    let v = v~ [1, 2, 3]\n"),
+        flat("fn main$:\n    let v =\n        v~ [1\n            2\n            3]\n").replace("letv=", "letv=")
+    );
+}
+
+/// A panic names the Harsh line, not the generated one (2026-09-21): `hrs
+/// run` and `hrs test` read the program's stderr and put every
+/// `target/hrs/main.rs:L:C` back through the source map. Here through the
+/// real binary and a real map; the position is the same token Rust named.
+#[test]
+fn a_panic_is_put_back_on_its_harsh_line() {
+    let dir = std::env::temp_dir().join(format!("hrs-panic-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(dir.join("src")).unwrap();
+    std::fs::create_dir_all(dir.join("target/hrs")).unwrap();
+    std::fs::write(dir.join("src/main.hrs"), "fn main$:\n    let v: Vec<i32> = vec!$\n    println! \"{}\" v[3]\n").unwrap();
+    let ok = std::process::Command::new(env!("CARGO_BIN_EXE_hrs"))
+        // Absolute paths, as the driver writes them into its maps.
+        .arg(dir.join("src/main.hrs"))
+        .arg("-o")
+        .arg(dir.join("target/hrs/main.rs"))
+        .arg("--map")
+        .arg(dir.join("target/hrs/main.map.json"))
+        .current_dir(&dir)
+        .status()
+        .unwrap()
+        .success();
+    assert!(ok);
+    let generated = std::fs::read_to_string(dir.join("target/hrs/main.rs")).unwrap();
+    let line = generated.lines().position(|l| l.contains("v[3]")).unwrap() + 1;
+    let col = generated.lines().nth(line - 1).unwrap().find("v[3]").unwrap() + 1;
+    let places = harsh_lang::driver::PanicPlaces::load(&dir, &[dir.join("target/hrs/main.map.json")]);
+    let said = format!("thread 'main' panicked at target/hrs/main.rs:{line}:{col}:");
+    assert_eq!(places.rewrite(&said), "thread 'main' panicked at src/main.hrs:3:19:");
+    // A backtrace frame, with Rust's `./` prefix, and text the maps do not
+    // cover, are handled and left alone respectively.
+    assert!(places.rewrite(&format!("  at ./target/hrs/main.rs:{line}:{col}")).contains("./src/main.hrs:3:19"));
+    assert_eq!(places.rewrite("no place here: main.rs"), "no place here: main.rs");
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// A macro never sees a comment, in Rust or in Harsh (2026-09-21). A
+/// comment on one of a `~` call's lines used to be captured into a spanning
+/// fragment -- `1..20 // only a is available` as one expression -- and the
+/// one-line expansion was commented out from there on. Found writing the
+/// Book's annotated comprehension, which is this test.
+#[test]
+fn a_comment_inside_a_macro_call_is_not_part_of_it() {
+    let src = "fn main$:\n    let triples =\n        list~ (a, b, c)\n            for a in 1..20        // only a is available for the condition\n            for b in a..20        // only a, b are available for the condition\n            for c in b..20        // a, b, c are available for the condition\n            if a * a + b * b == c * c\n";
+    let out = transpile(src);
+    assert!(!out.contains("//"), "a comment reached the expansion:\n{out}");
+    let flat: String = out.split_whitespace().collect();
+    assert!(flat.contains("(1..20).into_iter().flat_map(") && flat.contains("(a*a+b*b==c*c)"), "{flat}");
+}
+
+/// Julia's dotted operators (ruled 2026-09-21): `.*` is `* hrs_std::DOT *`, a
+/// pure substitution, so Rust's precedence is left to do Julia's work.
+#[test]
+fn a_dotted_operator_is_a_pair_of_operators_round_a_dot() {
+    let out = transpile("use std.collections.*\n\nfn f$:\n    let c = &a .* &b\n    let d = &a + &a.*&b ./ 2.0 .- x\n    let e = (g a) .+ h$ .* 3\n");
+    assert!(out.contains("use std::collections::*;"), "a `use` glob is not an operator:\n{out}");
+    assert!(out.contains("let c = &a * hrs_std::DOT * &b;"), "{out}");
+    assert!(out.contains("let d = &a + &a * hrs_std::DOT *&b / hrs_std::DOT / 2.0 - hrs_std::DOT - x;"), "{out}");
+    assert!(out.contains("let e = (g(a)) + hrs_std::DOT + h() * hrs_std::DOT * 3;"), "{out}");
+    // A path, a range and a float are still what they were.
+    let out = transpile("fn f$:\n    let r = a.b * 1.0 - c..d\n");
+    assert!(out.contains("let r = a::b * 1.0 - c..d;"), "{out}");
+}
+
+/// `f<>` -- apply to each (the user's mark, 2026-09-21): a macro head, and the
+/// rest is the application rule. The pipes see `f<>` as one function.
+#[test]
+fn a_function_marked_each_becomes_the_each_macro() {
+    let src = "fn f$:\n    let r = f64.sqrt<> a\n    let p = f64.powf<> a 2.0\n    let q = (|x| x * x)<> a\n    let s = a |> f64.abs<> |> f64.sqrt<> |> total\n    let u = relu<> (&a * &b) .+ 1.0\n    println! \"{}\" (relu<> a)\n";
+    let out = transpile(src);
+    for want in [
+        "let r = hrs_std::each!(f64::sqrt, a);",
+        "let p = hrs_std::each!(f64::powf, a, 2.0);",
+        "let q = hrs_std::each!(|x| x * x, a);",
+        "let s = total(hrs_std::each!(f64::sqrt, hrs_std::each!(f64::abs, a)));",
+        "let u = hrs_std::each!(relu, &a * &b) + hrs_std::DOT + 1.0;",
+        "println!(\"{}\", hrs_std::each!(relu, a))",
+    ] {
+        assert!(out.contains(want), "missing `{want}` in:\n{out}");
+    }
+    // Generics and comparisons are untouched.
+    let out = transpile("fn f$:\n    let v = xs <- collect<Vec<_>>$\n    let b = a < c && c > d\n");
+    assert!(out.contains("xs.collect::<Vec<_>>()") && out.contains("a < c && c > d"), "{out}");
+}
+
+#[test]
+fn the_each_mark_is_written_tight_and_rusts_empty_generics_are_dropped() {
+    let toks = harsh_lang::lex::lex("fn f$:\n    let r = g <> a\n").expect("lex");
+    let err = harsh_lang::layout::build(toks).expect_err("a spaced `<>` must be refused");
+    assert!(err.msg.contains("written tight against it: `g<> a`"), "{}", err.msg);
+    // Rust's `f::<>(x)` and `P<>` mean nothing; in Harsh they would mean
+    // *apply to each*, so the converter drops them -- the one carve-out from
+    // "Harsh is a superset of Rust".
+    let harsh = convert("fn main() { let p: P<> = P(1); let x = sq::<>(3.0); }\n");
+    assert!(!harsh.contains("<>"), "{harsh}");
+    assert!(harsh.contains("let p: P = P 1") && harsh.contains("let x = sq 3.0"), "{harsh}");
+}
+
+/// A top-level comma in an index makes a tuple (ruled 2026-09-21): Julia's
+/// `a[1, 2]`, through Rust's one-argument `Index`.
+#[test]
+fn a_comma_in_an_index_makes_a_tuple() {
+    let src = "fn notify<T, U> (item: &T) (other: U) [where T: Clone, U: Copy]:\n    let x = a[1, 1]\n    a[0, 1] = 50\n    let v = &a[0..2, ..]\n    let w = a [1.., ..=1] <- copy$\n    let n = grid[i + 1, g j][0, 0]\n    let arr = [1, 2]\n    let t = total ([4, 5])\n    let one = a[(2, 3)]\n    let plain = xs[4]\n    println! \"{} {}\" a[0, 0] (&a[0, ..])\n    for p in [(1, 2), (3, 4)]:\n        show p\n";
+    let out = transpile(src);
+    for want in [
+        "where T: Clone, U: Copy {",
+        "let x = a[(1, 1)];",
+        "a[(0, 1)] = 50;",
+        "let v = &a[(0..2, ..)];",
+        "[(1.., ..=1)].copy();",
+        "let n = grid[(i + 1, g(j))][(0, 0)];",
+        "let arr = [1, 2];",
+        "let t = total([4, 5]);",
+        "let one = a[(2, 3)];",
+        "let plain = xs[4];",
+        "println!(\"{} {}\", a[(0, 0)], &a[(0, ..)]);",
+        "for p in [(1, 2), (3, 4)] {",
+    ] {
+        assert!(out.contains(want), "missing `{want}` in:\n{out}");
+    }
+}
+
+/// Found by `round_trip_own_source` on 2026-09-21, in code written minutes
+/// before: three shapes the converter wrote wrongly, one of them silently.
+#[test]
+fn converter_carries_a_block_operand_and_a_literal_closure_body() {
+    let same = |rust: &str| {
+        let harsh = convert(rust);
+        let back = transpile(&harsh);
+        assert_eq!(norm_tokens(rust), norm_tokens(&back), "through:\n{harsh}\nback:\n{back}");
+        harsh
+    };
+    // A `match` as an operand with more after it. The `&& t < 9` used to be
+    // written as a statement of its own, and transpiled without complaint.
+    same("fn f(k: i32, t: i32) -> bool {\n    let ok = t > 0\n        && match k {\n            1 => true,\n            _ => false,\n        }\n        && t < 9;\n    ok\n}\n");
+    // The same with a bracket inside a character literal before the `match`:
+    // the depth scan read `'['` as an opener and wrote the retired `match x:`.
+    let harsh = same("fn f(toks: &[Token], k: usize) -> bool {\n    let ok = toks[k].kind == Tk::Open('[')\n        && match toks[k - 1].kind {\n            Tk::Ident => true,\n            _ => false,\n        }\n        && k > 0;\n    ok\n}\n");
+    assert!(harsh.contains("kind\\"), "a match is opened by `\\`:\n{harsh}");
+    // A struct literal as a closure's body, across lines: the `|` that closes
+    // the parameters was taken for a pattern's, and the literal for a block.
+    let harsh = same("fn f(xs: Vec<i32>, t: &T) -> Vec<Token> {\n    xs.into_iter()\n        .map(|(kind, text)| Token {\n            ctx: t.ctx,\n            kind,\n            text: text.to_string(),\n        })\n        .collect()\n}\n");
+    assert!(harsh.contains("Token\\") && !harsh.contains("do:"), "{harsh}");
+    // A struct pattern in a closure's parameters is still a pattern.
+    same("fn f(ps: Vec<Point>) -> Vec<i32> {\n    ps.into_iter().map(|Point { x, y }| x + y).collect()\n}\n");
+}
+
+/// A1 (ruled 2026-09-22): a bracket after a macro's bang is its first
+/// argument, an array; the idiom is juxtaposition, and a stream that is not a
+/// list of expressions goes in braces. The prelude's `m~` and `v~` were
+/// written in the old spelling and are pinned here through their output.
+#[test]
+fn a_bracket_after_a_bang_is_an_array_argument() {
+    let out = transpile("fn f$:\n    let a = vec! 1 2 3\n    let b = vec! (x + 1) (g y)\n    let c = vec!$\n    let d = vec! { 0u8; 4 }\n    let e = vec! ([1, 2, 3])\n    let g = m! [a, b] c\n    let h = f (vec! 1 2)\n");
+    for want in [
+        "let a = vec!(1, 2, 3);",
+        "let b = vec!(x + 1, g(y));",
+        "let c = vec!();",
+        "let d = vec! { 0u8; 4 };",
+        "let e = vec!([1, 2, 3]);",
+        "let g = m!([a, b], c);",
+        "let h = f(vec!(1, 2));",
+    ] {
+        assert!(out.contains(want), "missing `{want}` in:\n{out}");
+    }
+    let out = transpile("fn f$:\n    let a = m~ [1 2; 3 4]\n    let v = v~ [1.0, 2.0]\n");
+    assert!(out.contains("hrs_std::Matrix::from_rows(vec!(vec!(1, 2), vec!(3, 4)))"), "{out}");
+    assert!(out.contains("hrs_std::Vector::from_vec(vec!(1.0, 2.0))"), "{out}");
+    // The converter's side: a list is juxtaposed, `;` goes in braces.
+    let harsh = convert("fn f(n: usize) {\n    let a = vec![1, 2];\n    let b: Vec<i32> = vec![];\n    let c = vec![usize::MAX; n];\n    let d = vec![(1, 2), (3, 4)];\n    let e = vec![Some(1), None];\n}\n");
+    for want in ["let a = vec! 1 2", "vec!$", "let c = vec! { usize::MAX; n }", "let d = vec! ((1, 2)) ((3, 4))", "let e = vec! (Some 1) None"] {
+        assert!(harsh.contains(want), "missing `{want}` in:\n{harsh}");
+    }
+}
+
+/// A `~` call's stream belongs to its macro (3.1.1): no rule for Rust's `!`
+/// macros may judge it. Found 2026-09-22 on the raw path the editor and the
+/// formatter's guard read, where the mark is already normalised to `!`: the
+/// new bracket refusal fired on `filled~ [0u8; 2]`, and the older tuple rule
+/// had always fired on the guide's own `pair~ (1, 2)`.
+#[test]
+fn a_tilde_stream_is_never_judged_by_the_bang_rules() {
+    for src in [
+        "fn f$:\n    let z = filled~ [0u8; 2]\n",
+        "fn f$:\n    let p = pair~ (1, 2)\n",
+        "fn f$:\n    let p = g (pair~ (1, 2))\n",
+    ] {
+        let toks = harsh_lang::lex::lex(src).expect("lex");
+        if let Err(e) = harsh_lang::layout::build(toks) {
+            panic!("{src:?} refused on the raw path: {}", e.msg);
+        }
+    }
+}
+
+/// Found 2026-09-22 while migrating `vec!` (A1): a block argument followed by
+/// another block argument ended the application -- `f (P\\ x = 1) (Q\\ y = 2)`
+/// was `f(P { .. })(Q { .. })`, a call on the result. Plain arguments after a
+/// block argument always worked; a second block did not. Pre-existing, and on
+/// the migration's path: a list of literals is now juxtaposed.
+#[test]
+fn a_block_argument_may_be_followed_by_another() {
+    let out = transpile("fn f$:\n    let a = g (|x|: x) (|y|: y)\n    let b = g (P\\ x = 1) (Q\\ y = 2)\n    let c = g (P\\ x = 1) y (Q\\ y = 2)\n    let d = g y (P\\ x = 1) (Q\\ y = 2)\n    let e = vec! (P\\ x = 1) (Q\\ y = 2) (R\\ z = 3)\n");
+    let flat: String = out.split_whitespace().collect();
+    for want in [
+        "leta=g(|x|{x},|y|{y});",
+        "letb=g(P{x:1,},Q{y:2,});",
+        "letc=g(P{x:1,},y,Q{y:2,});",
+        "letd=g(y,P{x:1,},Q{y:2,});",
+        "lete=vec!(P{x:1},Q{y:2,},R{z:3,});",
+    ] {
+        assert!(flat.contains(want), "missing `{want}` in:\n{out}");
+    }
+    // Across lines, one argument per continuation line.
+    let out: String = transpile("fn f$:\n    let v =\n        vec!\n            (P\\\n                x = 1)\n            (P\\ x = 2)\n").split_whitespace().collect();
+    assert!(out.contains("letv=vec!(P{x:1},P{x:2,});"), "{out}");
+}
+
+/// A literal cannot be applied (ruled 2026-09-22, A3). A literal after an
+/// operator, `=`, a keyword or an opener is a head; one after a name, a
+/// literal, a closer or a macro's bang is an argument, and fine.
+#[test]
+fn a_literal_cannot_be_applied() {
+    for (src, shown) in [
+        ("fn f$:\n    let b = assert_eq! a + 1 b\n", "`1 b`"),
+        ("fn f$:\n    let x = 1 b\n", "`1 b`"),
+        ("fn f$:\n    let s = \"s\" x\n", "`\"s\" x`"),
+    ] {
+        let toks = harsh_lang::lex::lex(src).expect("lex");
+        let msg = harsh_lang::layout::build(toks).expect_err(src).msg;
+        assert!(msg.contains("a literal cannot be applied") && msg.contains(shown), "{src:?}: {msg}");
+    }
+    let out = transpile("fn f$:\n    let c = assert_eq! (a + 1) b\n    let d = f 1 2\n    let e = println! \"{}\" 1\n    let g = f (x) 1 \"a\"\n    let h = 1 as u8\n");
+    for want in ["assert_eq!(a + 1, b)", "f(1, 2)", "println!(\"{}\", 1)", "f(x, 1, \"a\")", "1 as u8"] {
+        assert!(out.contains(want), "missing `{want}` in:\n{out}");
+    }
+}
+
+/// Harsh's turbofish `.<T>` is a path step, so a turbofished function
+/// applies: `parse_kv.<String> "x"` was `parse_kv::<String> "x"`, the
+/// argument left behind (found running C1 of the edge sheet, 2026-09-22).
+#[test]
+fn a_turbofished_function_applies() {
+    let out = transpile("fn f$:\n    let a = parse_kv.<String> \"x\"\n    let b = m.parse.<i32> \"x\"\n    let c = g.<T> a b\n    let d = size_of.<Vec<Vec<u8>>>$\n    let e = Vec.<i32>.with_capacity 4\n    let k = a < b && c > d\n");
+    for want in [
+        "parse_kv::<String>(\"x\")",
+        "m::parse::<i32>(\"x\")",
+        "g::<T>(a, b)",
+        "size_of::<Vec<Vec<u8>>>()",
+        "Vec::<i32>::with_capacity(4)",
+        "a < b && c > d",
+    ] {
+        assert!(out.contains(want), "missing `{want}` in:\n{out}");
+    }
+}
+
+/// The converter writes the holes an author would (the user's algorithm,
+/// 2026-09-23): the DSL as written, every piece of Rust code in a hole, a
+/// literal as it is. Found by shape, knowing no DSL -- and each shape pinned
+/// here, because the round trip proves the program unchanged, not a hole's
+/// place: twice a misplaced hole passed it.
+#[test]
+fn converter_writes_holes_in_a_dsl_body() {
+    let harsh = convert("fn main() {\n    let v = view! {\n        <button\n            type=\"button\"\n            class:active=move || current.get() == i\n            aria-label=format!(\"Show review {}\", i + 1)\n            on:click=move |_| set_current.set(i)\n        ></button>\n        <p class=\"x\">{\"literal\"}</p>\n        <ul>{items.iter().map(|x| view! { <li>{x.name.clone()}</li> }).collect_view()}</ul>\n    };\n}\n");
+    for want in [
+        "type=\"button\"\n",
+        "class:active=@: move || current <- get$ == i :@\n",
+        "aria-label=@: format! \"Show review {}\" (i + 1) :@\n",
+        "on:click=@: move |_| set_current <- set i :@\n",
+        "<p class=\"x\">{\"literal\"}</p>",
+        "view! { <li>{@: x <- name <- clone$ :@}</li> }",
+    ] {
+        assert!(harsh.contains(want), "\n  expected: {want:?}\n  got:\n{harsh}");
+    }
+    assert!(!harsh.contains("class:@:"), "a namespaced attribute read as a tree's:\n{harsh}");
+    // An `if` expression inside a value is part of it, braces and all.
+    let harsh = convert("fn main() {\n    let v = view! { <p class=if c { \"a\" } else { \"b\" }>\"x\"</p> };\n}\n");
+    let flat: String = harsh.split_whitespace().collect();
+    assert!(flat.contains("class=@:ifc:\"a\"else:\"b\":@>"), "{harsh}");
+    assert!(harsh_lang::driver::transpile_str(&harsh).unwrap().contains("class=if c {"), "{harsh}");
+    // What the converter cannot write as Harsh exactly stops it, named by
+    // line: a chain off an `if`, which it isolates in parentheses, is such a
+    // piece today.
+    let err = harsh_lang::unbrace::convert("fn main() {\n    let v = view! {\n        <p class=if c { \"a\" } else { \"b\" }.to_string()>\"x\"</p>\n    };\n}\n").unwrap_err();
+    assert!(err.contains("line 3") && err.contains("could not be written as Harsh"), "{err}");
+}
+
+/// `select!`-style arms, `pattern = future => handler,`: the pattern, the
+/// future and the handler are Rust and become holes; `_`, `else` and a
+/// literal stay as written (2026-09-23).
+#[test]
+fn converter_writes_holes_in_select_arms() {
+    let rust = "async fn race(rx: Receiver<u8>) -> u8 {\n    tokio::select! {\n        n = slow(\"slow\") => n,\n        Some(v) = rx.recv() => {\n            println!(\"{v}\");\n            v\n        }\n        _ = sleep(Duration::from_millis(5)) => 0,\n        else => 1,\n    }\n}\n";
+    let harsh = convert(rust);
+    for want in [
+        "n = @: slow \"slow\" :@ => @: n :@,",
+        "@: Some v :@ = @: rx <- recv$ :@ => {",
+        "_ = @: sleep (Duration.from_millis 5) :@ => 0,",
+        "else => 1,",
+    ] {
+        assert!(harsh.contains(want), "\n  expected: {want:?}\n  got:\n{harsh}");
+    }
+    let back = transpile(&harsh);
+    assert_eq!(norm_tokens(rust), norm_tokens(&back), "back:\n{back}");
+}
+
+/// A macro called with `(…)` or `[…]` whose stream is not a list of
+/// expressions is a DSL: braces delimit it in Harsh, its Rust in holes, and
+/// only the delimiter changes (the user's rule, 2026-09-23). A list stays
+/// juxtaposed. Until then `sql!(SELECT name FROM t)` was written in isolating
+/// parens and came back `sql!(SELECT(name, FROM, t))`, silently.
+#[test]
+fn converter_writes_a_dsl_stream_in_braces() {
+    let rust = "fn main() {\n    let a = vec![1, 2, 3];\n    let b = matches!(x, Some(1) | None);\n    let d = sql!(SELECT name FROM users WHERE id = 1);\n    let e = html!(<p class=\"x\">{name}</p>);\n    let f = json!({ \"id\": 1, \"tags\": [\"a\", \"b\"] });\n    let g = json!({ \"id\": user.id, \"ok\": true });\n    let h = 1;\n}\n";
+    let harsh = convert(rust);
+    for want in [
+        "let a = vec! 1 2 3",
+        "let b = matches! x (Some 1 | None)",
+        "let d = sql! {SELECT name FROM users WHERE id = 1}",
+        "let e = html! {<p class=\"x\">{@: name :@}</p>}",
+        "let f = json! {{ \"id\": 1, \"tags\": [\"a\", \"b\"] }}",
+        "let g = json! {{ \"id\": @: user <- id :@, \"ok\": true }}",
+    ] {
+        assert!(harsh.contains(want), "\n  expected: {want:?}\n  got:\n{harsh}");
+    }
+    let back = transpile(&harsh);
+    assert_eq!(norm_tokens(rust), norm_tokens(&back), "back:\n{back}");
+    assert!(!back.contains("SELECT("), "{back}");
+    // Nested JSON: arrays of objects are structure; the holes are the leaves
+    // (sr-auto's `ai.rs`, where the whole array was first taken for one hole).
+    let rust = "fn main() {\n    let body = json!({ \"parts\": [{ \"text\": prompt() }], \"n\": [1, 2] });\n}\n";
+    let harsh = convert(rust);
+    assert!(harsh.contains("\"parts\": [{ \"text\": @: prompt$ :@ }], \"n\": [1, 2]"), "{harsh}");
+    assert_eq!(norm_tokens(rust), norm_tokens(&transpile(&harsh)));
+}
+
+/// A closure's prototype ends itself, and `:` opens its body. A return type
+/// closing two generic lists at once, `Option<Vec<u8>>`, had its body isolated
+/// as if it were an argument -- `(do: …)`, which transpiled to a turbofish in
+/// the return type (the `>>` token, 2026-09-23).
+#[test]
+fn converter_writes_a_closure_body_beneath_its_prototype() {
+    for rt in ["usize", "Vec<u8>", "Option<Vec<String>>", "HashMap<String, Vec<Option<u8>>>"] {
+        let rust = format!("fn main() {{\n    let f = |s: &str| -> {rt} {{\n        let v = g(s);\n        v\n    }};\n}}\n");
+        let harsh = convert(&rust);
+        assert!(harsh.contains(&format!("-> {rt}:\n")) && !harsh.contains("(do:"), "{rt}:\n{harsh}");
+        let back = transpile(&harsh);
+        assert_eq!(norm_tokens(&rust), norm_tokens(&back), "{rt} back:\n{back}");
+    }
+}
+
+/// A `~` macro's author expands to valid Harsh, holes included; the
+/// transpiler reads an expansion exactly as it reads a file (the user's rule,
+/// 2026-09-23). An expansion that produced a Rust macro's brace body is read
+/// again as source -- its holes transpiled -- with the file's own brace bodies
+/// and Rust zones put back first.
+#[test]
+fn an_expansion_is_read_as_source() {
+    let out = transpile("macro_rules! double {\n    ($x:expr) => { $x * 2 };\n}\n\nmacro_rules~ filled\n    ([ ($elem:expr) ; ($n:expr) ]) => do:\n        vec! { @: $elem :@; @: $n :@ }\n\nfn main$:\n    let t = view! { <p>{@: 1 + 1 :@}</p> }\n    let z = filled~ [Vec.<u8>.new$; 2]\n    println! \"{:?} {}\" z (double! 3)\n");
+    let flat: String = out.split_whitespace().collect();
+    for want in ["macro_rules!double{($x:expr)=>{$x*2};}", "letz=vec!{Vec::<u8>::new();2};", "view!{<p>{1+1}</p>}", "double!(3)"] {
+        assert!(flat.contains(want), "missing `{want}` in:\n{out}");
+    }
+}
+
+/// Harsh's own proc macros, the registration (ruling 17, 2026-09-24): the
+/// plan's `hello_macro` is ordinary Harsh with a mark, and the mark is
+/// Harsh's -- it never reaches Rust. The Rust is exactly the plan's, line for
+/// line (the mark's line left empty, so every line below keeps its number and
+/// the map holds), and the formatter leaves the file as written.
+#[test]
+fn a_proc_macro_is_ordinary_harsh_with_a_mark() {
+    let harsh = "use hrs_proc_macro.TokenStream\n\
+                 \n\
+                 #[proc_macro~]\n\
+                 pub fn hello_macro (input: TokenStream) -> TokenStream:\n\
+                 \x20   let input_str = input <- to_string$\n\
+                 \x20   let output = format! \"\\\"Hello, {}!\\\"\" input_str\n\
+                 \x20   output <- parse$ <- unwrap$\n";
+    let rust = "use hrs_proc_macro::TokenStream;\n\
+                \n\
+                \n\
+                pub fn hello_macro(input: TokenStream) -> TokenStream {\n\
+                \x20   let input_str = input.to_string();\n\
+                \x20   let output = format!(\"\\\"Hello, {}!\\\"\", input_str);\n\
+                \x20   output.parse().unwrap()\n\
+                }\n";
+    assert_eq!(transpile(harsh), rust);
+    assert_eq!(harsh_lang::fmt::format(harsh), harsh, "hrs fmt must leave a proc macro's mark alone");
+    let regs = harsh_lang::procmac::prepare(harsh).unwrap().1;
+    assert_eq!(regs.iter().map(|r| r.name.as_str()).collect::<Vec<_>>(), ["hello_macro"]);
+}
+
+/// Every `~` expands in Harsh and none reaches Rust (the user, 2026-09-24).
+/// A derive and an attribute-like macro are both built (0.1.29, and this
+/// batch): without the macro among the project's proc macros, each is an
+/// error naming it -- never a `derive!` or `name!` for rustc.
+#[test]
+fn a_derive_or_attribute_needs_its_macro() {
+    let table: &[(&str, &str, &str)] = &[
+        ("derive", "#[derive~ MyMacro]\nstruct P\n    x: i32\n", "no derive macro `MyMacro`"),
+        ("derive beside Rust's", "#[derive Debug]\n#[derive~ MyMacro]\nstruct P\n    x: i32\n", "no derive macro `MyMacro`"),
+        ("attribute", "#[my_attr~ GET \"/\"]\nfn f$:\n    ()\n", "no attribute macro `my_attr`"),
+        ("bare attribute", "#[my_attr~]\nfn f$:\n    ()\n", "no attribute macro `my_attr`"),
+    ];
+    for (what, src, phrase) in table {
+        // The driver's path: the refusal lives before the lexer, where
+        // `layout_err` does not reach.
+        let msg = harsh_lang::driver::transpile_str(src).expect_err(what);
+        assert!(msg.contains(phrase), "{what}: {msg}");
+    }
+    // Rust's own attributes are Rust's and pass through as ever.
+    let out = transpile("#[derive Debug Clone]\n#[tokio.main]\nfn f$:\n    ()\n");
+    assert!(out.starts_with("#[derive(Debug, Clone)]\n#[tokio::main]\n"), "{out}");
+}
+
+/// **Known converter gap, open (found 2026-09-24 by the self-host, in
+/// `src/procmac.rs`).** An `if` used as a struct literal's field value, with a
+/// string continued over lines (`"…\`) in one branch, comes out of `hrs-from`
+/// in inline braces spanning two lines -- `m = if a {"x \` / ` y" <- into$ }
+/// else {…}` -- which the transpiler refuses ("a block over several lines is
+/// written with `:` or `do:`"). The same `if` in a `let` converts. Ignored so
+/// that every `cargo test` reports it until it is fixed; remove the `ignore`
+/// with the fix, and `procmac.rs` may then build its message in place again.
+#[test]
+#[ignore = "known converter gap: `if` with a continued string as a struct field value (ROADMAP, open)"]
+fn converter_writes_an_if_with_a_continued_string_as_a_field_value() {
+    let rust = "fn f(a: bool) -> E {\n    E { m: if a { \"x \\\n y\".into() } else { \"y\".into() } }\n}\n";
+    let harsh = convert(rust);
+    let back = harsh_lang::driver::transpile_str(&harsh).unwrap_or_else(|e| panic!("{e}\n--- harsh:\n{harsh}"));
+    assert_eq!(norm_tokens(&back), norm_tokens(rust), "\n--- harsh:\n{harsh}");
+}
+
+/// A mark written inline before its item, as any attribute may be: blanked,
+/// it left the item first on its line and over-indented, and was refused
+/// (found 2026-09-24, building derives). The item now takes the mark's column.
+#[test]
+fn an_inline_proc_macro_mark_leaves_the_item_where_it_stood() {
+    let harsh = "use hrs_proc_macro.TokenStream\n\n#[proc_macro~] pub fn hi (i: TokenStream) -> TokenStream:\n    i\n\nfn main$:\n    ()\n";
+    let rust = transpile(harsh);
+    assert_eq!(rust, "use hrs_proc_macro::TokenStream;\n\npub fn hi(i: TokenStream) -> TokenStream {\n    i\n}\n\nfn main() {\n    ()\n}\n");
+}
+
+/// **Fixed 2026-09-24** (`layout::decl_header` skips the line's leading
+/// attributes). An attribute written inline before a `struct` whose fields
+/// are beneath --
+/// `#[derive Debug] struct P` / `    x: i32` -- emits `struct P\n    x {\n
+/// i32,\n}`, invalid Rust; on its own line the attribute works, and inline
+/// before a `fn` it works. Harsh is a superset of Rust, so the inline form
+/// is owed. Ignored so every `cargo test` reports it until it is fixed.
+#[test]
+fn an_inline_attribute_before_a_struct_keeps_its_fields() {
+    let rust = transpile("#[derive Debug] struct P\n    x: i32\n");
+    assert_eq!(norm_tokens(&rust), norm_tokens("#[derive(Debug)] struct P { x: i32, }"));
+}
+
+/// **Known converter gap, open (found 2026-09-24 by the self-host, in
+/// `mac::expand_derive`).** A guard arm followed by an arm whose value is a
+/// `match`: `hrs-from` writes the inner `match` with `:` and its arms on one
+/// line (`Some _ => match g h:` / `Some c => h = c + 1, None => break,`),
+/// which the transpiler refuses. Without the guard it converts. Ignored so
+/// every `cargo test` reports it until it is fixed.
+#[test]
+fn converter_writes_a_match_after_a_guard_arm() {
+    let rust = "fn f(v: &[i32]) -> usize {\n    let mut h = 0;\n    loop {\n        match v.get(h) {\n            Some(t) if *t > 0 => h += 1,\n            Some(_) => match g(h) {\n                Some(c) => h = c + 1,\n                None => break,\n            },\n            None => return 0,\n        }\n    }\n    h\n}\nfn g(i: usize) -> Option<usize> { Some(i) }\n";
+    let harsh = convert(rust);
+    let back = harsh_lang::driver::transpile_str(&harsh).unwrap_or_else(|e| panic!("{e}\n--- harsh:\n{harsh}"));
+    assert_eq!(norm_tokens(&back), norm_tokens(rust), "\n--- harsh:\n{harsh}");
+}
+
+/// **Known converter gap, open (found 2026-09-24 by the self-host, in
+/// `driver.rs`).** An attribute between two runs of doc comments -- valid
+/// Rust -- is converted so that the item beneath is over-indented, and the
+/// transpiler refuses it. With the docs first and the attribute right above
+/// the item, it converts. Ignored so every `cargo test` reports it until it
+/// is fixed.
+#[test]
+fn converter_keeps_an_item_after_an_attribute_between_doc_comments() {
+    let rust = "struct P;\nimpl P {\n    /// First.\n    #[inline]\n    /// Second.\n    pub fn f(&self) -> i32 {\n        1\n    }\n}\n";
+    let harsh = convert(rust);
+    let back = harsh_lang::driver::transpile_str(&harsh).unwrap_or_else(|e| panic!("{e}\n--- harsh:\n{harsh}"));
+    assert_eq!(norm_tokens(&back), norm_tokens(rust), "\n--- harsh:\n{harsh}");
+}
+
+/// An item may be a macro call, as in Rust: at item level `compile_error!
+/// "msg"` was left unapplied, `compile_error! "msg";` (found 2026-09-24,
+/// when a derive emitted one). Now applied as in a block; the isolated and
+/// brace forms were already right.
+#[test]
+fn a_macro_call_at_item_level_is_applied() {
+    let rust = transpile("struct P\n    x: i32\ncompile_error! \"top-level\"\nmy_items! a b\ncompile_error! (\"isolated\")\nthread_local! { static X: u8 = 0 }\n");
+    assert!(rust.contains("compile_error!(\"top-level\");"), "{rust}");
+    assert!(rust.contains("my_items!(a, b);"), "{rust}");
+    assert!(rust.contains("compile_error!(\"isolated\");"), "{rust}");
+    assert!(rust.contains("thread_local! { static X: u8 = 0 }"), "{rust}");
+}
+
+/// A declaration's where clause stands on its header line (found
+/// 2026-09-24, writing `hrs_syn`): `struct W<T> [where T: Clone]` transpiles
+/// to Rust's; the function's own-line form beneath a struct's header had been
+/// emitted as a field, invalid Rust, and is now refused, naming the form.
+#[test]
+fn a_structs_where_clause_stands_on_its_header_line() {
+    let rust = transpile("struct W<T> [where T: Clone]\n    t: T\n");
+    assert_eq!(norm_tokens(&rust), norm_tokens("struct W<T> where T: Clone { t: T, }"));
+    let e = layout_err("struct W<T>\n    [where T: Clone]\n    t: T\n");
+    assert!(e.contains("stands on its header line"), "{e}");
+}
+
+/// **Known converter gap, open (found 2026-09-24 by the self-host, in
+/// `procmac.rs`).** An `if` expression as a macro argument,
+/// `format!` with its arguments one per line, `if c { a } else { b }` among them: `hrs-from` writes block `if`s
+/// inside the parentheses, and the `else` loses its `if`. Ignored so every
+/// `cargo test` reports it until it is fixed.
+#[test]
+#[ignore = "known converter gap: an `if` expression as a macro argument (ROADMAP, open)"]
+fn converter_writes_an_if_as_a_macro_argument() {
+    // The arguments one per line, as rustfmt lays out a long call; on one
+    // line the same call converts.
+    let rust = "fn f(c: bool) -> String {\n    format!(\n        \"{} {}\",\n        if c { \"a\" } else { \"b\" },\n        if c { \"c\" } else { \"d\" }\n    )\n}\n";
+    let harsh = convert(rust);
+    let back = harsh_lang::driver::transpile_str(&harsh).unwrap_or_else(|e| panic!("{e}\n--- harsh:\n{harsh}"));
+    assert_eq!(norm_tokens(&back), norm_tokens(rust), "\n--- harsh:\n{harsh}");
+}
+
+/// Harsh declarative macros, the matcher (the user, 2026-09-25):
+/// 1. a metavariable is written `($name:spec)`, its parentheses part of the
+///    construct as `$( … )*`'s are the repetition's; a bare `$name:spec` is
+///    refused, in repetitions too, naming the form;
+/// 2. every other token in a matcher is literal, further parentheses too;
+/// 3. a specifier gives its capture meaning: `:expr` sees `(1+2)`, `((1+2))`
+///    as the same expression, while `:ident` is one identifier token, as in
+///    Rust, so `(adding)` is no `:ident`;
+/// 4. the transcriber stays bare.
+#[test]
+fn a_metavariable_is_written_in_its_parentheses_and_the_rest_is_literal() {
+    let pair = |matcher: &str, call: &str| -> Result<String, String> {
+        let src = format!("macro_rules~ pair\n    ({matcher}) => do:\n        ($k, $v)\n\nfn main$:\n    let p = pair~ {call}\n");
+        harsh_lang::driver::transpile_str(&src)
+    };
+    // The user's table.
+    assert!(pair("($k:expr) => ($v:expr)", "\"key\" => (3+4)").is_ok(), "row 1");
+    assert!(pair("(($k:expr)) => ($v:expr)", "\"key\" => (3+4)").is_err(), "row 2: the outer `( )` is literal");
+    assert!(pair("(($k:expr)) => ($v:expr)", "(\"key\") => (3+4)").is_ok(), "row 3");
+    assert!(pair("(($k:expr)) => ($v:expr)", "((\"key\")) => (3+4)").is_ok(), "row 4");
+    // Grouping parentheses are the expression's: all three are one `:expr`.
+    for v in ["(1+2)", "((1+2))", "(((1+2)))"] {
+        assert!(pair("($k:expr) => ($v:expr)", &format!("1 => {v}")).is_ok(), "{v}");
+    }
+    // The user's three examples, with the rule as it now stands.
+    let flat = |s: &str| s.split_whitespace().collect::<String>();
+    let apply = |matcher: &str, call: &str| {
+        let src = format!(
+            "macro_rules~ apply\n    ({matcher}) => do:\n        $v $( $x )*\n\n\
+             fn adding (x:i32) (y:i32) -> i32 do:\n    x + y\n\nfn main$:\n    let x = apply~ {call}\n"
+        );
+        harsh_lang::driver::transpile_str(&src)
+    };
+    let e = apply("($v:ident) $( ($x:expr) )*", "(adding) (4) (5)").expect_err("`(adding)` is no `:ident`");
+    assert!(e.contains("no arm of `apply~` matches"), "{e}");
+    let e = apply("$v:ident $( $x:expr )*", "adding 4 5").expect_err("bare metavariables");
+    assert!(e.contains("a metavariable is written in its parentheses: `($v:ident)`"), "{e}");
+    let rust = apply("($v:ident) $( ($x:expr) )*", "adding 4 5").expect("matches");
+    assert!(flat(&rust).contains("letx=adding(4,5)"), "{rust}");
+    let rust = apply("($v:ident) $( ($x:expr) )*", "adding (4) (5)").expect("matches");
+    // `(4)` is captured as written; in Harsh, isolation parens around one
+    // argument, so the Rust is the same call.
+    assert!(flat(&rust).contains("letx=adding(4,5)"), "{rust}");
 }

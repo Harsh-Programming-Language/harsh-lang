@@ -34,13 +34,110 @@ fn corpus() -> Vec<PathBuf> {
             }
         }
     }
-    walk(&root.join("book").join("src"), &mut files);
+    // The Book's sources moved to `book/sources/src` on 2026-09-11 and this
+    // line was not moved with them, so for nine days the corpus guards walked
+    // a directory that does not exist and 223 snippets were invisible to them
+    // (found 2026-09-20 while wiring up the second book). The Book's own
+    // harness still built them, so nothing was wrong -- but "`hrs fmt` is a
+    // no-op over the corpus" was being asserted over the examples alone.
+    walk(&root.join("book").join("sources").join("src"), &mut files);
+    walk(&root.join("by-example").join("sources").join("src"), &mut files);
+    // `hrs fmt` is a pure text transformation, so every `.hrs` in the tree is
+    // fair game for it. Building and running a snippet is not: a book's
+    // harness knows which are deliberate errors, which are modules of a
+    // multi-file project, and which stand in for a framework's DSL. Those
+    // guards use `standalone()`.
+    // A guard that walks a path is made vacuous by a move, and stays green
+    // while it does: `book/src` was walked for nine days after the Book's
+    // sources went to `book/sources/src`, so the corpus was 43 files instead
+    // of 278 and 223 snippets were checked by nothing (found 2026-09-20).
+    // A public clone has the examples alone and 43 is right there, so the
+    // test is not a count but this: whatever source tree exists must be found.
+    for tree in [
+        root.join("examples"),
+        root.join("book").join("sources").join("src"),
+        root.join("by-example").join("sources").join("src"),
+    ] {
+        if tree.is_dir() {
+            assert!(
+                files.iter().any(|f| f.starts_with(&tree)),
+                "{} exists but the corpus walk found nothing in it: has it moved?",
+                tree.display()
+            );
+        }
+    }
+    assert!(!files.is_empty(), "the corpus is empty");
     files.sort();
     files
 }
 
+/// The snippets a book marks with a flag that changes how they are built:
+/// `!error` (meant not to compile), `!test` / `!test!fail` (built with
+/// `rustc --test`, so no `main`), `!doc` (a cargo project). `!panic` is not
+/// among them -- such a snippet compiles like any other and only its exit
+/// status differs. Read from the page sources rather than listed here, so a
+/// new one cannot quietly break a guard.
+fn harness_only() -> Vec<String> {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let mut out = Vec::new();
+    for book in ["book", "by-example"] {
+        let dir = root.join(book).join("sources");
+        let Ok(rd) = fs::read_dir(&dir) else { continue };
+        for e in rd.flatten() {
+            if e.path().extension().map_or(false, |x| x == "md") {
+                let text = fs::read_to_string(e.path()).unwrap_or_default();
+                for line in text.lines() {
+                    let Some(rest) = line.strip_prefix("@@ ") else { continue };
+                    let mut parts = rest.split_whitespace();
+                    let Some(name) = parts.next() else { continue };
+                    if parts.any(|f| f.starts_with('!') && f != "!panic") {
+                        out.push(format!("{name}.hrs"));
+                    }
+                }
+            }
+        }
+    }
+    out
+}
+
+/// The corpus files a test may transpile and compile **on their own**.
+///
+/// Excluded: the snippets a book's harness builds its own way (deliberate
+/// errors, `--test` snippets, doc-test projects),
+/// the modules of a multi-file project (no `main`; the harness compiles them
+/// together), and the two DSL stand-ins whose bodies are a framework's
+/// grammar. All of those are built and run by the book harness on every
+/// release -- just not one at a time.
+fn standalone() -> Vec<PathBuf> {
+    let skip = harness_only();
+    corpus()
+        .into_iter()
+        .filter(|p| {
+            let name = p.file_name().unwrap().to_string_lossy().to_string();
+            if skip.contains(&name) || matches!(name.as_str(), "hsx.hrs" | "rsx.hrs") {
+                return false;
+            }
+            // A cargo-backed snippet has a `Cargo.toml` beside its `src/`:
+            // it may use dependencies and is built by the harness with
+            // `hrs run`, so it cannot be compiled alone.
+            if p.ancestors().any(|a| a.join("Cargo.toml").exists()) {
+                return false;
+            }
+            // A module of a directory project sits two or more levels below
+            // the chapter directory; a plain snippet sits directly in it.
+            p.components().rev().take_while(|c| c.as_os_str() != "src").count() <= 2
+        })
+        .collect()
+}
+
 fn transpile(src: &str) -> Option<String> {
     let toks = harsh_lang::lex::lex(src).ok()?;
+    // The same pipeline the binary runs: a file may define Harsh macros, and
+    // a Rust `macro_rules!` zone is read here too. Skipping this step made
+    // two of the Book's snippets look as though they did not transpile when
+    // `hrs` transpiles them (2026-09-20).
+    let taken = harsh_lang::layout::names_in_scope(&toks);
+    let toks = harsh_lang::mac::expand_all(toks, &taken).ok()?;
     let nodes = harsh_lang::layout::build(toks).ok()?;
     let mut em = harsh_lang::emit::Emitter::new(src);
     em.program(&nodes);
@@ -93,10 +190,6 @@ fn fmt_is_idempotent() {
     }
 }
 
-/// The corpus is hand-written in the recommended layout, so `fmt` over it is
-/// a no-op. Files that would change are listed with their first differing
-/// line; the count is the number to bring to zero.
-#[test]
 /// Every corpus file must transpile — except the ones the Book tags
 /// `!error`, which exist to fail.
 ///
@@ -108,7 +201,7 @@ fn fmt_is_idempotent() {
 fn every_corpus_file_transpiles() {
     const DELIBERATELY_BROKEN: [&str; 1] = ["pipe_too_many.hrs"];
     let mut bad = Vec::new();
-    for f in corpus() {
+    for f in standalone() {
         let name = f.file_name().unwrap().to_string_lossy().to_string();
         if DELIBERATELY_BROKEN.contains(&name.as_str()) {
             continue;
@@ -148,7 +241,7 @@ fn every_example_compiles() {
     fs::create_dir_all(&tmp).unwrap();
     let hrs = env!("CARGO_BIN_EXE_hrs");
     let mut bad = Vec::new();
-    for f in corpus() {
+    for f in standalone() {
         let name = f.file_name().unwrap().to_string_lossy().to_string();
         if NEEDS_DEPENDENCIES.contains(&name.as_str()) || DELIBERATELY_BROKEN.contains(&name.as_str()) {
             continue;
@@ -176,6 +269,9 @@ fn every_example_compiles() {
     assert!(bad.is_empty(), "{} example(s) do not compile:\n{}", bad.len(), bad.join("\n"));
 }
 
+/// The corpus is hand-written in the recommended layout, so `fmt` over it is
+/// a no-op. Files that would change are listed with their first differing
+/// line; the count is the number to bring to zero.
 #[test]
 fn fmt_is_a_no_op_over_the_corpus() {
     let mut changed = Vec::new();
@@ -207,8 +303,8 @@ fn fmt_shapes() {
         // Bracket contents one unit past the anchor, closer under it; the
         // `=` breaks before a multi-line group.
         (
-            "fn main$:\n    let row = vec! [\n        1,\n        2,\n    ]\n",
-            "fn main$:\n    let row =\n        vec! [\n            1,\n            2,\n        ]\n",
+            "fn main$:\n    let row = [\n        1,\n        2,\n    ]\n",
+            "fn main$:\n    let row =\n        [\n            1,\n            2,\n        ]\n",
         ),
         // A paren block: `(` line-final, prototype and body beneath, `)`
         // under the callee; the chain resumes under its arrow.
@@ -319,4 +415,59 @@ fn chains_recurse_and_tails_continue() {
     let want = "fn f$:\n    let e =\n        xs <- iter$\n           <- map (|x| x <- foo$\n                         <- bar$\n                         <- baz$\n                         <- qux$)\n           <- collect$\n    let app =\n        Router.new$ <- leptos_routes\n                           (&leptos_options)\n                           routes\n                           (do:\n                                let leptos_options = leptos_options <- clone$\n                                move || shell (leptos_options <- clone$)\n                           )\n                    <- fallback (leptos_axum.file_and_error_handler shell)\n                    <- with_state leptos_options\n    app\n";
     assert_eq!(harsh_lang::fmt::format(src), want);
     assert_eq!(harsh_lang::fmt::format(want), want, "idempotent");
+}
+
+/// A line inside an open `[`, past its first entry, aligns under that entry:
+/// a bracket holds data -- an array, a matrix's rows -- whose lines are
+/// siblings (the user's rule, from his Julia layout, 2026-09-21). Before, the
+/// formatter read `1 2 3` / `4 5 6` as an application and put the second row
+/// one unit past `1`, and rows written beneath `m~ [` became a staircase.
+/// Parens and the `[where …]` clause keep their rules.
+#[test]
+fn a_bracket_aligns_its_lines_under_its_first_entry() {
+    let f = harsh_lang::fmt::format;
+    let rows = "fn main$:\n    let b =\n        m~ [1 2 3\n            4 5 6]\n";
+    assert_eq!(f(rows), rows, "the Julia layout is already canonical");
+    let skewed = "fn main$:\n    let b =\n        m~ [1 2 3\n                4 5 6]\n";
+    assert_eq!(f(skewed), rows);
+    let beneath = f("fn main$:\n    let b =\n        m~ [\n            1 2 3\n                4 5 6\n        ]\n");
+    let cols: Vec<usize> = beneath.lines().filter(|l| l.contains('1') || l.contains('4'))
+        .map(|l| l.len() - l.trim_start().len()).collect();
+    assert_eq!(cols[0], cols[1], "rows beneath the bracket align, no staircase:\n{beneath}");
+    let vec = "fn main$:\n    let v =\n        [1, 2,\n         3]\n";
+    assert_eq!(f(vec), vec);
+    let paren = "fn main$:\n    let w =\n        f a (g b\n                 c)\n";
+    assert_eq!(f(paren), paren, "parens keep their rule");
+}
+
+/// The user's rule, 2026-09-21: the formatter never adds or removes a line
+/// break inside a `~` call's stream -- the stream's syntax belongs to the DSL,
+/// and for `m~` a line break is a row. Both demonstrations shown to him: the
+/// first came back with its last row split in three (a panic when run), the
+/// second, a row of ten, came back as a column of ten and ran without a word.
+#[test]
+fn fmt_never_breaks_a_line_inside_a_tilde_stream() {
+    let three_rows = "fn main$:\n    let mut readings = m~ [20.5 21.0 19.5; 22.0 23.5 21.0; 18.0 19.0 17.5]\n    println! \"{}\" readings\n";
+    assert_eq!(harsh_lang::fmt::format(three_rows), three_rows);
+    let one_row = "fn main$:\n    let weights = m~ [0.125 0.250 0.375 0.500 0.625 0.750 0.875 1.000 1.125 1.250]\n    println! \"{:?}\" (weights <- size$)\n";
+    assert_eq!(harsh_lang::fmt::format(one_row), one_row);
+    // Any `~` macro, not `m~` by name: a comprehension's clauses stay put.
+    let comp = "fn main$:\n    let picked = list~ (x * y) for x in 0..100 if x % 3 == 0 for y in 0..100 if y % 7 == 0 if x != y\n";
+    assert_eq!(harsh_lang::fmt::format(comp), comp);
+    // Rows the author wrote on lines of their own are kept as rows.
+    // The call may move whole and its rows are aligned under the first entry
+    // (the rule of 0.1.18), but two rows stay two rows.
+    let by_line = "fn main$:\n    let a = m~ [1 2 3\n                4 5 6]\n";
+    let laid = "fn main$:\n    let a =\n        m~ [1 2 3\n            4 5 6]\n";
+    assert_eq!(harsh_lang::fmt::format(by_line), laid);
+    assert_eq!(harsh_lang::fmt::format(laid), laid);
+    // Round the stream the formatter works as ever: the call moves whole, the
+    // application it is an argument of is listed, and a chain after the group
+    // that closes the stream is joined. The stream itself is one piece.
+    let around = "fn main$:\n    let total = combine (m~ [0.125 0.250 0.375 0.500 0.625 0.750 0.875 1.000]) (second_argument_long) third\n";
+    let out = harsh_lang::fmt::format(around);
+    assert!(out.contains("\n            (m~ [0.125 0.250 0.375 0.500 0.625 0.750 0.875 1.000])\n"), "{out}");
+    assert!(out.contains("\n            (second_argument_long)\n"), "{out}");
+    // And it is stable.
+    assert_eq!(harsh_lang::fmt::format(&out), out);
 }

@@ -64,3 +64,12 @@ Rust separates with `;`, set apart by taking no marker at all — layout
 separates its arms. And `impl`, `trait`, `mod` and `extern` hold items,
 which take no separator, so their headers end themselves like a declaration's.
 
+## Macros (the user's principle, 2026-09-20)
+
+A macro is a function of exactly one argument, a token stream, returning a
+token stream. The syntax and layout of that argument belong to the construct
+or DSL the programmer is creating. Harsh decides only where the argument ends
+— the newline, the end of the block the call opens, or the close of the group
+the call sits in — and passes everything inside it as written. A rule about
+the *contents* of a macro's argument is not Harsh's to make.
+

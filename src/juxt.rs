@@ -202,14 +202,46 @@ fn atom_end(toks: &[Token], i: usize, end: usize) -> Option<usize> {
         }
         Tk::Ident => {
             k += 1;
-            // Path segments: `a.b.c`
-            while k + 1 < end && toks[k].kind == Tk::Dot && toks[k + 1].kind == Tk::Ident {
-                k += 2;
+            // Path segments: `a.b.c`, and Harsh's turbofish `.<T>` as one more
+            // step -- `parse_kv.<String> "x"` applies; until 2026-09-22 the
+            // atom ended before the `.<` and the argument was left behind
+            // (C1 of the edge sheet).
+            loop {
+                if k + 1 < end && toks[k].kind == Tk::Dot && toks[k + 1].kind == Tk::Ident {
+                    k += 2;
+                    continue;
+                }
+                if k + 1 < end && toks[k].kind == Tk::Dot && toks[k + 1].kind == Tk::Lt {
+                    let mut d = 0i32;
+                    let mut j = k + 1;
+                    let mut closed = None;
+                    while j < end {
+                        match toks[j].kind {
+                            Tk::Lt => d += 1,
+                            Tk::Gt => d -= 1,
+                            Tk::Punct if toks[j].text == ">>" => d -= 2,
+                            Tk::Semi | Tk::Open('{') => break,
+                            _ => {}
+                        }
+                        if d <= 0 {
+                            if d == 0 {
+                                closed = Some(j);
+                            }
+                            break;
+                        }
+                        j += 1;
+                    }
+                    if let Some(j) = closed {
+                        k = j + 1;
+                        continue;
+                    }
+                }
+                break;
             }
             // Generic arguments: `Vec<i32>`. Only when the matching `>` is
             // followed by a call or a path step -- otherwise the `<` is a
             // comparison, as in `s < to && a.lo > b`.
-            if k < end && toks[k].kind == Tk::Lt {
+            if k < end && toks[k].kind == Tk::Lt && !is_each_mark(toks, k) {
                 let mut d = 0i32;
                 let mut j = k;
                 while j < end {
@@ -248,9 +280,12 @@ fn atom_end(toks: &[Token], i: usize, end: usize) -> Option<usize> {
                     j += 1;
                 }
             }
-            // Macro bang
+            // Macro bang. A macro is not a value, so nothing after its bang
+            // indexes it: a bracket there, tight or spaced, is its first
+            // argument, an array literal -- `vec! [1, 2]` is `vec!([1, 2])`
+            // (ruled 2026-09-22, A1). The head ends at the bang.
             if k < end && toks[k].text == "!" {
-                k += 1;
+                return Some(dollar_end(toks, k + 1, end));
             }
             // Tuple indexes: `t.0`, `t.0.1`. A path segment can never start
             // with a digit, so `.0` after a name is always an index and is
@@ -312,12 +347,35 @@ fn tight_index_end(toks: &[Token], mut k: usize, end: usize) -> usize {
     }
 }
 
+/// The `<>` of `f<>`, written tight: `<` against what it marks, `>` against `<`.
+pub fn is_each_mark(toks: &[Token], k: usize) -> bool {
+    k >= 1
+        && k + 1 < toks.len()
+        && toks[k].kind == Tk::Lt
+        && toks[k + 1].kind == Tk::Gt
+        && toks[k].span.hi == toks[k + 1].span.lo
+        && toks[k - 1].span.hi == toks[k].span.lo
+        && match toks[k - 1].kind {
+            Tk::Ident => !crate::rules::is_keyword(&toks[k - 1].text),
+            Tk::Close(')') => true,
+            _ => false,
+        }
+}
+
+/// `f<>` -- apply to each. Until `rewrite_each` runs, after the pipes, the
+/// mark belongs to the atom it follows, as `$` does: `a |> f64.sqrt<>` pipes
+/// into `f64.sqrt<>`, one function.
+fn each_end(toks: &[Token], k: usize, end: usize) -> usize {
+    if k + 1 < end && is_each_mark(toks, k) { k + 2 } else { k }
+}
+
 /// `f$` -- apply to nothing. `rewrite_dollar` has already turned the `$` into
 /// a synthetic `()`, and that pair belongs to the atom it follows: `f$` is one
 /// atom, `f()`, wherever it stands, so `g f$ 5` is `g(f(), 5)` and `f$ |> g`
 /// is `g(f())`. A *source* `()` is never absorbed: it is a group holding the
 /// unit value, and `f ()` is `f(())`.
 fn dollar_end(toks: &[Token], k: usize, end: usize) -> usize {
+    let k = each_end(toks, k, end);
     if k + 1 < end
         && toks[k].dollar
         && toks[k].kind == Tk::Open('(')
@@ -328,6 +386,228 @@ fn dollar_end(toks: &[Token], k: usize, end: usize) -> usize {
     } else {
         k
     }
+}
+
+/// `a[i, j]` -- an index of several axes, as Julia writes it (ruled
+/// 2026-09-21). Rust's `Index` takes one value, so the axes are a tuple:
+/// `a[1, 2]` is `a[(1, 2)]`, `&a[0..2, ..]` is `&a[(0..2, ..)]`. One brick: *a
+/// top-level comma in an index makes a tuple.* What the tuple selects is the
+/// indexed type's business -- for `hrs_std`'s matrices an element, or a view.
+///
+/// A bracket indexes when it follows a value -- a name, `)`, `]`, `.0` --
+/// spaced or not, which is the language's rule already. `[where T: A, U: B]`
+/// follows a type and is not an index.
+pub fn rewrite_comma_index(toks: &[Token]) -> Vec<Token> {
+    if toks.iter().any(|t| t.is_kw("macro_rules")) || !toks.iter().any(|t| t.kind == Tk::Comma) {
+        return toks.to_vec();
+    }
+    // Token index -> the paren to write before it.
+    let mut before: std::collections::HashMap<usize, Tk> = std::collections::HashMap::new();
+    for k in 1..toks.len() {
+        let follows_value = match toks[k - 1].kind {
+            Tk::Ident => !crate::rules::is_keyword(&toks[k - 1].text),
+            Tk::Close(')') | Tk::Close(']') | Tk::TupleIdx => true,
+            _ => false,
+        };
+        let indexes = toks[k].kind == Tk::Open('[')
+            && follows_value
+            && !toks.get(k + 1).map_or(false, |t| t.is_kw("where"));
+        if !indexes {
+            continue;
+        }
+        let (mut d, mut comma, mut close) = (0i32, false, None);
+        for j in k..toks.len() {
+            match toks[j].kind {
+                Tk::Open(_) => d += 1,
+                Tk::Close(_) => {
+                    d -= 1;
+                    if d == 0 {
+                        close = Some(j);
+                        break;
+                    }
+                }
+                Tk::Comma if d == 1 => comma = true,
+                _ => {}
+            }
+        }
+        if let (true, Some(c)) = (comma, close) {
+            before.insert(k + 1, Tk::Open('('));
+            before.insert(c, Tk::Close(')'));
+        }
+    }
+    if before.is_empty() {
+        return toks.to_vec();
+    }
+    let mut v = Vec::with_capacity(toks.len() + before.len());
+    for (k, t) in toks.iter().enumerate() {
+        // `a[]`-with-a-comma cannot be: `k + 1 == c` needs an empty bracket.
+        if let Some(kind) = before.get(&k) {
+            let open = *kind == Tk::Open('(');
+            let at = if open { toks[k - 1].span.hi } else { t.span.lo };
+            v.push(Token {
+                ctx: t.ctx,
+                kind: kind.clone(),
+                span: Span { lo: at, hi: at },
+                text: if open { "(" } else { ")" }.to_string(),
+                line_start: None,
+                line: t.line,
+                synthetic: true,
+                dollar: false,
+                tilde: false,
+            });
+        }
+        v.push(t.clone());
+    }
+    v
+}
+
+/// A `use` declaration: `use a.b.*`, `pub use …`, `pub(crate) use …`. The one
+/// place where `.*` is a glob and not an operator.
+fn is_use_line(toks: &[Token]) -> bool {
+    toks.iter().take(6).any(|t| t.is_kw("use"))
+}
+
+/// Julia's dotted operators: `a .* b`, `a .+ b`, `a .- b`, `a ./ b` -- the
+/// operation applied element by element, shapes stretched as Julia stretches
+/// them (ruled 2026-09-21).
+///
+/// A pure substitution, needing neither a type nor an expression parser:
+/// `.*` becomes `* hrs_std.DOT *`. `a * DOT` is half an operation and `* b`
+/// completes it; being two operators of one level, Rust's precedence and
+/// associativity are already Julia's. `.` is otherwise the path separator,
+/// which an operator can never follow -- except the glob of a `use`, so a
+/// `use` declaration is left alone. Spacing does not matter: `a.*b` is the
+/// same, as in Julia.
+pub fn rewrite_dotted(toks: &[Token]) -> Vec<Token> {
+    if is_use_line(toks) || toks.iter().any(|t| t.is_kw("macro_rules")) {
+        return toks.to_vec();
+    }
+    let mut v: Vec<Token> = Vec::with_capacity(toks.len());
+    for (i, t) in toks.iter().enumerate() {
+        let op = toks.get(i + 1).filter(|n| {
+            t.kind == Tk::Dot
+                && n.kind == Tk::Punct
+                && n.span.lo == t.span.hi
+                && matches!(n.text.as_str(), "*" | "+" | "-" | "/")
+        });
+        let Some(op) = op else {
+            v.push(t.clone());
+            continue;
+        };
+        // The whole operator's span, so a diagnostic lands on `.*`.
+        let span = Span { lo: t.span.lo, hi: op.span.hi };
+        for (kind, text) in [
+            (Tk::Punct, op.text.as_str()),
+            (Tk::Ident, "hrs_std"),
+            (Tk::Dot, "."),
+            (Tk::Ident, "DOT"),
+        ] {
+            v.push(Token {
+                ctx: t.ctx,
+                kind,
+                span,
+                text: text.to_string(),
+                line_start: None,
+                line: t.line,
+                synthetic: true,
+                dollar: false,
+                tilde: false,
+            });
+        }
+        // The operator itself follows, untouched, and completes the pair.
+    }
+    v
+}
+
+/// `f<>` is *apply to each*: `f64.sqrt<> a`, `f64.powf<> a 2.0`,
+/// `(|x| x * x)<> a`, `a |> f64.sqrt<>` -- Julia's `f.(a)` (the user's mark,
+/// 2026-09-21). A suffix, tight like `$`, `!` and `~`, and like them it says
+/// how the name is applied.
+///
+/// It becomes the head of a macro call, `hrs_std.each! f a b`, and the rest is
+/// the ordinary application rule: the macro borrows every argument, because
+/// applying a function to each element consumes nothing, and picks `each1` or
+/// `each2` by their number. Runs after the pipes, which treat `f<>` as the one
+/// function it is.
+///
+/// Rust's empty generic list (`f::<>(x)`, `P<>`) means nothing, so Harsh takes
+/// the spelling and the converter drops Rust's -- the one place Harsh is not a
+/// superset, recorded as such.
+pub fn rewrite_each(toks: &[Token]) -> Result<Vec<Token>, JuxtError> {
+    if toks.iter().any(|t| t.is_kw("macro_rules")) {
+        return Ok(toks.to_vec());
+    }
+    let mut v: Vec<Token> = Vec::with_capacity(toks.len() + 4);
+    let mut i = 0;
+    while i < toks.len() {
+        let t = &toks[i];
+        let pair = t.kind == Tk::Lt
+            && toks.get(i + 1).map_or(false, |n| n.kind == Tk::Gt && n.span.lo == t.span.hi);
+        if !pair {
+            v.push(t.clone());
+            i += 1;
+            continue;
+        }
+        if !is_each_mark(toks, i) {
+            let name = i.checked_sub(1).map(|j| &toks[j]).filter(|p| p.kind == Tk::Ident).map(|p| p.text.clone()).unwrap_or_else(|| "f".into());
+            return Err(JuxtError {
+                msg: format!("`<>` applies a function to each element and is written tight against it: `{name}<> a`"),
+                span: Span { lo: t.span.lo, hi: toks[i + 1].span.hi },
+            });
+        }
+        // Where the marked function begins, in what has been written so far:
+        // a parenthesised group, or a path `a.b.c`.
+        let mut h = v.len() - 1;
+        if v[h].kind == Tk::Close(')') {
+            let mut d = 0i32;
+            loop {
+                match v[h].kind {
+                    Tk::Close(_) => d += 1,
+                    Tk::Open(_) => d -= 1,
+                    _ => {}
+                }
+                if d == 0 || h == 0 {
+                    break;
+                }
+                h -= 1;
+            }
+        } else {
+            while h >= 2 && v[h - 1].kind == Tk::Dot && v[h - 2].kind == Tk::Ident {
+                h -= 2;
+            }
+        }
+        // Zero-width, and one short of the function: the inserted words are
+        // tight among themselves (`each!`) but a space away from a marked
+        // group, as `m! (..)` must be.
+        let lo = v[h].span.lo.saturating_sub(1);
+        let at = Span { lo, hi: lo };
+        let head_starts_line = v[h].line_start.take();
+        let mut head: Vec<Token> = Vec::with_capacity(4);
+        for (kind, text) in [(Tk::Ident, "hrs_std"), (Tk::Dot, "."), (Tk::Ident, "each"), (Tk::Punct, "!")] {
+            head.push(Token {
+                ctx: t.ctx,
+                kind,
+                span: at,
+                text: text.to_string(),
+                line_start: None,
+                line: t.line,
+                synthetic: true,
+                dollar: false,
+                tilde: false,
+            });
+        }
+        // If the function began its line, the inserted head begins it now.
+        head[0].line_start = head_starts_line;
+        v.splice(h..h, head);
+        // The mark is gone from the tokens; its two characters now belong to
+        // the function's last token, so they are not copied out as a gap and
+        // a diagnostic on the function underlines `f<>`.
+        if let Some(last) = v.last_mut() {
+            last.span.hi = toks[i + 1].span.hi;
+        }
+        i += 2;
+    }
+    Ok(v)
 }
 
 /// `$` is *apply to nothing*: `main$`, `s <- len$`, `String.new$`, `m!$`,
@@ -380,7 +660,9 @@ pub fn rewrite_dollar(toks: &[Token]) -> Result<Vec<Token>, JuxtError> {
         }
         for (kind, text) in [(Tk::Open('('), "("), (Tk::Close(')'), ")")] {
             v.push(Token {
-                ctx: 0,
+                // The `$`'s own context: a `$` a macro's transcriber wrote
+                // belongs to that expansion, and the emitter must know it.
+                ctx: t.ctx,
                 kind,
                 span: t.span,
                 text: text.to_string(),
@@ -388,6 +670,7 @@ pub fn rewrite_dollar(toks: &[Token]) -> Result<Vec<Token>, JuxtError> {
                 line: t.line,
                 synthetic: true,
                 dollar: true,
+                tilde: false,
             });
         }
     }
@@ -399,21 +682,6 @@ pub fn rewrite_dollar(toks: &[Token]) -> Result<Vec<Token>, JuxtError> {
 fn apply_region(toks: &[Token], from: usize, to: usize, out: &mut Vec<(usize, Jx)>) {
     let mut i = from;
     while i < to {
-        // Rule 1 in brace form: `view! { <markup/> }`. The markup is
-        // verbatim; every `{ .. }` hole in it is Harsh.
-        if let Some(c) = hsx_brace_close(toks, i, to) {
-            hsx_holes(toks, i + 1, c, &mut |a, b, parens| {
-                apply_region(toks, a, b, out);
-                // A value's isolating parens are optional grouping: not
-                // emitted, in the brace form as in the block form.
-                if let Some((o, cl)) = parens {
-                    out.push((o, Jx::Drop));
-                    out.push((cl, Jx::Drop));
-                }
-            });
-            i = c + 1;
-            continue;
-        }
         rep_fixups(toks, i, to, out);
         let Some(head_end) = atom_end(toks, i, to) else {
             i += 1;
@@ -450,7 +718,18 @@ fn apply_region(toks: &[Token], from: usize, to: usize, out: &mut Vec<(usize, Jx
         // arrives with the block's tail. It is the last argument.
         let mut open_last = false;
         bracket_interiors(toks, i, head_end, out);
+        let bang_head = head_end > i && toks[head_end - 1].kind == Tk::Punct && toks[head_end - 1].text == "!";
         while k < to {
+            // A bracket right after a macro's bang is its first argument, an
+            // array literal. Its elements are applied with the other
+            // arguments, below, as any argument's are.
+            if k == head_end && bang_head && toks[k].kind == Tk::Open('[') {
+                if let Some(c) = matching_close_idx(toks, k, to) {
+                    args.push((k, c + 1));
+                    k = c + 1;
+                    continue;
+                }
+            }
             match atom_end(toks, k, to) {
                 Some(e) => {
                     rep_fixups(toks, k, to, out);
@@ -716,6 +995,23 @@ pub fn regions(toks: &[Token], stmt_block: bool, is_header: bool) -> Vec<(usize,
         None
     };
 
+    // `union U\\ a: u32, b: f32` inline: `union` is a contextual keyword, so
+    // it is not refused as a callee the way `struct` is, and `union U` was
+    // read as an application and emitted `union(U) {` (found 2026-09-20).
+    // It is a declaration exactly when a name follows and then the `\\`, the
+    // generics, or nothing; `union a b` stays a call to a function so named.
+    {
+        let mut k = 0;
+        while k < sig.len() && crate::rules::MODIFIERS.contains(&toks[sig[k]].text.as_str()) && !toks[sig[k]].is_kw("const") {
+            k += 1;
+        }
+        if k + 1 < sig.len() && toks[sig[k]].text == "union" && toks[sig[k + 1]].kind == Tk::Ident {
+            let after = sig.get(k + 2).map(|&i| &toks[i].kind);
+            if matches!(after, None | Some(Tk::Backslash) | Some(Tk::Lt)) {
+                return Vec::new();
+            }
+        }
+    }
     if is_header {
         // A `fn` header is a signature: only the parameter patterns juxtapose.
         // Every other header juxtaposes whole, because a match arm's pattern,
@@ -808,6 +1104,20 @@ pub fn regions(toks: &[Token], stmt_block: bool, is_header: bool) -> Vec<(usize,
         };
         let stop = *sig.last().unwrap(); // the block-opening `:`
         return start.filter(|&s| s < stop).map(|s| vec![(s, stop)]).unwrap_or_default();
+    }
+
+    // A macro call at item level -- `compile_error! "msg"`, a crate's
+    // `define_x! a b` -- is applied as it is in a block: Harsh is a superset
+    // of Rust, and an item may be a macro call. It was left unapplied,
+    // `compile_error! "msg";`, invalid Rust (found 2026-09-24, when a derive
+    // emitted one).
+    let item_macro = !stmt_block
+        && sig.len() >= 2
+        && toks[sig[0]].kind == Tk::Ident
+        && toks[sig[1]].text == "!"
+        && toks[sig[0]].span.hi == toks[sig[1]].span.lo;
+    if item_macro {
+        return regions(toks, true, is_header);
     }
 
     if !stmt_block {
@@ -954,37 +1264,84 @@ pub fn check(toks: &[Token], stmt_block: bool, is_header: bool) -> Result<(), Ju
     Ok(())
 }
 
-/// The macro-tuple check over one expression region, markup holes included.
+/// The macro-tuple check over one expression region.
 fn check_region(toks: &[Token], a: usize, b: usize) -> Result<(), JuxtError> {
     let mut i = a;
     while i < b {
-        if let Some(c) = hsx_brace_close(toks, i, b) {
-            let mut err = None;
-            hsx_holes(toks, i + 1, c, &mut |x, y, _| {
-                if err.is_none() {
-                    if let Err(e) = check_region(toks, x, y) {
-                        err = Some(e);
-                    }
-                }
-            });
-            if let Some(e) = err {
-                return Err(e);
+        // A group's inside is a region of its own: `f (vec! [1, 2])` is
+        // checked as `vec! [1, 2]` is. Until 2026-09-22 the walk stepped over
+        // a parenthesised head without looking in.
+        if matches!(toks[i].kind, Tk::Open('(') | Tk::Open('[')) {
+            if let Some(c) = matching_close_idx(toks, i, b) {
+                check_region(toks, i + 1, c)?;
             }
-            i = c + 1;
-            continue;
         }
         let Some(head_end) = atom_end(toks, i, b) else {
             i += 1;
             continue;
         };
-        let is_macro = head_end > a && toks[head_end - 1].text == "!";
+        // A `~` call's stream is its macro's (3.1.1): the `!` rules below
+        // never judge it. Found 2026-09-22: `filled~ [0u8; 2]` and the
+        // guide's own `pair~ (1, 2)` were refused on the raw path the editor
+        // and the formatter's guard read.
+        // A literal cannot be applied (ruled 2026-09-22, A3): `x = 1 b` was
+        // `1(b)`, and `assert_eq! a + 1 b` was `assert_eq!(a) + 1(b)`, both
+        // silently. A literal is a head -- not an argument -- when what
+        // precedes it does not end an atom: an operator, `=`, a keyword, an
+        // opener, or nothing.
+        if matches!(toks[i].kind, Tk::Int | Tk::Float | Tk::Str | Tk::Char) && head_end < b && atom_end(toks, head_end, b).is_some() {
+            let prev = (a..i).rev().find(|&k| !toks[k].is_comment()).map(|k| &toks[k]);
+            let is_arg = prev.map_or(false, |p| match p.kind {
+                Tk::Ident => !NOT_CALLABLE.contains(&p.text.as_str()),
+                Tk::Int | Tk::Float | Tk::Str | Tk::Char | Tk::TupleIdx | Tk::Close(_) => true,
+                Tk::Punct => p.text == "!" || p.text == "$",
+                _ => false,
+            });
+            if !is_arg {
+                let next = &toks[head_end];
+                return Err(JuxtError {
+                    msg: format!(
+                        "a literal cannot be applied: `{} {}`; if the literal ends an argument that has an operator in it, isolate that argument in parentheses, as in `(a + 1) b`",
+                        toks[i].text, next.text
+                    ),
+                    span: next.span,
+                });
+            }
+        }
+        let is_macro = head_end > a && toks[head_end - 1].text == "!" && !toks[head_end - 1].tilde;
+        // A macro applied to one array literal and nothing else is Rust's
+        // bracket call written in Harsh, where it now means something else:
+        // `vec! [1, 2, 3]` is a vector holding one array. Refused, both
+        // spellings named; `vec! ([1, 2, 3])` says one array on purpose.
+        // (Ruled 2026-09-22, A1.)
+        if is_macro && head_end < b && toks[head_end].kind == Tk::Open('[') {
+            if let Some(c) = matching_close_idx(toks, head_end, b) {
+                if !(c + 1 < b && atom_end(toks, c + 1, b).is_some()) {
+                    let name = toks[head_end - 2].text.clone();
+                    let repeat = toks[head_end + 1..c].iter().any(|t| t.kind == Tk::Semi);
+                    let want = if repeat {
+                        format!("Rust's `{name}![x; n]` is `{name}! {{ x; n }}` in Harsh")
+                    } else if c == head_end + 1 {
+                        format!("Rust's `{name}![]` is `{name}!$` in Harsh")
+                    } else {
+                        format!("Rust's `{name}![a, b]` is `{name}! a b` in Harsh")
+                    };
+                    return Err(JuxtError {
+                        msg: format!(
+                            "`{name}! [..]` passes one array to the macro: {want}; to pass one array on purpose, isolate it, `{name}! ([..])`"
+                        ),
+                        span: toks[head_end].span,
+                    });
+                }
+            }
+        }
         // `f arr [1]`: the `[` is spaced, so it is an index -- but of what?
         // Of `arr`, the reader means; of `f(arr)`, the rule would say. Neither
         // reading is taken: the line is refused with both spellings named.
-        // (`vec! [1, 2]` is a macro's bracket body, and a `[` right after the
-        // head is an index of the head with no argument in between.)
-        // A macro too, once it has an argument: `assert_eq! v [1, 2]` is not
-        // the bracket-body form (`vec! [1, 2]`, no argument before the `[`).
+        // (A `[` right after a function's head is an index of the head with
+        // no argument in between. After a macro's bang it is the first
+        // argument, handled above.) A macro too, once it has an argument:
+        // `assert_eq! v [1, 2]` is refused like `f arr [1]`.
         {
             let mut k = head_end;
             let mut nargs = 0;
@@ -1147,87 +1504,6 @@ fn type_app_fixups(toks: &[Token], regs: &[(usize, usize)], out: &mut Vec<(usize
             }
             i = e.max(i + 1);
             continue;
-        }
-        i += 1;
-    }
-}
-
-/// `toks[i]` opens a macro's brace body whose first token is `<`: markup
-/// (rule 1 in brace form). Returns the body's `}`.
-fn hsx_brace_close(toks: &[Token], i: usize, to: usize) -> Option<usize> {
-    let e = macro_brace_end(toks, i, to)?;
-    if !is_markup(toks, i + 1, e - 1) {
-        return None;
-    }
-    Some(e - 1)
-}
-
-/// Is `toks[from..to]` markup? It begins with a tag `<name`, `</name` or a
-/// fragment `<>`, or -- a body may open with a hole or a string, `{panel}`
-/// `<button ..>` -- such a tag follows at depth zero, outside any hole.
-pub fn is_markup(toks: &[Token], from: usize, to: usize) -> bool {
-    let mut d = 0i32;
-    let mut i = from;
-    let mut seen_lead = false;
-    while i < to {
-        let t = &toks[i];
-        if t.is_comment() {
-            i += 1;
-            continue;
-        }
-        match t.kind {
-            Tk::Open(_) => {
-                d += 1;
-                seen_lead = true;
-            }
-            Tk::Close(_) => d -= 1,
-            Tk::Lt if d == 0 => {
-                let n = toks.get(i + 1);
-                return n.map_or(false, |n| {
-                    n.kind == Tk::Ident || n.kind == Tk::Gt || (n.kind == Tk::Punct && (n.text == "/" || n.text == "!"))
-                });
-            }
-            Tk::Str if d == 0 => seen_lead = true,
-            _ if d == 0 => return false,
-            _ => {}
-        }
-        i += 1;
-    }
-    // Only holes and strings, `{found} {missing}`: markup with no tag.
-    seen_lead
-}
-
-/// The `(open, close)` of every `name! { <markup> }` body in `toks`.
-pub fn markup_brace_spans(toks: &[Token]) -> Vec<(usize, usize)> {
-    let mut out = Vec::new();
-    let mut i = 0;
-    while i < toks.len() {
-        if let Some(c) = hsx_brace_close(toks, i, toks.len()) {
-            out.push((i, c));
-            i = c + 1;
-            continue;
-        }
-        i += 1;
-    }
-    out
-}
-
-/// Call `f(a, b, parens)` for the inside of every depth-one hole in the
-/// markup `toks[from..to]`: a `{ .. }` block, or an attribute value
-/// isolated in parens after `=`, `on:click=(|| body)` -- for those,
-/// `parens` carries the pair, which the caller drops.
-fn hsx_holes(toks: &[Token], from: usize, to: usize, f: &mut dyn FnMut(usize, usize, Option<(usize, usize)>)) {
-    let mut i = from;
-    while i < to {
-        let paren_value = toks[i].kind == Tk::Open('(') && i > from && toks[i - 1].kind == Tk::Eq;
-        if toks[i].kind == Tk::Open('{') || paren_value {
-            if let Some(c) = matching_close_idx(toks, i, to) {
-                if c > i + 1 {
-                    f(i + 1, c, paren_value.then_some((i, c)));
-                }
-                i = c + 1;
-                continue;
-            }
         }
         i += 1;
     }
@@ -1453,6 +1729,7 @@ fn paren(kind: Tk, text: &str, at: Span, line: usize) -> Token {
         line,
         synthetic: true,
         dollar: false,
+        tilde: false,
     }
 }
 
@@ -1728,6 +2005,7 @@ impl<'a> Pipes<'a> {
                 line,
                 synthetic: true,
                 dollar: false,
+                tilde: false,
             });
             v.extend(callee);
             v.extend(left.into_iter().flatten());
@@ -1742,6 +2020,7 @@ impl<'a> Pipes<'a> {
                     line,
                     synthetic: true,
                     dollar: false,
+                    tilde: false,
                 });
             }
             v.extend(right.into_iter().flatten());

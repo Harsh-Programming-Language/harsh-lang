@@ -37,7 +37,7 @@ fn main$:
         (commas 2 3)
         (unit$)
         (unit_then 4)
-        (generic "v" (vec! [1]))
+        (generic "v" (vec! 1))
         (fnptr (|n| n + 1) 41)
         (single_line_where 9)
         (bracketed_where 1 "s")

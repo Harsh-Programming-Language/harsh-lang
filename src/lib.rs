@@ -12,12 +12,17 @@
 pub mod columns;
 pub mod fmt;
 pub mod docex;
+#[cfg(feature = "remap")]
+pub mod dist;
 pub mod driver;
+pub mod dslzone;
 pub mod emit;
 pub mod juxt;
 pub mod layout;
 pub mod mac;
+pub mod procmac;
 pub mod lex;
+#[cfg(feature = "remap")]
 pub mod remap;
 pub mod rawzone;
 pub mod rules;

@@ -66,7 +66,7 @@ The rule for `default`, in order, first match wins:
 | none (top of file) | 0 |
 | the `)` tail of a paren-block | the header's chain arrow, or one unit past its last physical line |
 | opens a block (`:` or `=>` last) | column of the construct that opened it — the first token on its **last physical line**, or the token after the innermost open bracket (`<- map (|x|:` indents from `|x|`) — plus one unit |
-| ends in `(` or `[` | the group's **anchor** plus one unit: the start of the callee path before the bracket (`map (`, `foo.bar (`, `vec![`), else the bracket itself |
+| ends in `(` or `[` | the group's **anchor** plus one unit: the start of the callee path before the bracket (`map (`, `foo.bar (`, `m! [`), else the bracket itself |
 | ends in `=` | its indent plus one unit |
 | inside an open `(` or `[`, several physical lines | the column of its last physical line: the next element is a peer |
 | its last physical line is a lone `)` or `]` | the statement is complete: under its top-level `<-` if it is a chain link, else its indent |

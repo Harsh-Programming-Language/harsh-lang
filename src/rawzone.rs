@@ -128,9 +128,26 @@ pub const MARKER: &str = "__hrs_raw_zone_";
 
 /// Put each zone's text back into generated Rust, where its marker stands.
 pub fn restore(generated: &mut String, src: &str, zones: &[Zone]) {
+    restore_with_map(generated, src, zones, &mut Vec::new());
+}
+
+/// `restore`, keeping the source map right: the text put back is seldom the
+/// marker's length, so every entry after it moves by the difference, and the
+/// zone itself maps to its own text in the source. (Until 2026-09-23 the map
+/// was not moved, and every diagnostic after a `macro_rules!` pointed a few
+/// bytes off -- more with each zone.)
+pub fn restore_with_map(generated: &mut String, src: &str, zones: &[Zone], map: &mut Vec<crate::emit::MapEntry>) {
     if zones.is_empty() {
         return;
     }
+    let shift = |map: &mut Vec<crate::emit::MapEntry>, from: usize, delta: i64| {
+        for e in map.iter_mut() {
+            if e.gen_lo as usize >= from {
+                e.gen_lo = (e.gen_lo as i64 + delta) as u32;
+                e.gen_hi = (e.gen_hi as i64 + delta) as u32;
+            }
+        }
+    };
     for (n, z) in zones.iter().enumerate() {
         let marker = format!("//{}{}", MARKER, n);
         let text = &src[z.lo..z.hi];
@@ -155,6 +172,9 @@ pub fn restore(generated: &mut String, src: &str, zones: &[Zone]) {
                 .all(|c| c == ' ');
             let end = if blank_after { line_end } else { mark_end };
             generated.replace_range(at..end, text);
+            map.retain(|e| (e.gen_lo as usize) < at || (e.gen_lo as usize) >= end);
+            shift(map, end, text.len() as i64 - (end - at) as i64);
+            map.push(crate::emit::MapEntry { gen_lo: at as u32, gen_hi: (at + text.len()) as u32, src_lo: z.lo as u32, src_hi: z.hi as u32, ctx: 0 });
         } else {
             // The marker did not survive (an empty file, or a zone the
             // emitter dropped): put the definition at the top, where a macro
@@ -162,12 +182,16 @@ pub fn restore(generated: &mut String, src: &str, zones: &[Zone]) {
             let mut item = String::from(text);
             item.push_str("\n\n");
             generated.insert_str(0, &item);
+            shift(map, 0, item.len() as i64);
+            map.push(crate::emit::MapEntry { gen_lo: 0, gen_hi: text.len() as u32, src_lo: z.lo as u32, src_hi: z.hi as u32, ctx: 0 });
         }
     }
     // A zone at the top of the file leaves the blank lines its body occupied.
     while generated.starts_with('\n') {
         generated.remove(0);
+        shift(map, 1, -1);
     }
+    map.sort_by_key(|e| e.gen_lo);
 }
 
 /// Lex, find the zones, and hand back the text the transpiler should work on.

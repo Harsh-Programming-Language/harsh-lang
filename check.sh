@@ -15,6 +15,15 @@ say "Building harsh-lang"
 cargo build --release
 BIN="$ROOT/target/release"
 
+say "The library without features"
+# hrs_proc_macro, and after it the parsing crates, build on the pure
+# language: lexer, layout, expander, emitter, no dependencies. It stopped
+# building that way once without anyone noticing (found 2026-09-24).
+cargo check --lib --no-default-features --quiet
+( cd hrs_proc_macro && cargo test --quiet 2>&1 | grep -E "^test result" )
+( cd hrs_quote && cargo test --quiet 2>&1 | grep -E "^test result" )
+( cd hrs_syn && cargo test --quiet 2>&1 | grep -E "^test result" )
+
 say "Transpiling examples"
 for f in general edge params brackets; do
     "$BIN/hrs" "examples/$f.hrs" -o "$WORK/$f.rs" --map "$WORK/$f.map.json"

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.5
+
+- **DSL bodies and holes are highlighted as what they are.** A Rust macro's brace body, `view! { … }`, is the DSL's own text, no longer coloured as Harsh; a hole, `@: … :@`, is Harsh inside it, its marks shown as embedded punctuation -- a DSL body inside a hole nests, holes and all; `@@:`, the literal `@:`, is an escape. Checked with VS Code's own tokenizer.
+
 ## 0.1.4
 
 - The search log has its own output channel, **"Harsh: server search"**. In 0.1.3 it was called "Harsh", which is the name the language client gives its own channel, so the log was hidden behind it. The channel now opens itself when the extension activates, and every line is mirrored to the developer console.

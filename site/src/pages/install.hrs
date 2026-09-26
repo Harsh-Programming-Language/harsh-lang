@@ -1,0 +1,69 @@
+use dioxus.prelude.*
+
+use crate.components.Code
+
+const INSTALL: &str = r#"cargo install harsh-lang
+hrs --version"#
+
+const NEW: &str = r#"hrs new hello
+cd hello
+hrs run"#
+
+const MAIN: &str = r#"fn main$:
+    println! "Hello, world!""#
+
+const COMMANDS: &str = r#"hrs build      transpile src/**.hrs to target/hrs/, then cargo build
+hrs run        build and run, diagnostics on the .hrs lines
+hrs test       cargo test, remapped
+hrs check      cargo check, remapped
+hrs lint       clippy, remapped
+hrs fmt        the formatter
+hrs watch      rebuild on every save
+hrs export     the project as pure Rust, nothing of Harsh left in it
+hrs-from       convert a Rust file or project to Harsh"#
+
+#[component]
+pub fn Install$ -> Element:
+    rsx! {
+        section { class: "page",
+            h1 { "Install" }
+            p {
+                "Harsh needs a Rust toolchain -- "
+                a { href: "https://rustup.rs", target: "_blank", rel: "noopener", "rustup" }
+                " -- and one " code { "cargo install" } ". The package is " code { "harsh-lang" }
+                "; it installs " code { "hrs" } ", " code { "hrs-from" } ", " code { "hrs-remap" }
+                " and " code { "hrs-lsp" } "."
+            }
+            Code { code: INSTALL, lang: "shell" }
+
+            h2 { "A first project" }
+            p {
+                code { "hrs new" } " writes a project whose " code { "Cargo.toml" }
+                " points at " code { "target/hrs/" } ", where the generated Rust goes. "
+                "Your sources are " code { "src/**.hrs" } "; dependencies are Cargo's, unchanged."
+            }
+            Code { code: NEW, lang: "shell" }
+            Code { code: MAIN, lang: "harsh" }
+
+            h2 { "The commands" }
+            Code { code: COMMANDS, lang: "shell" }
+
+            h2 { "Editors" }
+            p {
+                "The VS Code extension "
+                a { href: "https://marketplace.visualstudio.com/items?itemName=harsh-lang.harsh-lang", target: "_blank", rel: "noopener", code { "harsh-lang" } }
+                " is on the Marketplace: "
+                "highlighting, indentation on Enter, formatting, and diagnostics on save "
+                "through " code { "hrs-lsp" } ". A Zed extension and a tree-sitter grammar "
+                "are in the repository. A Jupyter kernel runs Harsh cells through evcxr."
+            }
+
+            h2 { "Bringing existing Rust in" }
+            p {
+                code { "hrs-from" } " converts a Rust file, or a whole project, to Harsh -- "
+                "including a Leptos or Dioxus site, whose " code { "view!" } " and "
+                code { "rsx!" } " bodies stay as written with the Rust in them turned into Harsh holes. "
+                "The round trip is byte-exact: it is how the transpiler's own source is tested."
+            }
+        }
+    }

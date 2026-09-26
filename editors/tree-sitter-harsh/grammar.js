@@ -51,6 +51,9 @@ module.exports = grammar({
       $.string,
       $.char,
       $.macro_name,
+      $.hole_escape,
+      $.hole_open,
+      $.hole_close,
       $.metavariable,
       $.apply_nothing,
       $.operator,
@@ -109,6 +112,13 @@ module.exports = grammar({
     apply_nothing: $ => '$',
 
     macro_name: $ => token(seq(/[A-Za-z_][A-Za-z0-9_]*/, '!')),
+
+    // A hole, `@: … :@`: Harsh inside a Rust macro's DSL body (the user's
+    // rulings of 2026-09-22/23). `@@:` is a literal `@:`. Longer than `@` or
+    // `:`, so the lexer takes these first.
+    hole_escape: $ => token(prec(2, '@@:')),
+    hole_open: $ => token(prec(1, '@:')),
+    hole_close: $ => token(prec(1, ':@')),
 
     punctuation: $ => prec(-1, choice(',', ';', ':', '.')),
 

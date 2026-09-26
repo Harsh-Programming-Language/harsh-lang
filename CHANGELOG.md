@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.1.32 — 2026-09-26  (the Jupyter kernel 0.1.2; everything else as in 0.1.31)
+
+0.1.31 was handed over and never published; its number is spent, and 0.1.32 carries all of it (below) with these additions:
+
+- **The Jupyter kernel is ready for PyPI**, as `harsh-kernel` 0.1.2: a `README.md` for its PyPI page, the licence as an SPDX string (`license = "MPL-2.0"`, which setuptools will require from 2027), `setuptools>=77`.
+- **`RELEASE.md`**, at the root: publishing and installing every product -- the crate, the Jupyter kernel, the editor extensions, Harshlings, the website -- in order, in one file.
+
+## 0.1.31 — 2026-09-26  (`hrs_std` 0.1.2, `hrs_proc_macro` 0.2.0, `hrs_quote` 0.1.0, `hrs_syn` 0.1.0, VS Code extension 0.1.5, Harshlings 0.1.6, all unchanged; the Jupyter kernel 0.1.1)
+
+- **The website, in the repository**: `site/`, a Dioxus app written in Harsh -- the home page, the Book, *By Example* and the guide, a Converter (Harsh to Rust in the browser) and a Playground (an editor that indents, closes brackets and highlights as Harsh does, and a console; the program runs on the Rust Playground, with the part of `hrs_std` it uses sent along). Published to GitHub Pages from the GitHub mirror by `.github/workflows/pages.yml`.
+- **A Harsh app can use a Harsh library by path.** `hrs` never transpiled the library, though the Book's chapter 17 said it did; `hrs build` now transpiles Harsh path dependencies first, recursively, only what is stale.
+- **Re-exports of Harsh macros**, as in Rust: a library writes `pub use hello_macro_derive.HelloMacro`, and its users call the macro through it. The `use` is resolved by `hrs` and leaves no trace in the Rust.
+- **`hrs export` carries `hrs_std` as the crate's own code**, pure Rust: the items of `hrs_std` the program reaches, and only those, become the crate's module `matrix`, with nalgebra and num-traits as its dependencies in place of `hrs_std`.
+- **The Jupyter kernel, 0.1.1, reports errors at the cell's lines**, read from evcxr's real output (its gutter numbers, not rustc's `-->`, which evcxr does not print).
+- **`hrs fmt` writes one space inside a hole's marks**, `@: x :@`; a multi-line hole's layout and `@@:` are left as written.
+- **Fixed: an `if` with a string continued over lines, as a struct literal's field value**, was refused after conversion; the transpiler's brace check asks whether a token begins a line, not whether the line number changed.
+- **`hrs-from` formats only a conversion that transpiles**, so a converter gap is reported as it is instead of reflowed.
+- **Fixed: a character of several bytes inside a hole panicked the transpiler** -- `view! { <p>{@: "…" :@}</p> }` stopped `hrs` with "byte index … is not a char boundary". The scan for a hole's closing `:@` compares bytes now, which find the same ASCII marks. Found writing the website, whose Converter and Playground run the transpiler in the browser, where a panic stops the page.
+- **`driver::single_file`**: a Harsh program's Rust as one file, with the part of `hrs_std` it uses following it as an inline `mod hrs_std { … }` -- shaken as `hrs export` shakes it, the program's lines where they were. For places that take one file and have no `hrs_std`, such as the Rust Playground, to which the website's Playground sends its code. `dist` and `shake` are part of the library without its features now (they depend on nothing).
+
 ## 0.1.30 — 2026-09-25  (new: Harsh's standard distribution -- `hrs_std` 0.1.2, `hrs_proc_macro` 0.2.0, `hrs_quote` 0.1.0, `hrs_syn` 0.1.0 -- shipped inside `hrs`; Harshlings 0.1.6)
 
 - **Harsh's standard distribution ships inside `hrs`**, as Rust's `std` and `proc_macro` ship with the toolchain: `hrs_std`, `hrs_proc_macro`, `hrs_quote` and `hrs_syn`. A `Cargo.toml` names them as Rust names `syn` and `quote` -- `hrs_quote = "0.1"` -- and `hrs` serves them from what it carries, never from crates.io, always at its own version. Only `harsh-lang` is published.

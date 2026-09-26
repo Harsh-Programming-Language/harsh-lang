@@ -49,7 +49,7 @@ $ hrs test
 running 1 test
 test target/hrs/lib.rs - add_one (line 10) ... ok
 
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.18s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.20s
 ```
 
 `cargo doc --open` renders every `///` and `//!` in the crate as HTML, with the Markdown inside them — headings, code blocks, links — laid out. The conventional sections are `# Examples`, `# Panics` (when the function can), `# Errors` (what `Err`s it returns) and `# Safety` (for `unsafe` functions). The example in the `///` is Harsh, like everything else in the file, and `cargo test` *runs it* — every code block in a doc comment is a test, so documentation cannot drift from the code without failing the build.
@@ -120,7 +120,7 @@ A *workspace* is a set of packages sharing one `Cargo.lock` and one `target/` di
 members = ["adder", "add_one"]
 ```
 
-and each member is an ordinary package in its own directory, depending on its siblings by path (`add_one = { path = "../add_one" }`). `cargo build` at the root builds them all; `cargo test -p add_one` tests one. `hrs` walks each member's `src/` in turn.
+and each member is an ordinary package in its own directory, depending on its siblings by path (`add_one = { path = "../add_one" }`). Run `hrs build` or `hrs run` in the member you want: `hrs` first transpiles the Harsh libraries it depends on by path, each only when its sources changed, and cargo then builds them all. A library written in Rust is cargo's, and needs nothing from `hrs`.
 
 ## 17.5 Installing binaries
 

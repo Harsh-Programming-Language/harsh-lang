@@ -24,6 +24,39 @@ cargo check --lib --no-default-features --quiet
 ( cd hrs_quote && cargo test --quiet 2>&1 | grep -E "^test result" )
 ( cd hrs_syn && cargo test --quiet 2>&1 | grep -E "^test result" )
 
+say "The website transpiles and is formatted"
+# site/ is a Harsh project (Dioxus); its Rust is never built here -- the
+# container's Rust is too old for Dioxus -- but every .hrs must transpile
+# and match the formatter. `hrs cargo metadata` transpiles and builds nothing.
+( cd site && "$BIN/hrs" cargo metadata --no-deps --format-version 1 > /dev/null && "$BIN/hrs" fmt --check > /dev/null && echo "  site/src: $(find src -name '*.hrs' | wc -l | tr -d ' ') files transpiled, formatted" )
+
+say "The website highlights as the books do"
+# site/src/highlight.hrs is a port of docs/build.py's highlighter (the user's
+# choice, 2026-09-26); every code block of the books must come out identical.
+python3 site/check-highlight.py
+
+say "The website's editor keys"
+# Enter, Tab, brackets and pairs in site/src/components/editor.hrs, driven by
+# simulated keys against the language's own columns (skipped without node).
+python3 site/check-editor.py
+
+say "The website's samples fit their panes"
+# Every line of a code sample is at most 52 characters, indentation
+# included: 430px at 13.5px monospace, the width each side-by-side pane
+# gives its text (the user's rule, 2026-09-26; site/assets/main.css).
+python3 - site/src/samples.hrs <<'PY'
+import re, sys
+text = open(sys.argv[1]).read()
+bad = [(name, n, len(line))
+       for name, body in re.findall(r'pub const (\w+): &str = r#"(.*?)\n"#', text, re.S)
+       for n, line in enumerate(body.split('\n'), 1) if len(line) > 52]
+for name, n, w in bad:
+    print(f"  {name}, line {n}: {w} characters, over 52")
+if bad:
+    sys.exit(1)
+print("  every sample line within 52 characters")
+PY
+
 say "Transpiling examples"
 for f in general edge params brackets; do
     "$BIN/hrs" "examples/$f.hrs" -o "$WORK/$f.rs" --map "$WORK/$f.map.json"

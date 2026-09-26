@@ -1,0 +1,2117 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Harsh by Example</title>
+<style>
+:root{
+  --bg:#0e1418; --panel:#141c21; --line:#233039;
+  --fg:#d7e1e8; --dim:#7d919e; --faint:#5b6d79;
+  --rust:#e08b5a; --acc:#6fb3d2; --kw:#c99bdd; --str:#8fbf7f; --num:#e0c07a;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0; background:var(--bg); color:var(--fg);
+  font:16px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,
+       "Helvetica Neue",Arial,sans-serif;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1180px;margin:0 auto;padding:0 28px}
+header{padding:64px 0 40px;border-bottom:1px solid var(--line);margin-bottom:40px}
+.logo{
+  font-family:"SF Mono",SFMono-Regular,ui-monospace,"JetBrains Mono",
+              "Cascadia Code",Menlo,Consolas,monospace;
+  font-size:clamp(38px,7vw,68px); font-weight:600; letter-spacing:-.02em;
+  line-height:1; margin:0; user-select:all;
+}
+.lg-b{color:var(--faint)}
+.lg-n{color:var(--fg)}
+.lg-a{color:var(--acc)}
+.lg-r{color:var(--rust)}
+.lg-i{display:inline-block;transform:skewX(-11deg);transform-origin:50% 70%}
+.title{margin:22px 0 6px;font-size:26px;font-weight:600;letter-spacing:-.01em}
+.tag{margin:0;color:var(--dim);font-size:16px}
+.tag em{color:var(--rust);font-style:normal}
+.cols{display:grid;grid-template-columns:250px minmax(0,1fr);gap:56px;
+      align-items:start;padding-bottom:120px}
+body.nav-hidden .cols{grid-template-columns:minmax(0,1fr)}
+body.nav-hidden .toc{display:none}
+.toggle{
+  position:fixed;left:10px;top:10px;z-index:10;
+  background:transparent;color:var(--faint);border:0;
+  padding:4px 6px;font:12px/1 inherit;cursor:pointer;opacity:.5;
+}
+.toggle:hover{opacity:1;color:var(--dim)}
+.toc{position:sticky;top:24px;max-height:calc(100vh - 48px);overflow:auto;
+     font-size:14px;border-left:1px solid var(--line);padding-left:18px}
+.toc-h{margin:0 0 10px;color:var(--dim);text-transform:uppercase;
+       letter-spacing:.09em;font-size:11px}
+.toc ul{list-style:none;margin:0;padding:0}
+.toc li{margin:.22em 0}
+.toc a{color:var(--fg);text-decoration:none;display:block;padding:1px 0}
+.toc a:hover{color:var(--acc)}
+/* depth from the document's top level: a book's chapters, then sections,
+   subsections, and theirs */
+.toc .d0{font-weight:600;margin-top:.7em}
+.toc .d0:first-child{margin-top:0}
+.toc .d1{padding-left:14px;font-size:13.5px}
+.toc .d1 a{color:#c5d2db}
+.toc .d2{padding-left:28px;font-size:13px}
+.toc .d2 a{color:var(--dim)}
+.toc .d3{padding-left:42px;font-size:12.5px}
+.toc .d3 a{color:var(--dim)}
+main{min-width:0}
+h2{font-size:25px;margin:52px 0 14px;padding-top:8px;letter-spacing:-.01em;
+   border-top:1px solid var(--line)}
+h2:first-child{border-top:0;margin-top:0}
+h3{font-size:18.5px;margin:32px 0 10px;color:#eaf1f6}
+h4{font-size:15.5px;margin:24px 0 8px;color:var(--dim);
+   text-transform:uppercase;letter-spacing:.06em}
+p{margin:.75em 0}
+ul,ol{padding-left:22px}
+li{margin:.3em 0}
+li>ul,li>ol{margin:.3em 0}
+strong{color:#fff;font-weight:600}
+a{color:var(--acc)}
+code{
+  font-family:"SF Mono",SFMono-Regular,ui-monospace,"JetBrains Mono",
+              "Cascadia Code",Menlo,Consolas,monospace;
+  font-size:.9em; background:#1b252b; border:1px solid var(--line);
+  padding:.08em .34em; border-radius:4px; color:#cfe0ea;
+}
+pre.code{
+  background:var(--panel); border:1px solid var(--line); border-radius:8px;
+  padding:14px 16px; overflow:auto; margin:14px 0; line-height:1.55;
+}
+pre.code code{background:none;border:0;padding:0;font-size:13.5px;color:var(--fg)}
+pre.code.rust{border-left:3px solid var(--rust)}
+pre.code.harsh{border-left:3px solid var(--acc)}
+pre.code.diagram{border-left:3px solid var(--faint);color:var(--dim)}
+.k{color:var(--kw)} .t{color:var(--acc)} .str{color:var(--str)}
+.num{color:var(--num)} .com{color:var(--faint);font-style:italic}
+.op{color:var(--rust);font-weight:600} .mac{color:var(--num)}
+.defer{color:var(--rust);font-weight:600} .attr{color:var(--faint)}
+.p{color:var(--dim)} .blk{color:var(--rust)}
+table{border-collapse:collapse;margin:16px 0;font-size:14.5px;width:100%}
+th,td{border:1px solid var(--line);padding:7px 11px;text-align:left;
+      vertical-align:top}
+th{background:#18222a;color:#eaf1f6;font-weight:600}
+td code{font-size:.88em}
+blockquote{border-left:3px solid var(--line);margin:1em 0;padding:.1em 1em;
+           color:var(--dim)}
+footer{border-top:1px solid var(--line);padding:26px 0 60px;color:var(--faint);
+       font-size:13.5px}
+@media(max-width:900px){
+  .cols,body.nav-hidden .cols{grid-template-columns:1fr;gap:0}
+  .toc{position:static;max-height:none;border-left:0;border-bottom:1px solid
+       var(--line);padding:0 0 20px;margin-bottom:28px}
+}
+</style>
+</head>
+<body>
+  <button class="toggle" id="nav-toggle" title="Show or hide the contents">☰</button>
+  <div class="wrap">
+    <header>
+      <p class="logo"><span class="lg-b">#[</span><span class="lg-n">Ha</span><span class="lg-a">&lt;</span><span class="lg-r">rs</span><span class="lg-a">&gt;</span><span class="lg-a">.</span><span class="lg-n lg-i">h</span><span class="lg-b">]</span></p>
+      <h1 class="title">Harsh</h1>
+      <p class="tag">Harsh by Example</p>
+    </header>
+    <div class="cols">
+      <nav class="toc"><p class="toc-h">Contents</p><ul>
+<li class="d0"><a href="#1-hello-and-printing">1. Hello and printing</a></li>
+<li class="d1"><a href="#1-1-hello-world">1.1 Hello, world!</a></li>
+<li class="d1"><a href="#1-2-comments">1.2 Comments</a></li>
+<li class="d1"><a href="#1-3-printing">1.3 Printing</a></li>
+<li class="d1"><a href="#1-4-debug">1.4 Debug</a></li>
+<li class="d1"><a href="#1-5-display">1.5 Display</a></li>
+<li class="d0"><a href="#2-primitives">2. Primitives</a></li>
+<li class="d1"><a href="#2-1-literals-and-operators">2.1 Literals and operators</a></li>
+<li class="d1"><a href="#2-2-tuples">2.2 Tuples</a></li>
+<li class="d1"><a href="#2-3-arrays-and-slices">2.3 Arrays and slices</a></li>
+<li class="d0"><a href="#3-custom-types">3. Custom types</a></li>
+<li class="d1"><a href="#3-1-structures">3.1 Structures</a></li>
+<li class="d1"><a href="#3-2-enums">3.2 Enums</a></li>
+<li class="d1"><a href="#3-3-constants">3.3 Constants</a></li>
+<li class="d0"><a href="#4-bindings-and-types">4. Bindings and types</a></li>
+<li class="d1"><a href="#4-1-bindings">4.1 Bindings</a></li>
+<li class="d1"><a href="#4-2-types">4.2 Types</a></li>
+<li class="d0"><a href="#5-flow-control">5. Flow control</a></li>
+<li class="d1"><a href="#5-1-if-and-else">5.1 if and else</a></li>
+<li class="d1"><a href="#5-2-loops">5.2 Loops</a></li>
+<li class="d1"><a href="#5-3-match">5.3 match</a></li>
+<li class="d1"><a href="#5-4-if-let-let-else-while-let">5.4 if let, let else, while let</a></li>
+<li class="d0"><a href="#6-functions">6. Functions</a></li>
+<li class="d1"><a href="#6-1-declaring-and-calling">6.1 Declaring and calling</a></li>
+<li class="d1"><a href="#6-2-methods">6.2 Methods</a></li>
+<li class="d1"><a href="#6-3-closures">6.3 Closures</a></li>
+<li class="d0"><a href="#7-what-harsh-adds">7. What Harsh adds</a></li>
+<li class="d1"><a href="#7-1-the-pipes">7.1 The pipes</a></li>
+<li class="d1"><a href="#7-2-partial-application">7.2 Partial application</a></li>
+<li class="d1"><a href="#7-3-macros">7.3 Macros</a></li>
+<li class="d2"><a href="#harsh-macros">Harsh macros (~)</a></li>
+<li class="d3"><a href="#declarative-macros">Declarative macros</a></li>
+<li class="d3"><a href="#procedural-macros">Procedural macros</a></li>
+<li class="d2"><a href="#rust-macros">Rust macros (!)</a></li>
+<li class="d3"><a href="#declarative-macros-1">Declarative macros</a></li>
+<li class="d3"><a href="#procedural-macros-1">Procedural macros</a></li>
+<li class="d2"><a href="#harsh-dsls">Harsh DSLs (~)</a></li>
+<li class="d2"><a href="#rust-dsls">Rust DSLs (!)</a></li>
+<li class="d0"><a href="#8-ownership-and-borrowing">8. Ownership and borrowing</a></li>
+<li class="d1"><a href="#8-1-moving">8.1 Moving</a></li>
+<li class="d1"><a href="#8-2-borrowing">8.2 Borrowing</a></li>
+<li class="d1"><a href="#8-3-slices">8.3 Slices</a></li>
+<li class="d0"><a href="#9-generics-and-traits">9. Generics and traits</a></li>
+<li class="d1"><a href="#9-1-generics">9.1 Generics</a></li>
+<li class="d1"><a href="#9-2-traits">9.2 Traits</a></li>
+<li class="d1"><a href="#9-3-operators-are-traits">9.3 Operators are traits</a></li>
+<li class="d0"><a href="#10-errors">10. Errors</a></li>
+<li class="d1"><a href="#10-1-option">10.1 Option</a></li>
+<li class="d1"><a href="#10-2-result">10.2 Result</a></li>
+<li class="d1"><a href="#10-3-an-error-type-of-your-own">10.3 An error type of your own</a></li>
+<li class="d0"><a href="#11-collections">11. Collections</a></li>
+<li class="d1"><a href="#11-1-vectors">11.1 Vectors</a></li>
+<li class="d1"><a href="#11-2-maps">11.2 Maps</a></li>
+<li class="d1"><a href="#11-3-strings">11.3 Strings</a></li>
+<li class="d0"><a href="#12-modules">12. Modules</a></li>
+<li class="d0"><a href="#13-threads-and-channels">13. Threads and channels</a></li>
+<li class="d0"><a href="#14-tests">14. Tests</a></li>
+<li class="d0"><a href="#15-the-tools">15. The tools</a></li>
+<li class="d0"><a href="#16-generator-comprehensions">16. Generator comprehensions</a></li>
+<li class="d1"><a href="#16-1-g">16.1 g~</a></li>
+<li class="d1"><a href="#16-2-conditions-and-several-fors">16.2 Conditions, and several `for`s</a></li>
+<li class="d1"><a href="#16-3-where-a-condition-may-go">16.3 Where a condition may go</a></li>
+<li class="d1"><a href="#16-4-collecting-list-set-dict">16.4 Collecting: list~, set~, dict~</a></li>
+<li class="d1"><a href="#16-5-laying-one-out">16.5 Laying one out</a></li>
+<li class="d1"><a href="#16-6-lazy-and-by-value">16.6 Lazy, and by value</a></li>
+<li class="d1"><a href="#16-7-what-it-stands-for">16.7 What it stands for</a></li>
+<li class="d0"><a href="#17-matrices">17. Matrices</a></li>
+<li class="d1"><a href="#17-1-writing-them">17.1 Writing them</a></li>
+<li class="d1"><a href="#17-2-arithmetic">17.2 Arithmetic</a></li>
+<li class="d1"><a href="#17-3-the-identity">17.3 The identity</a></li>
+<li class="d1"><a href="#17-4-joining-matrices">17.4 Joining matrices</a></li>
+<li class="d1"><a href="#17-5-solving">17.5 Solving</a></li>
+<li class="d1"><a href="#17-6-fitting-a-line">17.6 Fitting a line</a></li>
+<li class="d1"><a href="#17-7-slicing">17.7 Slicing</a></li>
+<li class="d1"><a href="#17-8-broadcasting">17.8 Broadcasting</a></li>
+<li class="d1"><a href="#17-9-when-sizes-do-not-fit">17.9 When sizes do not fit</a></li>
+</ul></nav>
+      <main>
+  <p>Short programs, one idea each, every one of them compiled and run to produce
+the output you see. If you know how to program, you can read this book from
+the top and write Harsh by the end of it.</p>
+<p>It is the <em>lookup</em> book: when you want to know how something is written, find
+the page and copy the shape. <em>The Harsh Programming Language</em> is the one that
+teaches the ideas — ownership, borrowing, traits, lifetimes — and is the place
+to go when an example here works but you cannot see why. <em>The Harsh Language
+Guide</em> is the third: it sets every Harsh spelling beside the Rust it stands
+for, for readers who already know Rust.</p>
+<p><strong>Rust without braces.</strong>
+<strong>Rust with pipes, partial application, comprehensions and linear algebra.</strong>
+<strong>Rust for functional programming, data science and machine learning.</strong></p>
+<p>The last three lines are pages 7, 16 and 17: the pipes and partial
+application, comprehensions, and matrices with linear algebra — what Harsh
+adds to Rust, and the reason to use it.</p>
+<p>There is no Rust in this book. Every program here is transpiled, compiled and
+run before it reaches the page, so what you read is what the machine did.</p>
+<p>The topics, and many of the example programs, follow <em>Rust by Example</em>,
+rewritten in Harsh. <code>ATTRIBUTION.md</code> has the licence and the details.</p>
+<h2 id="1-hello-and-printing">1. Hello and printing</h2>
+<h3 id="1-1-hello-world">1.1 Hello, world!</h3>
+<p>The whole program:</p>
+<pre class="code harsh"><code><span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="mac">println!</span> <span class="str">"Hello, world!"</span></code></pre>
+<pre class="code"><code>Hello, world!</code></pre>
+<p><code>fn main$</code> is the function every program starts from. The <code>$</code> says it takes no
+arguments — Harsh writes <em>apply to nothing</em> that way, and you will see it
+again on every call that takes none, like <code>String.new$</code>.</p>
+<p><code>println!</code> is a macro, which the <code>!</code> tells you, and its arguments are simply
+written after it with spaces between them. No parentheses, no commas: that is
+how every call in Harsh is written, macro or function.</p>
+<h3 id="1-2-comments">1.2 Comments</h3>
+<pre class="code harsh"><code><span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="com">// A line comment runs from the slashes to the end of the line.</span>
+    <span class="k">let</span> x <span class="p">=</span> <span class="num">5</span>
+
+    <span class="p">/</span><span class="p">*</span> <span class="t">A</span> block comment can sit inside an expression<span class="p">,</span> <span class="p">*</span><span class="p">/</span>
+    <span class="k">let</span> y <span class="p">=</span> x <span class="p">+</span> <span class="p">/</span><span class="p">*</span> like this <span class="p">*</span><span class="p">/</span> <span class="num">5</span>
+
+    <span class="mac">println!</span> <span class="str">"x = {x}, y = {y}"</span></code></pre>
+<pre class="code"><code>x = 5, y = 10</code></pre>
+<p>Two kinds, both Rust's: <code>//</code> to the end of the line, and <code>/* … */</code> anywhere,
+including in the middle of an expression. Block comments nest.</p>
+<h3 id="1-3-printing">1.3 Printing</h3>
+<p>The string comes first, then the values that fill its holes:</p>
+<pre class="code harsh"><code><span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="com">// Each `{}` is filled by the next argument, juxtaposed after the string.</span>
+    <span class="mac">println!</span> <span class="str">"{} days"</span> <span class="num">31</span>
+
+    <span class="com">// A name in the braces takes it from a variable of that name.</span>
+    <span class="k">let</span> actor <span class="p">=</span> <span class="str">"the sun"</span>
+    <span class="mac">println!</span> <span class="str">"{actor} rises"</span>
+
+    <span class="com">// `{n}` picks the nth argument, counting from zero.</span>
+    <span class="mac">println!</span> <span class="str">"{0} is {1}, {1} is {0}"</span> <span class="str">"this"</span> <span class="str">"that"</span>
+
+    <span class="com">// A width after `:` pads the value; `&gt;` right-aligns it.</span>
+    <span class="mac">println!</span> <span class="str">"[{:&gt;5}]"</span> <span class="num">42</span>
+
+    <span class="com">// And a `{{` is a literal brace.</span>
+    <span class="mac">println!</span> <span class="str">"{{ not a hole }}"</span></code></pre>
+<pre class="code"><code>31 days
+the sun rises
+this is that, that is this
+[   42]
+{ not a hole }</code></pre>
+<p>The hole is <code>{}</code>. What goes between the braces is a small language of its own —
+a name, a number, a width, an alignment — and all of it is Rust's, unchanged.
+The thing to notice is what is <em>outside</em> the braces: the arguments are
+juxtaposed, so <code>println! "{} {}" a b</code> needs no commas.</p>
+<p>An argument that is not a single atom is isolated in parentheses, exactly as
+it would be for a function:</p>
+<pre><code>println! "{}" (a + 1)
+println! "{}" (p &lt;- name)
+</code></pre>
+<p>That second one is a field access. <code>&lt;-</code> is how Harsh reads into a value, and
+it is an operator, so it needs the parentheses when used as an argument.</p>
+<h3 id="1-4-debug">1.4 Debug</h3>
+<p>Most types cannot be printed until you say how. The quickest way is to derive
+the programmer's spelling:</p>
+<pre class="code harsh"><code><span class="com">// `Debug` is derived: it prints a value the way a programmer reads it.</span>
+<span class="attr">#[derive Debug]</span>
+<span class="k">struct</span> <span class="t">Point</span>\ x<span class="p">:</span> i32<span class="p">,</span> y<span class="p">:</span> i32
+
+<span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="k">let</span> p <span class="p">=</span> <span class="t">Point</span>\ x <span class="p">=</span> <span class="num">3</span><span class="p">,</span> y <span class="p">=</span> <span class="num">4</span>
+
+    <span class="com">// `{:?}` asks for the Debug spelling...</span>
+    <span class="mac">println!</span> <span class="str">"{:?}"</span> p
+
+    <span class="com">// ...and `{:#?}` for the same thing laid out over several lines.</span>
+    <span class="mac">println!</span> <span class="str">"{:#?}"</span> p</code></pre>
+<pre class="code"><code>Point { x: 3, y: 4 }
+Point {
+    x: 3,
+    y: 4,
+}</code></pre>
+<p><code>#[derive Debug]</code> is an attribute, and its arguments juxtapose like everything
+else. <code>{:?}</code> asks for that spelling and <code>{:#?}</code> for the same thing over several
+lines.</p>
+<p>Note the struct declaration: <code>struct Point\ x: i32, y: i32</code>. The <code>\</code> opens a
+<em>specification block</em> — Rust's <code>{ a, b }</code> groupings — and it always follows
+the thing it specifies. The same <code>\</code> builds the value: <code>Point\ x = 3, y = 4</code>.
+Written over several lines, the fields simply go beneath:</p>
+<pre><code>struct Point
+    x: i32
+    y: i32
+</code></pre>
+<h3 id="1-5-display">1.5 Display</h3>
+<p><code>Display</code> is the spelling meant for whoever reads the output, and you write it
+yourself:</p>
+<pre class="code harsh"><code><span class="k">use</span> std<span class="p">.</span>fmt
+
+<span class="k">struct</span> <span class="t">Point</span>\ x<span class="p">:</span> i32<span class="p">,</span> y<span class="p">:</span> i32
+
+<span class="com">// `Display` is written by hand: it is the spelling meant for a reader.</span>
+<span class="k">impl</span> fmt<span class="p">.</span><span class="t">Display</span> <span class="k">for</span> <span class="t">Point</span>
+    <span class="k">fn</span> fmt <span class="p">(</span><span class="p">&amp;</span><span class="k">self</span><span class="p">)</span> <span class="p">(</span>f<span class="p">:</span> <span class="p">&amp;</span><span class="k">mut</span> fmt<span class="p">.</span><span class="t">Formatter</span><span class="p">)</span> <span class="op">-&gt;</span> fmt<span class="p">.</span><span class="t">Result</span><span class="p">:</span>
+        <span class="mac">write!</span> f <span class="str">"({}, {})"</span> <span class="p">(</span><span class="k">self</span> <span class="op">&lt;-</span> x<span class="p">)</span> <span class="p">(</span><span class="k">self</span> <span class="op">&lt;-</span> y<span class="p">)</span>
+
+<span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="k">let</span> p <span class="p">=</span> <span class="t">Point</span>\ x <span class="p">=</span> <span class="num">3</span><span class="p">,</span> y <span class="p">=</span> <span class="num">4</span>
+    <span class="mac">println!</span> <span class="str">"{}"</span> p</code></pre>
+<pre class="code"><code>(3, 4)</code></pre>
+<p><code>impl fmt.Display for Point</code> takes no mark at all — an item body follows its
+header directly, with the items beneath it. <code>.</code> is the path separator, so
+<code>fmt.Display</code> is Rust's <code>fmt::Display</code>. Inside, <code>write!</code> takes the formatter
+and the same string-and-holes as <code>println!</code>.</p>
+<p>Once a type has <code>Display</code>, <code>{}</code> works on it, and <code>to_string$</code> comes free.</p>
+<h2 id="2-primitives">2. Primitives</h2>
+<h3 id="2-1-literals-and-operators">2.1 Literals and operators</h3>
+<pre class="code harsh"><code><span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="com">// A suffix names the type; an underscore is a spacer.</span>
+    <span class="k">let</span> big <span class="p">=</span> <span class="num">1_000_000u64</span>
+    <span class="k">let</span> small<span class="p">:</span> i8 <span class="p">=</span> <span class="p">-</span><span class="num">7</span>
+    <span class="k">let</span> ratio <span class="p">=</span> <span class="num">2.5f32</span>
+
+    <span class="com">// Integer, float, bool, char.</span>
+    <span class="k">let</span> yes <span class="p">=</span> <span class="k">true</span>
+    <span class="k">let</span> letter <span class="p">=</span> <span class="str">'H'</span>
+
+    <span class="mac">println!</span> <span class="str">"{big} {small} {ratio} {yes} {letter}"</span>
+
+    <span class="com">// The operators are Rust's, unchanged.</span>
+    <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span><span class="num">1</span> <span class="p">+</span> <span class="num">2</span> <span class="p">*</span> <span class="num">3</span><span class="p">)</span>
+    <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span><span class="num">7</span> <span class="p">/</span> <span class="num">2</span><span class="p">)</span>          <span class="com">// integer division truncates</span>
+    <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span><span class="num">7</span> <span class="p">%</span> <span class="num">2</span><span class="p">)</span>
+    <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span><span class="num">1u32</span> <span class="p">&lt;</span><span class="p">&lt;</span> <span class="num">5</span><span class="p">)</span>
+    <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span><span class="k">true</span> <span class="op">&amp;&amp;</span> <span class="k">false</span><span class="p">)</span></code></pre>
+<pre class="code"><code>1000000 -7 2.5 true H
+7
+3
+1
+32
+false</code></pre>
+<p>Numbers, <code>bool</code> and <code>char</code> are Rust's, and so is every operator in that list.
+Harsh changes none of it. The one thing to watch is the parentheses: <code>1 + 2 * 3</code>
+is an operator expression, and an operator expression handed to a call is
+isolated, so it is <code>println! "{}" (1 + 2 * 3)</code>.</p>
+<h3 id="2-2-tuples">2.2 Tuples</h3>
+<pre class="code harsh"><code><span class="com">// A tuple struct: its fields juxtapose, like any application.</span>
+<span class="com">// (Parens would hold *one* payload: `struct Wrapped (i32, i32)` has a</span>
+<span class="com">// single field that is a pair.)</span>
+<span class="attr">#[derive Debug]</span>
+<span class="k">struct</span> <span class="t">Matrix</span> f32 f32 f32 f32
+
+<span class="k">fn</span> transpose <span class="p">(</span>m<span class="p">:</span> <span class="t">Matrix</span><span class="p">)</span> <span class="op">-&gt;</span> <span class="t">Matrix</span><span class="p">:</span>
+    <span class="com">// Fields of a tuple are reached by number.</span>
+    <span class="t">Matrix</span> <span class="p">(</span>m <span class="op">&lt;-</span> <span class="num">0</span><span class="p">)</span> <span class="p">(</span>m <span class="op">&lt;-</span> <span class="num">2</span><span class="p">)</span> <span class="p">(</span>m <span class="op">&lt;-</span> <span class="num">1</span><span class="p">)</span> <span class="p">(</span>m <span class="op">&lt;-</span> <span class="num">3</span><span class="p">)</span>
+
+<span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="com">// A tuple value: one construct, commas inside.</span>
+    <span class="k">let</span> pair <span class="p">=</span> <span class="p">(</span><span class="num">1</span><span class="p">,</span> <span class="str">"one"</span><span class="p">)</span>
+    <span class="mac">println!</span> <span class="str">"{:?}"</span> pair
+
+    <span class="com">// Taking it apart binds both halves.</span>
+    <span class="k">let</span> <span class="p">(</span>n<span class="p">,</span> name<span class="p">)</span> <span class="p">=</span> pair
+    <span class="mac">println!</span> <span class="str">"{n} is {name}"</span>
+
+    <span class="com">// Constructing juxtaposes, as every application does.</span>
+    <span class="k">let</span> m <span class="p">=</span> <span class="t">Matrix</span> <span class="num">1.1</span> <span class="num">1.2</span> <span class="num">2.1</span> <span class="num">2.2</span>
+    <span class="mac">println!</span> <span class="str">"{:?}"</span> m
+    <span class="mac">println!</span> <span class="str">"{:?}"</span> <span class="p">(</span>transpose m<span class="p">)</span></code></pre>
+<pre class="code"><code>(1, "one")
+1 is one
+Matrix(1.1, 1.2, 2.1, 2.2)
+Matrix(1.1, 2.1, 1.2, 2.2)</code></pre>
+<p>Two different things share the parentheses here, and it is worth keeping them
+apart.</p>
+<p>A <strong>tuple value</strong> is <code>(1, "one")</code> — one construct, commas inside, exactly as in
+Rust. A <strong>tuple struct</strong> declares its fields by juxtaposition:
+<code>struct Matrix f32 f32 f32 f32</code>. Parentheses in a declaration would hold a
+single payload, so <code>struct Wrapped (i32, i32)</code> is one field that happens to be
+a pair, not two fields.</p>
+<p>Constructing follows the same rule as any call — <code>Matrix 1.1 1.2 2.1 2.2</code> —
+and reaching a field by number is <code>m &lt;- 0</code>.</p>
+<h3 id="2-3-arrays-and-slices">2.3 Arrays and slices</h3>
+<pre class="code harsh"><code><span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="com">// An array: fixed length, all one type.</span>
+    <span class="k">let</span> xs<span class="p">:</span> <span class="p">[</span>i32<span class="p">;</span> <span class="num">5</span><span class="p">]</span> <span class="p">=</span> <span class="p">[</span><span class="num">1</span><span class="p">,</span> <span class="num">2</span><span class="p">,</span> <span class="num">3</span><span class="p">,</span> <span class="num">4</span><span class="p">,</span> <span class="num">5</span><span class="p">]</span>
+
+    <span class="com">// `[value; count]` fills it.</span>
+    <span class="k">let</span> zeros <span class="p">=</span> <span class="p">[</span><span class="num">0</span><span class="p">;</span> <span class="num">3</span><span class="p">]</span>
+
+    <span class="com">// Indexing is tight against the name.</span>
+    <span class="mac">println!</span> <span class="str">"{} {}"</span> xs<span class="p">[</span><span class="num">0</span><span class="p">]</span> xs<span class="p">[</span><span class="num">4</span><span class="p">]</span>
+    <span class="mac">println!</span> <span class="str">"{:?} {:?}"</span> xs zeros
+    <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span>xs <span class="op">&lt;-</span> len<span class="defer">$</span><span class="p">)</span>
+
+    <span class="com">// A slice borrows part of it.</span>
+    <span class="k">let</span> middle <span class="p">=</span> <span class="p">&amp;</span>xs<span class="p">[</span><span class="num">1..4</span><span class="p">]</span>
+    <span class="mac">println!</span> <span class="str">"{:?}"</span> middle
+
+    <span class="com">// Out of range is a panic, not a wrong answer -- see the next example.</span>
+    <span class="k">for</span> x <span class="k">in</span> xs <span class="op">&lt;-</span> iter<span class="defer">$</span><span class="p">:</span>
+        <span class="mac">print!</span> <span class="str">"{x} "</span>
+    <span class="mac">println!</span> <span class="str">""</span></code></pre>
+<pre class="code"><code>1 5
+[1, 2, 3, 4, 5] [0, 0, 0]
+5
+[2, 3, 4]
+1 2 3 4 5</code></pre>
+<p>An index is written tight against the name, <code>xs[0]</code>. That tightness is what
+makes it part of the atom: in an application, <code>f xs[0]</code> passes the element,
+while a spaced <code>f xs [0]</code> is refused rather than guessed at.</p>
+<p>A slice borrows a run of it: <code>&amp;xs[1..4]</code>.</p>
+<p>Reading past the end is a panic, which is to say it stops rather than
+returning something wrong:</p>
+<pre class="code harsh"><code><span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="k">let</span> xs <span class="p">=</span> <span class="p">[</span><span class="num">1</span><span class="p">,</span> <span class="num">2</span><span class="p">,</span> <span class="num">3</span><span class="p">]</span>
+    <span class="k">let</span> n <span class="p">=</span> <span class="num">5</span>
+    <span class="mac">println!</span> <span class="str">"reaching for element {n}"</span>
+    <span class="mac">println!</span> <span class="str">"{}"</span> xs<span class="p">[</span>n<span class="p">]</span></code></pre>
+<pre class="code"><code>reaching for element 5
+thread 'main' panicked at out_of_range.hrs:5:20:</code></pre>
+<h2 id="3-custom-types">3. Custom types</h2>
+<h3 id="3-1-structures">3.1 Structures</h3>
+<pre class="code harsh"><code><span class="attr">#[derive Debug]</span>
+<span class="k">struct</span> <span class="t">Person</span>
+    name<span class="p">:</span> <span class="t">String</span>
+    age<span class="p">:</span> u8
+
+<span class="com">// A unit struct: no fields at all.</span>
+<span class="k">struct</span> <span class="t">Unit</span>
+
+<span class="com">// A tuple struct: its fields juxtapose.</span>
+<span class="k">struct</span> <span class="t">Pair</span> i32 f32
+
+<span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="k">let</span> peter <span class="p">=</span> <span class="t">Person</span>\ name <span class="p">=</span> <span class="t">String</span><span class="p">.</span>from <span class="str">"Peter"</span><span class="p">,</span> age <span class="p">=</span> <span class="num">27</span>
+    <span class="mac">println!</span> <span class="str">"{:?}"</span> peter
+
+    <span class="com">// The same thing over several lines: the fields go beneath.</span>
+    <span class="k">let</span> jane <span class="p">=</span>
+        <span class="t">Person</span>\
+            name <span class="p">=</span> <span class="t">String</span><span class="p">.</span>from <span class="str">"Jane"</span>
+            age <span class="p">=</span> <span class="num">31</span>
+    <span class="mac">println!</span> <span class="str">"{} is {}"</span> <span class="p">(</span>jane <span class="op">&lt;-</span> name<span class="p">)</span> <span class="p">(</span>jane <span class="op">&lt;-</span> age<span class="p">)</span>
+
+    <span class="k">let</span> pair <span class="p">=</span> <span class="t">Pair</span> <span class="num">1</span> <span class="num">0.1</span>
+    <span class="mac">println!</span> <span class="str">"{} {}"</span> <span class="p">(</span>pair <span class="op">&lt;-</span> <span class="num">0</span><span class="p">)</span> <span class="p">(</span>pair <span class="op">&lt;-</span> <span class="num">1</span><span class="p">)</span>
+
+    <span class="com">// A struct is taken apart by naming its fields, the same `\`.</span>
+    <span class="k">let</span> <span class="t">Pair</span> x y <span class="p">=</span> pair
+    <span class="mac">println!</span> <span class="str">"{x} {y}"</span>
+
+    <span class="k">let</span> _u <span class="p">=</span> <span class="t">Unit</span></code></pre>
+<pre class="code"><code>Person { name: "Peter", age: 27 }
+Jane is 31
+1 0.1
+1 0.1</code></pre>
+<p>Three shapes, and the mark is the same in all of them: <strong>none</strong>. A
+declaration's body follows its name directly, with the fields beneath it, or
+inline after a <code>\</code>.</p>
+<pre><code>struct Person              struct Person\ name: String, age: u8
+    name: String
+    age: u8
+</code></pre>
+<p>Building a value uses the same <code>\</code>, with <code>=</code> for each field:
+<code>Person\ name = …, age = 27</code>. Over several lines the fields go beneath, and
+the opener starts its own line after the <code>=</code>. Taking one apart is the mirror
+image — <code>let Pair x y = pair</code> — which is the general rule that <strong>matching is
+constructing</strong>, read backwards.</p>
+<h3 id="3-2-enums">3.2 Enums</h3>
+<pre class="code harsh"><code><span class="com">// A variant can carry nothing, a payload, or named fields.</span>
+<span class="attr">#[derive Debug]</span>
+<span class="k">enum</span> <span class="t">Event</span>
+    <span class="t">PageLoad</span>
+    <span class="t">Click</span> i64 i64
+    <span class="t">KeyPress</span> char
+    <span class="t">Paste</span>
+        text<span class="p">:</span> <span class="t">String</span>
+        at<span class="p">:</span> usize
+
+<span class="k">fn</span> describe <span class="p">(</span>e<span class="p">:</span> <span class="t">Event</span><span class="p">)</span> <span class="op">-&gt;</span> <span class="t">String</span><span class="p">:</span>
+    <span class="k">match</span> e\
+        <span class="t">Event</span><span class="p">.</span><span class="t">PageLoad</span> <span class="op">=&gt;</span> <span class="t">String</span><span class="p">.</span>from <span class="str">"the page loaded"</span>
+        <span class="t">Event</span><span class="p">.</span><span class="t">Click</span> x y <span class="op">=&gt;</span> <span class="mac">format!</span> <span class="str">"clicked at {x}, {y}"</span>
+        <span class="t">Event</span><span class="p">.</span><span class="t">KeyPress</span> c <span class="op">=&gt;</span> <span class="mac">format!</span> <span class="str">"pressed '{c}'"</span>
+        <span class="t">Event</span><span class="p">.</span><span class="t">Paste</span>\ text<span class="p">,</span> at <span class="op">=&gt;</span> <span class="mac">format!</span> <span class="str">"pasted {:?} at {}"</span> text at
+
+<span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="k">let</span> events <span class="p">=</span> <span class="p">[</span>
+        <span class="t">Event</span><span class="p">.</span><span class="t">PageLoad</span><span class="p">,</span>
+        <span class="t">Event</span><span class="p">.</span><span class="t">Click</span> <span class="num">20</span> <span class="num">80</span><span class="p">,</span>
+        <span class="t">Event</span><span class="p">.</span><span class="t">KeyPress</span> <span class="str">'q'</span><span class="p">,</span>
+        <span class="t">Event</span><span class="p">.</span><span class="t">Paste</span>\ text <span class="p">=</span> <span class="t">String</span><span class="p">.</span>from <span class="str">"hi"</span><span class="p">,</span> at <span class="p">=</span> <span class="num">3</span><span class="p">,</span>
+    <span class="p">]</span>
+    <span class="k">for</span> e <span class="k">in</span> events<span class="p">:</span>
+        <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span>describe e<span class="p">)</span></code></pre>
+<pre class="code"><code>the page loaded
+clicked at 20, 80
+pressed 'q'
+pasted "hi" at 3</code></pre>
+<p>A variant carries nothing, a payload (<code>Click i64 i64</code>, juxtaposed like a tuple
+struct), or named fields (<code>Paste</code> with its fields beneath). Constructing and
+matching use the shape the variant was declared with, and the record variant
+takes the <code>\</code> it was declared with:</p>
+<pre><code>Event.Paste\ text = String.from "hi", at = 3        building
+Event.Paste\ text, at =&gt; …                          matching
+</code></pre>
+<p><code>match e\</code> opens the arms with <code>\</code>, because a match's arms are a specification
+block like a struct's fields — Rust writes both with braces and commas. The
+arms then go beneath, or inline after the <code>\</code>:</p>
+<pre><code>match n\ 0 =&gt; "zero", _ =&gt; "more"
+</code></pre>
+<h3 id="3-3-constants">3.3 Constants</h3>
+<pre class="code harsh"><code><span class="com">// A `const` is inlined wherever it is used; a `static` has one address.</span>
+<span class="k">const</span> <span class="t">THRESHOLD</span><span class="p">:</span> i32 <span class="p">=</span> <span class="num">10</span>
+<span class="k">static</span> <span class="t">LANGUAGE</span><span class="p">:</span> <span class="p">&amp;</span>str <span class="p">=</span> <span class="str">"Harsh"</span>
+
+<span class="k">fn</span> is_big <span class="p">(</span>n<span class="p">:</span> i32<span class="p">)</span> <span class="op">-&gt;</span> bool<span class="p">:</span>
+    n <span class="p">&gt;</span> <span class="t">THRESHOLD</span>
+
+<span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="mac">println!</span> <span class="str">"{LANGUAGE}: threshold is {THRESHOLD}"</span>
+    <span class="mac">println!</span> <span class="str">"{} {}"</span> <span class="p">(</span>is_big <span class="num">5</span><span class="p">)</span> <span class="p">(</span>is_big <span class="num">50</span><span class="p">)</span></code></pre>
+<pre class="code"><code>Harsh: threshold is 10
+false true</code></pre>
+<p><code>const</code> is inlined at each use; <code>static</code> names one place in memory. Both need
+their type, and both are written at the top level or inside a function.</p>
+<h2 id="4-bindings-and-types">4. Bindings and types</h2>
+<h3 id="4-1-bindings">4.1 Bindings</h3>
+<pre class="code harsh"><code><span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="com">// A binding is immutable unless it says otherwise.</span>
+    <span class="k">let</span> x <span class="p">=</span> <span class="num">1</span>
+    <span class="k">let</span> <span class="k">mut</span> y <span class="p">=</span> <span class="num">1</span>
+    y <span class="op">+=</span> <span class="num">1</span>
+    <span class="mac">println!</span> <span class="str">"{x} {y}"</span>
+
+    <span class="com">// Shadowing: a second `let` of the same name, even of another type.</span>
+    <span class="k">let</span> spaces <span class="p">=</span> <span class="str">"   "</span>
+    <span class="k">let</span> spaces <span class="p">=</span> spaces <span class="op">&lt;-</span> len<span class="defer">$</span>
+    <span class="mac">println!</span> <span class="str">"{spaces}"</span>
+
+    <span class="com">// A block has its own scope, and is an expression.</span>
+    <span class="k">let</span> outer <span class="p">=</span> <span class="num">1</span>
+    <span class="k">do</span><span class="p">:</span>
+        <span class="k">let</span> outer <span class="p">=</span> <span class="num">2</span>
+        <span class="mac">println!</span> <span class="str">"inner sees {outer}"</span>
+    <span class="mac">println!</span> <span class="str">"outer is still {outer}"</span>
+
+    <span class="com">// Declared first, given a value later.</span>
+    <span class="k">let</span> answer
+    <span class="k">if</span> y <span class="p">&gt;</span> <span class="num">1</span><span class="p">:</span>
+        answer <span class="p">=</span> <span class="str">"big"</span>
+    <span class="k">else</span><span class="p">:</span>
+        answer <span class="p">=</span> <span class="str">"small"</span>
+    <span class="mac">println!</span> <span class="str">"{answer}"</span></code></pre>
+<pre class="code"><code>1 2
+3
+inner sees 2
+outer is still 1
+big</code></pre>
+<p>A <code>let</code> binds a name, and the binding is immutable unless it says <code>mut</code>. A
+second <code>let</code> of the same name <em>shadows</em> the first, and may give it another
+type — which is how <code>spaces</code> goes from a string to its length without a second
+name.</p>
+<p><code>do:</code> opens a block of statements. It is the mark for "this is a block", and
+you will meet it wherever a block is needed but no keyword has already said
+so: as a scope of its own, as a closure's body, as a value.</p>
+<p>Assigning to a binding that never said <code>mut</code> is refused before the program
+runs:</p>
+<pre class="code harsh"><code><span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="k">let</span> x <span class="p">=</span> <span class="num">1</span>
+    x <span class="p">=</span> <span class="num">2</span>
+    <span class="mac">println!</span> <span class="str">"{x}"</span></code></pre>
+<pre class="code"><code>error[E0384]: cannot assign twice to immutable variable `x`
+ --&gt; immutable.hrs:3:5
+  |
+2 |     let x = 1;
+  |         -
+  |         |
+  |         first assignment to `x`
+  |         help: consider making this binding mutable: `mut x`
+3 |     x = 2;
+  |     ^^^^^ cannot assign twice to immutable variable
+
+error: aborting due to previous error
+
+For more information about this error, try `rustc --explain E0384`.</code></pre>
+<h3 id="4-2-types">4.2 Types</h3>
+<pre class="code harsh"><code><span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="com">// An annotation names the type; otherwise it is inferred.</span>
+    <span class="k">let</span> n<span class="p">:</span> u8 <span class="p">=</span> <span class="num">200</span>
+    <span class="k">let</span> guessed <span class="p">=</span> <span class="num">200</span>        <span class="com">// i32 by default</span>
+
+    <span class="com">// A cast is explicit, with `as`.</span>
+    <span class="k">let</span> wide <span class="p">=</span> n <span class="k">as</span> u32 <span class="p">+</span> <span class="num">1</span>
+    <span class="k">let</span> narrowed <span class="p">=</span> <span class="num">300i32</span> <span class="k">as</span> u8      <span class="com">// wraps: 300 - 256</span>
+    <span class="mac">println!</span> <span class="str">"{n} {guessed} {wide} {narrowed}"</span>
+
+    <span class="com">// A float to an integer truncates towards zero.</span>
+    <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span><span class="num">2.9f64</span> <span class="k">as</span> i32<span class="p">)</span>
+
+    <span class="com">// An alias is another name for a type, not a new type.</span>
+    <span class="k">let</span> total<span class="p">:</span> <span class="t">Meters</span> <span class="p">=</span> <span class="num">5</span>
+    <span class="mac">println!</span> <span class="str">"{total}"</span>
+
+<span class="com">// Aliases are items, so they live outside the function too.</span>
+<span class="k">type</span> <span class="t">Meters</span> <span class="p">=</span> u32</code></pre>
+<pre class="code"><code>200 200 201 44
+2
+5</code></pre>
+<p>Every value has a type, written after <code>:</code> when it is not obvious. <code>as</code> casts,
+truncating or wrapping rather than guessing. <code>type</code> makes an alias — another
+name for the same type, not a new one.</p>
+<p>Note where the <code>type</code> item sits in that program: <strong>after</strong> the function that
+uses it. Items are not statements, and their order does not matter.</p>
+<h2 id="5-flow-control">5. Flow control</h2>
+<h3 id="5-1-if-and-else">5.1 if and else</h3>
+<pre class="code harsh"><code><span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="k">let</span> n <span class="p">=</span> <span class="num">7</span>
+
+    <span class="com">// `if` is an expression, so it has a value.</span>
+    <span class="k">let</span> size <span class="p">=</span>
+        <span class="k">if</span> n <span class="p">&lt;</span> <span class="num">5</span><span class="p">:</span>
+            <span class="str">"small"</span>
+        <span class="k">else</span> <span class="k">if</span> n <span class="p">&lt;</span> <span class="num">10</span><span class="p">:</span>
+            <span class="str">"medium"</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="str">"large"</span>
+    <span class="mac">println!</span> <span class="str">"{size}"</span>
+
+    <span class="com">// On one line, the body follows the colon.</span>
+    <span class="k">let</span> parity <span class="p">=</span> <span class="k">if</span> n <span class="p">%</span> <span class="num">2</span> <span class="op">==</span> <span class="num">0</span><span class="p">:</span> <span class="str">"even"</span> <span class="k">else</span><span class="p">:</span> <span class="str">"odd"</span>
+    <span class="mac">println!</span> <span class="str">"{parity}"</span></code></pre>
+<pre class="code"><code>medium
+odd</code></pre>
+<p><code>if</code> is an expression, so it can be the value of a <code>let</code>. Written over several
+lines, the opener ends its line and the body goes beneath; written on one
+line, the body follows the colon.</p>
+<p>Each <code>else</code> answers the nearest open <code>if</code>.</p>
+<h3 id="5-2-loops">5.2 Loops</h3>
+<pre class="code harsh"><code><span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="com">// `loop` runs until something breaks out of it -- and `break` may</span>
+    <span class="com">// carry a value, which makes the loop an expression.</span>
+    <span class="k">let</span> <span class="k">mut</span> n <span class="p">=</span> <span class="num">0</span>
+    <span class="k">let</span> stopped_at <span class="p">=</span>
+        <span class="k">loop</span><span class="p">:</span>
+            n <span class="op">+=</span> <span class="num">1</span>
+            <span class="k">if</span> n <span class="op">==</span> <span class="num">5</span><span class="p">:</span>
+                <span class="k">break</span> n <span class="p">*</span> <span class="num">10</span>
+    <span class="mac">println!</span> <span class="str">"stopped at {stopped_at}"</span>
+
+    <span class="com">// `while` tests first.</span>
+    <span class="k">let</span> <span class="k">mut</span> count <span class="p">=</span> <span class="num">3</span>
+    <span class="k">while</span> count <span class="p">&gt;</span> <span class="num">0</span><span class="p">:</span>
+        <span class="mac">print!</span> <span class="str">"{count} "</span>
+        count <span class="op">-=</span> <span class="num">1</span>
+    <span class="mac">println!</span> <span class="str">"go"</span>
+
+    <span class="com">// `for` walks anything iterable; `..` excludes the end, `..=` includes it.</span>
+    <span class="k">for</span> i <span class="k">in</span> <span class="num">1..4</span><span class="p">:</span>
+        <span class="mac">print!</span> <span class="str">"{i} "</span>
+    <span class="k">for</span> i <span class="k">in</span> <span class="num">1</span><span class="op">..=</span><span class="num">3</span><span class="p">:</span>
+        <span class="mac">print!</span> <span class="str">"{i} "</span>
+    <span class="mac">println!</span> <span class="str">""</span>
+
+    <span class="com">// A label lets `break` leave the outer loop.</span>
+    'rows<span class="p">:</span> <span class="k">for</span> r <span class="k">in</span> <span class="num">0..3</span><span class="p">:</span>
+        <span class="k">for</span> c <span class="k">in</span> <span class="num">0..3</span><span class="p">:</span>
+            <span class="k">if</span> r <span class="p">*</span> c <span class="op">==</span> <span class="num">4</span><span class="p">:</span>
+                <span class="k">break</span> 'rows
+            <span class="mac">print!</span> <span class="str">"{r}{c} "</span>
+    <span class="mac">println!</span> <span class="str">""</span></code></pre>
+<pre class="code"><code>stopped at 50
+3 2 1 go
+1 2 3 1 2 3 
+00 01 02 10 11 12 20 21</code></pre>
+<p><code>loop</code>, <code>while</code> and <code>for</code>, all with their bodies beneath a <code>:</code>. Two things are
+worth pointing out.</p>
+<p><code>break</code> may carry a value, which makes <code>loop</code> an expression — that is where
+<code>stopped_at</code> comes from. And a loop may be labelled, <code>'rows:</code>, so that <code>break</code>
+can leave an outer loop rather than the one it stands in.</p>
+<h3 id="5-3-match">5.3 match</h3>
+<pre class="code harsh"><code><span class="k">fn</span> describe <span class="p">(</span>n<span class="p">:</span> i32<span class="p">)</span> <span class="op">-&gt;</span> <span class="t">String</span><span class="p">:</span>
+    <span class="k">match</span> n\
+        <span class="num">0</span> <span class="op">=&gt;</span> <span class="t">String</span><span class="p">.</span>from <span class="str">"zero"</span>
+        <span class="num">1</span> <span class="p">|</span> <span class="num">2</span> <span class="op">=&gt;</span> <span class="t">String</span><span class="p">.</span>from <span class="str">"a couple"</span>
+        <span class="num">3</span><span class="op">..=</span><span class="num">9</span> <span class="op">=&gt;</span> <span class="t">String</span><span class="p">.</span>from <span class="str">"a few"</span>
+        _ <span class="k">if</span> n <span class="p">&lt;</span> <span class="num">0</span> <span class="op">=&gt;</span> <span class="t">String</span><span class="p">.</span>from <span class="str">"negative"</span>
+        other <span class="op">=&gt;</span> <span class="mac">format!</span> <span class="str">"{other}, which is a lot"</span>
+
+<span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="k">for</span> n <span class="k">in</span> <span class="p">[</span><span class="num">0</span><span class="p">,</span> <span class="num">2</span><span class="p">,</span> <span class="num">5</span><span class="p">,</span> <span class="p">-</span><span class="num">1</span><span class="p">,</span> <span class="num">40</span><span class="p">]</span><span class="p">:</span>
+        <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span>describe n<span class="p">)</span>
+
+    <span class="com">// Destructuring in a match arm.</span>
+    <span class="k">let</span> point <span class="p">=</span> <span class="p">(</span><span class="num">3</span><span class="p">,</span> <span class="num">0</span><span class="p">)</span>
+    <span class="k">let</span> where_ <span class="p">=</span>
+        <span class="k">match</span> point\
+            <span class="p">(</span><span class="num">0</span><span class="p">,</span> <span class="num">0</span><span class="p">)</span> <span class="op">=&gt;</span> <span class="str">"the origin"</span>
+            <span class="p">(</span>_<span class="p">,</span> <span class="num">0</span><span class="p">)</span> <span class="op">=&gt;</span> <span class="str">"the x axis"</span>
+            <span class="p">(</span><span class="num">0</span><span class="p">,</span> _<span class="p">)</span> <span class="op">=&gt;</span> <span class="str">"the y axis"</span>
+            _ <span class="op">=&gt;</span> <span class="str">"somewhere else"</span>
+    <span class="mac">println!</span> <span class="str">"{where_}"</span></code></pre>
+<pre class="code"><code>zero
+a couple
+a few
+negative
+40, which is a lot
+the x axis</code></pre>
+<p><code>match x\</code> opens the arms with <code>\</code>, because they are a specification block:
+Rust writes them with braces and commas, and <code>\</code> is how Harsh spells that.
+The arms go beneath, or inline after the <code>\</code>.</p>
+<p>An arm's pattern is read exactly as an application is — <code>Some n</code>,
+<code>Event.Click x y</code> — which is the rule that <strong>matching is constructing</strong>, used
+backwards. A guard is an <code>if</code> after the pattern, and <code>_</code> catches the rest.</p>
+<h3 id="5-4-if-let-let-else-while-let">5.4 if let, let else, while let</h3>
+<pre class="code harsh"><code><span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="k">let</span> some<span class="p">:</span> <span class="t">Option</span><span class="p">&lt;</span>i32<span class="p">&gt;</span> <span class="p">=</span> <span class="t">Some</span> <span class="num">7</span>
+    <span class="k">let</span> none<span class="p">:</span> <span class="t">Option</span><span class="p">&lt;</span>i32<span class="p">&gt;</span> <span class="p">=</span> <span class="t">None</span>
+
+    <span class="com">// `if let` runs the block only when the pattern fits.</span>
+    <span class="k">if</span> <span class="k">let</span> <span class="t">Some</span> n <span class="p">=</span> some<span class="p">:</span>
+        <span class="mac">println!</span> <span class="str">"got {n}"</span>
+
+    <span class="com">// With an `else` for when it does not.</span>
+    <span class="k">if</span> <span class="k">let</span> <span class="t">Some</span> n <span class="p">=</span> none<span class="p">:</span>
+        <span class="mac">println!</span> <span class="str">"got {n}"</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="mac">println!</span> <span class="str">"got nothing"</span>
+
+    <span class="com">// `let ... else` binds or leaves: the `else` block must not fall through.</span>
+    <span class="k">let</span> <span class="t">Some</span> value <span class="p">=</span> some <span class="k">else</span><span class="p">:</span>
+        <span class="mac">println!</span> <span class="str">"nothing to do"</span>
+        <span class="k">return</span>
+    <span class="mac">println!</span> <span class="str">"value is {value}"</span>
+
+    <span class="com">// `while let` keeps going as long as the pattern fits.</span>
+    <span class="k">let</span> <span class="k">mut</span> stack <span class="p">=</span> <span class="mac">vec!</span> <span class="num">1</span> <span class="num">2</span> <span class="num">3</span>
+    <span class="k">while</span> <span class="k">let</span> <span class="t">Some</span> top <span class="p">=</span> stack <span class="op">&lt;-</span> pop<span class="defer">$</span><span class="p">:</span>
+        <span class="mac">print!</span> <span class="str">"{top} "</span>
+    <span class="mac">println!</span> <span class="str">""</span></code></pre>
+<pre class="code"><code>got 7
+got nothing
+value is 7
+3 2 1</code></pre>
+<p>Three shorthands for the same idea: run this only if the pattern fits.</p>
+<p><code>let … else:</code> is the one to reach for when the rest of the function makes no
+sense without the value — the <code>else</code> block must leave, so after it the binding
+is simply there.</p>
+<h2 id="6-functions">6. Functions</h2>
+<h3 id="6-1-declaring-and-calling">6.1 Declaring and calling</h3>
+<pre class="code harsh"><code><span class="com">// One group per parameter. A single parameter may drop its parentheses.</span>
+<span class="k">fn</span> double n<span class="p">:</span> i32 <span class="op">-&gt;</span> i32<span class="p">:</span>
+    n <span class="p">*</span> <span class="num">2</span>
+
+<span class="k">fn</span> add <span class="p">(</span>a<span class="p">:</span> i32<span class="p">)</span> <span class="p">(</span>b<span class="p">:</span> i32<span class="p">)</span> <span class="op">-&gt;</span> i32<span class="p">:</span>
+    a <span class="p">+</span> b
+
+<span class="com">// No parameters at all: `$`.</span>
+<span class="k">fn</span> greeting<span class="defer">$</span> <span class="op">-&gt;</span> <span class="p">&amp;</span>'static str<span class="p">:</span>
+    <span class="str">"hello"</span>
+
+<span class="com">// Nothing returned: no arrow.</span>
+<span class="k">fn</span> announce <span class="p">(</span>what<span class="p">:</span> <span class="p">&amp;</span>str<span class="p">)</span><span class="p">:</span>
+    <span class="mac">println!</span> <span class="str">"-- {what} --"</span>
+
+<span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    announce <span class="p">(</span>greeting<span class="defer">$</span><span class="p">)</span>
+    <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span>double <span class="num">21</span><span class="p">)</span>
+    <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span>add <span class="num">1</span> <span class="num">2</span><span class="p">)</span>
+
+    <span class="com">// The last expression is the value; `return` is for leaving early.</span>
+    <span class="com">// `-3` is isolated: without the parens, `abs - 3` is a subtraction.</span>
+    <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span>abs <span class="p">(</span><span class="p">-</span><span class="num">3</span><span class="p">)</span><span class="p">)</span>
+
+<span class="k">fn</span> abs n<span class="p">:</span> i32 <span class="op">-&gt;</span> i32<span class="p">:</span>
+    <span class="k">if</span> n <span class="p">&lt;</span> <span class="num">0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">-</span>n
+    n</code></pre>
+<pre class="code"><code>-- hello --
+42
+3
+3</code></pre>
+<p><strong>One group per parameter</strong>: <code>fn add (a: i32) (b: i32)</code>. A single parameter
+may drop its parentheses, <code>fn double n: i32</code>. A comma list is refused, because
+it would be a second spelling of the same thing.</p>
+<p><code>fn greeting$</code> takes nothing — the same <code>$</code> as every call that applies a name
+to nothing.</p>
+<p>Calling juxtaposes: <code>add 1 2</code>. An argument that is not one atom is isolated:
+<code>(greeting$)</code>, <code>(abs (-3))</code>. That last one is the case to remember — without
+its parentheses, <code>abs -3</code> reads as a subtraction, because that is what it
+looks like.</p>
+<h3 id="6-2-methods">6.2 Methods</h3>
+<pre class="code harsh"><code><span class="k">struct</span> <span class="t">Rect</span>
+    w<span class="p">:</span> f64
+    h<span class="p">:</span> f64
+
+<span class="k">impl</span> <span class="t">Rect</span>
+    <span class="com">// An associated function: no `self`, called through the type.</span>
+    <span class="k">fn</span> square s<span class="p">:</span> f64 <span class="op">-&gt;</span> <span class="t">Rect</span><span class="p">:</span>
+        <span class="t">Rect</span>\ w <span class="p">=</span> s<span class="p">,</span> h <span class="p">=</span> s
+
+    <span class="com">// A method: `self` is the first parameter, and alone it may be bare.</span>
+    <span class="k">fn</span> area <span class="p">(</span><span class="p">&amp;</span><span class="k">self</span><span class="p">)</span> <span class="op">-&gt;</span> f64<span class="p">:</span>
+        <span class="p">(</span><span class="k">self</span> <span class="op">&lt;-</span> w<span class="p">)</span> <span class="p">*</span> <span class="p">(</span><span class="k">self</span> <span class="op">&lt;-</span> h<span class="p">)</span>
+
+    <span class="com">// Taking `&amp;mut self` to change the value.</span>
+    <span class="k">fn</span> grow <span class="p">(</span><span class="p">&amp;</span><span class="k">mut</span> <span class="k">self</span><span class="p">)</span> <span class="p">(</span>by<span class="p">:</span> f64<span class="p">)</span><span class="p">:</span>
+        <span class="k">self</span> <span class="op">&lt;-</span> w <span class="op">+=</span> by
+        <span class="k">self</span> <span class="op">&lt;-</span> h <span class="op">+=</span> by
+
+<span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="k">let</span> <span class="k">mut</span> r <span class="p">=</span> <span class="t">Rect</span><span class="p">.</span>square <span class="num">2.0</span>
+    <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span>r <span class="op">&lt;-</span> area<span class="defer">$</span><span class="p">)</span>
+    r <span class="op">&lt;-</span> grow <span class="num">1.0</span>
+    <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span>r <span class="op">&lt;-</span> area<span class="defer">$</span><span class="p">)</span></code></pre>
+<pre class="code"><code>4
+9</code></pre>
+<p>An <code>impl</code> block takes no mark at all: the items follow the header. <code>self</code> is a
+parameter like any other — alone it may be bare, <code>fn area (&amp;self)</code>, and beside
+others it is a group of its own.</p>
+<p><code>&lt;-</code> reaches into a value, so a field is <code>self &lt;- w</code> and a method call on a
+value is <code>r &lt;- area$</code>. An associated function is reached through the type,
+<code>Rect.square 2.0</code>, because <code>.</code> is the path separator.</p>
+<h3 id="6-3-closures">6.3 Closures</h3>
+<pre class="code harsh"><code><span class="k">fn</span> apply <span class="p">(</span>f<span class="p">:</span> <span class="k">impl</span> <span class="t">Fn</span> i32 <span class="op">-&gt;</span> i32<span class="p">)</span> <span class="p">(</span>to<span class="p">:</span> i32<span class="p">)</span> <span class="op">-&gt;</span> i32<span class="p">:</span>
+    f to
+
+<span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="com">// A closure: parameters between bars, then the body.</span>
+    <span class="k">let</span> twice <span class="p">=</span> <span class="p">|</span>x<span class="p">:</span> i32<span class="p">|</span> x <span class="p">*</span> <span class="num">2</span>
+    <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span>apply twice <span class="num">5</span><span class="p">)</span>
+
+    <span class="com">// A block body: `|x|:` with the body beneath, or `|x| do:` inline.</span>
+    <span class="k">let</span> describe <span class="p">=</span> <span class="p">|</span>n<span class="p">:</span> i32<span class="p">|</span><span class="p">:</span>
+        <span class="k">if</span> n <span class="p">&gt;</span> <span class="num">10</span><span class="p">:</span>
+            <span class="str">"big"</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="str">"small"</span>
+    <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span>describe <span class="num">40</span><span class="p">)</span>
+
+    <span class="com">// A closure captures what it uses.</span>
+    <span class="k">let</span> base <span class="p">=</span> <span class="num">100</span>
+    <span class="k">let</span> offset <span class="p">=</span> <span class="p">|</span>x<span class="p">:</span> i32<span class="p">|</span> x <span class="p">+</span> base
+    <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span>offset <span class="num">5</span><span class="p">)</span>
+
+    <span class="com">// In a chain, a closure with a block body is isolated in parentheses:</span>
+    <span class="com">// a bare block would swallow the rest of the chain.</span>
+    <span class="k">let</span> v <span class="p">=</span> <span class="mac">vec!</span> <span class="num">1</span> <span class="num">2</span> <span class="num">3</span> <span class="num">4</span>
+    <span class="k">let</span> evens<span class="p">:</span> <span class="t">Vec</span><span class="p">&lt;</span>i32<span class="p">&gt;</span> <span class="p">=</span>
+        v <span class="op">&lt;-</span> iter<span class="defer">$</span>
+          <span class="op">&lt;-</span> filter <span class="p">(</span><span class="p">|</span>n<span class="p">|</span><span class="p">:</span> <span class="p">*</span>n <span class="p">%</span> <span class="num">2</span> <span class="op">==</span> <span class="num">0</span><span class="p">)</span>
+          <span class="op">&lt;-</span> cloned<span class="defer">$</span>
+          <span class="op">&lt;-</span> collect<span class="defer">$</span>
+    <span class="mac">println!</span> <span class="str">"{:?}"</span> evens
+
+    <span class="com">// When the chain is a statement rather than a value being bound, the</span>
+    <span class="com">// last closure may keep its block, with the body beneath.</span>
+    v <span class="op">&lt;-</span> iter<span class="defer">$</span> <span class="op">&lt;-</span> for_each <span class="p">|</span>n<span class="p">|</span><span class="p">:</span>
+        <span class="mac">print!</span> <span class="str">"{n} "</span>
+    <span class="mac">println!</span> <span class="str">""</span></code></pre>
+<pre class="code"><code>10
+big
+105
+[2, 4]
+1 2 3 4</code></pre>
+<p><code>|x| body</code> on one line; <code>|x|:</code> with the body beneath; <code>|x| do:</code> for the same
+thing inline. As a trailing argument a closure may own its block, and the
+chain closes after it — but only when the chain is a statement. When the chain
+is a value being bound, isolate the closure in parentheses, as <code>filter</code> does
+here, so that the block cannot swallow what follows.</p>
+<h2 id="7-what-harsh-adds">7. What Harsh adds</h2>
+<p>Everything so far has been Rust with the braces taken out. This page is the
+part that is Harsh's own.</p>
+<h3 id="7-1-the-pipes">7.1 The pipes</h3>
+<pre class="code harsh"><code><span class="k">fn</span> sub <span class="p">(</span>a<span class="p">:</span> i32<span class="p">)</span> <span class="p">(</span>b<span class="p">:</span> i32<span class="p">)</span> <span class="p">(</span>c<span class="p">:</span> i32<span class="p">)</span> <span class="op">-&gt;</span> i32<span class="p">:</span>
+    a <span class="p">-</span> b <span class="p">-</span> c
+
+<span class="k">fn</span> double n<span class="p">:</span> i32 <span class="op">-&gt;</span> i32<span class="p">:</span>
+    n <span class="p">*</span> <span class="num">2</span>
+
+<span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="com">// `|&gt;` fills a function's parameters from the left.</span>
+    <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span><span class="num">10</span> <span class="num">5</span> <span class="num">1</span> <span class="op">|&gt;</span> sub<span class="p">)</span>
+
+    <span class="com">// Fewer arguments than it takes: what comes back is a closure waiting</span>
+    <span class="com">// for the rest. This is partial application, and it is flat -- no</span>
+    <span class="com">// nesting, no `move |x| move |y|`.</span>
+    <span class="k">let</span> from_ten <span class="p">=</span> <span class="num">10</span> <span class="op">|&gt;</span> sub
+    <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span>from_ten <span class="num">5</span> <span class="num">1</span><span class="p">)</span>
+
+    <span class="com">// `&lt;|` fills from the right instead.</span>
+    <span class="k">let</span> take_one <span class="p">=</span> sub <span class="op">&lt;|</span> <span class="num">1</span>
+    <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span>take_one <span class="num">10</span> <span class="num">5</span><span class="p">)</span>
+
+    <span class="com">// Both at once: `1 |&gt; sub &lt;| 3` puts 1 first and 3 last.</span>
+    <span class="k">let</span> middle <span class="p">=</span> <span class="num">10</span> <span class="op">|&gt;</span> sub <span class="op">&lt;|</span> <span class="num">1</span>
+    <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span>middle <span class="num">5</span><span class="p">)</span>
+
+    <span class="com">// Chained, a pipe reads left to right: the value, then what happens next.</span>
+    <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span><span class="num">3</span> <span class="op">|&gt;</span> double <span class="op">|&gt;</span> double<span class="p">)</span></code></pre>
+<pre class="code"><code>4
+4
+4
+4
+12</code></pre>
+<p><code>|&gt;</code> fills a function's parameters from the left, <code>&lt;|</code> from the right. When
+the count reaches what the function takes, it is simply a call. When it falls
+short, what comes back is a closure waiting for the rest — partial
+application, and a flat one: a single closure over the remaining parameters,
+not a nest of them.</p>
+<p>The arity comes from the declaration, which <code>hrs</code> has already read, so nothing
+has to be spelled out at the call.</p>
+<p>Left of <code>|&gt;</code> is a run of atoms, all of them arguments. To pipe the <em>result</em> of
+an application, isolate it: <code>(f a) |&gt; g</code>.</p>
+<h3 id="7-2-partial-application">7.2 Partial application</h3>
+<pre class="code harsh"><code><span class="k">fn</span> label <span class="p">(</span>prefix<span class="p">:</span> <span class="p">&amp;</span>str<span class="p">)</span> <span class="p">(</span>name<span class="p">:</span> <span class="p">&amp;</span>str<span class="p">)</span> <span class="p">(</span>suffix<span class="p">:</span> <span class="p">&amp;</span>str<span class="p">)</span> <span class="op">-&gt;</span> <span class="t">String</span><span class="p">:</span>
+    <span class="mac">format!</span> <span class="str">"{prefix}{name}{suffix}"</span>
+
+<span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="com">// `|&gt;` fills the parameters from the left.</span>
+    <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span><span class="str">"Dr. "</span> <span class="str">"Ada"</span> <span class="str">","</span> <span class="op">|&gt;</span> label<span class="p">)</span>
+    <span class="com">// `&lt;|` fills them from the right: this waits for a prefix.</span>
+    <span class="k">let</span> with_phd <span class="p">=</span> label <span class="op">&lt;|</span> <span class="str">"Ada"</span> <span class="str">" PhD"</span>
+    <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span>with_phd <span class="str">"Prof. "</span><span class="p">)</span>
+    <span class="com">// Both together leave a hole in the middle: a function of the name.</span>
+    <span class="k">let</span> formal <span class="p">=</span> <span class="str">"Dr. "</span> <span class="op">|&gt;</span> label <span class="op">&lt;|</span> <span class="str">"."</span>
+    <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span>formal <span class="str">"Ada"</span><span class="p">)</span>
+    <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span>formal <span class="str">"Grace"</span><span class="p">)</span></code></pre>
+<pre class="code"><code>Dr. Ada,
+Prof. Ada PhD
+Dr. Ada.
+Dr. Grace.</code></pre>
+<p>Give a function fewer values than it takes and the result is a function
+waiting for the rest. <code>|&gt;</code> fills parameters from the left, <code>&lt;|</code> from the
+right, and both together leave a hole in the middle: <code>"Dr. " |&gt; label &lt;| "."</code>
+is a function of the name alone. There is no placeholder; the hole is what is
+left. Chapter 14 of the Book has the whole story.</p>
+<h3 id="7-3-macros">7.3 Macros</h3>
+<p>Harsh's macros are organised by who wrote them: in Harsh or in Rust -- the
+mark says so, <code>name~</code> or <code>name!</code> -- and yours or imported from a library.
+The Book's sections 23.5 to 23.8 take each part in full, and follow the Rust
+Book's own chapter on macros.</p>
+<h4 id="harsh-macros">Harsh macros (~)</h4>
+<p>Your own, written in Harsh.</p>
+<h5 id="declarative-macros">Declarative macros</h5>
+<pre class="code harsh"><code><span class="com">// A Harsh macro is matched and expanded by `hrs`, in Harsh, before anything</span>
+<span class="com">// is transpiled. The mark is `~`.</span>
+macro_rules<span class="p">~</span> greet
+    <span class="p">(</span><span class="p">(</span><span class="defer">$</span>who<span class="p">:</span>expr<span class="p">)</span><span class="p">)</span> <span class="op">=&gt;</span> <span class="k">do</span><span class="p">:</span>
+        <span class="mac">println!</span> <span class="str">"hello, {}"</span> <span class="defer">$</span>who
+
+<span class="com">// A repetition takes `*`, `+` or `?`, exactly as Rust's does.</span>
+macro_rules<span class="p">~</span> list_of
+    <span class="p">(</span><span class="defer">$</span><span class="p">(</span> <span class="p">(</span><span class="defer">$</span>x<span class="p">:</span>expr<span class="p">)</span> <span class="p">)</span><span class="p">*</span><span class="p">)</span> <span class="op">=&gt;</span> <span class="k">do</span><span class="p">:</span> <span class="p">[</span><span class="defer">$</span><span class="p">(</span> <span class="defer">$</span>x <span class="p">)</span><span class="p">,</span><span class="p">*</span><span class="p">]</span>
+
+<span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    greet<span class="p">~</span> <span class="str">"world"</span>
+
+    <span class="com">// The arguments are a token stream: everything to the end of the line,</span>
+    <span class="com">// and every line indented beneath it.</span>
+    <span class="k">let</span> small <span class="p">=</span> list_of<span class="p">~</span> <span class="num">1</span> <span class="num">2</span> <span class="num">3</span>
+    <span class="k">let</span> bigger <span class="p">=</span>
+        list_of<span class="p">~</span> <span class="num">1</span> <span class="num">2</span> <span class="num">3</span>
+                     <span class="num">4</span> <span class="num">5</span> <span class="num">6</span>
+    <span class="mac">println!</span> <span class="str">"{:?} {:?}"</span> small bigger
+
+    <span class="com">// To chain on the result, isolate the call.</span>
+    <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span><span class="p">(</span>list_of<span class="p">~</span> <span class="num">1</span> <span class="num">2</span> <span class="num">3</span><span class="p">)</span> <span class="op">&lt;-</span> len<span class="defer">$</span><span class="p">)</span></code></pre>
+<pre class="code"><code>hello, world
+[1, 2, 3] [1, 2, 3, 4, 5, 6]
+3</code></pre>
+<p><code>macro_rules~</code> defines a macro that <code>hrs</code> expands itself, in Harsh, before
+anything is transpiled — so the generated Rust holds no macro at all, and what
+a macro produces is Harsh you could have written by hand.</p>
+<p>A call passes a <strong>token stream</strong>, not arguments: everything after <code>name~</code> to
+the end of the line, and every line indented deeper beneath it. Nothing in
+that stream is interpreted — a comma is the DSL's, a <code>\</code> is the DSL's — which
+is why a macro can invent a grammar of its own. The stream ends at the close
+of a group the call sits inside, so <code>(list_of~ 1 2 3) &lt;- len$</code> chains on the
+result.</p>
+<h5 id="procedural-macros">Procedural macros</h5>
+<p>Programs, written in Harsh in a crate of their own, mirroring Rust's three
+forms; each needs two crates to show, so the Book teaches them (23.5).</p>
+<h6 id="custom-derive-macros">Custom derive Macros</h6>
+<p>A <code>pub fn</code> marked <code>#[proc_macro_derive~ Describe]</code>, called <code>#[derive~ Describe]</code>
+above a <code>struct</code>, an <code>enum</code> or a <code>union</code>: it receives the item and adds code
+after it.</p>
+<h6 id="attribute-like-macros">Attribute-Like Macros</h6>
+<p><code>#[proc_macro_attribute~]</code> on a <code>pub fn</code> taking two streams, the attribute's
+arguments and the item, called <code>#[route~ GET "/"]</code> or <code>#[route~]</code>, and
+replacing the item (the Book's 23.5 has the Rust Book's <code>route</code> example).</p>
+<h6 id="function-like-macros">Function-Like Macros</h6>
+<p>A <code>pub fn</code> marked <code>#[proc_macro~]</code>, called like a declarative macro,
+<code>hello_macro~ world</code>: it receives <code>world</code> and returns the Harsh that takes the
+call's place.</p>
+<h4 id="rust-macros">Rust macros (!)</h4>
+<p>Your own, written in Rust, still supported (23.6).</p>
+<h5 id="declarative-macros-1">Declarative macros</h5>
+<p>A <code>macro_rules!</code> in a Harsh file is a zone of Rust, copied as written; its
+calls are Harsh, <code>square! n</code>.</p>
+<h5 id="procedural-macros-1">Procedural macros</h5>
+<p>A Rust proc-macro crate beside your Harsh crates, brought in with <code>use</code>.</p>
+<h6 id="custom-derive-macros-1">Custom derive Macros</h6>
+<p><code>proc_macro_derive</code>, called <code>#[derive Name]</code>; the Book's 23.6 has the Rust
+Book's <code>HelloMacro</code> used from Harsh.</p>
+<h6 id="attribute-like-macros-1">Attribute-Like Macros</h6>
+<p><code>proc_macro_attribute</code>, two streams, called <code>#[route GET "/"]</code> -- Rust's
+<code>#[route(GET, "/")]</code> -- replacing the item.</p>
+<h6 id="function-like-macros-1">Function-Like Macros</h6>
+<p><code>proc_macro</code>, called <code>name! args</code>.</p>
+<h4 id="harsh-dsls">Harsh DSLs (~)</h4>
+<p>Imported from Harsh libraries, Harsh throughout; the library's guide is the
+reference. The prelude's <code>g~</code> and <code>m~</code> are the first (pages 16 and 17).</p>
+<h4 id="rust-dsls">Rust DSLs (!)</h4>
+<p>Imported from Rust libraries, called by Harsh's rules: <code>vec! 1 2 3</code>,
+<code>#[derive Debug Serialize]</code>, <code>#[tokio.main]</code>; a stream that is a language of
+its own goes in braces, with Harsh in holes, <code>@: … :@</code> (23.8).</p>
+<h2 id="8-ownership-and-borrowing">8. Ownership and borrowing</h2>
+<p>This is the part of Rust that Harsh keeps entirely. Nothing here is a Harsh
+idea; the only thing to learn is how the spellings look.</p>
+<h3 id="8-1-moving">8.1 Moving</h3>
+<pre class="code harsh"><code><span class="k">fn</span> consume <span class="p">(</span>s<span class="p">:</span> <span class="t">String</span><span class="p">)</span> <span class="op">-&gt;</span> usize<span class="p">:</span>
+    s <span class="op">&lt;-</span> len<span class="defer">$</span>
+
+<span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="com">// A `String` owns its text. Passing it hands the ownership over.</span>
+    <span class="k">let</span> a <span class="p">=</span> <span class="t">String</span><span class="p">.</span>from <span class="str">"hello"</span>
+    <span class="k">let</span> n <span class="p">=</span> consume a
+    <span class="mac">println!</span> <span class="str">"{n}"</span>
+    <span class="com">// `a` is gone here: it was moved into `consume`.</span>
+
+    <span class="com">// `clone` makes a second owner.</span>
+    <span class="k">let</span> b <span class="p">=</span> <span class="t">String</span><span class="p">.</span>from <span class="str">"world"</span>
+    <span class="k">let</span> c <span class="p">=</span> b <span class="op">&lt;-</span> clone<span class="defer">$</span>
+    <span class="mac">println!</span> <span class="str">"{b} {c}"</span>
+
+    <span class="com">// Small copyable values are copied instead of moved.</span>
+    <span class="k">let</span> x <span class="p">=</span> <span class="num">5</span>
+    <span class="k">let</span> y <span class="p">=</span> x
+    <span class="mac">println!</span> <span class="str">"{x} {y}"</span></code></pre>
+<pre class="code"><code>5
+world world
+5 5</code></pre>
+<p>A value that owns something — a <code>String</code> owns its text — has exactly one
+owner. Passing it to a function hands the ownership over, and the old name
+cannot be used afterwards. <code>clone$</code> makes a second owner when you want one,
+and small copyable values such as integers are copied rather than moved.</p>
+<p>Using a name after it has been moved is refused before the program runs:</p>
+<pre class="code harsh"><code><span class="k">fn</span> consume <span class="p">(</span>s<span class="p">:</span> <span class="t">String</span><span class="p">)</span><span class="p">:</span>
+    <span class="mac">println!</span> <span class="str">"{s}"</span>
+
+<span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="k">let</span> a <span class="p">=</span> <span class="t">String</span><span class="p">.</span>from <span class="str">"hello"</span>
+    consume a
+    <span class="mac">println!</span> <span class="str">"{a}"</span></code></pre>
+<pre class="code"><code>error[E0382]: borrow of moved value: `a`
+ --&gt; use_after_move.hrs:8:15
+  |
+6 |     let a = String::from("hello");
+  |         - move occurs because `a` has type `String`, which does not implement the `Copy` trait
+7 |     consume(a);
+  |             - value moved here
+8 |     println!("{a}")
+  |               ^^^ value borrowed here after move
+  |
+note: consider changing this parameter type in function `consume` to borrow instead if owning the value isn't necessary
+ --&gt; use_after_move.hrs:1:15
+  |
+1 | fn consume(s: String) {
+  |    -------    ^^^^^^ this parameter takes ownership of the value
+  |    |
+  |    in this function
+  = note: this error originates in the macro `$crate::format_args_nl` which comes from the expansion of the macro `println` (in Nightly builds, run with -Z macro-backtrace for more info)
+help: consider cloning the value if the performance cost is acceptable
+  |
+7 |     consume(a.clone());
+  |              ++++++++
+
+error: aborting due to previous error
+
+For more information about this error, try `rustc --explain E0382`.</code></pre>
+<p>The error arrives on the Harsh line that caused it, not on the generated Rust.</p>
+<h3 id="8-2-borrowing">8.2 Borrowing</h3>
+<pre class="code harsh"><code><span class="com">// A borrow reads without taking ownership.</span>
+<span class="k">fn</span> length <span class="p">(</span>s<span class="p">:</span> <span class="p">&amp;</span><span class="t">String</span><span class="p">)</span> <span class="op">-&gt;</span> usize<span class="p">:</span>
+    s <span class="op">&lt;-</span> len<span class="defer">$</span>
+
+<span class="com">// A mutable borrow may change what it points at.</span>
+<span class="k">fn</span> shout <span class="p">(</span>s<span class="p">:</span> <span class="p">&amp;</span><span class="k">mut</span> <span class="t">String</span><span class="p">)</span><span class="p">:</span>
+    s <span class="op">&lt;-</span> push_str <span class="str">"!"</span>
+
+<span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="k">let</span> <span class="k">mut</span> greeting <span class="p">=</span> <span class="t">String</span><span class="p">.</span>from <span class="str">"hi"</span>
+
+    <span class="com">// `&amp;` is an operator, so a borrowed argument is isolated.</span>
+    <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span>length <span class="p">(</span><span class="p">&amp;</span>greeting<span class="p">)</span><span class="p">)</span>
+
+    shout <span class="p">(</span><span class="p">&amp;</span><span class="k">mut</span> greeting<span class="p">)</span>
+    <span class="mac">println!</span> <span class="str">"{greeting}"</span>
+
+    <span class="com">// Many readers, or one writer, never both at once.</span>
+    <span class="k">let</span> r1 <span class="p">=</span> <span class="p">&amp;</span>greeting
+    <span class="k">let</span> r2 <span class="p">=</span> <span class="p">&amp;</span>greeting
+    <span class="mac">println!</span> <span class="str">"{r1} {r2}"</span>
+
+    <span class="k">let</span> w <span class="p">=</span> <span class="p">&amp;</span><span class="k">mut</span> greeting
+    w <span class="op">&lt;-</span> push_str <span class="str">"?"</span>
+    <span class="mac">println!</span> <span class="str">"{greeting}"</span></code></pre>
+<pre class="code"><code>2
+hi!
+hi! hi!
+hi!?</code></pre>
+<p><code>&amp;x</code> borrows, <code>&amp;mut x</code> borrows so it can change. The rule is one writer <em>or</em>
+any number of readers, never both, and the compiler checks it.</p>
+<p>The Harsh part is only the parentheses: <code>&amp;</code> is an operator, so a borrowed
+argument is isolated — <code>length (&amp;greeting)</code>, <code>shout (&amp;mut greeting)</code>.</p>
+<h3 id="8-3-slices">8.3 Slices</h3>
+<pre class="code harsh"><code><span class="com">// A slice borrows a run of something rather than the whole of it.</span>
+<span class="k">fn</span> first_word <span class="p">(</span>s<span class="p">:</span> <span class="p">&amp;</span>str<span class="p">)</span> <span class="op">-&gt;</span> <span class="p">&amp;</span>str<span class="p">:</span>
+    <span class="k">let</span> bytes <span class="p">=</span> s <span class="op">&lt;-</span> as_bytes<span class="defer">$</span>
+    <span class="k">for</span> <span class="p">(</span>i<span class="p">,</span> <span class="p">&amp;</span>b<span class="p">)</span> <span class="k">in</span> bytes <span class="op">&lt;-</span> iter<span class="defer">$</span> <span class="op">&lt;-</span> enumerate<span class="defer">$</span><span class="p">:</span>
+        <span class="k">if</span> b <span class="op">==</span> b<span class="str">' '</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">&amp;</span>s<span class="p">[</span><span class="num">0..i</span><span class="p">]</span>
+    s
+
+<span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="k">let</span> sentence <span class="p">=</span> <span class="t">String</span><span class="p">.</span>from <span class="str">"hello wide world"</span>
+    <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span>first_word <span class="p">(</span><span class="p">&amp;</span>sentence<span class="p">)</span><span class="p">)</span>
+
+    <span class="k">let</span> numbers <span class="p">=</span> <span class="p">[</span><span class="num">1</span><span class="p">,</span> <span class="num">2</span><span class="p">,</span> <span class="num">3</span><span class="p">,</span> <span class="num">4</span><span class="p">,</span> <span class="num">5</span><span class="p">]</span>
+    <span class="k">let</span> middle <span class="p">=</span> <span class="p">&amp;</span>numbers<span class="p">[</span><span class="num">1..4</span><span class="p">]</span>
+    <span class="mac">println!</span> <span class="str">"{:?} {}"</span> middle <span class="p">(</span>middle <span class="op">&lt;-</span> len<span class="defer">$</span><span class="p">)</span></code></pre>
+<pre class="code"><code>hello
+[2, 3, 4] 3</code></pre>
+<p>A slice borrows a run of a value: <code>&amp;s[0..i]</code> of a string, <code>&amp;numbers[1..4]</code> of
+an array. Note <code>&amp;s[0..i]</code> needs no extra parentheses when it is a <code>return</code>
+value, but would as an argument, by the same operator rule.</p>
+<h2 id="9-generics-and-traits">9. Generics and traits</h2>
+<h3 id="9-1-generics">9.1 Generics</h3>
+<pre class="code harsh"><code><span class="com">// A generic function: one definition, many types.</span>
+<span class="k">fn</span> largest<span class="p">&lt;</span><span class="t">T</span><span class="p">:</span> <span class="t">PartialOrd</span> <span class="p">+</span> <span class="t">Copy</span><span class="p">&gt;</span> <span class="p">(</span>items<span class="p">:</span> <span class="p">&amp;</span><span class="p">[</span><span class="t">T</span><span class="p">]</span><span class="p">)</span> <span class="op">-&gt;</span> <span class="t">T</span><span class="p">:</span>
+    <span class="k">let</span> <span class="k">mut</span> best <span class="p">=</span> items<span class="p">[</span><span class="num">0</span><span class="p">]</span>
+    <span class="k">for</span> <span class="p">&amp;</span>item <span class="k">in</span> items <span class="op">&lt;-</span> iter<span class="defer">$</span><span class="p">:</span>
+        <span class="k">if</span> item <span class="p">&gt;</span> best<span class="p">:</span>
+            best <span class="p">=</span> item
+    best
+
+<span class="com">// A generic type.</span>
+<span class="k">struct</span> <span class="t">Pair</span><span class="p">&lt;</span><span class="t">T</span><span class="p">&gt;</span>
+    left<span class="p">:</span> <span class="t">T</span>
+    right<span class="p">:</span> <span class="t">T</span>
+
+<span class="k">impl</span><span class="p">&lt;</span><span class="t">T</span><span class="p">:</span> std<span class="p">.</span>fmt<span class="p">.</span><span class="t">Display</span><span class="p">&gt;</span> <span class="t">Pair</span><span class="p">&lt;</span><span class="t">T</span><span class="p">&gt;</span>
+    <span class="k">fn</span> show <span class="p">(</span><span class="p">&amp;</span><span class="k">self</span><span class="p">)</span><span class="p">:</span>
+        <span class="mac">println!</span> <span class="str">"({}, {})"</span> <span class="p">(</span><span class="k">self</span> <span class="op">&lt;-</span> left<span class="p">)</span> <span class="p">(</span><span class="k">self</span> <span class="op">&lt;-</span> right<span class="p">)</span>
+
+<span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span>largest <span class="p">(</span><span class="p">&amp;</span><span class="p">[</span><span class="num">1</span><span class="p">,</span> <span class="num">7</span><span class="p">,</span> <span class="num">3</span><span class="p">]</span><span class="p">)</span><span class="p">)</span>
+    <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span>largest <span class="p">(</span><span class="p">&amp;</span><span class="p">[</span><span class="num">1.5</span><span class="p">,</span> <span class="num">0.2</span><span class="p">]</span><span class="p">)</span><span class="p">)</span>
+
+    <span class="k">let</span> p <span class="p">=</span> <span class="t">Pair</span>\ left <span class="p">=</span> <span class="str">"a"</span><span class="p">,</span> right <span class="p">=</span> <span class="str">"b"</span>
+    p <span class="op">&lt;-</span> show<span class="defer">$</span></code></pre>
+<pre class="code"><code>7
+1.5
+(a, b)</code></pre>
+<p>Generic parameters sit in <code>&lt;&gt;</code> after the name, with their bounds, exactly as
+in Rust. A bound long enough to be awkward goes in a bracketed <code>where</code> clause, which is
+Harsh's own spelling:</p>
+<pre class="code harsh"><code><span class="com">// A bound long enough to be awkward goes in a bracketed `where` clause.</span>
+<span class="com">// Brackets suppress layout, so the clause may span lines and its own `:`</span>
+<span class="com">// cannot be mistaken for a block opener.</span>
+<span class="k">fn</span> describe_all<span class="p">&lt;</span><span class="t">T</span><span class="p">&gt;</span> <span class="p">(</span>items<span class="p">:</span> <span class="p">&amp;</span><span class="p">[</span><span class="t">T</span><span class="p">]</span><span class="p">)</span> <span class="op">-&gt;</span> <span class="t">String</span>
+    <span class="p">[</span><span class="k">where</span> <span class="t">T</span><span class="p">:</span> std<span class="p">.</span>fmt<span class="p">.</span><span class="t">Debug</span> <span class="p">+</span> <span class="t">Clone</span><span class="p">]</span><span class="p">:</span>
+    <span class="mac">format!</span> <span class="str">"{:?}"</span> <span class="p">(</span>items <span class="op">&lt;-</span> to_vec<span class="defer">$</span><span class="p">)</span>
+
+<span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span>describe_all <span class="p">(</span><span class="p">&amp;</span><span class="p">[</span><span class="num">1</span><span class="p">,</span> <span class="num">2</span><span class="p">,</span> <span class="num">3</span><span class="p">]</span><span class="p">)</span><span class="p">)</span>
+    <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span>describe_all <span class="p">(</span><span class="p">&amp;</span><span class="p">[</span><span class="str">"a"</span><span class="p">,</span> <span class="str">"b"</span><span class="p">]</span><span class="p">)</span><span class="p">)</span></code></pre>
+<pre class="code"><code>[1, 2, 3]
+["a", "b"]</code></pre>
+<p>The brackets are there because a bound contains a <code>:</code>, and a <code>:</code> at the end of
+a line opens a block. Brackets suppress layout, so the clause may span lines
+and its colons cannot be mistaken for openers.</p>
+<h3 id="9-2-traits">9.2 Traits</h3>
+<pre class="code harsh"><code><span class="k">trait</span> <span class="t">Greet</span>
+    <span class="com">// A method with no body: whoever implements the trait writes it.</span>
+    <span class="k">fn</span> name <span class="p">(</span><span class="p">&amp;</span><span class="k">self</span><span class="p">)</span> <span class="op">-&gt;</span> <span class="t">String</span>
+
+    <span class="com">// One with a body is a default, and may be overridden.</span>
+    <span class="k">fn</span> hello <span class="p">(</span><span class="p">&amp;</span><span class="k">self</span><span class="p">)</span> <span class="op">-&gt;</span> <span class="t">String</span><span class="p">:</span>
+        <span class="mac">format!</span> <span class="str">"hello, {}"</span> <span class="p">(</span><span class="k">self</span> <span class="op">&lt;-</span> name<span class="defer">$</span><span class="p">)</span>
+
+<span class="k">struct</span> <span class="t">Cat</span>
+<span class="k">struct</span> <span class="t">Dog</span>\ called<span class="p">:</span> <span class="t">String</span>
+
+<span class="k">impl</span> <span class="t">Greet</span> <span class="k">for</span> <span class="t">Cat</span>
+    <span class="k">fn</span> name <span class="p">(</span><span class="p">&amp;</span><span class="k">self</span><span class="p">)</span> <span class="op">-&gt;</span> <span class="t">String</span><span class="p">:</span>
+        <span class="t">String</span><span class="p">.</span>from <span class="str">"cat"</span>
+
+<span class="k">impl</span> <span class="t">Greet</span> <span class="k">for</span> <span class="t">Dog</span>
+    <span class="k">fn</span> name <span class="p">(</span><span class="p">&amp;</span><span class="k">self</span><span class="p">)</span> <span class="op">-&gt;</span> <span class="t">String</span><span class="p">:</span>
+        <span class="k">self</span> <span class="op">&lt;-</span> called <span class="op">&lt;-</span> clone<span class="defer">$</span>
+
+    <span class="k">fn</span> hello <span class="p">(</span><span class="p">&amp;</span><span class="k">self</span><span class="p">)</span> <span class="op">-&gt;</span> <span class="t">String</span><span class="p">:</span>
+        <span class="mac">format!</span> <span class="str">"woof, says {}"</span> <span class="p">(</span><span class="k">self</span> <span class="op">&lt;-</span> name<span class="defer">$</span><span class="p">)</span>
+
+<span class="com">// Taking any type that implements the trait.</span>
+<span class="k">fn</span> greet_all <span class="p">(</span>who<span class="p">:</span> <span class="p">&amp;</span><span class="p">[</span><span class="p">&amp;</span><span class="k">dyn</span> <span class="t">Greet</span><span class="p">]</span><span class="p">)</span><span class="p">:</span>
+    <span class="k">for</span> one <span class="k">in</span> who <span class="op">&lt;-</span> iter<span class="defer">$</span><span class="p">:</span>
+        <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span>one <span class="op">&lt;-</span> hello<span class="defer">$</span><span class="p">)</span>
+
+<span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="k">let</span> d <span class="p">=</span> <span class="t">Dog</span>\ called <span class="p">=</span> <span class="t">String</span><span class="p">.</span>from <span class="str">"Rex"</span>
+    greet_all <span class="p">(</span><span class="p">&amp;</span><span class="p">[</span><span class="p">&amp;</span><span class="t">Cat</span><span class="p">,</span> <span class="p">&amp;</span>d<span class="p">]</span><span class="p">)</span></code></pre>
+<pre class="code"><code>hello, cat
+woof, says Rex</code></pre>
+<p>A trait declares methods; an <code>impl … for …</code> provides them. Both take no mark:
+the items follow the header. A method with a body in the trait is a default.</p>
+<p><code>&amp;dyn Greet</code> is a trait object — any type implementing the trait, decided at
+run time. <code>impl Greet</code> as a parameter type is the other way, decided at
+compile time.</p>
+<h3 id="9-3-operators-are-traits">9.3 Operators are traits</h3>
+<pre class="code harsh"><code><span class="k">use</span> std<span class="p">.</span>ops<span class="p">.</span><span class="t">Add</span>
+
+<span class="attr">#[derive Debug Clone Copy]</span>
+<span class="k">struct</span> <span class="t">Point</span>
+    x<span class="p">:</span> i32
+    y<span class="p">:</span> i32
+
+<span class="com">// Operators are traits, so `+` is written by implementing `Add`.</span>
+<span class="k">impl</span> <span class="t">Add</span> <span class="k">for</span> <span class="t">Point</span>
+    <span class="k">type</span> <span class="t">Output</span> <span class="p">=</span> <span class="t">Point</span>
+
+    <span class="k">fn</span> add <span class="p">(</span><span class="k">self</span><span class="p">)</span> <span class="p">(</span>other<span class="p">:</span> <span class="t">Point</span><span class="p">)</span> <span class="op">-&gt;</span> <span class="t">Point</span><span class="p">:</span>
+        <span class="t">Point</span>\ x <span class="p">=</span> <span class="p">(</span><span class="k">self</span> <span class="op">&lt;-</span> x<span class="p">)</span> <span class="p">+</span> <span class="p">(</span>other <span class="op">&lt;-</span> x<span class="p">)</span><span class="p">,</span> y <span class="p">=</span> <span class="p">(</span><span class="k">self</span> <span class="op">&lt;-</span> y<span class="p">)</span> <span class="p">+</span> <span class="p">(</span>other <span class="op">&lt;-</span> y<span class="p">)</span>
+
+<span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="k">let</span> a <span class="p">=</span> <span class="t">Point</span>\ x <span class="p">=</span> <span class="num">1</span><span class="p">,</span> y <span class="p">=</span> <span class="num">2</span>
+    <span class="k">let</span> b <span class="p">=</span> <span class="t">Point</span>\ x <span class="p">=</span> <span class="num">10</span><span class="p">,</span> y <span class="p">=</span> <span class="num">20</span>
+    <span class="mac">println!</span> <span class="str">"{:?}"</span> <span class="p">(</span>a <span class="p">+</span> b<span class="p">)</span></code></pre>
+<pre class="code"><code>Point { x: 11, y: 22 }</code></pre>
+<p><code>+</code> is <code>Add</code>, <code>*</code> is <code>Mul</code>, <code>==</code> is <code>PartialEq</code>. Implementing the trait is
+what gives a type the operator, and <code>type Output = …</code> names what comes back.</p>
+<p>This is why Harsh does not need operator syntax of its own for matrices or
+money or anything else: the operator is already a trait, and the trait is
+already implementable.</p>
+<h2 id="10-errors">10. Errors</h2>
+<p>Harsh has no exceptions, because Rust has none. A function that can fail says
+so in its return type, and the caller has to deal with it.</p>
+<h3 id="10-1-option">10.1 Option</h3>
+<pre class="code harsh"><code><span class="k">fn</span> first_even <span class="p">(</span>xs<span class="p">:</span> <span class="p">&amp;</span><span class="p">[</span>i32<span class="p">]</span><span class="p">)</span> <span class="op">-&gt;</span> <span class="t">Option</span><span class="p">&lt;</span>i32<span class="p">&gt;</span><span class="p">:</span>
+    <span class="k">for</span> <span class="p">&amp;</span>x <span class="k">in</span> xs <span class="op">&lt;-</span> iter<span class="defer">$</span><span class="p">:</span>
+        <span class="k">if</span> x <span class="p">%</span> <span class="num">2</span> <span class="op">==</span> <span class="num">0</span><span class="p">:</span>
+            <span class="k">return</span> <span class="t">Some</span> x
+    <span class="t">None</span>
+
+<span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="mac">println!</span> <span class="str">"{:?}"</span> <span class="p">(</span>first_even <span class="p">(</span><span class="p">&amp;</span><span class="p">[</span><span class="num">1</span><span class="p">,</span> <span class="num">3</span><span class="p">,</span> <span class="num">4</span><span class="p">]</span><span class="p">)</span><span class="p">)</span>
+    <span class="mac">println!</span> <span class="str">"{:?}"</span> <span class="p">(</span>first_even <span class="p">(</span><span class="p">&amp;</span><span class="p">[</span><span class="num">1</span><span class="p">,</span> <span class="num">3</span><span class="p">]</span><span class="p">)</span><span class="p">)</span>
+
+    <span class="com">// Reading what is inside, safely.</span>
+    <span class="k">match</span> first_even <span class="p">(</span><span class="p">&amp;</span><span class="p">[</span><span class="num">5</span><span class="p">,</span> <span class="num">6</span><span class="p">]</span><span class="p">)</span>\
+        <span class="t">Some</span> n <span class="op">=&gt;</span> <span class="mac">println!</span> <span class="str">"found {n}"</span>
+        <span class="t">None</span> <span class="op">=&gt;</span> <span class="mac">println!</span> <span class="str">"found nothing"</span>
+
+    <span class="com">// Or with a default.</span>
+    <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span>first_even <span class="p">(</span><span class="p">&amp;</span><span class="p">[</span><span class="num">1</span><span class="p">]</span><span class="p">)</span> <span class="op">&lt;-</span> unwrap_or <span class="num">0</span><span class="p">)</span>
+
+    <span class="com">// `?` on an Option leaves the function early when it is None.</span>
+    <span class="mac">println!</span> <span class="str">"{:?}"</span> <span class="p">(</span>doubled_first <span class="p">(</span><span class="p">&amp;</span><span class="p">[</span><span class="num">4</span><span class="p">,</span> <span class="num">5</span><span class="p">]</span><span class="p">)</span><span class="p">)</span>
+    <span class="mac">println!</span> <span class="str">"{:?}"</span> <span class="p">(</span>doubled_first <span class="p">(</span><span class="p">&amp;</span><span class="p">[</span><span class="num">1</span><span class="p">,</span> <span class="num">5</span><span class="p">]</span><span class="p">)</span><span class="p">)</span>
+
+<span class="k">fn</span> doubled_first <span class="p">(</span>xs<span class="p">:</span> <span class="p">&amp;</span><span class="p">[</span>i32<span class="p">]</span><span class="p">)</span> <span class="op">-&gt;</span> <span class="t">Option</span><span class="p">&lt;</span>i32<span class="p">&gt;</span><span class="p">:</span>
+    <span class="k">let</span> n <span class="p">=</span> first_even xs<span class="p">?</span>
+    <span class="t">Some</span> <span class="p">(</span>n <span class="p">*</span> <span class="num">2</span><span class="p">)</span></code></pre>
+<pre class="code"><code>Some(4)
+None
+found 6
+0
+Some(8)
+None</code></pre>
+<p><code>Option&lt;T&gt;</code> is either <code>Some value</code> or <code>None</code>. <code>match</code> reads it; <code>unwrap_or</code>
+gives a default; <code>?</code> leaves the function early when it is <code>None</code>.</p>
+<p>Note <code>Some n</code> and <code>Some (n * 2)</code>: constructing a variant is an application
+like any other, so the payload is juxtaposed and an expression is isolated.</p>
+<h3 id="10-2-result">10.2 Result</h3>
+<pre class="code harsh"><code><span class="k">fn</span> parse_age <span class="p">(</span>text<span class="p">:</span> <span class="p">&amp;</span>str<span class="p">)</span> <span class="op">-&gt;</span> <span class="t">Result</span><span class="p">&lt;</span>u32<span class="p">,</span> <span class="t">String</span><span class="p">&gt;</span><span class="p">:</span>
+    <span class="com">// `map_err` turns one error into another.</span>
+    <span class="k">let</span> n<span class="p">:</span> u32 <span class="p">=</span>
+        text <span class="op">&lt;-</span> trim<span class="defer">$</span>
+             <span class="op">&lt;-</span> parse<span class="defer">$</span>
+             <span class="op">&lt;-</span> map_err <span class="p">(</span><span class="p">|</span>e<span class="p">|</span> <span class="mac">format!</span> <span class="str">"{text:?} is not a number ({e})"</span><span class="p">)</span><span class="p">?</span>
+    <span class="k">if</span> n <span class="p">&gt;</span> <span class="num">150</span><span class="p">:</span>
+        <span class="k">return</span> <span class="t">Err</span> <span class="p">(</span><span class="mac">format!</span> <span class="str">"{n} is too old"</span><span class="p">)</span>
+    <span class="t">Ok</span> n
+
+<span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="k">for</span> text <span class="k">in</span> <span class="p">[</span><span class="str">"31"</span><span class="p">,</span> <span class="str">" 7 "</span><span class="p">,</span> <span class="str">"abc"</span><span class="p">,</span> <span class="str">"900"</span><span class="p">]</span><span class="p">:</span>
+        <span class="k">match</span> parse_age text\
+            <span class="t">Ok</span> n <span class="op">=&gt;</span> <span class="mac">println!</span> <span class="str">"age {n}"</span>
+            <span class="t">Err</span> why <span class="op">=&gt;</span> <span class="mac">println!</span> <span class="str">"rejected: {why}"</span></code></pre>
+<pre class="code"><code>age 31
+age 7
+rejected: "abc" is not a number (invalid digit found in string)
+rejected: 900 is too old</code></pre>
+<p><code>Result&lt;T, E&gt;</code> is <code>Ok value</code> or <code>Err why</code>. <code>?</code> is the same shorthand: it
+returns the error to the caller, converting it if the types allow.</p>
+<p>The chain in <code>parse_age</code> is worth reading slowly —
+<code>text &lt;- trim$ &lt;- parse$ &lt;- map_err (…)?</code> — because it shows the two
+mechanisms side by side: <code>&lt;-</code> walks the chain, and <code>?</code> at the end takes the
+error out of it.</p>
+<h3 id="10-3-an-error-type-of-your-own">10.3 An error type of your own</h3>
+<pre class="code harsh"><code><span class="k">use</span> std<span class="p">.</span>fmt
+
+<span class="com">// An error of one's own is a type with a `Display`.</span>
+<span class="attr">#[derive Debug]</span>
+<span class="k">enum</span> <span class="t">ConfigError</span>
+    <span class="t">Missing</span> <span class="t">String</span>
+    <span class="t">Bad</span>
+        key<span class="p">:</span> <span class="t">String</span>
+        value<span class="p">:</span> <span class="t">String</span>
+
+<span class="k">impl</span> fmt<span class="p">.</span><span class="t">Display</span> <span class="k">for</span> <span class="t">ConfigError</span>
+    <span class="k">fn</span> fmt <span class="p">(</span><span class="p">&amp;</span><span class="k">self</span><span class="p">)</span> <span class="p">(</span>f<span class="p">:</span> <span class="p">&amp;</span><span class="k">mut</span> fmt<span class="p">.</span><span class="t">Formatter</span><span class="p">)</span> <span class="op">-&gt;</span> fmt<span class="p">.</span><span class="t">Result</span><span class="p">:</span>
+        <span class="k">match</span> <span class="k">self</span>\
+            <span class="t">ConfigError</span><span class="p">.</span><span class="t">Missing</span> key <span class="op">=&gt;</span> <span class="mac">write!</span> f <span class="str">"{key} is missing"</span>
+            <span class="t">ConfigError</span><span class="p">.</span><span class="t">Bad</span>\ key<span class="p">,</span> value <span class="op">=&gt;</span> <span class="mac">write!</span> f <span class="str">"{key} cannot be {value}"</span>
+
+<span class="com">// An impl with no items of its own keeps Rust's braces: there is no body</span>
+<span class="com">// to put beneath it.</span>
+<span class="k">impl</span> std<span class="p">.</span>error<span class="p">.</span><span class="t">Error</span> <span class="k">for</span> <span class="t">ConfigError</span> <span class="p">{</span><span class="p">}</span>
+
+<span class="k">fn</span> port <span class="p">(</span>raw<span class="p">:</span> <span class="t">Option</span><span class="p">&lt;</span><span class="p">&amp;</span>str<span class="p">&gt;</span><span class="p">)</span> <span class="op">-&gt;</span> <span class="t">Result</span><span class="p">&lt;</span>u16<span class="p">,</span> <span class="t">ConfigError</span><span class="p">&gt;</span><span class="p">:</span>
+    <span class="k">let</span> <span class="t">Some</span> text <span class="p">=</span> raw <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="t">Err</span> <span class="p">(</span><span class="t">ConfigError</span><span class="p">.</span><span class="t">Missing</span> <span class="p">(</span><span class="t">String</span><span class="p">.</span>from <span class="str">"port"</span><span class="p">)</span><span class="p">)</span>
+    text <span class="op">&lt;-</span> parse<span class="defer">$</span> <span class="op">&lt;-</span> map_err <span class="p">|</span>_<span class="p">|</span><span class="p">:</span>
+        <span class="t">ConfigError</span><span class="p">.</span><span class="t">Bad</span>\ key <span class="p">=</span> <span class="t">String</span><span class="p">.</span>from <span class="str">"port"</span><span class="p">,</span> value <span class="p">=</span> <span class="t">String</span><span class="p">.</span>from text
+
+<span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="k">for</span> raw <span class="k">in</span> <span class="p">[</span><span class="t">Some</span> <span class="str">"8080"</span><span class="p">,</span> <span class="t">Some</span> <span class="str">"wat"</span><span class="p">,</span> <span class="t">None</span><span class="p">]</span><span class="p">:</span>
+        <span class="k">match</span> port raw\
+            <span class="t">Ok</span> n <span class="op">=&gt;</span> <span class="mac">println!</span> <span class="str">"port {n}"</span>
+            <span class="t">Err</span> e <span class="op">=&gt;</span> <span class="mac">println!</span> <span class="str">"error: {e}"</span></code></pre>
+<pre class="code"><code>port 8080
+error: port cannot be wat
+error: port is missing</code></pre>
+<p>An error is a type with a <code>Display</code>. Giving it <code>std.error.Error</code> as well lets
+it travel as a <code>Box&lt;dyn Error&gt;</code>, which is what a program that has several
+kinds of failure usually returns.</p>
+<p>Two Harsh details in that program. An <code>impl</code> with no items of its own keeps
+Rust's braces — <code>impl std.error.Error for ConfigError {}</code> — since there is no
+body to put beneath it. And a record variant is matched with the <code>\</code> it was
+declared with: <code>ConfigError.Bad\ key, value</code>.</p>
+<h2 id="11-collections">11. Collections</h2>
+<h3 id="11-1-vectors">11.1 Vectors</h3>
+<pre class="code harsh"><code><span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="com">// `vec!` builds one; brackets are Rust's and pass through.</span>
+    <span class="k">let</span> <span class="k">mut</span> v <span class="p">=</span> <span class="mac">vec!</span> <span class="num">1</span> <span class="num">2</span> <span class="num">3</span>
+    v <span class="op">&lt;-</span> push <span class="num">4</span>
+
+    <span class="mac">println!</span> <span class="str">"{:?} {}"</span> v <span class="p">(</span>v <span class="op">&lt;-</span> len<span class="defer">$</span><span class="p">)</span>
+    <span class="mac">println!</span> <span class="str">"{}"</span> v<span class="p">[</span><span class="num">0</span><span class="p">]</span>
+
+    <span class="com">// `get` returns an Option rather than panicking.</span>
+    <span class="mac">println!</span> <span class="str">"{:?} {:?}"</span> <span class="p">(</span>v <span class="op">&lt;-</span> get <span class="num">1</span><span class="p">)</span> <span class="p">(</span>v <span class="op">&lt;-</span> get <span class="num">99</span><span class="p">)</span>
+
+    <span class="com">// Iterating, and building a new one.</span>
+    <span class="k">let</span> doubled<span class="p">:</span> <span class="t">Vec</span><span class="p">&lt;</span>i32<span class="p">&gt;</span> <span class="p">=</span>
+        v <span class="op">&lt;-</span> iter<span class="defer">$</span>
+          <span class="op">&lt;-</span> map <span class="p">(</span><span class="p">|</span>n<span class="p">|</span> n <span class="p">*</span> <span class="num">2</span><span class="p">)</span>
+          <span class="op">&lt;-</span> collect<span class="defer">$</span>
+    <span class="mac">println!</span> <span class="str">"{:?}"</span> doubled
+
+    <span class="k">let</span> total<span class="p">:</span> i32 <span class="p">=</span> v <span class="op">&lt;-</span> iter<span class="defer">$</span> <span class="op">&lt;-</span> sum<span class="defer">$</span>
+    <span class="mac">println!</span> <span class="str">"{total}"</span></code></pre>
+<pre class="code"><code>[1, 2, 3, 4] 4
+1
+Some(2) None
+[2, 4, 6, 8]
+10</code></pre>
+<p><code>vec! 1 2 3</code> builds one: a macro is applied like a function, one argument per
+value. <code>vec! { 0; 4 }</code> repeats one value, four times -- that stream is not a
+list of values, so it goes in braces and reaches the macro as written.</p>
+<p><code>v[0]</code> indexes and panics if it is out of range; <code>v &lt;- get 0</code> returns an
+<code>Option</code> instead.</p>
+<h3 id="11-2-maps">11.2 Maps</h3>
+<pre class="code harsh"><code><span class="k">use</span> std<span class="p">.</span>collections<span class="p">.</span><span class="t">HashMap</span>
+
+<span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="k">let</span> <span class="k">mut</span> ages <span class="p">=</span> <span class="t">HashMap</span><span class="p">.</span>new<span class="defer">$</span>
+    ages <span class="op">&lt;-</span> insert <span class="str">"Ada"</span> <span class="num">36</span>
+    ages <span class="op">&lt;-</span> insert <span class="str">"Alan"</span> <span class="num">41</span>
+
+    <span class="com">// Looking up gives an Option.</span>
+    <span class="k">match</span> ages <span class="op">&lt;-</span> get <span class="str">"Ada"</span>\
+        <span class="t">Some</span> n <span class="op">=&gt;</span> <span class="mac">println!</span> <span class="str">"Ada is {n}"</span>
+        <span class="t">None</span> <span class="op">=&gt;</span> <span class="mac">println!</span> <span class="str">"no Ada"</span>
+
+    <span class="com">// `entry` inserts only when the key is absent.</span>
+    ages <span class="op">&lt;-</span> entry <span class="str">"Grace"</span> <span class="op">&lt;-</span> or_insert <span class="num">45</span>
+    ages <span class="op">&lt;-</span> entry <span class="str">"Ada"</span> <span class="op">&lt;-</span> or_insert <span class="num">0</span>
+
+    <span class="com">// A HashMap has no order, so sort before printing.</span>
+    <span class="k">let</span> <span class="k">mut</span> pairs<span class="p">:</span> <span class="t">Vec</span><span class="p">&lt;</span>_<span class="p">&gt;</span> <span class="p">=</span> ages <span class="op">&lt;-</span> iter<span class="defer">$</span> <span class="op">&lt;-</span> collect<span class="defer">$</span>
+    pairs <span class="op">&lt;-</span> sort<span class="defer">$</span>
+    <span class="mac">println!</span> <span class="str">"{:?}"</span> pairs</code></pre>
+<pre class="code"><code>Ada is 36
+[("Ada", 36), ("Alan", 41), ("Grace", 45)]</code></pre>
+<p><code>HashMap.new$</code>, then <code>insert</code>, <code>get</code>, <code>entry</code>. A map has no order, so a
+program that prints one should sort first — which is why the last two lines
+collect into a <code>Vec</code> and sort it.</p>
+<h3 id="11-3-strings">11.3 Strings</h3>
+<pre class="code harsh"><code><span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="com">// `&amp;str` borrows; `String` owns.</span>
+    <span class="k">let</span> borrowed <span class="p">=</span> <span class="str">"hello"</span>
+    <span class="k">let</span> <span class="k">mut</span> owned <span class="p">=</span> <span class="t">String</span><span class="p">.</span>from borrowed
+    owned <span class="op">&lt;-</span> push_str <span class="str">", world"</span>
+    <span class="mac">println!</span> <span class="str">"{owned}"</span>
+
+    <span class="com">// Slicing is by bytes, so it must fall on a character boundary.</span>
+    <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span><span class="p">&amp;</span>owned<span class="p">[</span><span class="num">0..5</span><span class="p">]</span><span class="p">)</span>
+
+    <span class="com">// Splitting, trimming, joining.</span>
+    <span class="k">let</span> csv <span class="p">=</span> <span class="str">" a,b,c "</span>
+    <span class="k">let</span> parts<span class="p">:</span> <span class="t">Vec</span><span class="p">&lt;</span><span class="p">&amp;</span>str<span class="p">&gt;</span> <span class="p">=</span>
+        csv <span class="op">&lt;-</span> trim<span class="defer">$</span>
+            <span class="op">&lt;-</span> split <span class="str">','</span>
+            <span class="op">&lt;-</span> collect<span class="defer">$</span>
+    <span class="mac">println!</span> <span class="str">"{:?}"</span> parts
+    <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span>parts <span class="op">&lt;-</span> join <span class="str">" + "</span><span class="p">)</span>
+
+    <span class="com">// Characters, not bytes, when you mean characters.</span>
+    <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span><span class="str">"héllo"</span> <span class="op">&lt;-</span> chars<span class="defer">$</span> <span class="op">&lt;-</span> count<span class="defer">$</span><span class="p">)</span></code></pre>
+<pre class="code"><code>hello, world
+hello
+["a", "b", "c"]
+a + b + c
+5</code></pre>
+<p><code>&amp;str</code> borrows text; <code>String</code> owns it. Indexing is by byte and must land on a
+character boundary, so counting characters is <code>chars$ &lt;- count$</code> rather than
+<code>len$</code>.</p>
+<h2 id="12-modules">12. Modules</h2>
+<pre class="code harsh"><code><span class="com">// A module groups items. Its body follows the header, with no mark.</span>
+<span class="k">mod</span> shapes
+    <span class="com">// Items are private to the module unless they say `pub`.</span>
+    <span class="k">pub</span> <span class="k">struct</span> <span class="t">Circle</span>
+        <span class="k">pub</span> radius<span class="p">:</span> f64
+
+    <span class="k">impl</span> <span class="t">Circle</span>
+        <span class="k">pub</span> <span class="k">fn</span> area <span class="p">(</span><span class="p">&amp;</span><span class="k">self</span><span class="p">)</span> <span class="op">-&gt;</span> f64<span class="p">:</span>
+            <span class="num">3.14159</span> <span class="p">*</span> <span class="p">(</span><span class="k">self</span> <span class="op">&lt;-</span> radius<span class="p">)</span> <span class="p">*</span> <span class="p">(</span><span class="k">self</span> <span class="op">&lt;-</span> radius<span class="p">)</span>
+
+    <span class="k">pub</span> <span class="k">mod</span> units
+        <span class="k">pub</span> <span class="k">const</span> <span class="t">NAME</span><span class="p">:</span> <span class="p">&amp;</span>str <span class="p">=</span> <span class="str">"cm"</span>
+
+<span class="com">// `use` brings a path into scope; `.` is the path separator.</span>
+<span class="k">use</span> shapes<span class="p">.</span><span class="t">Circle</span>
+<span class="k">use</span> shapes<span class="p">.</span>units<span class="p">.</span><span class="t">NAME</span>
+
+<span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="k">let</span> c <span class="p">=</span> <span class="t">Circle</span>\ radius <span class="p">=</span> <span class="num">2.0</span>
+    <span class="mac">println!</span> <span class="str">"{:.2} square {}"</span> <span class="p">(</span>c <span class="op">&lt;-</span> area<span class="defer">$</span><span class="p">)</span> <span class="t">NAME</span>
+
+    <span class="com">// Or written out in full, without a `use`.</span>
+    <span class="mac">println!</span> <span class="str">"{}"</span> shapes<span class="p">.</span>units<span class="p">.</span><span class="t">NAME</span></code></pre>
+<pre class="code"><code>12.57 square cm
+cm</code></pre>
+<p>A <code>mod</code> groups items, and its body follows the header with no mark, like every
+other item body. Everything inside is private unless it says <code>pub</code>.</p>
+<p><code>.</code> is the path separator, so Rust's <code>shapes::units::NAME</code> is
+<code>shapes.units.NAME</code>, and <code>use shapes.Circle</code> brings it into scope. A grouped
+import is written with parentheses: <code>use std.io.(Read, Write)</code>.</p>
+<p>Privacy is checked, so reaching a field that is not <code>pub</code> is refused:</p>
+<pre class="code harsh"><code><span class="k">mod</span> counter
+    <span class="k">pub</span> <span class="k">struct</span> <span class="t">Counter</span>
+        <span class="com">// Not `pub`: only this module may touch it.</span>
+        value<span class="p">:</span> i32
+
+    <span class="k">impl</span> <span class="t">Counter</span>
+        <span class="k">pub</span> <span class="k">fn</span> new<span class="defer">$</span> <span class="op">-&gt;</span> <span class="t">Counter</span><span class="p">:</span>
+            <span class="t">Counter</span>\ value <span class="p">=</span> <span class="num">0</span>
+
+<span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="k">let</span> c <span class="p">=</span> counter<span class="p">.</span><span class="t">Counter</span><span class="p">.</span>new<span class="defer">$</span>
+    <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span>c <span class="op">&lt;-</span> value<span class="p">)</span></code></pre>
+<pre class="code"><code>error[E0616]: field `value` of struct `Counter` is private
+  --&gt; privacy.hrs:18:22
+   |
+18 |     println!("{}", c.value)
+   |                      ^^^^^ private field
+
+error: aborting due to previous error
+
+For more information about this error, try `rustc --explain E0616`.</code></pre>
+<p>In a real project the modules live in files rather than in one: <code>src/main.hrs</code>
+plus <code>src/shapes.hrs</code>, and <code>mod shapes</code> in the main file. <code>hrs build</code>
+transpiles the tree and cargo compiles it.</p>
+<h2 id="13-threads-and-channels">13. Threads and channels</h2>
+<pre class="code harsh"><code><span class="k">use</span> std<span class="p">.</span>thread
+<span class="k">use</span> std<span class="p">.</span>sync<span class="p">.</span>mpsc
+
+<span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="com">// A thread takes a closure. `move` hands it what it captures.</span>
+    <span class="k">let</span> handle <span class="p">=</span> thread<span class="p">.</span>spawn <span class="k">move</span> <span class="op">||</span><span class="p">:</span>
+        <span class="k">let</span> <span class="k">mut</span> total <span class="p">=</span> <span class="num">0</span>
+        <span class="k">for</span> i <span class="k">in</span> <span class="num">1</span><span class="op">..=</span><span class="num">10</span><span class="p">:</span>
+            total <span class="op">+=</span> i
+        total
+
+    <span class="com">// `join` waits for it and gives back what it returned.</span>
+    <span class="k">let</span> total <span class="p">=</span> handle <span class="op">&lt;-</span> join<span class="defer">$</span> <span class="op">&lt;-</span> unwrap<span class="defer">$</span>
+    <span class="mac">println!</span> <span class="str">"the thread counted {total}"</span>
+
+    <span class="com">// A channel carries values between threads.</span>
+    <span class="k">let</span> <span class="p">(</span>tx<span class="p">,</span> rx<span class="p">)</span> <span class="p">=</span> mpsc<span class="p">.</span>channel<span class="defer">$</span>
+    <span class="k">for</span> id <span class="k">in</span> <span class="num">0..3</span><span class="p">:</span>
+        <span class="k">let</span> tx <span class="p">=</span> tx <span class="op">&lt;-</span> clone<span class="defer">$</span>
+        <span class="com">// Bound to `_`: the block's last expression is its value, and here</span>
+        <span class="com">// the handle is not wanted, so the binding discards it.</span>
+        <span class="k">let</span> _ <span class="p">=</span> thread<span class="p">.</span>spawn <span class="k">move</span> <span class="op">||</span><span class="p">:</span>
+            tx <span class="op">&lt;-</span> send <span class="p">(</span>id <span class="p">*</span> id<span class="p">)</span> <span class="op">&lt;-</span> unwrap<span class="defer">$</span>
+    drop tx
+
+    <span class="k">let</span> <span class="k">mut</span> got<span class="p">:</span> <span class="t">Vec</span><span class="p">&lt;</span>i32<span class="p">&gt;</span> <span class="p">=</span> rx <span class="op">&lt;-</span> iter<span class="defer">$</span> <span class="op">&lt;-</span> collect<span class="defer">$</span>
+    got <span class="op">&lt;-</span> sort<span class="defer">$</span>
+    <span class="mac">println!</span> <span class="str">"{:?}"</span> got</code></pre>
+<pre class="code"><code>the thread counted 55
+[0, 1, 4]</code></pre>
+<p><code>thread.spawn</code> takes a closure, and <code>move</code> hands it what it captured. Note the
+spelling: <code>thread.spawn move ||:</code> with the body beneath — a closure is a
+trailing argument that owns its block, and <code>move</code> before the bars is part of
+it.</p>
+<p><code>join$</code> waits and gives back whatever the closure returned.</p>
+<p>A channel is a pair: <code>tx</code> to send, <code>rx</code> to receive. Every thread gets its own
+clone of <code>tx</code>, and the original is dropped so the receiver knows when the last
+one is gone.</p>
+<p>One Harsh detail worth the line it costs: <code>let _ = thread.spawn …</code>. A block's
+last expression is its value, and here the handle is not wanted, so binding it
+to <code>_</code> discards it. Without the binding the loop body would be trying to
+return a <code>JoinHandle</code>, and rustc would say so.</p>
+<h2 id="14-tests">14. Tests</h2>
+<pre class="code harsh"><code><span class="k">fn</span> add <span class="p">(</span>a<span class="p">:</span> i32<span class="p">)</span> <span class="p">(</span>b<span class="p">:</span> i32<span class="p">)</span> <span class="op">-&gt;</span> i32<span class="p">:</span>
+    a <span class="p">+</span> b
+
+<span class="k">fn</span> divide <span class="p">(</span>a<span class="p">:</span> i32<span class="p">)</span> <span class="p">(</span>b<span class="p">:</span> i32<span class="p">)</span> <span class="op">-&gt;</span> <span class="t">Result</span><span class="p">&lt;</span>i32<span class="p">,</span> <span class="t">String</span><span class="p">&gt;</span><span class="p">:</span>
+    <span class="k">if</span> b <span class="op">==</span> <span class="num">0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="t">Err</span> <span class="p">(</span><span class="t">String</span><span class="p">.</span>from <span class="str">"divide by zero"</span><span class="p">)</span>
+    <span class="t">Ok</span> <span class="p">(</span>a <span class="p">/</span> b<span class="p">)</span>
+
+<span class="com">// A test module is compiled only when testing.</span>
+<span class="attr">#[cfg (test)]</span>
+<span class="k">mod</span> tests
+    <span class="k">use</span> <span class="k">super</span><span class="p">.</span><span class="p">*</span>
+
+    <span class="attr">#[test]</span>
+    <span class="k">fn</span> addition_works<span class="defer">$</span><span class="p">:</span>
+        <span class="mac">assert_eq!</span> <span class="p">(</span>add <span class="num">2</span> <span class="num">2</span><span class="p">)</span> <span class="num">4</span>
+
+    <span class="attr">#[test]</span>
+    <span class="k">fn</span> division_reports_its_error<span class="defer">$</span><span class="p">:</span>
+        <span class="mac">assert!</span> <span class="p">(</span>divide <span class="num">1</span> <span class="num">0</span> <span class="op">&lt;-</span> is_err<span class="defer">$</span><span class="p">)</span>
+        <span class="mac">assert_eq!</span> <span class="p">(</span>divide <span class="num">10</span> <span class="num">2</span><span class="p">)</span> <span class="p">(</span><span class="t">Ok</span> <span class="num">5</span><span class="p">)</span>
+
+    <span class="attr">#[test]</span>
+    <span class="k">fn</span> a_message_of_your_own<span class="defer">$</span><span class="p">:</span>
+        <span class="k">let</span> n <span class="p">=</span> add <span class="num">2</span> <span class="num">2</span>
+        <span class="mac">assert!</span> <span class="p">(</span>n <span class="p">&gt;</span> <span class="num">0</span><span class="p">)</span> <span class="str">"expected a positive number, got {}"</span> n</code></pre>
+<pre class="code"><code>$ hrs test
+running 3 tests
+test tests::a_message_of_your_own ... ok
+test tests::addition_works ... ok
+test tests::division_reports_its_error ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished</code></pre>
+<p>A test is a function marked <code>#[test]</code>, usually inside a
+<code>#[cfg (test)] mod tests</code>, which is compiled only when testing. <code>use super.*</code>
+brings in what the file above defines.</p>
+<p>Three things read differently from Rust, and all three are the ordinary rules:</p>
+<ul>
+<li><code>#[cfg (test)]</code> — an attribute is an application, so its argument is
+  isolated in parentheses when it is not a single atom.</li>
+<li><code>fn addition_works$</code> — a test takes no parameters, so it takes <code>$</code>.</li>
+<li><code>assert_eq! (add 2 2) 4</code> — a macro's arguments juxtapose, and <code>add 2 2</code> is
+  an application, so it is isolated.</li>
+</ul>
+<p><code>hrs test</code> runs them, passing the arguments through to cargo.</p>
+<h2 id="15-the-tools">15. The tools</h2>
+<p>Harsh is a transpiler, so the tools are a thin layer over cargo's.</p>
+<pre><code>hrs new NAME          a project: Cargo.toml, src/main.hrs, .gitignore
+hrs run               transpile what changed, then cargo run
+hrs build             transpile, then cargo build
+hrs test              transpile, then cargo test
+hrs check             transpile, then cargo check
+hrs lint              the same, through clippy, with its notes remapped
+hrs fmt               lay out the Harsh in the canonical form
+hrs watch             rebuild as files change
+hrs expand FILE       the file with its Harsh macros unfolded
+hrs export DIR        the project as a plain Rust crate
+</code></pre>
+<p>A project keeps its Harsh in <code>src/**.hrs</code>. The generated Rust goes to
+<code>target/hrs/</code>, and <code>Cargo.toml</code> points at it:</p>
+<pre><code>[[bin]]
+name = "myapp"
+path = "target/hrs/main.rs"
+</code></pre>
+<p>One manifest, ordinary dependencies, nothing extra to ignore — cargo already
+ignores <code>/target</code>.</p>
+<pre class="code harsh"><code><span class="com">// This is what `hrs new` writes for you, and what `hrs run` builds.</span>
+<span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="k">let</span> args<span class="p">:</span> <span class="t">Vec</span><span class="p">&lt;</span><span class="t">String</span><span class="p">&gt;</span> <span class="p">=</span> std<span class="p">.</span>env<span class="p">.</span>args<span class="defer">$</span> <span class="op">&lt;-</span> collect<span class="defer">$</span>
+    <span class="k">let</span> name <span class="p">=</span>
+        <span class="k">if</span> <span class="p">(</span>args <span class="op">&lt;-</span> len<span class="defer">$</span><span class="p">)</span> <span class="p">&gt;</span> <span class="num">1</span><span class="p">:</span>
+            args<span class="p">[</span><span class="num">1</span><span class="p">]</span> <span class="op">&lt;-</span> clone<span class="defer">$</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="t">String</span><span class="p">.</span>from <span class="str">"world"</span>
+    <span class="mac">println!</span> <span class="str">"hello, {name}"</span></code></pre>
+<pre class="code"><code>hello, world</code></pre>
+<p>Every diagnostic comes back on the <code>.hrs</code> line and column that produced it,
+not on the generated Rust, because the transpiler writes a source map and the
+driver runs cargo's output back through it. That is true of rustc's errors,
+its suggestions, and clippy's lints alike.</p>
+<p><code>hrs-from</code> goes the other way, turning Rust into Harsh — which is how an
+existing crate is brought across.</p>
+<h2 id="16-generator-comprehensions">16. Generator comprehensions</h2>
+<h3 id="16-1-g">16.1 g~</h3>
+<pre class="code harsh"><code><span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="com">// A comprehension: the value, then where it comes from.</span>
+    <span class="k">let</span> squares<span class="p">:</span> <span class="t">Vec</span><span class="p">&lt;</span>i32<span class="p">&gt;</span> <span class="p">=</span> <span class="p">(</span>g<span class="p">~</span> x <span class="p">*</span> x <span class="k">for</span> x <span class="k">in</span> <span class="num">1..6</span><span class="p">)</span> <span class="op">&lt;-</span> collect<span class="defer">$</span>
+    <span class="mac">println!</span> <span class="str">"{:?}"</span> squares
+
+    <span class="com">// `if`s filter; each belongs to the `for` it follows.</span>
+    <span class="k">let</span> odd_big<span class="p">:</span> <span class="t">Vec</span><span class="p">&lt;</span>i32<span class="p">&gt;</span> <span class="p">=</span> <span class="p">(</span>g<span class="p">~</span> x <span class="k">for</span> x <span class="k">in</span> <span class="num">0..20</span> <span class="k">if</span> x <span class="p">%</span> <span class="num">2</span> <span class="op">==</span> <span class="num">1</span> <span class="k">if</span> x <span class="p">&gt;</span> <span class="num">10</span><span class="p">)</span> <span class="op">&lt;-</span> collect<span class="defer">$</span>
+    <span class="mac">println!</span> <span class="str">"{:?}"</span> odd_big
+
+    <span class="com">// Several `for`s nest, and an inner condition sees the outer name.</span>
+    <span class="k">let</span> pairs<span class="p">:</span> <span class="t">Vec</span><span class="p">&lt;</span><span class="p">(</span>i32<span class="p">,</span> i32<span class="p">)</span><span class="p">&gt;</span> <span class="p">=</span> <span class="p">(</span>g<span class="p">~</span> <span class="p">(</span>x<span class="p">,</span> y<span class="p">)</span> <span class="k">for</span> x <span class="k">in</span> <span class="num">1..4</span> <span class="k">for</span> y <span class="k">in</span> <span class="num">1..4</span> <span class="k">if</span> y <span class="p">&gt;</span> x<span class="p">)</span> <span class="op">&lt;-</span> collect<span class="defer">$</span>
+    <span class="mac">println!</span> <span class="str">"{:?}"</span> pairs</code></pre>
+<pre class="code"><code>[1, 4, 9, 16, 25]
+[11, 13, 15, 17, 19]
+[(1, 2), (1, 3), (2, 3)]</code></pre>
+<p><code>g~</code> is Harsh's comprehension, and it is always available — it lives in the
+prelude, so there is nothing to <code>use</code>. It reads the way the idea reads: the
+value first, then <code>for</code> a pattern <code>in</code> an iterable, then any conditions.</p>
+<p>Each <code>if</code> belongs to the <code>for</code> it follows, so a condition can use every name
+bound up to that point — <code>if y &gt; x</code> sees both — and a condition on the outer
+loop filters before the inner one runs.</p>
+<p><code>g~</code> produces an iterator, and it is lazy: nothing is computed until something
+asks for the values. <code>for</code> means what it means everywhere in the language, so
+it takes the iterable by value; write <code>xs &lt;- iter$</code> to borrow instead.</p>
+<h3 id="16-2-conditions-and-several-fors">16.2 Conditions, and several <code>for</code>s</h3>
+<pre class="code harsh"><code><span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="com">// `if`s filter, and every `if` belongs to the `for` before it.</span>
+    <span class="k">let</span> picked<span class="p">:</span> <span class="t">Vec</span><span class="p">&lt;</span>i32<span class="p">&gt;</span> <span class="p">=</span> <span class="p">(</span>g<span class="p">~</span> x <span class="k">for</span> x <span class="k">in</span> <span class="num">0..30</span> <span class="k">if</span> x <span class="p">%</span> <span class="num">3</span> <span class="op">==</span> <span class="num">0</span> <span class="k">if</span> x <span class="p">%</span> <span class="num">2</span> <span class="op">==</span> <span class="num">1</span><span class="p">)</span> <span class="op">&lt;-</span> collect<span class="defer">$</span>
+    <span class="mac">println!</span> <span class="str">"{picked:?}"</span>
+
+    <span class="com">// A condition sees every name bound so far: `y &gt; x` uses both.</span>
+    <span class="k">let</span> rising<span class="p">:</span> <span class="t">Vec</span><span class="p">&lt;</span><span class="p">(</span>i32<span class="p">,</span> i32<span class="p">)</span><span class="p">&gt;</span> <span class="p">=</span> <span class="p">(</span>g<span class="p">~</span> <span class="p">(</span>x<span class="p">,</span> y<span class="p">)</span> <span class="k">for</span> x <span class="k">in</span> <span class="num">1..4</span> <span class="k">for</span> y <span class="k">in</span> <span class="num">1..4</span> <span class="k">if</span> y <span class="p">&gt;</span> x<span class="p">)</span> <span class="op">&lt;-</span> collect<span class="defer">$</span>
+    <span class="mac">println!</span> <span class="str">"{rising:?}"</span></code></pre>
+<pre class="code"><code>[3, 9, 15, 21, 27]
+[(1, 2), (1, 3), (2, 3)]</code></pre>
+<p>Each <code>if</code> belongs to the <code>for</code> before it, so a condition sees every name
+bound up to that point — <code>y &gt; x</code> uses both — and runs as early as it can.</p>
+<h3 id="16-3-where-a-condition-may-go">16.3 Where a condition may go</h3>
+<pre class="code harsh"><code><span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="k">let</span> triples <span class="p">=</span>
+        list<span class="p">~</span> <span class="p">(</span>a<span class="p">,</span> b<span class="p">,</span> c<span class="p">)</span>
+            <span class="k">for</span> a <span class="k">in</span> <span class="num">1..20</span>        <span class="com">// only a is available for the condition</span>
+            <span class="k">for</span> b <span class="k">in</span> a<span class="op">..</span><span class="num">20</span>        <span class="com">// only a, b are available for the condition</span>
+            <span class="k">for</span> c <span class="k">in</span> b<span class="op">..</span><span class="num">20</span>        <span class="com">// a, b, c are available for the condition</span>
+            <span class="k">if</span> a <span class="p">*</span> a <span class="p">+</span> b <span class="p">*</span> b <span class="op">==</span> c <span class="p">*</span> c
+    <span class="mac">println!</span> <span class="str">"{triples:?}"</span></code></pre>
+<pre class="code"><code>[(3, 4, 5), (5, 12, 13), (6, 8, 10), (8, 15, 17), (9, 12, 15)]</code></pre>
+<p>Every <code>for</code> makes one more name available, and a condition can use only the
+names bound up to its place — so a test goes after the last <code>for</code> whose name it
+uses. Attached to <code>for a</code>, the same test cannot see <code>b</code>:</p>
+<pre class="code harsh"><code><span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="com">// The test needs b and c, but it is attached to `for a`,</span>
+    <span class="com">// where neither exists yet.</span>
+    <span class="k">let</span> triples <span class="p">=</span>
+        list<span class="p">~</span> <span class="p">(</span>a<span class="p">,</span> b<span class="p">,</span> c<span class="p">)</span>
+            <span class="k">for</span> a <span class="k">in</span> <span class="num">1..20</span> <span class="k">if</span> a <span class="p">*</span> a <span class="p">+</span> b <span class="p">*</span> b <span class="op">==</span> c <span class="p">*</span> c
+            <span class="k">for</span> b <span class="k">in</span> a<span class="op">..</span><span class="num">20</span>
+            <span class="k">for</span> c <span class="k">in</span> b<span class="op">..</span><span class="num">20</span>
+    <span class="mac">println!</span> <span class="str">"{triples:?}"</span></code></pre>
+<pre class="code"><code>error[E0425]: cannot find value `b` in this scope
+ --&gt; too_early.hrs:4:80
+  |
+4 | ....flat_map(move | a | ((true &amp;&amp;(a * a + b * b == c * c)).then(|| ((a .. 20).into_iter().flat_map(move | b | ((true).then(|| ((b .. 20)....
+  |                                           ^ help: a local variable with a similar name exists: `a`
+
+error[E0425]: cannot find value `b` in this scope
+ --&gt; too_early.hrs:4:84
+  |
+4 | ...t_map(move | a | ((true &amp;&amp;(a * a + b * b == c * c)).then(|| ((a .. 20).into_iter().flat_map(move | b | ((true).then(|| ((b .. 20).into...
+  |                                           ^ help: a local variable with a similar name exists: `a`
+
+error[E0425]: cannot find value `c` in this scope
+ --&gt; too_early.hrs:4:89
+  |
+4 | ...(move | a | ((true &amp;&amp;(a * a + b * b == c * c)).then(|| ((a .. 20).into_iter().flat_map(move | b | ((true).then(|| ((b .. 20).into_iter...
+  |                                           ^ help: a local variable with a similar name exists: `a`
+
+error[E0425]: cannot find value `c` in this scope
+ --&gt; too_early.hrs:4:93
+  |
+4 | ...e | a | ((true &amp;&amp;(a * a + b * b == c * c)).then(|| ((a .. 20).into_iter().flat_map(move | b | ((true).then(|| ((b .. 20).into_iter().f...
+  |                                           ^ help: a local variable with a similar name exists: `a`
+
+error: aborting due to 4 previous errors
+
+For more information about this error, try `rustc --explain E0425`.</code></pre>
+<h3 id="16-4-collecting-list-set-dict">16.4 Collecting: list~, set~, dict~</h3>
+<pre class="code harsh"><code><span class="k">use</span> std<span class="p">.</span>collections<span class="p">.</span><span class="t">HashMap</span>
+<span class="k">use</span> std<span class="p">.</span>collections<span class="p">.</span><span class="t">HashSet</span>
+
+<span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="com">// `g~` is lazy -- a plain iterator. The shorthands collect it.</span>
+    <span class="k">let</span> v <span class="p">=</span> list<span class="p">~</span> x <span class="p">*</span> <span class="num">10</span> <span class="k">for</span> x <span class="k">in</span> <span class="num">1..4</span>
+    <span class="mac">println!</span> <span class="str">"{:?}"</span> v
+
+    <span class="k">let</span> remainders<span class="p">:</span> <span class="t">HashSet</span><span class="p">&lt;</span>i32<span class="p">&gt;</span> <span class="p">=</span> set<span class="p">~</span> x <span class="p">%</span> <span class="num">3</span> <span class="k">for</span> x <span class="k">in</span> <span class="num">0..10</span>
+    <span class="k">let</span> <span class="k">mut</span> seen<span class="p">:</span> <span class="t">Vec</span><span class="p">&lt;</span>_<span class="p">&gt;</span> <span class="p">=</span> remainders <span class="op">&lt;-</span> into_iter<span class="defer">$</span> <span class="op">&lt;-</span> collect<span class="defer">$</span>
+    seen <span class="op">&lt;-</span> sort<span class="defer">$</span>
+    <span class="mac">println!</span> <span class="str">"{:?}"</span> seen
+
+    <span class="com">// `dict~` takes `key =&gt; value`.</span>
+    <span class="k">let</span> lengths<span class="p">:</span> <span class="t">HashMap</span><span class="p">&lt;</span><span class="p">&amp;</span>str<span class="p">,</span> usize<span class="p">&gt;</span> <span class="p">=</span> dict<span class="p">~</span> w <span class="op">=&gt;</span> <span class="p">(</span>w <span class="op">&lt;-</span> len<span class="defer">$</span><span class="p">)</span> <span class="k">for</span> w <span class="k">in</span> <span class="p">[</span><span class="str">"sun"</span><span class="p">,</span> <span class="str">"moon"</span><span class="p">]</span>
+    <span class="k">let</span> <span class="k">mut</span> pairs<span class="p">:</span> <span class="t">Vec</span><span class="p">&lt;</span>_<span class="p">&gt;</span> <span class="p">=</span> lengths <span class="op">&lt;-</span> into_iter<span class="defer">$</span> <span class="op">&lt;-</span> collect<span class="defer">$</span>
+    pairs <span class="op">&lt;-</span> sort<span class="defer">$</span>
+    <span class="mac">println!</span> <span class="str">"{:?}"</span> pairs</code></pre>
+<pre class="code"><code>[10, 20, 30]
+[0, 1, 2]
+[("moon", 4), ("sun", 3)]</code></pre>
+<p>The shorthands collect a comprehension into a <code>Vec</code>, a <code>HashSet</code> or a
+<code>HashMap</code>. <code>dict~</code> takes its entry as <code>key =&gt; value</code>. Or keep <code>g~</code> and let the
+type decide — <code>let v: Vec&lt;_&gt; = (g~ …) &lt;- collect$</code> — which is the same thing
+written out.</p>
+<h3 id="16-5-laying-one-out">16.5 Laying one out</h3>
+<pre class="code harsh"><code><span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="com">// Every line indented beneath the call belongs to it, so a long one is</span>
+    <span class="com">// laid out one clause per line. Pythagorean triples:</span>
+    <span class="k">let</span> triples <span class="p">=</span>
+        list<span class="p">~</span> <span class="p">(</span>a<span class="p">,</span> b<span class="p">,</span> c<span class="p">)</span>
+            <span class="k">for</span> a <span class="k">in</span> <span class="num">1..20</span>
+            <span class="k">for</span> b <span class="k">in</span> a<span class="op">..</span><span class="num">20</span>
+            <span class="k">for</span> c <span class="k">in</span> b<span class="op">..</span><span class="num">20</span> <span class="k">if</span> a <span class="p">*</span> a <span class="p">+</span> b <span class="p">*</span> b <span class="op">==</span> c <span class="p">*</span> c
+    <span class="mac">println!</span> <span class="str">"{:?}"</span> triples</code></pre>
+<pre class="code"><code>[(3, 4, 5), (5, 12, 13), (6, 8, 10), (8, 15, 17), (9, 12, 15)]</code></pre>
+<p>A call takes the rest of its line <strong>and every line indented beneath it</strong>, so a
+comprehension with several clauses is written one clause per line. Nothing
+changes but the layout: the same tokens reach the macro either way.</p>
+<p>If you define a macro of your own called <code>g</code> (or <code>list</code>, <code>set</code>, <code>dict</code>), yours
+wins in that file. The prelude's is still there as <code>hrs_std.g~</code>.</p>
+<h3 id="16-6-lazy-and-by-value">16.6 Lazy, and by value</h3>
+<pre class="code harsh"><code><span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="com">// `g~` is an iterator: nothing runs until something asks for values.</span>
+    <span class="com">// So an endless source is fine, as long as something stops asking.</span>
+    <span class="k">let</span> first<span class="p">:</span> <span class="t">Vec</span><span class="p">&lt;</span>u64<span class="p">&gt;</span> <span class="p">=</span>
+        <span class="p">(</span>g<span class="p">~</span> n <span class="p">*</span> n <span class="k">for</span> n <span class="k">in</span> <span class="num">1</span><span class="op">..</span> <span class="k">if</span> n <span class="p">%</span> <span class="num">7</span> <span class="op">==</span> <span class="num">3</span><span class="p">)</span> <span class="op">&lt;-</span> take <span class="num">4</span> <span class="op">&lt;-</span> collect<span class="defer">$</span>
+    <span class="mac">println!</span> <span class="str">"{first:?}"</span>
+
+    <span class="com">// `for` takes its iterable by value, as it does everywhere in Rust.</span>
+    <span class="com">// Borrow to keep the collection.</span>
+    <span class="k">let</span> words <span class="p">=</span> <span class="mac">vec!</span> <span class="p">(</span><span class="t">String</span><span class="p">.</span>from <span class="str">"pipe"</span><span class="p">)</span> <span class="p">(</span><span class="t">String</span><span class="p">.</span>from <span class="str">"matrix"</span><span class="p">)</span>
+    <span class="k">let</span> lengths<span class="p">:</span> <span class="t">Vec</span><span class="p">&lt;</span>usize<span class="p">&gt;</span> <span class="p">=</span> <span class="p">(</span>g<span class="p">~</span> <span class="p">(</span>w <span class="op">&lt;-</span> len<span class="defer">$</span><span class="p">)</span> <span class="k">for</span> w <span class="k">in</span> <span class="p">(</span>words <span class="op">&lt;-</span> iter<span class="defer">$</span><span class="p">)</span><span class="p">)</span> <span class="op">&lt;-</span> collect<span class="defer">$</span>
+    <span class="mac">println!</span> <span class="str">"{lengths:?} -- and still {words:?}"</span></code></pre>
+<pre class="code"><code>[9, 100, 289, 576]
+[4, 6] -- and still ["pipe", "matrix"]</code></pre>
+<p><code>g~</code> is an iterator: nothing runs until something asks, so an endless
+source is fine when something stops asking. <code>for</code> takes its iterable by
+value; give it a borrow, <code>(words &lt;- iter$)</code>, to keep the collection.</p>
+<h3 id="16-7-what-it-stands-for">16.7 What it stands for</h3>
+<pre class="code harsh"><code><span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="k">let</span> wanted<span class="p">:</span> <span class="t">Vec</span><span class="p">&lt;</span>i32<span class="p">&gt;</span> <span class="p">=</span>
+        <span class="p">(</span>g<span class="p">~</span> x <span class="p">*</span> <span class="num">10</span> <span class="p">+</span> y
+            <span class="k">for</span> x <span class="k">in</span> <span class="p">(</span><span class="num">0..6</span><span class="p">)</span> <span class="k">if</span> x <span class="p">%</span> <span class="num">2</span> <span class="op">==</span> <span class="num">0</span> <span class="k">if</span> x <span class="p">&gt;</span> <span class="num">0</span>
+            <span class="k">for</span> y <span class="k">in</span> <span class="p">(</span><span class="num">0..6</span><span class="p">)</span> <span class="k">if</span> y <span class="p">&gt;</span> x <span class="k">if</span> y <span class="p">%</span> <span class="num">2</span> <span class="op">==</span> <span class="num">1</span>
+        <span class="p">)</span> <span class="op">&lt;-</span> collect<span class="defer">$</span>
+
+    <span class="com">// The same by hand: one `flat_map` per `for`, each level's conditions</span>
+    <span class="com">// folded into one test, and the outer level flattened.</span>
+    <span class="k">let</span> inner <span class="p">=</span>
+        <span class="p">|</span>x<span class="p">:</span> i32<span class="p">|</span> <span class="p">(</span><span class="num">0..6</span><span class="p">)</span> <span class="op">&lt;-</span> into_iter<span class="defer">$</span>
+            <span class="op">&lt;-</span> flat_map <span class="p">(</span><span class="k">move</span> <span class="p">|</span>y<span class="p">|</span> <span class="p">(</span><span class="p">(</span><span class="k">true</span> <span class="op">&amp;&amp;</span> <span class="p">(</span>y <span class="p">&gt;</span> x<span class="p">)</span> <span class="op">&amp;&amp;</span> <span class="p">(</span>y <span class="p">%</span> <span class="num">2</span> <span class="op">==</span> <span class="num">1</span><span class="p">)</span><span class="p">)</span> <span class="op">&lt;-</span> then <span class="p">(</span><span class="op">||</span> x <span class="p">*</span> <span class="num">10</span> <span class="p">+</span> y<span class="p">)</span><span class="p">)</span><span class="p">)</span>
+    <span class="k">let</span> written<span class="p">:</span> <span class="t">Vec</span><span class="p">&lt;</span>i32<span class="p">&gt;</span> <span class="p">=</span>
+        <span class="p">(</span><span class="num">0..6</span><span class="p">)</span> <span class="op">&lt;-</span> into_iter<span class="defer">$</span>
+               <span class="op">&lt;-</span> flat_map <span class="p">(</span><span class="k">move</span> <span class="p">|</span>x<span class="p">|</span> <span class="p">(</span><span class="p">(</span><span class="k">true</span> <span class="op">&amp;&amp;</span> <span class="p">(</span>x <span class="p">%</span> <span class="num">2</span> <span class="op">==</span> <span class="num">0</span><span class="p">)</span> <span class="op">&amp;&amp;</span> <span class="p">(</span>x <span class="p">&gt;</span> <span class="num">0</span><span class="p">)</span><span class="p">)</span> <span class="op">&lt;-</span> then <span class="p">(</span><span class="op">||</span> inner x<span class="p">)</span><span class="p">)</span><span class="p">)</span>
+               <span class="op">&lt;-</span> flatten<span class="defer">$</span>
+               <span class="op">&lt;-</span> collect<span class="defer">$</span>
+
+    <span class="mac">println!</span> <span class="str">"{wanted:?} {}"</span> <span class="p">(</span>wanted <span class="op">==</span> written<span class="p">)</span></code></pre>
+<pre class="code"><code>[23, 25, 45] true</code></pre>
+<p>A generator comprehension is a chain written another way: each <code>for</code> a
+<code>flat_map</code>, its conditions folded into one test under <code>then</code>, every level but
+the innermost flattened. The <code>flatten$</code> is part of the generator, so it is
+never written by hand; the <code>collect$</code> is not, because a generator is lazy —
+write it, or use <code>list~</code>. Chapter 15 of the Book shows the whole expansion.</p>
+<pre class="code harsh"><code><span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="k">let</span> scores <span class="p">=</span> <span class="mac">vec!</span> <span class="num">72</span> <span class="num">45</span> <span class="num">91</span> <span class="num">60</span> <span class="num">88</span>
+
+    <span class="com">// A comprehension...</span>
+    <span class="k">let</span> a<span class="p">:</span> <span class="t">Vec</span><span class="p">&lt;</span>i32<span class="p">&gt;</span> <span class="p">=</span> <span class="p">(</span>g<span class="p">~</span> s <span class="p">+</span> <span class="num">5</span> <span class="k">for</span> s <span class="k">in</span> <span class="p">(</span>scores <span class="op">&lt;-</span> iter<span class="defer">$</span><span class="p">)</span> <span class="k">if</span> <span class="p">*</span>s <span class="op">&gt;=</span> <span class="num">60</span><span class="p">)</span> <span class="op">&lt;-</span> collect<span class="defer">$</span>
+    <span class="com">// ...and the chain it stands for.</span>
+    <span class="k">let</span> b<span class="p">:</span> <span class="t">Vec</span><span class="p">&lt;</span>i32<span class="p">&gt;</span> <span class="p">=</span>
+        scores <span class="op">&lt;-</span> iter<span class="defer">$</span>
+               <span class="op">&lt;-</span> filter <span class="p">(</span><span class="p">|</span>s<span class="p">|</span> <span class="p">*</span><span class="p">*</span>s <span class="op">&gt;=</span> <span class="num">60</span><span class="p">)</span>
+               <span class="op">&lt;-</span> map <span class="p">(</span><span class="p">|</span>s<span class="p">|</span> s <span class="p">+</span> <span class="num">5</span><span class="p">)</span>
+               <span class="op">&lt;-</span> collect<span class="defer">$</span>
+    <span class="mac">println!</span> <span class="str">"{a:?} {}"</span> <span class="p">(</span>a <span class="op">==</span> b<span class="p">)</span></code></pre>
+<pre class="code"><code>[77, 96, 65, 93] true</code></pre>
+<h2 id="17-matrices">17. Matrices</h2>
+<p>Harsh's matrices are Julia's, for anyone who knows Julia: the same literal,
+the same meaning for <code>*</code>, the same errors. They live in <code>hrs_std</code>, Harsh's
+standard library, which a project adds to its dependencies once. The literals
+themselves, <code>m~</code> and <code>v~</code>, need no <code>use</code>: they are part of the language.</p>
+<h3 id="17-1-writing-them">17.1 Writing them</h3>
+<pre class="code"><code>[dependencies]
+hrs_std = "0.1"</code></pre>
+<pre class="code harsh"><code><span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="com">// A matrix: spaces between entries, `;` between rows.</span>
+    <span class="k">let</span> a <span class="p">=</span> m<span class="p">~</span> <span class="p">[</span><span class="num">1</span> <span class="num">2</span> <span class="num">3</span><span class="p">;</span> <span class="num">4</span> <span class="num">5</span> <span class="num">6</span><span class="p">]</span>
+    <span class="mac">println!</span> <span class="str">"{a}"</span>
+    <span class="com">// Rows may be blocks of their own, stacked with `;`.</span>
+    <span class="k">let</span> b <span class="p">=</span> m<span class="p">~</span> <span class="p">[</span><span class="p">[</span><span class="num">1</span> <span class="num">2</span> <span class="num">3</span><span class="p">]</span><span class="p">;</span> <span class="p">[</span><span class="num">4</span> <span class="num">5</span> <span class="num">6</span><span class="p">]</span><span class="p">]</span>
+    <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span>a <span class="op">==</span> b<span class="p">)</span>
+
+    <span class="com">// A vector is a column: commas, or one entry per line.</span>
+    <span class="k">let</span> v <span class="p">=</span> v<span class="p">~</span> <span class="p">[</span><span class="num">1.5</span><span class="p">,</span> <span class="num">2.5</span><span class="p">,</span> <span class="num">3.5</span><span class="p">]</span>
+    <span class="mac">println!</span> <span class="str">"{v}"</span>
+
+    <span class="com">// A bracket inside is a block. Side by side, columns make a matrix.</span>
+    <span class="k">let</span> c <span class="p">=</span> m<span class="p">~</span> <span class="p">[</span><span class="p">[</span><span class="num">1</span><span class="p">,</span> <span class="num">4</span><span class="p">]</span> <span class="p">[</span><span class="num">2</span><span class="p">,</span> <span class="num">5</span><span class="p">]</span> <span class="p">[</span><span class="num">3</span><span class="p">,</span> <span class="num">6</span><span class="p">]</span><span class="p">]</span>
+    <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span>a <span class="op">==</span> c<span class="p">)</span></code></pre>
+<pre class="code"><code>2×3 Matrix&lt;i32&gt;:
+ 1 2 3
+ 4 5 6
+true
+3-element Vector&lt;f64&gt;:
+ 1.5
+ 2.5
+ 3.5
+true</code></pre>
+<p>Three rules make every matrix literal, and they compose. A <strong>space</strong> puts
+things side by side. A <strong><code>;</code></strong> puts them one above another — and so does a
+line break, so a matrix may be written one row per line, as it reads. A
+<strong>comma</strong> makes the entries of a vector, which is a column.</p>
+<p>A bracket inside the literal is a block built by the same rules, so
+<code>[[1, 4] [2, 5] [3, 6]]</code> is three columns side by side — the same matrix as
+<code>[1 2 3; 4 5 6]</code>. What the literal refuses, it refuses with Julia's reason:
+<code>m~ [[1 2], [3 4]]</code> is two matrices in a vector, not one matrix, because a
+comma never joins; and <code>v~ [1 2 3]</code> is a row, which is a matrix, not a vector.</p>
+<p>A matrix prints its shape and its element type, as Julia does.</p>
+<h3 id="17-2-arithmetic">17.2 Arithmetic</h3>
+<pre class="code"><code>[dependencies]
+hrs_std = "0.1"</code></pre>
+<pre class="code harsh"><code><span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="k">let</span> a <span class="p">=</span> m<span class="p">~</span> <span class="p">[</span><span class="num">1.0</span> <span class="num">2.0</span><span class="p">;</span> <span class="num">3.0</span> <span class="num">4.0</span><span class="p">]</span>
+    <span class="k">let</span> b <span class="p">=</span> m<span class="p">~</span> <span class="p">[</span><span class="num">0.0</span> <span class="num">1.0</span><span class="p">;</span> <span class="num">1.0</span> <span class="num">0.0</span><span class="p">]</span>
+    <span class="k">let</span> x <span class="p">=</span> v<span class="p">~</span> <span class="p">[</span><span class="num">1.0</span><span class="p">,</span> <span class="num">1.0</span><span class="p">]</span>
+
+    <span class="com">// One `*`, three meanings, chosen from what it multiplies.</span>
+    <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span><span class="p">&amp;</span>a <span class="p">*</span> <span class="p">&amp;</span>b<span class="p">)</span>        <span class="com">// the matrix product</span>
+    <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span><span class="num">2.0</span> <span class="p">*</span> <span class="p">(</span><span class="p">&amp;</span>a <span class="p">+</span> <span class="p">&amp;</span>b<span class="p">)</span><span class="p">)</span>  <span class="com">// scaling a sum</span>
+    <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span><span class="p">&amp;</span>a <span class="p">*</span> <span class="p">&amp;</span>x<span class="p">)</span>        <span class="com">// a matrix times a vector is a vector</span>
+
+    <span class="mac">println!</span> <span class="str">"{:?} {}"</span> <span class="p">(</span>a <span class="op">&lt;-</span> size<span class="defer">$</span><span class="p">)</span> <span class="p">(</span>a <span class="op">&lt;-</span> transpose<span class="defer">$</span><span class="p">)</span></code></pre>
+<pre class="code"><code>2×2 Matrix&lt;f64&gt;:
+ 2 1
+ 4 3
+2×2 Matrix&lt;f64&gt;:
+ 2 6
+ 8 8
+2-element Vector&lt;f64&gt;:
+ 3
+ 7
+(2, 2) 2×2 Matrix&lt;f64&gt;:
+ 1 3
+ 2 4</code></pre>
+<p><code>*</code> between two matrices is the matrix product; between a number and a matrix
+it is scaling; between a matrix and a vector it gives a vector. The compiler
+chooses, from what is being multiplied — nothing has to be spelled out.</p>
+<p>The <code>&amp;</code> is ownership, Rust's rule: <code>&amp;a * &amp;b</code> borrows both, so <code>a</code> and <code>b</code> are
+still there on the next line. Without it, the product would consume them.</p>
+<h3 id="17-3-the-identity">17.3 The identity</h3>
+<pre class="code"><code>[dependencies]
+hrs_std = "0.1"</code></pre>
+<pre class="code harsh"><code><span class="k">use</span> hrs_std<span class="p">.</span><span class="p">(</span><span class="t">UniformScaling</span><span class="p">,</span> <span class="t">I</span><span class="p">)</span>
+
+<span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="k">let</span> a <span class="p">=</span> m<span class="p">~</span> <span class="p">[</span><span class="num">1</span> <span class="num">2</span><span class="p">;</span> <span class="num">3</span> <span class="num">4</span><span class="p">]</span>
+    <span class="k">let</span> u <span class="p">=</span> <span class="t">UniformScaling</span> <span class="num">2</span>
+    <span class="com">// As in Julia: `u` is 2 times an identity of whatever size is needed.</span>
+    <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span><span class="p">&amp;</span>a <span class="p">+</span> u<span class="p">)</span>
+    <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span><span class="p">&amp;</span>a <span class="p">*</span> u<span class="p">)</span>
+    <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span><span class="p">&amp;</span>a <span class="p">+</span> <span class="t">I</span><span class="p">)</span></code></pre>
+<pre class="code"><code>2×2 Matrix&lt;i32&gt;:
+ 3 2
+ 3 6
+2×2 Matrix&lt;i32&gt;:
+ 2 4
+ 6 8
+2×2 Matrix&lt;i32&gt;:
+ 2 2
+ 3 5</code></pre>
+<p><code>UniformScaling k</code> is <code>k</code> times an identity of whatever size the other side
+needs, and <code>I</code> is the identity itself — Julia's own names.</p>
+<h3 id="17-4-joining-matrices">17.4 Joining matrices</h3>
+<pre class="code"><code>[dependencies]
+hrs_std = "0.1"</code></pre>
+<pre class="code harsh"><code><span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="k">let</span> a <span class="p">=</span> m<span class="p">~</span> <span class="p">[</span><span class="num">1</span> <span class="num">2</span><span class="p">;</span> <span class="num">3</span> <span class="num">4</span><span class="p">]</span>
+    <span class="com">// Any matrix is a block, so the literal joins matrices as it joins numbers.</span>
+    <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span>m<span class="p">~</span> <span class="p">[</span><span class="p">(</span><span class="p">&amp;</span>a<span class="p">)</span> <span class="p">(</span><span class="p">&amp;</span>a<span class="p">)</span><span class="p">]</span><span class="p">)</span>
+    <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span>m<span class="p">~</span> <span class="p">[</span><span class="p">(</span><span class="p">&amp;</span>a<span class="p">)</span><span class="p">;</span> <span class="p">(</span><span class="p">&amp;</span>a<span class="p">)</span><span class="p">]</span><span class="p">)</span></code></pre>
+<pre class="code"><code>2×4 Matrix&lt;i32&gt;:
+ 1 2 1 2
+ 3 4 3 4
+4×2 Matrix&lt;i32&gt;:
+ 1 2
+ 3 4
+ 1 2
+ 3 4</code></pre>
+<p>A block may be any matrix, so the literal that builds a matrix from numbers
+also joins matrices: side by side with a space, stacked with a <code>;</code>. Each block
+is isolated in parentheses, <code>(&amp;a)</code>, as any argument with an operator is.</p>
+<h3 id="17-5-solving">17.5 Solving</h3>
+<pre class="code"><code>[dependencies]
+hrs_std = "0.1"</code></pre>
+<pre class="code harsh"><code><span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="com">// 2x + y = 5 and x + y = 3, as a matrix and a vector.</span>
+    <span class="k">let</span> a <span class="p">=</span> m<span class="p">~</span> <span class="p">[</span><span class="num">2.0</span> <span class="num">1.0</span><span class="p">;</span> <span class="num">1.0</span> <span class="num">1.0</span><span class="p">]</span>
+    <span class="k">let</span> b <span class="p">=</span> v<span class="p">~</span> <span class="p">[</span><span class="num">5.0</span><span class="p">,</span> <span class="num">3.0</span><span class="p">]</span>
+    <span class="com">// Julia's `a \ b`.</span>
+    <span class="k">let</span> x <span class="p">=</span> a <span class="op">&lt;-</span> solve <span class="p">(</span><span class="p">&amp;</span>b<span class="p">)</span>
+    <span class="mac">println!</span> <span class="str">"x = {}, y = {}"</span> x<span class="p">[</span><span class="num">0</span><span class="p">]</span> x<span class="p">[</span><span class="num">1</span><span class="p">]</span>
+
+    <span class="mac">println!</span> <span class="str">"det {}"</span> <span class="p">(</span>a <span class="op">&lt;-</span> det<span class="defer">$</span><span class="p">)</span>
+    <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span>a <span class="op">&lt;-</span> inv<span class="defer">$</span><span class="p">)</span>
+
+    <span class="k">let</span> v <span class="p">=</span> v<span class="p">~</span> <span class="p">[</span><span class="num">3.0</span><span class="p">,</span> <span class="num">4.0</span><span class="p">]</span>
+    <span class="mac">println!</span> <span class="str">"length {}, dot {}"</span> <span class="p">(</span>v <span class="op">&lt;-</span> norm<span class="defer">$</span><span class="p">)</span> <span class="p">(</span>v <span class="op">&lt;-</span> dot <span class="p">(</span><span class="p">&amp;</span>v<span class="p">)</span><span class="p">)</span></code></pre>
+<pre class="code"><code>x = 2, y = 1
+det 1
+2×2 Matrix&lt;f64&gt;:
+ 1 -1
+ -1 2
+length 5, dot 25</code></pre>
+<p><code>a &lt;- solve (&amp;b)</code> is Julia's <code>a \ b</code>: the <code>x</code> with <code>a * x == b</code>. <code>det$</code>,
+<code>inv$</code>, <code>norm$</code> and <code>dot</code> carry Julia's names. Indexes start at 0, as for
+every collection in Harsh.</p>
+<h3 id="17-6-fitting-a-line">17.6 Fitting a line</h3>
+<pre class="code"><code>[dependencies]
+hrs_std = "0.1"</code></pre>
+<pre class="code harsh"><code><span class="k">use</span> hrs_std<span class="p">.</span><span class="t">Matrix</span>
+
+<span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="com">// Hours studied, and the score each student got.</span>
+    <span class="k">let</span> hours <span class="p">=</span> <span class="p">[</span><span class="num">1.0</span><span class="p">,</span> <span class="num">2.0</span><span class="p">,</span> <span class="num">3.0</span><span class="p">,</span> <span class="num">4.0</span><span class="p">,</span> <span class="num">5.0</span><span class="p">,</span> <span class="num">6.0</span><span class="p">]</span>
+    <span class="k">let</span> score <span class="p">=</span> v<span class="p">~</span> <span class="p">[</span><span class="num">52.0</span><span class="p">,</span> <span class="num">55.0</span><span class="p">,</span> <span class="num">61.0</span><span class="p">,</span> <span class="num">64.0</span><span class="p">,</span> <span class="num">70.0</span><span class="p">,</span> <span class="num">73.0</span><span class="p">]</span>
+
+    <span class="com">// The design matrix, one row per student: a 1 for the intercept,</span>
+    <span class="com">// then the hours. A comprehension builds the rows.</span>
+    <span class="k">let</span> x <span class="p">=</span> <span class="t">Matrix</span><span class="p">.</span>from_rows <span class="p">(</span>list<span class="p">~</span> <span class="p">(</span><span class="mac">vec!</span> <span class="num">1.0</span> h<span class="p">)</span> <span class="k">for</span> h <span class="k">in</span> hours<span class="p">)</span>
+
+    <span class="com">// Julia's `β = X \ y`: for a tall matrix, the least-squares fit.</span>
+    <span class="k">let</span> beta <span class="p">=</span> x <span class="op">&lt;-</span> solve <span class="p">(</span><span class="p">&amp;</span>score<span class="p">)</span>
+    <span class="mac">println!</span> <span class="str">"score = {:.2} + {:.2} × hours"</span> beta<span class="p">[</span><span class="num">0</span><span class="p">]</span> beta<span class="p">[</span><span class="num">1</span><span class="p">]</span>
+
+    <span class="k">let</span> fitted <span class="p">=</span> <span class="p">&amp;</span>x <span class="p">*</span> <span class="p">&amp;</span>beta
+    <span class="mac">println!</span> <span class="str">"residual {:.2}"</span> <span class="p">(</span><span class="p">(</span><span class="p">&amp;</span>score <span class="p">-</span> <span class="p">&amp;</span>fitted<span class="p">)</span> <span class="op">&lt;-</span> norm<span class="defer">$</span><span class="p">)</span>
+    <span class="mac">println!</span> <span class="str">"7 hours: {:.1}"</span> <span class="p">(</span>beta<span class="p">[</span><span class="num">0</span><span class="p">]</span> <span class="p">+</span> beta<span class="p">[</span><span class="num">1</span><span class="p">]</span> <span class="p">*</span> <span class="num">7.0</span><span class="p">)</span></code></pre>
+<pre class="code"><code>score = 47.20 + 4.37 × hours
+residual 1.76
+7 hours: 77.8</code></pre>
+<p>With more rows than columns, <code>solve</code> returns the least-squares fit, as Julia's
+<code>X \ y</code> does: linear regression in one line, with the design matrix built by
+a comprehension. Chapter 16 of the Book explains each step.</p>
+<h3 id="17-7-slicing">17.7 Slicing</h3>
+<pre class="code"><code>[dependencies]
+hrs_std = "0.1"</code></pre>
+<pre class="code harsh"><code><span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="k">let</span> <span class="k">mut</span> a <span class="p">=</span> m<span class="p">~</span> <span class="p">[</span><span class="num">1</span> <span class="num">2</span> <span class="num">3</span><span class="p">;</span> <span class="num">4</span> <span class="num">5</span> <span class="num">6</span><span class="p">;</span> <span class="num">7</span> <span class="num">8</span> <span class="num">9</span><span class="p">]</span>
+    <span class="com">// The method copies, as Julia's `a[1:2, :]` does. `..` alone is Julia's `:`.</span>
+    <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span>a <span class="op">&lt;-</span> slice <span class="p">(</span><span class="num">0..2</span><span class="p">)</span> <span class="p">(</span><span class="op">..</span><span class="p">)</span><span class="p">)</span>
+    <span class="com">// An axis taken by a number is dropped: a row is a vector.</span>
+    <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span>a <span class="op">&lt;-</span> slice <span class="num">1</span> <span class="p">(</span><span class="op">..</span><span class="p">)</span><span class="p">)</span>
+    <span class="com">// The index borrows: a view, as `&amp;v[1..3]` is a view of a `Vec`.</span>
+    <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span><span class="p">&amp;</span>a<span class="p">[</span><span class="num">1</span><span class="op">..</span><span class="p">,</span> <span class="op">..=</span><span class="num">1</span><span class="p">]</span><span class="p">)</span>
+    <span class="k">let</span> corner <span class="p">=</span> a<span class="p">[</span><span class="num">1</span><span class="op">..</span><span class="p">,</span> <span class="op">..=</span><span class="num">1</span><span class="p">]</span> <span class="op">&lt;-</span> copy<span class="defer">$</span>
+    <span class="mac">println!</span> <span class="str">"{}"</span> corner
+    <span class="com">// An element, and a whole row, written through.</span>
+    a<span class="p">[</span><span class="num">1</span><span class="p">,</span> <span class="num">1</span><span class="p">]</span> <span class="p">=</span> <span class="num">50</span>
+    a<span class="p">[</span><span class="num">2</span><span class="p">,</span> <span class="op">..</span><span class="p">]</span> <span class="op">&lt;-</span> fill <span class="num">0</span>
+    <span class="mac">println!</span> <span class="str">"{}"</span> a</code></pre>
+<pre class="code"><code>2×3 Matrix&lt;i32&gt;:
+ 1 2 3
+ 4 5 6
+3-element Vector&lt;i32&gt;:
+ 4
+ 5
+ 6
+2×2 view of Matrix&lt;i32&gt;:
+ 4 5
+ 7 8
+2×2 Matrix&lt;i32&gt;:
+ 4 5
+ 7 8
+3×3 Matrix&lt;i32&gt;:
+ 1 2 3
+ 4 50 6
+ 0 0 0</code></pre>
+<p>Julia writes <code>a[1:2, :]</code>. Harsh keeps its own ranges -- 0-based, the end left
+out, as for every collection -- and <code>..</code> alone is Julia's <code>:</code>. There are two
+spellings with one meaning. The method <code>a &lt;- slice (0..2) (..)</code> <em>copies</em>, as
+Julia does. The index <code>&amp;a[0..2, ..]</code> <em>borrows</em>: it is a view onto <code>a</code>, exactly
+as <code>&amp;v[1..3]</code> is a view onto a <code>Vec</code>, and <code>&lt;- copy$</code> makes it a matrix of its
+own. An axis taken by a number is dropped, so <code>a[1, ..]</code> is a vector and
+<code>a[1, 1]</code> a number; and what can be read can be written, <code>a[1, 1] = 50</code>,
+<code>a[2, ..] &lt;- fill 0</code>.</p>
+<p>An index takes its axes with a comma, <code>a[i, j]</code>; the parenthesised <code>a[(i, j)]</code>
+means the same and is what the comma stands for.</p>
+<h3 id="17-8-broadcasting">17.8 Broadcasting</h3>
+<pre class="code"><code>[dependencies]
+hrs_std = "0.1"</code></pre>
+<pre class="code harsh"><code><span class="k">fn</span> relu <span class="p">(</span>x<span class="p">:</span> f64<span class="p">)</span> <span class="op">-&gt;</span> f64<span class="p">:</span>
+    x <span class="op">&lt;-</span> max <span class="num">0.0</span>
+
+<span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="k">let</span> a <span class="p">=</span> m<span class="p">~</span> <span class="p">[</span><span class="num">1.0</span> <span class="p">-</span><span class="num">2.0</span><span class="p">;</span> <span class="p">-</span><span class="num">3.0</span> <span class="num">4.0</span><span class="p">]</span>
+    <span class="k">let</span> b <span class="p">=</span> m<span class="p">~</span> <span class="p">[</span><span class="num">10.0</span> <span class="num">20.0</span><span class="p">;</span> <span class="num">30.0</span> <span class="num">40.0</span><span class="p">]</span>
+    <span class="k">let</span> row <span class="p">=</span> m<span class="p">~</span> <span class="p">[</span><span class="num">100.0</span> <span class="num">200.0</span><span class="p">]</span>
+    <span class="com">// `*` is the matrix product; `.*` multiplies element by element.</span>
+    <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span><span class="p">&amp;</span>a <span class="p">*</span> <span class="p">&amp;</span>b<span class="p">)</span>
+    <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span><span class="p">&amp;</span>a <span class="p">.</span><span class="p">*</span> <span class="p">&amp;</span>b<span class="p">)</span>
+    <span class="com">// Shapes stretch as in Julia: a number, a row, a column.</span>
+    <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span><span class="p">&amp;</span>a <span class="p">.</span><span class="p">*</span> <span class="num">2.0</span> <span class="p">.</span><span class="p">+</span> <span class="p">&amp;</span>row<span class="p">)</span>
+    <span class="com">// `f&lt;&gt;` applies `f` to each element: Julia's `f.(a)`.</span>
+    <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span>relu<span class="p">&lt;</span><span class="p">&gt;</span> a<span class="p">)</span>
+    <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span>f64<span class="p">.</span>powf<span class="p">&lt;</span><span class="p">&gt;</span> a <span class="num">2.0</span><span class="p">)</span>
+    <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span><span class="p">(</span><span class="p">|</span>x<span class="p">,</span> y<span class="p">|</span> x <span class="p">&gt;</span> y<span class="p">)</span><span class="p">&lt;</span><span class="p">&gt;</span> a b<span class="p">)</span>
+    <span class="com">// It pipes, and nothing above consumed `a`.</span>
+    <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span>a <span class="op">|&gt;</span> relu<span class="p">&lt;</span><span class="p">&gt;</span> <span class="op">|&gt;</span> f64<span class="p">.</span>sqrt<span class="p">&lt;</span><span class="p">&gt;</span><span class="p">)</span></code></pre>
+<pre class="code"><code>2×2 Matrix&lt;f64&gt;:
+ -50 -60
+ 90 100
+2×2 Matrix&lt;f64&gt;:
+ 10 -40
+ -90 160
+2×2 Matrix&lt;f64&gt;:
+ 102 196
+ 94 208
+2×2 Matrix&lt;f64&gt;:
+ 1 0
+ 0 4
+2×2 Matrix&lt;f64&gt;:
+ 1 4
+ 9 16
+2×2 Matrix&lt;bool&gt;:
+ false false
+ false false
+2×2 Matrix&lt;f64&gt;:
+ 1 0
+ 0 2</code></pre>
+<p>A dot before an operator applies it element by element: <code>.*</code>, <code>.+</code>, <code>.-</code>, <code>./</code>,
+Julia's own spellings. Shapes stretch as Julia stretches them -- along an axis
+two lengths must be equal, or one of them 1 -- so a number, a row or a column
+combines with a matrix. Precedence is the operator's own: <code>x + a .* b</code>
+multiplies first.</p>
+<p><code>f&lt;&gt;</code> is <em>apply to each</em>, Julia's <code>f.(a)</code>: a mark written tight against a
+function, as <code>$</code> and <code>!</code> are, saying how it is applied. It takes up to three
+arguments, borrows them, works on a closure in parentheses, and pipes. With it
+the operators that have no dotted form are ordinary functions: <code>f64.powf&lt;&gt; a 2.0</code>
+is Julia's <code>a .^ 2</code>, and a comparison gives a matrix of <code>bool</code>. Beneath it is a
+method, <code>a &lt;- map f</code>, as <code>slice</code> is beneath the index.</p>
+<h3 id="17-9-when-sizes-do-not-fit">17.9 When sizes do not fit</h3>
+<pre class="code"><code>[dependencies]
+hrs_std = "0.1"</code></pre>
+<pre class="code harsh"><code><span class="k">use</span> hrs_std<span class="p">.</span><span class="t">UniformScaling</span>
+
+<span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="k">let</span> b <span class="p">=</span> m<span class="p">~</span> <span class="p">[</span><span class="num">1</span> <span class="num">2</span> <span class="num">3</span><span class="p">;</span> <span class="num">4</span> <span class="num">5</span> <span class="num">6</span><span class="p">]</span>
+    <span class="com">// Adding a scaled identity needs a square matrix, and this is 2×3.</span>
+    <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span><span class="p">&amp;</span>b <span class="p">-</span> <span class="p">(</span><span class="t">UniformScaling</span> <span class="num">2</span><span class="p">)</span><span class="p">)</span></code></pre>
+<pre class="code"><code>DimensionMismatch: matrix is not square: dimensions are (2, 3)</code></pre>
+<p>A matrix's size is a value, known when the program runs, not a type. So a
+mismatch is caught then, and reported in Julia's words: <code>DimensionMismatch</code>,
+with the sizes that did not fit.</p>
+    </main>
+  </div>
+</div>
+<script>
+(function(){
+  var b=document.body, t=document.getElementById('nav-toggle');
+  try{ if(localStorage.getItem('harsh-nav')==='hidden') b.classList.add('nav-hidden'); }catch(e){}
+  t.addEventListener('click',function(){
+    b.classList.toggle('nav-hidden');
+    try{ localStorage.setItem('harsh-nav', b.classList.contains('nav-hidden')?'hidden':'shown'); }catch(e){}
+  });
+})();
+</script>
+</body>
+</html>

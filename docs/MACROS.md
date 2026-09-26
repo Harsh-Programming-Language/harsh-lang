@@ -216,6 +216,38 @@ fn main$:
   macro crate mapped to its `.hrs`; proc macros inside `@: … :@` holes and
   in single-file `hrs FILE -o OUT`.
 
+### Re-exporting a Harsh macro
+
+As in Rust, a library can hand its users a macro from its proc-macro crate, so
+they depend on the library alone (the user's ruling, 2026-09-24, option (a)):
+
+```
+# hello_macro/Cargo.toml
+[package.metadata.harsh]
+proc-macros = ["../hello_macro_derive"]
+
+# hello_macro/src/lib.hrs
+pub trait HelloMacro
+    fn hello_macro$
+
+pub use hello_macro_derive.HelloMacro        # resolved by hrs; absent from the Rust
+
+# app/Cargo.toml -- depends on hello_macro only
+[dependencies]
+hello_macro = { path = "../hello_macro" }
+
+# app/src/main.hrs
+use hello_macro.HelloMacro
+
+#[derive~ HelloMacro]
+struct Pancakes
+```
+
+`hrs` blanks every `use` naming a macro crate the project lists -- it has no
+Rust meaning -- and when it builds `app`, reads its path dependencies for
+`pub use <macro crate>.<Name>` (or `.{A, B}`) and adds those macros, and only
+those, to `app`'s runner.
+
 ## Rust macros (!)
 
 Your own macros, written in Rust inside a Harsh project: still supported, and called by the rules of *Rust DSLs* below.

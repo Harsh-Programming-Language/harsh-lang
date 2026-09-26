@@ -1,0 +1,27 @@
+use dioxus.prelude.*
+
+use crate.highlight.tokens
+
+/// Highlighted code as `build.py` renders it: a span for each classed
+/// token, plain text for the rest. Every code on the site goes through here.
+pub fn spans code: &str -> Element:
+    let toks = tokens code
+    rsx! {
+        for t in @: toks :@ {
+            if t.class.is_empty() {
+                "{t.text}"
+            } else {
+                span { class: "{t.class}", "{t.text}" }
+            }
+        }
+    }
+
+/// One block of code, highlighted. `lang` is a class on the block --
+/// `harsh` or `rust` -- so the stylesheet can tell them apart.
+#[component]
+pub fn Code (code: &'static str) (lang: &'static str) -> Element:
+    rsx! {
+        pre { class: "code {lang}",
+            code { {@: spans code :@} }
+        }
+    }

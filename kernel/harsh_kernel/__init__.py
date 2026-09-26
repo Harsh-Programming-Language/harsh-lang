@@ -10,4 +10,4 @@ evcxr kernel per notebook, speaks the Jupyter protocol on both sides, and
 translates in the middle. See `docs/JUPYTER.md`.
 """
 
-__version__ = "0.1.0"
+__version__ = "0.1.2"

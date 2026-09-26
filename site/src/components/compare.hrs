@@ -1,0 +1,20 @@
+use dioxus.prelude.*
+
+use crate.components.Code
+
+/// Harsh on the left, the Rust it becomes on the right. Below a certain
+/// width the stylesheet stacks them.
+#[component]
+pub fn Compare (harsh: &'static str) (rust: &'static str) -> Element:
+    rsx! {
+        div { class: "compare",
+            div { class: "pane",
+                div { class: "pane-label", "Harsh" }
+                Code { code: harsh, lang: "harsh" }
+            }
+            div { class: "pane",
+                div { class: "pane-label", "Rust" }
+                Code { code: rust, lang: "rust" }
+            }
+        }
+    }

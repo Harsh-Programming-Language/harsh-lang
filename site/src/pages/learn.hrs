@@ -1,0 +1,59 @@
+use dioxus.prelude.*
+
+/// The books and the guide are shipped with the site, as the HTML the
+/// project already renders, under `/book/`, `/by-example/` and `/guide/`.
+/// The workflow copies them from `static/` beside the built app.
+#[component]
+pub fn Learn$ -> Element:
+    rsx! {
+        section { class: "page",
+            h1 { "Learn Harsh" }
+            p {
+                "Harsh makes Rust quieter, not easier: everything the Rust Book teaches "
+                "still applies. If you know a programming language but not Rust, start "
+                "with the Book. If you know Rust, the guide's quick reference is a page."
+            }
+            div { class: "cards",
+                a { class: "card", href: "book/",
+                    h3 { "The Harsh Book" }
+                    p {
+                        "The Rust Book's path, in Harsh: 21 chapters, every example "
+                        "built and run, shown as Harsh, the Rust it becomes, and its output."
+                    }
+                }
+                a { class: "card", href: "by-example/",
+                    h3 { "Harsh by Example" }
+                    p {
+                        "A Rust by Example equivalent: short runnable pages, one concept each, "
+                        "with Harsh's own -- pipes, comprehensions, matrices -- beside Rust's."
+                    }
+                }
+                a { class: "card", href: "guide/",
+                    h3 { "The language guide" }
+                    p {
+                        "The reference: every construct, every form, every error message, "
+                        "and the reasoning behind each rule."
+                    }
+                }
+                a { class: "card", href: "https://gitlab.com/bahiminin.benoit.dah.opensource/harshlings", target: "_blank", rel: "noopener",
+                    h3 { "Harshlings" }
+                    p {
+                        "Rustlings for Harsh: 65 small exercises broken on purpose, with hints "
+                        "and solutions, and a runner written in Harsh."
+                    }
+                }
+                a { class: "card", href: "guide/macros.html",
+                    h3 { "Macros and DSLs" }
+                    p {
+                        "Harsh's own macros, " code { "name~" } ", expanded before anything is "
+                        "transpiled; Rust's " code { "name!" } " left to Rust; and a framework's "
+                        code { "view!" } " or " code { "rsx!" } " with Harsh in holes -- how this site is written."
+                    }
+                }
+                a { class: "card", href: "guide/tutorial.html",
+                    h3 { "The tutorial" }
+                    p { "One small program, built up a function at a time." }
+                }
+            }
+        }
+    }

@@ -1,0 +1,10 @@
+/Users/benoitbdah/Programming-Projects/Harsh - Rust transpiler tooling/zPipeline/harsh-lang/hrs_std/target/debug/deps/num_complex-9d65d1e33e50c8a5.d: /Users/benoitbdah/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/num-complex-0.4.6/src/lib.rs /Users/benoitbdah/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/num-complex-0.4.6/src/cast.rs /Users/benoitbdah/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/num-complex-0.4.6/src/pow.rs /Users/benoitbdah/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/num-complex-0.4.6/src/complex_float.rs
+
+/Users/benoitbdah/Programming-Projects/Harsh - Rust transpiler tooling/zPipeline/harsh-lang/hrs_std/target/debug/deps/libnum_complex-9d65d1e33e50c8a5.rlib: /Users/benoitbdah/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/num-complex-0.4.6/src/lib.rs /Users/benoitbdah/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/num-complex-0.4.6/src/cast.rs /Users/benoitbdah/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/num-complex-0.4.6/src/pow.rs /Users/benoitbdah/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/num-complex-0.4.6/src/complex_float.rs
+
+/Users/benoitbdah/Programming-Projects/Harsh - Rust transpiler tooling/zPipeline/harsh-lang/hrs_std/target/debug/deps/libnum_complex-9d65d1e33e50c8a5.rmeta: /Users/benoitbdah/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/num-complex-0.4.6/src/lib.rs /Users/benoitbdah/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/num-complex-0.4.6/src/cast.rs /Users/benoitbdah/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/num-complex-0.4.6/src/pow.rs /Users/benoitbdah/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/num-complex-0.4.6/src/complex_float.rs
+
+/Users/benoitbdah/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/num-complex-0.4.6/src/lib.rs:
+/Users/benoitbdah/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/num-complex-0.4.6/src/cast.rs:
+/Users/benoitbdah/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/num-complex-0.4.6/src/pow.rs:
+/Users/benoitbdah/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/num-complex-0.4.6/src/complex_float.rs:

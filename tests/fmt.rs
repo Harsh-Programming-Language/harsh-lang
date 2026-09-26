@@ -471,3 +471,17 @@ fn fmt_never_breaks_a_line_inside_a_tilde_stream() {
     // And it is stable.
     assert_eq!(harsh_lang::fmt::format(&out), out);
 }
+
+/// B7 (the user, 2026-09-25, option (a)): `hrs fmt` writes one space inside
+/// a hole's marks; the DSL's own text outside them, a multi-line hole's
+/// layout and `@@:` are left as written, and the Rust is unchanged.
+#[test]
+fn fmt_puts_one_space_inside_a_holes_marks() {
+    let src = "fn main$:\n    let count = 3\n    let t = view! { <p>{@:count + 1:@}</p> }\n    let q = sql! { WHERE id = @:count:@ }\n";
+    let out = harsh_lang::fmt::format(src);
+    assert!(out.contains("view! { <p>{@: count + 1 :@}</p> }"), "{out}");
+    assert!(out.contains("sql! { WHERE id = @: count :@ }"), "{out}");
+    let rust = |s: &str| harsh_lang::driver::transpile_str(s).unwrap();
+    assert_eq!(rust(&out), rust(src));
+    assert_eq!(harsh_lang::fmt::format(&out), out, "idempotent");
+}

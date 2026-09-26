@@ -16,122 +16,112 @@ Sizing is relative: XS, S, M, L. "Blocked by" matters more than the estimate.
 - Language guide doubled — tutorial plus every construct in every form — with every snippet transpiled, compiled and run
 - Driver verified on a Mac with rustc 1.97 and current cargo: `new`, `build`, `run`, remapping. Manifest guard (refuses to build without a target under `target/hrs/`), always-on transpile report, equal-mtime staleness, progress bar suppressed; remapper locates zero-width insertion spans; application-vs-`<-` precedence stated in the guide and pinned by a test
 
-## Open, in order (2026-09-22)
+## Open, in order (2026-09-25)
 
-**0. Foreign DSLs and the macro rulings of 2026-09-22 — the build plan.**
-Ruled that day (ruling 16, the map of the macro system and the A–E rulings
-in the macro design notes); nothing built. Not a rewrite: the layout rules,
-the application rule, `~` macros, the emitter, pipes, comprehensions and
-matrices are untouched. What changes, in the order to do it, one change at
-a time with the gates between:
+**Where things stand.** 0.1.32 is delivered as a complete bundle
+(2026-09-26), with `RELEASE.md` -- publishing and installing every product,
+in order; publishing is the user's. 0.1.30 and 0.1.31 were handed over and
+are spent. The design questions
+are gathered in the development notes and wait on his use of what exists -- he decides
+after a few days with it. What needs no decision is done, or listed last below.
 
-1. **The `vec!` migration — done 2026-09-23 (0.1.23).** A bracket after `!` becomes an
-   ordinary argument (A1), so `vec! [1, 2, 3]` would mean `vec!([1, 2, 3])`:
-   the idiom becomes `vec! 1 2 3` and `vec! { 0; 10 }`. 78 corpus lines,
-   the Book, Harshlings, *by Example*, the guide and `hrs-from` move in one
-   step, with a diagnostic for `vec!` applied to a single array literal. A
-   language change more than a transpiler change; its own diff.
-2. **Local rule changes — done 2026-09-23 (0.1.24):** `m!\`
-   retired (A2); "a literal cannot be applied" (A3); `@:` refused outside a
-   body (B1); the turbofished-function application bug
-   (`parse_kv.<String> "x"` loses its parens, C1).
-3. **The prototype — merged into 4 (the user: everything in the tree):** a zone scanner for `m! { … }` bodies
-   with `@: … :@` holes, run on the sketches in ruling 16 and on the sr-auto
-   Rust (`sr-auto-leptos.zip`), with a stub `view!` and a real Leptos build.
-   Bring the runs before building.
-4. **Verbatim bodies with holes — built 2026-09-23 (0.1.24, `src/dslzone.rs`); the old DSL modes retired with it; expansions read as source (0.1.26).** Open: the real Leptos build; source-map offsets for a re-read expansion (a hole's are right since 0.1.27). A brace macro call
-   is a zone the transpiler does not lex as Harsh -- the `macro_rules!`
-   zone mechanism, generalised -- with a scanner for `@: … :@` that hands
-   each hole to the pipeline as a fragment with its own baseline (B2),
-   splices the Rust back, and carries the source map through (E2); `hrs fmt`
-   leaves the zone alone (E1). Estimated 500–800 lines across `lex`,
-   `layout`, `emit`, `fmt` and the map, mostly new. Then `@@:` (B8),
-   comments skipped in a body (B5).
-5. **The converter — done 2026-09-23 (0.1.25-0.1.26): writes the holes (markup, trees, `select!` arms, `json!` objects by shape), writes a DSL stream in braces, an error for what it cannot write:** `hrs-from` classifies every
-   macro call by its stream -- comma list to juxtaposition, else braces
-   (D1) -- and drops the stray `;` it leaves after `sql!(…)`. `unbrace.rs`
-   is where the subtle regressions come from; `round_trip_own_source` is
-   the guard.
-6. **Reconvert the sr-auto site** from its Rust with the new `hrs-from`; lay
-   out its holes by hand where Harsh is wanted.
-7. **Outside the transpiler:** the VSCode and tree-sitter grammars (a scope
-   for holes, one for verbatim bodies, E3); the precedence table of
-   operators and constructs in the guide (A4); the guide's DSL chapter.
+### Waiting on the user, after his testing
 
-Ruled 2026-09-23: **always close** -- every hole ends in `:@`, delimited
-or not (removes "whichever first" and B6). Still to rule before 4: B7,
-spacing around the marks, with B2's fresh-line question. Sessions: one
-for 3, two or three for 1–2 and 4–6. The old items 6 and 7 below (the
-`dsl.hrs` spelling map, the `#:` formatter rule) are superseded by this
-item.
+- **Matrix views as values** -- `VIEWS-DESIGN.md`: the spelling (methods
+  `view`/`view_mut`, or a `view~` macro), `&a[range, range]` then refused,
+  the release it goes in. The views' undefined behaviour under Stacked
+  Borrows is the known issue of 0.1.30.
+- **Hover, go-to-definition, completion through rust-analyzer** --
+  `LSP-RA-DESIGN.md`: how rust-analyzer sees the distribution, answers while
+  a file does not transpile, first-release scope.
+- **B7's outside of the marks** (the inside is built) and **B2** --
+  `DSL-REVIEW.md`.
+- **Zed** -- the two Enter causes in `ZED-FINDINGS.md`, then the registry PR:
+  his editor.
+- **sr-auto** -- the hand-written rewrite: his to run.
+- **Publishing**, always his.
 
-1. **Harsh by Example — done 2026-09-20.** `by-example/`: 15 pages, 43
-   programs, one idea each, every one transpiled, compiled and run by its
-   harness; the lookup book between the Book and the Guide. Written by hand
-   rather than converted (the user's call, and the reason it can carry a page
-   on what Harsh adds); the topics follow *Rust by Example*, MIT OR
-   Apache-2.0, attributed in `by-example/ATTRIBUTION.md`. In the public tree,
-   excluded from the crate, as the Book is. Left for a later pass, pending the
-   user's reading: lifetimes beyond slices, iterators as their own topic,
-   trait objects past one example, async.
-2. **Generator comprehensions — done 2026-09-21.** `g~ e for p in it if c …`
-   in Harsh's prelude, with `list~`, `set~`, `dict~`; the design and every
-   alternative rejected on the way are recorded as rulings 11-13 in the
-   macro design notes, and *Harsh by Example* has a page on it. Building it
-   fixed two emitter bugs every user macro had (an expanded `$` pasting
-   source text, and no turbofish inside an expansion). Open: a real
-   `hrs_std` crate, which waits on `~` macros travelling between crates.
-3. **Matrices and linear algebra, Julia's — done 2026-09-21 (0.1.18).**
-   `hrs_std` (nalgebra underneath), `m~`/`v~` in the prelude with Julia's
-   grammar, `*` dispatched by the operand types, `solve` for Julia's `\`
-   (least squares when tall), `inv`, `det`, `UniformScaling`, `I`,
-   concatenation; the Book's chapter 16. Every decision and its reason is
-   ruling 14 in the macro design notes. **Slicing and broadcasting — done
-   2026-09-21 (0.1.21)**, ruling 15: `slice`, views through a comma index,
-   the dotted operators, `f<>`. **Open:** a Miri run over `hrs_std`'s views
-   (the user's Mac) before `hrs_std` 0.1.1 is published; `.^` and dotted
-   comparisons as operators and in-place `.=` (closed unless the user asks:
-   `f64.powf<> a 2.0` and a closure under `<>` cover them, and neither can
-   be a token substitution), an optional `bc~` (`@.`) macro. Taught in the
-   Book (16.7, 16.8) and Harshlings (`matrices05`–`07`) since 0.1.22;
-   block concatenation with `UniformScaling`. (A panic naming the Harsh line: done in 0.1.19.)
-4. **The user's macro testing** — how `expr` absorbs constructs and isolation
-   parens under the stream rule. Any adjustment to the extent rule waits on
-   his examples. Two things 0.1.14 found and left for it: an `expr` fragment
-   accepts *any* single token as an atom (`<-`, `\`), so a stream that does
-   not fit fails late and with a poor message; and a fragment has no notion of
-   a line, so in the `do:` form nothing stops a `stmt` at a newline.
-5. **Procedural macros** — paused for his reading. Verified: a proc macro
-   defined in Harsh transpiles to a Rust one; simple calls reach it as
-   ordinary Rust tokens. Untested: a Harsh-written proc-macro crate built and
-   called; derive and attribute on Harsh items; Harsh marks inside a macro
-   body; diagnostics mapped back. Open ruling: `m! a | b | c`.
-6. ~~**Foreign DSLs**, the `dsl.hrs` spelling map~~ and 7. ~~**the `#:`
-   formatter rule**~~ -- **superseded** by item 0, the `@: … :@` holes, built
-   0.1.24-0.1.27 (item 0 said so; this list had not caught up -- corrected
-   2026-09-24, the user). What is still open for DSLs:
-   - **B7, one ruling, deferred by the user:** spacing around `@:` and `:@`,
-     with B2's question (may code start on the `@:` line of a multi-line
-     hole?). Laid out for him in the development notes (`DSL-REVIEW.md`).
-   - a real Leptos build; source-map offsets for a re-read expansion;
-   - reconverting the sr-auto site with the current `hrs-from`;
-   - the editor grammars' scopes for holes and verbatim bodies, the guide's
-     DSL chapter, its precedence table;
-   - C1's transpiler bug: `parse_kv.<String> "x"` loses its application.
-8. **Zed** — the two Enter causes in `ZED-FINDINGS.md`, then the registry PR.
-9. **Kernel follow-ups** — rustc line numbers through evcxr's wrapping back to
-   the cell's Harsh lines; completion via `hrs-lsp` once it has types.
-10. **The rest of the language server** — hover, go-to-definition, inline
-   errors — and Open VSX.
-11. **Still the user's to run** — the hand-written sr-auto rewrite; the
-   refinement corpus of real crates. (The rewrite needs the site's original
-   *Rust*, reconverted with the current `hrs-from`: the 2026-09-07 conversion
-   predates the block kit and `match x\`, and 9 of its 22 files are refused
-   today.)
-12. **Last: a Harsh crate registry** — deliberately last; `~` macros travel as
-   `.hrs` inside a crates.io package already.
+### In 0.1.31 and 0.1.32 (delivered 2026-09-26; the changelog lists it)
+
+A Harsh app using a Harsh library by path (it never worked); re-exports of
+Harsh macros; `hrs export` carrying no Harsh crate (`hrs_std` as the crate's
+own module, module level); the Jupyter kernel's errors at the cell's lines
+(checked against evcxr's real output); `hrs fmt` spacing inside a hole's
+marks (B7); the converter's field-value gap (in the transpiler's brace
+check); the matcher ruling's leftovers (the kernel's test).
+
+- **The website, `site/`** -- built 2026-09-26, written by hand in Harsh on
+  Dioxus by Claude Fable 5.1 (the user's ruling: never authored in Rust and converted), part of
+  the tree and the bundles, published to GitHub Pages from the GitHub mirror
+  by `.github/workflows/pages.yml`; built and served on the user's Mac the
+  same day. The Converter (Harsh to Rust in the browser) has its own page;
+  the Playground is an editor and a console, running the Rust on the Rust
+  Playground's servers, `hrs_std` sent along with it (`driver::single_file`);
+  running it all in the browser is deferred, not planned. Publishing guide:
+  `site/DEPLOY.md`. Next: his changes; the first CI deploy; static generation
+  (`dx build --ssg`) for SEO; a custom domain; the logo as an SVG.
+
+### Open, needing no decision
+
+- ~~**Item-level shaking of `hrs_std`**~~ -- **built 2026-09-25**
+  (`src/shake.rs`): 18 real programs (the Book's and *By Example*'s matrix
+  examples) exported, built with cargo alone, identical to `hrs run`, zero
+  warnings. It keeps ~780 of `hrs_std`'s 846 lines for the simplest matrix
+  program: the crate is small and knit together (operators, display,
+  indexing and through it the views), so the minimum set is close to the
+  whole.
+- ~~**Two `if`/`else` arguments in a row**~~ -- **fixed 2026-09-25**: the
+  emitter already continued an argument list across a tail after a literal
+  (`continues_args`), but required the call's `(` in the block's own header,
+  which after an `else:` branch it is not; and the `else` check now looks
+  into a block's tail. Both converter gaps of this family are closed.
+- ~~**The converter's width-reflowed layout**~~ -- **explained and fixed
+  2026-09-25:** not a second bug. The formatter guards its changes only for a
+  file that transpiles; handed `hrs-from`'s output when that was broken by a
+  converter gap, it reflowed the broken file, and the gap looked like two
+  problems. `hrs-from` now formats only a conversion that transpiles
+  (`format_if_sound`), so a gap's error points at the converter's own layout.
+- ~~**Reconvert the sr-auto site**~~ -- **done 2026-09-25**: 22 files, 2,426 lines, 235 holes, 0 conversion errors; every file reads back the same program (19 token for token, 3 by design); the same picture as 0.1.26, no regression. Building it with Leptos needs Rust 1.76 (Leptos 0.8's minimum).
+- ~~**The editor grammars' scopes for holes**~~ -- **done 2026-09-25.**
+  VS Code (extension 0.1.5): a `name! { … }` body is the DSL's text
+  (`meta.embedded.dsl`), a hole `@: … :@` Harsh inside it, nested DSL bodies
+  in holes too, `@@:` an escape -- checked with VS Code's own tokenizer.
+  tree-sitter: `hole_open`, `hole_close`, `hole_escape` tokens, highlighted;
+  parser regenerated; over the corpus (359 files) error nodes fell from 879
+  to 281 -- every hole used to be one. **Zed** takes it once
+  `tree-sitter-harsh` is pushed and `zed-harsh/extension.toml`'s `rev` set to
+  that commit (the user's). Left: the guide's DSL chapter and its precedence
+  table.
+- **A real Leptos build**, and source-map offsets for a re-read expansion.
+
+### Last
+
+- **A Harsh crate registry** -- deliberately last; `PACKAGING.md` section 6.
+
+*(The detailed list this replaces -- the DSL build plan of 2026-09-22 and the
+items done since -- is kept in the handover and the changelog.)*
 
 ## Known bugs, open — fix before the next release that touches the converter
+
+- **Converter, found converting the website back (2026-09-26):** an empty
+  record variant `Home {}` converts to `Home` over a `()` line, which
+  transpiles to `Home { (), }` -- invalid Rust, the round trip broken; a
+  single-token attribute argument is isolated, `#[route ("/")]`; spaces
+  around `<` are dropped (`i < cs.len()` → `i<cs <- len$`); `&text(x)` →
+  `& text (x)`. None pinned yet.
+
+- **`hrs-from`: a tuple field right after an index, `v[0].1`**, does not read
+  back (found 2026-09-25 by the self-host, in a test; worked around with a
+  destructuring `let`). Not pinned yet.
+
+- ~~**A Harsh app could not use a Harsh library by path**~~ -- **found and
+  fixed 2026-09-25** while building re-exports: `hrs` never transpiled a
+  Harsh library the project depends on by path, so cargo found no Rust for
+  it -- though the Book's chapter 17 said `hrs` walks each member. Now
+  `Project::transpile` transpiles such libraries first, recursively, each
+  only when stale (`a_harsh_app_uses_a_harsh_library_by_path`); chapter 17
+  corrected to say what `hrs` does. `hrs` at a workspace's root, without a
+  `[package]`, is still not a command -- run it in a member.
 
 - **Matrix views are undefined behaviour under Stacked Borrows** (Miri on the
   user's Mac, 2026-09-25; released so in 0.1.30 by his decision). `&a[0..2,
@@ -183,6 +173,21 @@ item.
   { a } else { b })` becomes block `if`s inside the parentheses, and the
   `else` loses its `if`. Pinned by the ignored test
   `converter_writes_an_if_as_a_macro_argument`.
+  *Traced 2026-09-25, the transpiler's half:* the approved form -- `(` on its
+  own line, the `if`/`else` beneath, `)` -- transpiles for **one** argument.
+  With two in a row, the layout pass absorbs the first group's closing `)`,
+  the next `(`, its `if c:` and body into the tail of the first group's
+  `else:` block, so only the second `else:` surfaces, with no `if` before it
+  (node dump: `Block format!…( if c:`, `Block else:`, `Block else:`). The fix
+  is in the layout: a block's tail ends at the `)` closing its group, and the
+  next `(` starts a sibling group. Then the converter writes that form.
+  *Tried 2026-09-25:* the `else` check was taught to look into a block's
+  tail -- and the input was accepted but the Rust was wrong, `format!("{} {}",
+  if … ) (if … )`: the second group became a call on the macro's result.
+  Juxtaposition does not carry an argument list across a block's tail.
+  Reverted (refusing beats miscompiling). The real fix is in the emitter's
+  juxtaposition; low priority -- the converter works around it with bindings,
+  and hand-written Harsh rarely meets it.
 - ~~**A `struct`'s `[where …]` clause emitted as a field**~~ -- **fixed
   2026-09-24.** Half a misreading: Harsh writes a declaration's where clause
   on its header line, `struct W<T> [where T: Clone]`, which was always
@@ -481,15 +486,20 @@ own line; evcxr's `:dep`/`:vars`/… commands pass through. Installed with
 for the transpile half (`kernel/test_transpile.py`); the end-to-end run
 against evcxr is verified on the Mac, since the container's Rust 1.75 cannot
 build a current evcxr (edition 2024) and an old one took the session's disk.
-**Left**: rustc line numbers through evcxr's wrapping back to the cell's Harsh
-lines; completion via `hrs-lsp` when it has types. *(2026-09-24: both need
-the user's Mac -- the first reads evcxr's error output, and evcxr cannot be
-built in the container, so writing the mapping here would mean guessing its
-format; the second waits on the language-server design below.)*
+**Done 2026-09-25: errors point at the cell's Harsh lines.** evcxr 0.17
+(built in the container with `cargo install evcxr_repl --version 0.17.0
+--locked`, its own lock file keeping it on Rust 1.75) prints its own report,
+`╭─[command:1:1]` over a numbered gutter, not rustc's `-->`, so the old
+remapping never matched. The kernel now asks `hrs` for the source map, maps
+each line of the Rust it sends to the cell's line, and rewrites the gutter
+(`6 │` → `3 │` where a one-line struct literal was four lines of Rust),
+colours kept; tested on evcxr's real report. **Left:** completion via
+`hrs-lsp`, when the language server has types.
 
-## Next week
+## Next week (as of mid-September -- kept for the record; see the open list above)
 
-- **A turbofish head does not apply to a juxtaposed argument.** `from_str.<Person> "…"` and its multi-line form emit `from_str::<Person> "…"` — no call, and rustc's message is about the string, not about the missing application; only `from_str.<Person> ("…")` works. Cause (found 2026-09-12): `juxt::atom_end` accepts a generic list only when the matching `>` is followed by `(` or `.`, which was written for `Vec<i32>` versus the comparison `a < b && c > d`; a juxtaposed argument after `>` fails that test, so the head is never an atom and nothing applies. The rule Harsh states is that a name with its generics is a callee like any other, so this is the rule failing in one of its forms (GOVERNANCE: "a rule holds in every form it applies to"). Fix: accept the list when the `>` belongs to a path segment written `.<…>` — that spelling is unambiguous, since a comparison never follows a dot — and leave the bare `name<…>` case as it is. Pin both directions plus `a < b && c > d`. **And the error**: when a name with generics is followed by something that is not an application, say so — "`from_str.<Person>` is a name with its generics; write `from_str.<Person> arg` to apply it" beats rustc's complaint about the string that follows.
+- ~~**A turbofish head does not apply to a juxtaposed argument.**~~ -- found
+  **fixed** on 2026-09-25 (`from_str.<Person> "x"` → `from_str::<Person>("x")`). `from_str.<Person> "…"` and its multi-line form emit `from_str::<Person> "…"` — no call, and rustc's message is about the string, not about the missing application; only `from_str.<Person> ("…")` works. Cause (found 2026-09-12): `juxt::atom_end` accepts a generic list only when the matching `>` is followed by `(` or `.`, which was written for `Vec<i32>` versus the comparison `a < b && c > d`; a juxtaposed argument after `>` fails that test, so the head is never an atom and nothing applies. The rule Harsh states is that a name with its generics is a callee like any other, so this is the rule failing in one of its forms (GOVERNANCE: "a rule holds in every form it applies to"). Fix: accept the list when the `>` belongs to a path segment written `.<…>` — that spelling is unambiguous, since a comparison never follows a dot — and leave the bare `name<…>` case as it is. Pin both directions plus `a < b && c > d`. **And the error**: when a name with generics is followed by something that is not an application, say so — "`from_str.<Person>` is a name with its generics; write `from_str.<Person> arg` to apply it" beats rustc's complaint about the string that follows.
 
 
 - **Harshlings: an exercise for every edge case decided this week**, so the language's own rules are the ones a learner practises first: the tight index as an atom (`add a[0] a[1]`, `add a[0] (a[1] * 2)`, a tuple of elements), the refused `f arr [1]` and its two spellings, `f ([1, 2])` for an array argument, the written `;` in an inline `do:`, the `\` literal in a tuple, application binding tighter than `<-`, a pipe's sides as atoms, `$` versus `()`, a bare parameter before `->`. Each with the error it produces today as the exercise and the decided spelling as the solution.
@@ -500,7 +510,7 @@ format; the second waits on the language-server design below.)*
 - **Formatter: a block literal's shape — done 2026-09-10** (the rule below landed in `fmt.rs` and `columns.rs`; the corpus moved with one `hrs fmt`).
 - Was: `let user1 = User\` with the fields one unit past the *statement* is legal and is what the Book's snippets write today, but it hides what belongs to what. The author's rule (2026-09-10): the fields sit one unit past the literal's own column, so either `=` ends its line and `User\` starts the next one with the fields beneath it — the guide's stated style, and what `hrs-from` already writes — or the fields align one unit past `User` on the `=` line. Today `hrs fmt` leaves the first form alone (`fmt --check` on `book/src/05_structs/define.hrs` is a no-op), so this is a re-breaking rule for `fmt.rs`, the same brick as "break after `=` before a multi-line group": once it lands, the Book's snippets move with one `hrs fmt`, and Enter after a line ending in `\` should land one unit past the literal's name (`columns.rs`), not the statement. Verified the same day the Book's literals are not in the formatter's style.
 
-## Procedural macros — paused 2026-09-18, by the user
+## Procedural macros — paused 2026-09-18; built since (0.1.28-0.1.30) -- kept for the record
 
 Declarative macros are finished. Procedural macros are **paused while the user
 reads into `TokenStream`**; the careful approach is his, and the state is:
@@ -545,7 +555,8 @@ in the development tree and not built. Untouched.
   map the answer back (the last good transpile kept for a file that does not
   transpile). Its design document comes first. `hrs-lsp` exists and formats on type. What rust-analyzer gives that `.hrs` files still don't: types on hover, go-to-definition, inline errors. Decides adoption beyond one person. Needs error recovery in the layout pass (first error currently stops the run) and the source map in both directions. Largest item by far; deserves its own design conversation. Smaller first steps in `hrs-lsp`: `)` as a second on-type trigger so the closing paren of an isolated closure snaps into place; `else` likewise.
 - **Remove the dead `depth` field** from `scanner.c`.
-- **Converter: a `while … matches! …` condition inside a block-bodied arm of a nested `match`** leaves a `,` on the next arm and drops the outer `},` — reproduction in the handover (2026-09-10). Not pinned. It was never updated and does nothing; noted so it isn't mistaken for load-bearing.
+- ~~**The transpiler panicked on a non-ASCII character inside a hole**~~ — **fixed 2026-09-26**: `dslzone::restore`'s scan for a hole's `:@` stepped one byte at a time and sliced `text[j..]`, panicking inside a multi-byte character (`view! { <p>{@: "…" :@}</p> }`); it compares bytes now, which find the same (ASCII) marks. Pinned by `a_hole_carries_characters_of_several_bytes`. Found writing the website, whose Converter and Playground run this code in the browser, where a panic stops the page.
+- ~~**Converter: a `while … matches! …` condition inside a block-bodied arm of a nested `match`**~~ — **fixed by 2026-09-25**'s brace look-back stopping at an arm's `=>`: it converts and reads back exactly (`a_while_matches_inside_a_nested_match_converts_and_reads_back`). It was never updated and does nothing; noted so it isn't mistaken for load-bearing.
 
 ## Last: a Harsh crate registry
 

@@ -1,0 +1,13 @@
+//! The Harsh website: a Dioxus app written in Harsh. `hrs build` writes the
+//! Rust to `target/hrs/`; `dx` builds that as any Dioxus web app.
+
+mod app
+mod components
+mod highlight
+mod pages
+mod samples
+
+use dioxus.prelude.*
+
+fn main$:
+    dioxus.launch app.App

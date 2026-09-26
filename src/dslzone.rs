@@ -275,16 +275,20 @@ fn fill_holes(src: &str, lo: usize, hi: usize, hole: &dyn Fn(&str) -> Result<Str
             let mut j = i;
             let mut end = None;
             while j + 1 < b.len() {
-                if text[j..].starts_with("@@:") {
+                // Byte comparisons: this scan steps one byte at a time, and a
+                // slice `text[j..]` inside a multi-byte character panics
+                // (found 2026-09-26: `{@: "…" :@}`). The marks are ASCII, so
+                // bytes find exactly what characters would.
+                if b[j..].starts_with(b"@@:") {
                     j += 3;
                     continue;
                 }
-                if text[j..].starts_with("@:") {
+                if b[j..].starts_with(b"@:") {
                     d += 1;
                     j += 2;
                     continue;
                 }
-                if text[j..].starts_with(":@") {
+                if b[j..].starts_with(b":@") {
                     d -= 1;
                     if d == 0 {
                         end = Some(j);
@@ -340,6 +344,55 @@ fn fill_holes(src: &str, lo: usize, hi: usize, hole: &dyn Fn(&str) -> Result<Str
 
 /// A hole's code as a Harsh fragment: the text on the `@:` line at indent 0,
 /// every following line moved left by the hole's baseline.
+/// B7 (the user, 2026-09-25, option (a)): `hrs fmt` writes one space inside
+/// a hole's marks, `@: x :@` -- after `@:` unless the code starts on the next
+/// line, before `:@` unless the mark starts its own line. `@@:`, a literal
+/// `@:`, is not a mark. Outside the marks the text is the DSL's and is left
+/// as written. One line at a time: a mark's spacing is its own line's.
+pub fn normalize_hole_line(line: &str) -> String {
+    let b = line.as_bytes();
+    let mut out = String::with_capacity(line.len() + 4);
+    let mut i = 0;
+    while i < b.len() {
+        if line[i..].starts_with("@@:") {
+            out.push_str("@@:");
+            i += 3;
+            continue;
+        }
+        if line[i..].starts_with("@:") {
+            out.push_str("@:");
+            i += 2;
+            let mut j = i;
+            while j < b.len() && (b[j] == b' ' || b[j] == b'\t') {
+                j += 1;
+            }
+            // Code follows on this line: exactly one space before it.
+            if j < b.len() {
+                out.push(' ');
+            }
+            i = j;
+            continue;
+        }
+        if line[i..].starts_with(":@") {
+            // The mark ends a hole: one space after the code, unless the mark
+            // starts its line.
+            let trimmed_len = out.trim_end_matches([' ', '\t']).len();
+            let own_line = out[..trimmed_len].trim().is_empty();
+            if !own_line {
+                out.truncate(trimmed_len);
+                out.push(' ');
+            }
+            out.push_str(":@");
+            i += 2;
+            continue;
+        }
+        let ch = line[i..].chars().next().unwrap();
+        out.push(ch);
+        i += ch.len_utf8();
+    }
+    out
+}
+
 fn dedent(code: &str, base: usize) -> String {
     let mut lines = code.split('\n');
     let mut out: Vec<String> = Vec::new();
@@ -412,6 +465,22 @@ pub fn has_statements(rust: &str) -> bool {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn a_holes_marks_get_one_space_inside_and_nothing_else_changes() {
+        use super::normalize_hole_line as n;
+        assert_eq!(n("<p>{@:count + 1:@}</p>"), "<p>{@: count + 1 :@}</p>");
+        assert_eq!(n("<p>{@:    count :@}</p>"), "<p>{@: count :@}</p>");
+        assert_eq!(n("on:click=@:f 1:@>"), "on:click=@: f 1 :@>");
+        // Outside the marks is the DSL's own text.
+        assert_eq!(n("WHERE id = @:id:@ AND x"), "WHERE id = @: id :@ AND x");
+        // A multi-line hole: `@:` at the line's end, `:@` starting its own.
+        assert_eq!(n("<ul>{@:"), "<ul>{@:");
+        assert_eq!(n("        :@}</ul>"), "        :@}</ul>");
+        // `@@:` is a literal `@:`, never a mark.
+        assert_eq!(n("mail @@:x"), "mail @@:x");
+        assert_eq!(n("{@: x :@}"), "{@: x :@}");
+    }
+
     use super::*;
 
     #[test]

@@ -1524,7 +1524,13 @@ fn check_braces(lines: &[Line]) -> Result<(), LayoutError> {
             // preceded by a keyword, and not a pattern (a `let`/`if let`/`for`
             // before it, or a `=>` or `:` after it).
             let literal = !argument && literal_brace(t, i, j);
-            let spans_lines = t[j].line != t[i].line;
+            // Over several lines when a token between the braces begins a
+            // line -- the layout's own notion. A string continued with `\`
+            // spans physical lines inside one token, and the `}` after it
+            // begins no line: the block is on one line (found 2026-09-25, the
+            // converter's field-value gap; `line` records where the string
+            // ends, which a comparison of physical lines tripped on).
+            let spans_lines = t[i + 1..=j].iter().any(|x| x.line_start.is_some());
             if literal {
                 let name: String = literal_path(t, i).iter().map(|k| t[*k].text.clone()).collect::<Vec<_>>().join("");
                 return Err(LayoutError {
@@ -1831,6 +1837,21 @@ fn check_else(nodes: &[Node]) -> Result<(), LayoutError> {
         }
         if let Node::Block(b) = n {
             check_else(&b.body)?;
+            // A block's tail may open a block of its own -- `)` then `(` then
+            // `if c:`, a second isolated `if` argument after a first -- and an
+            // `else` after it belongs to that `if` (2026-09-25; the emitter
+            // writes it as the call's next argument, `continues_args`).
+            if let Some(last) = b.tail.last() {
+                check_else(&b.tail)?;
+                let last_toks = match last {
+                    Node::Line(l) => Some(&l.toks),
+                    Node::Block(t) => Some(&t.header.toks),
+                    Node::Group(_) => None,
+                };
+                if let Some(t) = last_toks.filter(|t| t.iter().any(|x| !x.is_comment())) {
+                    prev_opens_if = opens_if(t);
+                }
+            }
         }
     }
     Ok(())

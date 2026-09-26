@@ -1,0 +1,226 @@
+use dioxus.prelude.*
+
+use crate.components.code.spans
+use harsh_lang.columns.columns
+use harsh_lang.fmt.format
+
+/// The editor's keys, in the browser. Enter, Tab, Shift-Tab and a closing
+/// bracket are answered as `hrs-lsp` answers VS Code (its `extension.js`):
+/// the page's wasm computes the columns with `harsh_lang::columns`, the
+/// same code, and this script only places the text. Brackets and quotes
+/// close as the extension's `language-configuration.json` declares, with VS
+/// Code's defaults around it: `(`, `[`, `{` and `"` (not in a string, not
+/// after a word) close before whitespace, a line's end or one of
+/// `;:.,=}])>`; `/*` gets ` */`; `'` never closes (lifetimes) but wraps a
+/// selection, as the others do; a typed closer steps over the one already
+/// there; Backspace in an empty pair takes both; Enter between brackets
+/// splits them over three lines, the closer under its anchor. Every edit
+/// goes through the browser's own insertion, so undo works; Tab never
+/// leaves the editor -- after Escape, the next Tab does.
+const KEYS: &str = r#"
+const area = document.getElementById(__EDITOR_ID__);
+const view = area.previousElementSibling;
+let release = false;
+let queue = Promise.resolve();
+// Ask the wasm for the columns of a line: [default, legal, unit, closer].
+function ask(text, line) {
+    const answer = queue.then(async () => { dioxus.send([text, line]); return await dioxus.recv(); });
+    queue = answer.catch(() => {});
+    return answer;
+}
+// Replace [from, to) with text and put the caret at `caret`.
+function edit(from, to, text, caret) {
+    area.focus();
+    area.setSelectionRange(from, to);
+    if (!document.execCommand("insertText", false, text)) {
+        area.setRangeText(text, from, to, "end");
+        area.dispatchEvent(new Event("input", { bubbles: true }));
+    }
+    area.setSelectionRange(caret, caret);
+}
+area.addEventListener("keydown", async (e) => {
+    if (e.key === "Escape") { release = true; return; }
+    if (e.key === "Tab" && release) { release = false; return; }
+    release = false;
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    const v = area.value, s = area.selectionStart, t = area.selectionEnd;
+    const start = v.lastIndexOf("\n", s - 1) + 1;
+    let end = v.indexOf("\n", s);
+    if (end < 0) end = v.length;
+    const line = v.slice(0, start).split("\n").length - 1;
+    const ws = /^ */.exec(v.slice(start, end))[0].length;
+    if (e.isComposing) return;
+    // Pairs, as the VS Code extension declares them (language-configuration
+    // .json) and VS Code closes them: `'` is not closed -- lifetimes -- but
+    // surrounds a selection like the rest.
+    const PAIRS = { "(": ")", "[": "]", "{": "}", '"': '"' };
+    const SURROUND = { "(": ")", "[": "]", "{": "}", '"': '"', "'": "'" };
+    const prev = v.charAt(s - 1), next = v.charAt(t);
+    // Inside a string: an odd number of unescaped quotes before the caret.
+    const inString = () => {
+        let n = 0;
+        const l = v.slice(start, s);
+        for (let i = 0; i < l.length; i++) {
+            if (l[i] === "\\") { i++; continue; }
+            if (l[i] === '"') n++;
+        }
+        return n % 2 === 1;
+    };
+    // A selection and an opener or a quote: wrap it.
+    if (s !== t && SURROUND[e.key]) {
+        e.preventDefault();
+        edit(s, t, e.key + v.slice(s, t) + SURROUND[e.key], t + 2);
+        area.setSelectionRange(s + 1, t + 1);
+        return;
+    }
+    // Backspace inside an empty pair takes both.
+    if (e.key === "Backspace" && s === t && PAIRS[prev] && PAIRS[prev] === next) {
+        e.preventDefault();
+        edit(s - 1, s + 1, "", s - 1);
+        return;
+    }
+    // Typing the closer that is already next steps over it.
+    if (s === t && ((")]}".includes(e.key) && next === e.key) || (e.key === '"' && next === '"' && inString()))) {
+        e.preventDefault();
+        area.setSelectionRange(s + 1, s + 1);
+        return;
+    }
+    // An opener closes when what follows allows it (VS Code's autoCloseBefore);
+    // a quote, only outside a string and not straight after a word.
+    if (s === t && PAIRS[e.key] && (next === "" || " \t\n;:.,=}])>".includes(next))) {
+        if (!(e.key === '"' && (inString() || /\w/.test(prev)))) {
+            e.preventDefault();
+            edit(s, s, e.key + PAIRS[e.key], s + 1);
+            return;
+        }
+    }
+    // `/*` closes with ` */`, outside a string.
+    if (s === t && e.key === "*" && prev === "/" && !inString()) {
+        e.preventDefault();
+        edit(s, s, "* */", s + 1);
+        return;
+    }
+    // Enter between an opener and its closer: three lines, the caret in the
+    // middle at the layout's column, the closer under its anchor (LSP.md: the
+    // server places a lone `)` or `]` below the cursor); `}` is Rust's and
+    // goes back to the line's own indentation.
+    if (e.key === "Enter" && !e.shiftKey && s === t && "([{".includes(prev) && next === PAIRS[prev]) {
+        e.preventDefault();
+        const head = v.slice(0, s);
+        const [column] = await ask(head, line + 1);
+        const middle = "\n" + " ".repeat(column);
+        let close = ws;
+        if (prev !== "{") {
+            const answer = await ask(head + middle + "\n", line + 2);
+            if (answer[3] >= 0) close = answer[3];
+        }
+        edit(s, s, middle + "\n" + " ".repeat(close), s + middle.length);
+        return;
+    }
+    if (e.key === "Tab") {
+        e.preventDefault();
+        if (s !== t) {
+            // Several lines: each moves a unit, as in any editor.
+            const from = v.lastIndexOf("\n", s - 1) + 1;
+            let to = v.indexOf("\n", t - 1);
+            if (to < 0) to = v.length;
+            const lines = v.slice(from, to).split("\n").map((l) =>
+                e.shiftKey ? l.replace(/^ {1,4}/, "") : (l.length ? "    " + l : l));
+            const text = lines.join("\n");
+            edit(from, to, text, from + text.length);
+            area.setSelectionRange(from, from + text.length);
+            return;
+        }
+        if (s - start > ws) {
+            // Past the indentation: an ordinary tab stop, or back one.
+            if (e.shiftKey) {
+                const n = Math.min(ws, 4);
+                edit(start, start + n, "", s - n);
+            } else {
+                const pad = " ".repeat(4 - ((s - start) % 4));
+                edit(s, s, pad, s + pad.length);
+            }
+            return;
+        }
+        const [, legal, unit] = await ask(v, line);
+        let target;
+        if (!e.shiftKey) {
+            target = legal.find((c) => c > ws);
+            if (target === undefined) target = ws + unit;
+        } else {
+            const below = legal.filter((c) => c < ws);
+            const onGrid = below.length ? below[below.length - 1] : -1;
+            target = onGrid >= ws - unit ? onGrid : Math.max(ws - unit, 0);
+        }
+        if (target !== ws) edit(start, start + ws, " ".repeat(target), start + target);
+        return;
+    }
+    if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        if (s !== t || s < end) {
+            // Not at the end of a line: keep the line's indentation.
+            const pad = "\n" + " ".repeat(ws);
+            edit(s, t, pad, s + pad.length);
+            return;
+        }
+        const [column] = await ask(v, line + 1);
+        const pad = "\n" + " ".repeat(column);
+        edit(s, s, pad, s + pad.length);
+        return;
+    }
+    if ((e.key === ")" || e.key === "]") && s === t && v.slice(start, s).trim() === "") {
+        e.preventDefault();
+        const [, , , closer] = await ask(v, line);
+        if (closer >= 0) edit(start, s, " ".repeat(closer) + e.key, start + closer + 1);
+        else edit(s, s, e.key, s + 1);
+    }
+});
+area.addEventListener("scroll", () => {
+    view.scrollTop = area.scrollTop;
+    view.scrollLeft = area.scrollLeft;
+});
+await new Promise(() => {});
+"#
+
+/// A code editor for Harsh: the text highlighted as the books highlight it,
+/// with Enter, Tab and closing brackets placed by Harsh's layout rules.
+/// A textarea whose own text is transparent lies over the highlighted copy.
+#[component]
+pub fn Editor (value: Signal<String>) (id: &'static str) -> Element:
+    let mut value = value
+    use_effect move ||:
+        let _ = spawn (keys id)
+    rsx! {
+        div { class: "editor",
+            pre { class: "code harsh editor-view", aria_hidden: "true",
+                code { {@: spans (&value <- read$) :@} "\n" }
+            }
+            textarea {
+                id: id,
+                class: "editor-input",
+                spellcheck: "false",
+                autocomplete: "off",
+                autocapitalize: "off",
+                wrap: "off",
+                value: "{value}",
+                oninput: @: move |e| value <- set (e <- value$) :@,
+            }
+        }
+    }
+
+/// Answer the editor's questions for as long as it is on the page.
+async fn keys id: &'static str:
+    let mut eval = document.eval (&KEYS <- replace "__EDITOR_ID__" (&format! "{id:?}"))
+    loop:
+        match eval <- recv<(String, usize)>$ <- await\
+            Ok (text, line) =>
+                let c = columns (&text) line
+                let closer = c <- closer <- map (|n| n as i64) <- unwrap_or (-1)
+                if eval <- send (c <- default, c <- legal, c <- unit, closer) <- is_err$:
+                    break
+            Err _ => break
+
+/// Format the text as `hrs fmt` would.
+pub fn tidy mut value: Signal<String>:
+    let formatted = format (&value <- read$)
+    value <- set formatted

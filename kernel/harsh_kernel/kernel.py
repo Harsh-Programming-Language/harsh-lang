@@ -78,7 +78,7 @@ class HarshKernel(Kernel):
         wrapped = "fn __cell$:\n" + "\n".join("    " + l if l.strip() else l for l in lines) + "\n"
         with open(src, "w") as f:
             f.write(wrapped)
-        r = subprocess.run([self._hrs, src, "-o", rs], capture_output=True, text=True)
+        r = subprocess.run([self._hrs, src, "-o", rs, "--map", mp], capture_output=True, text=True)
         if r.returncode != 0:
             return None, self._reline(r.stderr + r.stdout, wrapper_lines=1, indent=4), None
         with open(rs) as f:
@@ -90,7 +90,36 @@ class HarshKernel(Kernel):
         while end > start and body[end].strip() != "}":
             end -= 1
         inner = [l[4:] if l.startswith("    ") else l for l in body[start:end]]
-        return "\n".join(inner) + "\n", None, start
+        return "\n".join(inner) + "\n", None, self._line_map(rust, wrapped, mp, start, len(inner))
+
+    def _line_map(self, rust, wrapped, mp, start, n):
+        """Line `k` of the Rust sent to evcxr (1-based) → line of the cell.
+
+        The map's entries are byte ranges, generated Rust to Harsh source;
+        the sent Rust is the generated body from line `start + 1`, and the
+        cell is the source from its second line (the first is the wrapper).
+        A Rust line with no entry of its own -- a closing brace -- takes the
+        line above it. Found 2026-09-25 against evcxr's real output: a
+        one-line struct literal in the cell is four lines of Rust, so evcxr's
+        `6 │` is the cell's line 3.
+        """
+        try:
+            with open(mp) as f:
+                entries = json.load(f).get("entries", [])
+        except (OSError, ValueError):
+            return {}
+        line_of = lambda text, at: text.count("\n", 0, at) + 1
+        best = {}
+        for e in entries:
+            sent = line_of(rust, e[0]) - start
+            cell = line_of(wrapped, e[2]) - 1
+            if 1 <= sent <= n and cell >= 1:
+                best[sent] = min(best.get(sent, cell), cell)
+        out, last = {}, 1
+        for k in range(1, n + 1):
+            last = best.get(k, last)
+            out[k] = last
+        return out
 
     def _reline(self, text, wrapper_lines, indent):
         """Point an hrs error at the cell's line and column, not the wrapper's:
@@ -124,7 +153,7 @@ class HarshKernel(Kernel):
             return {"status": "ok", "execution_count": self.execution_count, "payload": [], "user_expressions": {}}
 
         if _EVCXR_COMMAND.match(code):
-            rust, error, offset = code, None, 0
+            rust, error, offset = code, None, {}
         else:
             rust, error, offset = self._transpile(code)
             if error:
@@ -177,17 +206,26 @@ class HarshKernel(Kernel):
             pass
         return {"status": status, "execution_count": self.execution_count, "payload": [], "user_expressions": {}}
 
-    def _remap(self, text, offset):
-        """rustc lines (in the cell's Rust) back to the cell's Harsh lines.
+    def _remap(self, text, lines):
+        """evcxr's report, pointed at the cell's Harsh lines.
 
-        evcxr wraps the Rust in its own function, so its line numbers are
-        offset again; the Harsh map only knows the Rust hrs wrote. The
-        practical mapping is line-for-line here, since the cell's Rust keeps
-        one statement per line: the number in `--> src/lib.rs:N:C` becomes
-        `cell:N':C'` where N' is looked up through hrs's map when it exists,
-        else N unchanged.
+        evcxr (0.17, read from its real output 2026-09-25) reports an error
+        as `╭─[command:1:1]` -- the command's start, not the error -- with the
+        source beneath it in a numbered gutter, `6 │ let x: i32 = "text";`,
+        numbered by lines of the Rust it was sent. `lines` maps those to the
+        cell's own lines; a gutter number is rewritten in place, its width
+        and colours kept, and `command:` reads `cell:`. rustc's own form,
+        `--> file:N:C`, is mapped the same way.
         """
-        return re.sub(r"--> [^\s:]+:(\d+):(\d+)", lambda m: f"--> cell:{m.group(1)}:{m.group(2)}", text)
+        if not lines:
+            return text
+        def gutter(m):
+            n = int(m.group(1))
+            return str(lines.get(n, n)).rjust(len(m.group(1))) + m.group(2)
+        text = re.sub(r"(?<![\d:])(\d+)( \u2502)", gutter, text)
+        # The `[` and `command:` may be parted by a colour code.
+        text = re.sub(r"(\[(?:\x1b\[[0-9;]*m)*)command:", r"\1cell:", text)
+        return re.sub(r"--> [^\s:]+:(\d+):(\d+)", lambda m: f"--> cell:{lines.get(int(m.group(1)), int(m.group(1)))}:{m.group(2)}", text)
 
     def do_is_complete(self, code):
         # A cell that ends with an opener is being typed; anything else is complete.

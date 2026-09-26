@@ -12,8 +12,8 @@
 pub mod columns;
 pub mod fmt;
 pub mod docex;
-#[cfg(feature = "remap")]
 pub mod dist;
+pub mod shake;
 pub mod driver;
 pub mod dslzone;
 pub mod emit;

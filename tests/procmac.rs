@@ -488,3 +488,123 @@ fn a_version_the_distribution_cannot_serve_says_what_it_ships() {
     assert!(t.contains("this hrs ships hrs_proc_macro 0.2.0") && t.contains("ask for \"0.2\""), "{t}");
     assert!(!t.contains("crates.io index"), "{t}");
 }
+
+/// A Harsh app using a Harsh library by path (found 2026-09-25: it never
+/// worked -- `hrs` did not transpile the library, though the Book's chapter
+/// 17 said it did): the library is transpiled first, as a dependency.
+#[test]
+fn a_harsh_app_uses_a_harsh_library_by_path() {
+    let s = Scratch::new("pathdep");
+    write(&s.0.join("add_one/Cargo.toml"), "[package]\nname = \"add_one\"\nversion = \"0.1.0\"\nedition = \"2021\"\n\n[lib]\npath = \"target/hrs/lib.rs\"\n");
+    write(&s.0.join("add_one/src/lib.hrs"), "pub fn add_one (x: i32) -> i32:\n    x + 1\n");
+    write(&s.0.join("adder/Cargo.toml"), "[package]\nname = \"adder\"\nversion = \"0.1.0\"\nedition = \"2021\"\n\n[[bin]]\nname = \"adder\"\npath = \"target/hrs/main.rs\"\n\n[dependencies]\nadd_one = { path = \"../add_one\" }\n");
+    write(&s.0.join("adder/src/main.hrs"), "fn main$:\n    println! \"{}\" (add_one.add_one 41)\n");
+    let out = hrs("run", &s.0.join("adder"));
+    assert!(out.status.success(), "{}", text(&out));
+    assert_eq!(String::from_utf8_lossy(&out.stdout), "42\n");
+}
+
+/// Re-exporting a Harsh macro (the user, 2026-09-24, option (a);
+/// `PACKAGING.md` section 5), the Rust Book's arrangement: `hello_macro`
+/// defines the trait and says `pub use hello_macro_derive.HelloMacro`; `app`
+/// depends on `hello_macro` alone and derives it. The `pub use` is absent
+/// from `hello_macro`'s Rust.
+#[test]
+fn a_library_reexports_a_harsh_derive_to_its_users() {
+    let s = Scratch::new("reexport");
+    write(&s.0.join("hello_macro_derive/Cargo.toml"), "[package]\nname = \"hello_macro_derive\"\nversion = \"0.1.0\"\nedition = \"2021\"\n\n[lib]\npath = \"target/hrs/lib.rs\"\n\n[dependencies]\nhrs_proc_macro = \"0.2\"\nhrs_quote = \"0.1\"\nhrs_syn = \"0.1\"\n\n[package.metadata.harsh]\nproc-macro = true\n");
+    write(&s.0.join("hello_macro_derive/src/lib.hrs"), "use hrs_proc_macro.TokenStream\nuse hrs_quote.quote\nuse hrs_syn.{parse_macro_input, DeriveInput}\n\n#[proc_macro_derive~ HelloMacro]\npub fn hello_macro_derive (input: TokenStream) -> TokenStream:\n    // Construct a representation of Harsh code as a syntax tree\n    // that we can manipulate.\n    let ast = parse_macro_input! { input as DeriveInput }\n\n    // Build the trait implementation.\n    impl_hello_macro (&ast)\n\nfn impl_hello_macro (ast: &DeriveInput) -> TokenStream:\n    let name = &ast <- ident\n    let generated = quote~ do:\n        impl HelloMacro for #name\n            fn hello_macro$:\n                println! \"Hello, Macro! My name is {}!\" (stringify! #name)\n    generated\n");
+    write(&s.0.join("hello_macro/Cargo.toml"), "[package]\nname = \"hello_macro\"\nversion = \"0.1.0\"\nedition = \"2021\"\n\n[lib]\npath = \"target/hrs/lib.rs\"\n\n[package.metadata.harsh]\nproc-macros = [\"../hello_macro_derive\"]\n");
+    write(&s.0.join("hello_macro/src/lib.hrs"), "pub trait HelloMacro\n    fn hello_macro$\n\npub use hello_macro_derive.HelloMacro\n");
+    write(&s.0.join("app/Cargo.toml"), "[package]\nname = \"app\"\nversion = \"0.1.0\"\nedition = \"2021\"\n\n[[bin]]\nname = \"app\"\npath = \"target/hrs/main.rs\"\n\n[dependencies]\nhello_macro = { path = \"../hello_macro\" }\n");
+    write(&s.0.join("app/src/main.hrs"), "use hello_macro.HelloMacro\n\n#[derive~ HelloMacro]\nstruct Pancakes\n\nfn main$:\n    Pancakes.hello_macro$\n");
+    let out = hrs("run", &s.0.join("app"));
+    assert!(out.status.success(), "{}", text(&out));
+    assert_eq!(String::from_utf8_lossy(&out.stdout), "Hello, Macro! My name is Pancakes!\n");
+    let rust = fs::read_to_string(s.0.join("hello_macro/target/hrs/lib.rs")).unwrap();
+    assert!(!rust.contains("hello_macro_derive"), "{rust}");
+}
+
+/// `hrs export` carries no Harsh crate (the user, 2026-09-25;
+/// `PACKAGING.md` section 4): code using `hrs_std` gets it as its own module,
+/// `matrix`, with `nalgebra` and `num-traits` in place of `hrs_std`, and no
+/// word of Harsh anywhere; code without matrices gets neither. (Built with
+/// cargo alone and compared with `hrs run` by hand, 2026-09-25: the Book's
+/// `broadcasting` and `slicing` identical, no warnings -- not here, where
+/// compiling nalgebra would add minutes to every run.)
+#[test]
+fn export_takes_hrs_std_in_as_its_own_code() {
+    let s = Scratch::new("exportstd");
+    let app = consumer(&s.0, "fn main$:\n    let a = m~ [1.0_f64 2.0; 3.0 4.0]\n    println! \"{:?}\" (a <- size$)\n", false);
+    let manifest = fs::read_to_string(app.join("Cargo.toml")).unwrap();
+    fs::write(app.join("Cargo.toml"), manifest + "\n[dependencies]\nhrs_std = \"0.1\"\n").unwrap();
+    let out_dir = s.0.join("exported");
+    let out = hrs_args(&["export", &out_dir.display().to_string()], &app);
+    assert!(out.status.success(), "{}", text(&out));
+    let m = fs::read_to_string(out_dir.join("Cargo.toml")).unwrap();
+    assert!(m.contains("nalgebra") && m.contains("num-traits") && !m.contains("hrs_std"), "{m}");
+    assert!(out_dir.join("src/matrix/mod.rs").is_file());
+    let main = fs::read_to_string(out_dir.join("src/main.rs")).unwrap();
+    assert!(main.contains("mod matrix;") && main.contains("crate::matrix::Matrix"), "{main}");
+    for f in walk(&out_dir) {
+        let t = fs::read_to_string(&f).unwrap_or_default();
+        assert!(!t.contains("hrs_std") && !t.to_lowercase().contains("harsh"), "{}", f.display());
+    }
+    // Without matrices: no module, no dependency.
+    let plain = consumer(&s.0.join("plain"), "fn main$:\n    println! \"hi\"\n", false);
+    let out_dir = s.0.join("exported-plain");
+    let out = hrs_args(&["export", &out_dir.display().to_string()], &plain);
+    assert!(out.status.success(), "{}", text(&out));
+    assert!(!out_dir.join("src/matrix").exists());
+    assert!(!fs::read_to_string(out_dir.join("Cargo.toml")).unwrap().contains("nalgebra"));
+}
+
+/// The website's Playground sends one file to the Rust Playground, which
+/// has nalgebra and num-traits but not `hrs_std` (the user, 2026-09-26):
+/// `single_file` puts the part of `hrs_std` a program uses after it, as an
+/// inline `mod hrs_std { … }`, its modules nested, and leaves the program's
+/// lines where they were. Code without matrices is returned as it is. (Built
+/// with cargo alone and run by hand, 2026-09-26: all nine programs of the
+/// Book's chapter 16, packed this way, printed what the Book shows --
+/// against nalgebra 0.33, as here compiling nalgebra would add minutes.)
+#[test]
+fn single_file_carries_the_hrs_std_it_uses() {
+    use harsh_lang::driver::{single_file, transpile_str};
+    let plain = transpile_str("fn main$:\n    println! \"hi\"\n").unwrap();
+    assert_eq!(single_file(&plain), plain);
+
+    let rust = transpile_str("fn main$:\n    let v = v~ [1, 3, 4]\n    println! \"{}\" v\n").unwrap();
+    let one = single_file(&rust);
+    // The program first, line for line; only its paths changed.
+    let program: Vec<&str> = rust.trim_end().lines().collect();
+    let sent: Vec<&str> = one.lines().take(program.len()).collect();
+    assert_eq!(sent.len(), program.len());
+    for (a, b) in program.iter().zip(&sent) {
+        assert_eq!(a.replace("hrs_std::", "crate::hrs_std::"), *b, "\n{one}");
+    }
+    // Then the module, whole: nested, no declarations left, no tests.
+    assert!(one.contains("\nmod hrs_std {\n"), "{one}");
+    for m in ["broadcast", "slicing", "refs"] {
+        assert!(!one.contains(&format!("mod {m};")), "`mod {m};` left in:\n{one}");
+    }
+    assert!(!one.contains("#[cfg(test)]"), "{one}");
+    assert!(one.contains("pub struct Vector"), "{one}");
+    assert!(harsh_lang::lex::lex_rust(&one).is_ok());
+    let opens = one.matches('{').count();
+    assert_eq!(opens, one.matches('}').count());
+}
+
+fn walk(dir: &Path) -> Vec<PathBuf> {
+    let mut out = Vec::new();
+    for e in fs::read_dir(dir).unwrap().flatten() {
+        let p = e.path();
+        if p.is_dir() {
+            if p.file_name().map_or(false, |n| n != "target") {
+                out.extend(walk(&p));
+            }
+        } else {
+            out.push(p);
+        }
+    }
+    out
+}

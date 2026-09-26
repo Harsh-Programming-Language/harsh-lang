@@ -1,6 +1,6 @@
 [package]
 name = "harsh-lang"
-version = "0.1.30"
+version = "0.1.32"
 edition = "2021"
 authors = ["Bahiminin Benoit Dah"]
 # `examples/` holds Harsh sources and their generated Rust, not Cargo example
@@ -32,6 +32,9 @@ exclude = [
     "docs/build.py",
     "check.sh",
     ".gitlab-ci.yml",
+    "site/",
+    "RELEASE.md",
+    ".github/",
 ]
 
 [lib]

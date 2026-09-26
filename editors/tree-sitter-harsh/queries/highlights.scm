@@ -33,3 +33,8 @@
 ; A block opened inside a paren -- an isolated closure body -- reads as
 ; structure, like any other block opener.
 (paren_block opener: _ @punctuation.special)
+
+; Holes in a DSL body: `@: … :@`, and the `@@:` escape.
+(hole_open) @punctuation.special
+(hole_close) @punctuation.special
+(hole_escape) @string.escape

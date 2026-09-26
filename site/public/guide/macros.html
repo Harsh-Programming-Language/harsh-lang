@@ -1,0 +1,561 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Harsh — macros</title>
+<style>
+:root{
+  --bg:#0e1418; --panel:#141c21; --line:#233039;
+  --fg:#d7e1e8; --dim:#7d919e; --faint:#5b6d79;
+  --rust:#e08b5a; --acc:#6fb3d2; --kw:#c99bdd; --str:#8fbf7f; --num:#e0c07a;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0; background:var(--bg); color:var(--fg);
+  font:16px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,
+       "Helvetica Neue",Arial,sans-serif;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1180px;margin:0 auto;padding:0 28px}
+header{padding:64px 0 40px;border-bottom:1px solid var(--line);margin-bottom:40px}
+.logo{
+  font-family:"SF Mono",SFMono-Regular,ui-monospace,"JetBrains Mono",
+              "Cascadia Code",Menlo,Consolas,monospace;
+  font-size:clamp(38px,7vw,68px); font-weight:600; letter-spacing:-.02em;
+  line-height:1; margin:0; user-select:all;
+}
+.lg-b{color:var(--faint)}
+.lg-n{color:var(--fg)}
+.lg-a{color:var(--acc)}
+.lg-r{color:var(--rust)}
+.lg-i{display:inline-block;transform:skewX(-11deg);transform-origin:50% 70%}
+.title{margin:22px 0 6px;font-size:26px;font-weight:600;letter-spacing:-.01em}
+.tag{margin:0;color:var(--dim);font-size:16px}
+.tag em{color:var(--rust);font-style:normal}
+.cols{display:grid;grid-template-columns:250px minmax(0,1fr);gap:56px;
+      align-items:start;padding-bottom:120px}
+body.nav-hidden .cols{grid-template-columns:minmax(0,1fr)}
+body.nav-hidden .toc{display:none}
+.toggle{
+  position:fixed;left:10px;top:10px;z-index:10;
+  background:transparent;color:var(--faint);border:0;
+  padding:4px 6px;font:12px/1 inherit;cursor:pointer;opacity:.5;
+}
+.toggle:hover{opacity:1;color:var(--dim)}
+.toc{position:sticky;top:24px;max-height:calc(100vh - 48px);overflow:auto;
+     font-size:14px;border-left:1px solid var(--line);padding-left:18px}
+.toc-h{margin:0 0 10px;color:var(--dim);text-transform:uppercase;
+       letter-spacing:.09em;font-size:11px}
+.toc ul{list-style:none;margin:0;padding:0}
+.toc li{margin:.22em 0}
+.toc a{color:var(--fg);text-decoration:none;display:block;padding:1px 0}
+.toc a:hover{color:var(--acc)}
+/* depth from the document's top level: a book's chapters, then sections,
+   subsections, and theirs */
+.toc .d0{font-weight:600;margin-top:.7em}
+.toc .d0:first-child{margin-top:0}
+.toc .d1{padding-left:14px;font-size:13.5px}
+.toc .d1 a{color:#c5d2db}
+.toc .d2{padding-left:28px;font-size:13px}
+.toc .d2 a{color:var(--dim)}
+.toc .d3{padding-left:42px;font-size:12.5px}
+.toc .d3 a{color:var(--dim)}
+main{min-width:0}
+h2{font-size:25px;margin:52px 0 14px;padding-top:8px;letter-spacing:-.01em;
+   border-top:1px solid var(--line)}
+h2:first-child{border-top:0;margin-top:0}
+h3{font-size:18.5px;margin:32px 0 10px;color:#eaf1f6}
+h4{font-size:15.5px;margin:24px 0 8px;color:var(--dim);
+   text-transform:uppercase;letter-spacing:.06em}
+p{margin:.75em 0}
+ul,ol{padding-left:22px}
+li{margin:.3em 0}
+li>ul,li>ol{margin:.3em 0}
+strong{color:#fff;font-weight:600}
+a{color:var(--acc)}
+code{
+  font-family:"SF Mono",SFMono-Regular,ui-monospace,"JetBrains Mono",
+              "Cascadia Code",Menlo,Consolas,monospace;
+  font-size:.9em; background:#1b252b; border:1px solid var(--line);
+  padding:.08em .34em; border-radius:4px; color:#cfe0ea;
+}
+pre.code{
+  background:var(--panel); border:1px solid var(--line); border-radius:8px;
+  padding:14px 16px; overflow:auto; margin:14px 0; line-height:1.55;
+}
+pre.code code{background:none;border:0;padding:0;font-size:13.5px;color:var(--fg)}
+pre.code.rust{border-left:3px solid var(--rust)}
+pre.code.harsh{border-left:3px solid var(--acc)}
+pre.code.diagram{border-left:3px solid var(--faint);color:var(--dim)}
+.k{color:var(--kw)} .t{color:var(--acc)} .str{color:var(--str)}
+.num{color:var(--num)} .com{color:var(--faint);font-style:italic}
+.op{color:var(--rust);font-weight:600} .mac{color:var(--num)}
+.defer{color:var(--rust);font-weight:600} .attr{color:var(--faint)}
+.p{color:var(--dim)} .blk{color:var(--rust)}
+table{border-collapse:collapse;margin:16px 0;font-size:14.5px;width:100%}
+th,td{border:1px solid var(--line);padding:7px 11px;text-align:left;
+      vertical-align:top}
+th{background:#18222a;color:#eaf1f6;font-weight:600}
+td code{font-size:.88em}
+blockquote{border-left:3px solid var(--line);margin:1em 0;padding:.1em 1em;
+           color:var(--dim)}
+footer{border-top:1px solid var(--line);padding:26px 0 60px;color:var(--faint);
+       font-size:13.5px}
+@media(max-width:900px){
+  .cols,body.nav-hidden .cols{grid-template-columns:1fr;gap:0}
+  .toc{position:static;max-height:none;border-left:0;border-bottom:1px solid
+       var(--line);padding:0 0 20px;margin-bottom:28px}
+}
+</style>
+</head>
+<body>
+  <button class="toggle" id="nav-toggle" title="Show or hide the contents">☰</button>
+  <div class="wrap">
+    <header>
+      <p class="logo"><span class="lg-b">#[</span><span class="lg-n">Ha</span><span class="lg-a">&lt;</span><span class="lg-r">rs</span><span class="lg-a">&gt;</span><span class="lg-a">.</span><span class="lg-n lg-i">h</span><span class="lg-b">]</span></p>
+      <h1 class="title">Harsh</h1>
+      <p class="tag"><em>Design of Harsh's macro rules: HSX, expression bodies, matchers.</em></p>
+    </header>
+    <div class="cols">
+      <nav class="toc"><p class="toc-h">Contents</p><ul>
+<li class="d0"><a href="#where-macros-stand">Where macros stand</a></li>
+<li class="d0"><a href="#harsh-macros">Harsh macros (~)</a></li>
+<li class="d1"><a href="#declarative-macros">Declarative macros</a></li>
+<li class="d2"><a href="#rule-4-matchers-a-metavariable-is-written-in-its-parentheses">Rule 4 — matchers: a metavariable is written in its parentheses</a></li>
+<li class="d2"><a href="#rule-5-matchers-the-bracketed-and-braced-sides-are-rust-s">Rule 5 — matchers: the bracketed and braced sides are Rust&#x27;s</a></li>
+<li class="d1"><a href="#procedural-macros">Procedural macros</a></li>
+<li class="d2"><a href="#custom-derive-macros">Custom derive Macros</a></li>
+<li class="d2"><a href="#attribute-like-macros">Attribute-Like Macros</a></li>
+<li class="d2"><a href="#function-like-macros">Function-Like Macros</a></li>
+<li class="d1"><a href="#re-exporting-a-harsh-macro">Re-exporting a Harsh macro</a></li>
+<li class="d0"><a href="#rust-macros">Rust macros (!)</a></li>
+<li class="d1"><a href="#declarative-macros-1">Declarative macros</a></li>
+<li class="d2"><a href="#rule-0-macrorules-is-rust-macrorules-is-harsh">Rule 0 — `macro_rules!` is Rust, `macro_rules~` is Harsh</a></li>
+<li class="d1"><a href="#procedural-macros-1">Procedural macros</a></li>
+<li class="d2"><a href="#custom-derive-macros-1">Custom derive Macros</a></li>
+<li class="d2"><a href="#attribute-like-macros-1">Attribute-Like Macros</a></li>
+<li class="d2"><a href="#function-like-macros-1">Function-Like Macros</a></li>
+<li class="d0"><a href="#harsh-dsls">Harsh DSLs (~)</a></li>
+<li class="d1"><a href="#the-prelude-g-list-set-dict-m-v">The prelude: `g~`, `list~`, `set~`, `dict~`, `m~`, `v~`</a></li>
+<li class="d0"><a href="#rust-dsls">Rust DSLs (!)</a></li>
+<li class="d1"><a href="#calling-a-macro-the-shapes">Calling a macro: the shapes</a></li>
+<li class="d1"><a href="#derives-and-attributes">Derives and attributes</a></li>
+<li class="d1"><a href="#rule-1-a-rust-macro-s-brace-body-is-rust-its-holes-are-harsh">Rule 1 — a Rust macro&#x27;s brace body is Rust; its holes are Harsh</a></li>
+<li class="d0"><a href="#what-does-not-change">What does not change</a></li>
+<li class="d0"><a href="#order-of-work-done">Order of work — done</a></li>
+<li class="d1"><a href="#the-steps-as-planned">The steps as planned</a></li>
+</ul></nav>
+      <main>
+  <p>Decided in conversation before any code, from a real test: five notebooks of Leptos, Axum and Actix notes converted with <code>hrs-from</code>, whose <code>view!</code> bodies the transpiler mangled. The principle that came out of it: <strong>the macro rules are Harsh's rules, on both sides.</strong> A Harsh call is one group per argument; a Harsh matcher is one group per fragment; a macro body is Harsh where it is expressions and markup where it is markup; and the bracketed and braced forms are Rust's, exactly as brackets and braces are everywhere else in the language. Macros do not produce Harsh — <code>hrs</code> transpiles the file, then rustc expands — but the programmer never has to know: both sides of every macro are written in Harsh and meet in Rust.</p>
+<h2 id="where-macros-stand">Where macros stand</h2>
+<p>Macros are organised by who wrote them, in what, and whether they are yours:</p>
+<ul>
+<li><strong>Harsh macros (~)</strong> -- your own, written in Harsh. <em>Declarative</em>
+  (<code>macro_rules~</code>): finished. <em>Procedural</em>, mirroring Rust's (ruling 17):
+  custom derive, built (0.1.29); attribute-like, built (this batch);
+  function-like, built (0.1.28) -- the Rust Book's three kinds, in its order.</li>
+<li><strong>Rust macros (!)</strong> -- your own, written in Rust inside a Harsh project:
+  still supported. <em>Declarative</em> (<code>macro_rules!</code>): a zone of Rust, copied
+  verbatim. <em>Procedural</em>: a Rust proc-macro crate beside your Harsh crates,
+  depended on and brought in with <code>use</code> like any crate.</li>
+<li><strong>Harsh DSLs (~)</strong> -- imported from Harsh libraries: Harsh throughout; the
+  library's guide is the reference. The prelude is the first such library.</li>
+<li><strong>Rust DSLs (!)</strong> -- imported from Rust libraries: called by Harsh's rules;
+  a stream that is a language of its own is written in braces, with Harsh in
+  holes (ruling 16). A call whose arguments carry a top-level operator is read
+  as an application ending there, <code>my_macro! a | b | c</code> → <code>my_macro!(a) | b |
+  c</code>, as <code>f a | b</code> is <code>f(a) | b</code>; isolate the stream, <code>my_macro! (a | b | c)</code>,
+  or give it braces, <code>my_macro! { a | b | c }</code>.</li>
+</ul>
+<p>Parsing and building for Harsh's procedural macros: a Harsh counterpart to
+<code>syn</code> and <code>quote</code> is in progress (<code>hrs_syn</code>, <code>hrs_quote</code>); until it lands, a
+macro reads and writes its tokens with <code>hrs_proc_macro</code>.</p>
+<h2 id="harsh-macros">Harsh macros (~)</h2>
+<p>Your own macros, written in Harsh, expanded by <code>hrs</code> into Harsh before anything is transpiled.</p>
+<h3 id="declarative-macros">Declarative macros</h3>
+<p><code>macro_rules~</code>: Harsh layout, Harsh matchers, a Harsh transcriber, calls written <code>twice~ 4</code>. What sets it apart from Rust's <code>macro_rules!</code> is rule 0, under <em>Rust macros</em> below.</p>
+<h4 id="rule-4-matchers-a-metavariable-is-written-in-its-parentheses">Rule 4 — matchers: a metavariable is written in its parentheses</h4>
+<p>The user's ruling, 2026-09-25:</p>
+<ol>
+<li><strong>A metavariable is written <code>($name:spec)</code>.</strong> Its parentheses are part of the construct, as <code>$( … )*</code>'s are the repetition's -- Harsh's parameter shape, <code>fn f (a: T)</code>, and it keeps every metavariable one shape, with no drift such as <code>($k:     expr =&gt; $v:  expr)</code>. A bare <code>$name:spec</code> is refused, in a repetition too, and the message names the form.</li>
+<li><strong>Every other token in a matcher is literal</strong>, matched as written: <code>=&gt;</code>, a keyword, and any further parentheses.</li>
+<li><strong>A specifier gives its capture meaning.</strong> <code>:expr</code> means an expression, and in an expression parentheses are grouping, so <code>(1+2)</code>, <code>((1+2))</code> and <code>(((1+2)))</code> are one expression to <code>($v:expr)</code>. <code>:ident</code>, <code>:lifetime</code> and <code>:literal</code> are single tokens, as in Rust: <code>(adding)</code> is no <code>:ident</code>.</li>
+<li><strong>The transcriber stays bare</strong>: <code>$v $( $x )*</code>, parentheses only where the output needs them.</li>
+</ol>
+<pre class="code harsh"><code>macro_rules<span class="p">~</span> apply
+    <span class="p">(</span><span class="p">(</span><span class="defer">$</span>v<span class="p">:</span>ident<span class="p">)</span> <span class="defer">$</span><span class="p">(</span> <span class="p">(</span><span class="defer">$</span>x<span class="p">:</span>expr<span class="p">)</span> <span class="p">)</span><span class="p">*</span><span class="p">)</span> <span class="op">=&gt;</span> <span class="k">do</span><span class="p">:</span>
+        <span class="defer">$</span>v <span class="defer">$</span><span class="p">(</span> <span class="defer">$</span>x <span class="p">)</span><span class="p">*</span>
+
+apply<span class="p">~</span> adding <span class="num">4</span> <span class="num">5</span>            <span class="com">// adding(4, 5)</span>
+apply<span class="p">~</span> adding <span class="p">(</span><span class="num">4</span><span class="p">)</span> <span class="p">(</span><span class="num">1</span> <span class="p">+</span> <span class="num">2</span><span class="p">)</span>    <span class="com">// (4) and (1 + 2) are expressions</span>
+apply<span class="p">~</span> <span class="p">(</span>adding<span class="p">)</span> <span class="num">4</span> <span class="num">5</span>          <span class="com">// refused: (adding) is no :ident</span></code></pre>
+<p>The arm's own parentheses come first, so an arm whose whole matcher is one metavariable is written <code>(($e:expr)) =&gt; do:</code>. Literal parentheses in a matcher require literal parentheses in the call:</p>
+<table>
+<thead>
+<tr>
+<th>Matcher</th>
+<th>Call</th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>($k:expr) =&gt; ($v:expr)</code></td>
+<td><code>"key" =&gt; (3+4)</code></td>
+<td>matches</td>
+</tr>
+<tr>
+<td><code>(($k:expr)) =&gt; ($v:expr)</code></td>
+<td><code>"key" =&gt; (3+4)</code></td>
+<td>no: the outer <code>( )</code> is literal</td>
+</tr>
+<tr>
+<td><code>(($k:expr)) =&gt; ($v:expr)</code></td>
+<td><code>("key") =&gt; (3+4)</code></td>
+<td>matches</td>
+</tr>
+<tr>
+<td><code>(($k:expr)) =&gt; ($v:expr)</code></td>
+<td><code>(("key")) =&gt; (3+4)</code></td>
+<td>matches</td>
+</tr>
+</tbody>
+</table>
+<p>A pair in a repetition, each in literal parentheses of its own:</p>
+<pre class="code harsh"><code>macro_rules<span class="p">~</span> hashmap
+    <span class="p">(</span> <span class="defer">$</span><span class="p">(</span> <span class="p">(</span><span class="p">(</span><span class="defer">$</span>k<span class="p">:</span>expr<span class="p">)</span> <span class="op">=&gt;</span> <span class="p">(</span><span class="defer">$</span>v<span class="p">:</span>expr<span class="p">)</span><span class="p">)</span> <span class="p">)</span><span class="p">*</span> <span class="p">)</span> <span class="op">=&gt;</span> <span class="k">do</span><span class="p">:</span>
+        …
+<span class="k">let</span> m <span class="p">=</span> hashmap<span class="p">~</span> <span class="p">(</span><span class="str">"a"</span> <span class="op">=&gt;</span> <span class="num">1</span><span class="p">)</span> <span class="p">(</span><span class="str">"b"</span> <span class="op">=&gt;</span> <span class="num">2</span><span class="p">)</span></code></pre>
+<h4 id="rule-5-matchers-the-bracketed-and-braced-sides-are-rust-s">Rule 5 — matchers: the bracketed and braced sides are Rust's</h4>
+<p>A matcher in <code>[ … ]</code> or <code>{ … }</code> is Rust's syntax, as the stream of a <code>~</code> call is: <code>filled~ [0u8; 4]</code> reaches the macro as written, so <code>([ ($elem:expr) ; ($n:expr) ])</code> is how a macro takes a <code>;</code>-separated pair -- the arm's own parentheses, then the bracket, whose tokens are literal, the metavariables written in theirs (rule 4).</p>
+<pre class="code harsh"><code>macro_rules<span class="p">~</span> filled
+    <span class="p">(</span><span class="p">[</span> <span class="p">(</span><span class="defer">$</span>elem<span class="p">:</span>expr<span class="p">)</span> <span class="p">;</span> <span class="p">(</span><span class="defer">$</span>n<span class="p">:</span>expr<span class="p">)</span> <span class="p">]</span><span class="p">)</span> <span class="op">=&gt;</span> <span class="k">do</span><span class="p">:</span>
+        <span class="mac">vec!</span> <span class="p">{</span> <span class="p">@</span><span class="p">:</span> <span class="defer">$</span>elem <span class="p">:</span><span class="p">@</span><span class="p">;</span> <span class="p">@</span><span class="p">:</span> <span class="defer">$</span>n <span class="p">:</span><span class="p">@</span> <span class="p">}</span>
+<span class="k">let</span> v <span class="p">=</span> filled<span class="p">~</span> <span class="p">[</span><span class="num">0u8</span><span class="p">;</span> <span class="num">4</span><span class="p">]</span></code></pre>
+<h3 id="procedural-macros">Procedural macros</h3>
+<p>A procedural macro is a program: a function from tokens to the code that replaces or accompanies them. Harsh's are written in Harsh, in a crate of their own, and run by <code>hrs</code> when it transpiles the code that calls them; they mirror Rust's three forms.</p>
+<h4 id="custom-derive-macros">Custom derive Macros</h4>
+<p>A derive mirrors Rust's. It is registered with its name, and may declare
+helper attributes it reads:</p>
+<pre class="code harsh"><code><span class="attr">#[proc_macro_derive~ Describe (attributes describe)]</span>
+<span class="k">pub</span> <span class="k">fn</span> describe <span class="p">(</span>input<span class="p">:</span> <span class="t">TokenStream</span><span class="p">)</span> <span class="op">-&gt;</span> <span class="t">TokenStream</span><span class="p">:</span>
+    …</code></pre>
+<p>and is called above a <code>struct</code>, an <code>enum</code> or a <code>union</code>, beside Rust's own
+derives if you like:</p>
+<pre class="code harsh"><code><span class="attr">#[derive Debug]</span>
+<span class="attr">#[derive~ Describe]</span>
+<span class="k">struct</span> <span class="t">Point</span>
+    x<span class="p">:</span> i32
+    <span class="attr">#[describe skip]</span>
+    secret<span class="p">:</span> i32
+    y<span class="p">:</span> i32</code></pre>
+<ul>
+<li><strong>It receives</strong> the item as written: its outer attributes and doc
+  comments, its header and every line beneath it, with every derive
+  attribute removed -- Rust's and Harsh's -- and its helpers present.</li>
+<li><strong>Its output is added after the item</strong>, which it cannot change. Several
+  derives run in the order written.</li>
+<li><strong>Its helpers leave the item</strong> once it has run: rustc would not know
+  them. A helper no derive on the item declared is left for rustc to refuse.</li>
+<li><strong>Errors</strong> name the derive and point at its attribute: "the derive
+  <code>Describe</code> failed: …", or rustc's error with "in the expansion of
+  <code>#[derive~ Describe]</code>".</li>
+</ul>
+<h4 id="attribute-like-macros">Attribute-Like Macros</h4>
+<p>An attribute-like macro is placed on any item, and what it returns
+<em>replaces</em> the item. As in Rust it takes two streams, the attribute's
+arguments and the item -- a <code>proc_macro_attribute</code> with one parameter is
+refused by rustc ("attribute proc macro has incorrect signature", checked
+2026-09-24), and <code>#[route]</code> without arguments gets an empty first stream.
+Harsh's own: a <code>pub fn</code> marked <code>#[proc_macro_attribute~]</code> taking
+<code>(attr: TokenStream) (item: TokenStream)</code> -- one stream is refused, as rustc
+refuses it -- called <code>#[name~]</code> or <code>#[name~ arguments]</code> on any item:
+<code>#[route~ GET "/"]</code>, the arguments written after the name as a Rust
+attribute's are (the user, 2026-09-24), and handed to the macro as written,
+<code>GET "/"</code>. What shape of stream a macro expects is its author's decision, as
+with any <code>~</code> macro; Harsh imposes none -- written with Harsh in mind it will
+usually be <code>#[route~ GET "/" (some_attr = some_value)]</code>. The macro receives
+the item with all its other attributes, before and after its own (checked
+with rustc), and its output replaces the item; attribute-like macros run
+before derives. A <em>Rust</em> attribute macro is different: there <code>hrs</code>
+transpiles the call, and <code>#[route GET "/" (some_attr = some_value)]</code> and
+<code>#[route (GET) ("/") (some_attr = some_value)]</code> both become Rust's
+<code>#[route(GET, "/", some_attr = some_value)]</code> (checked). The Book's 23.5 has
+the Rust Book's <code>route</code> example, written in Harsh.</p>
+<h4 id="function-like-macros">Function-Like Macros</h4>
+<p>A proc macro is a Harsh function from a stream to a stream. The crate that
+defines it:</p>
+<pre class="code"><code># hello/Cargo.toml
+[package]
+name = "hello"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+path = "target/hrs/lib.rs"
+
+[dependencies]
+hrs_proc_macro = "0.2"
+
+[package.metadata.harsh]
+proc-macro = true</code></pre>
+<pre class="code harsh"><code><span class="com">// hello/src/lib.hrs</span>
+<span class="k">use</span> hrs_proc_macro<span class="p">.</span><span class="t">TokenStream</span>
+
+<span class="attr">#[proc_macro~]</span>
+<span class="k">pub</span> <span class="k">fn</span> hello_macro <span class="p">(</span>input<span class="p">:</span> <span class="t">TokenStream</span><span class="p">)</span> <span class="op">-&gt;</span> <span class="t">TokenStream</span><span class="p">:</span>
+    <span class="k">let</span> input_str <span class="p">=</span> input <span class="op">&lt;-</span> to_string<span class="defer">$</span>
+    <span class="k">let</span> output <span class="p">=</span> <span class="mac">format!</span> <span class="str">"\"Hello, {}!\""</span> input_str
+    output <span class="op">&lt;-</span> parse<span class="defer">$</span> <span class="op">&lt;-</span> unwrap<span class="defer">$</span></code></pre>
+<p>The crate that uses it lists it by path:</p>
+<pre class="code"><code># app/Cargo.toml
+[package.metadata.harsh]
+proc-macros = ["../hello"]</code></pre>
+<pre class="code harsh"><code><span class="com">// app/src/main.hrs</span>
+<span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span>hello_macro<span class="p">~</span> world<span class="p">)</span>        <span class="com">// prints Hello, world!</span></code></pre>
+<ul>
+<li><strong>The stream</strong> is the call's tokens as written, as text: the rest of the
+  line and every line indented beneath it (the <code>~</code> extent rule), comments
+  dropped, a <code>do:</code> opener stripped, each line's indentation relative to the
+  least-indented one. <code>hello_macro~ world</code> receives <code>world</code>.</li>
+<li><strong>The expansion</strong> is Harsh text. <code>hrs</code> reads it as Harsh and splices it
+  where the call stood, at the call's column; it then transpiles like any
+  Harsh you wrote. Text that does not read as Harsh is an error naming the
+  macro and the call; so is a macro that returns an error or panics.</li>
+<li><strong>Names</strong> a proc macro introduces are visible to the caller (no hygiene:
+  a Rust proc macro built from text has none either).</li>
+<li><strong>Who wins a name:</strong> a file's own <code>macro_rules~</code>, then the project's proc
+  macros, then the prelude; <code>hrs_std.NAME~</code> is always the prelude's.</li>
+<li><strong>Where it lives:</strong> <code>#[proc_macro~]</code> marks a <code>pub fn</code> in the crate's root,
+  <code>src/lib.hrs</code>. A crate marked <code>proc-macro = true</code> registers at least one;
+  an unmarked crate registers none.</li>
+<li><strong>How it runs:</strong> <code>hrs build</code>, <code>hrs run</code> and <code>hrs expand</code> transpile the
+  listed crates and build a small runner under <code>target/hrs/proc-macros/</code>
+  (cargo's own freshness check makes later builds a no-op), then run it
+  once per call. Changing a macro retranspiles its callers.</li>
+<li><strong>Not yet:</strong> the attribute form; tokens with spans; a proc-macro crate
+  that itself uses Harsh proc macros; diagnostics from rustc inside the
+  macro crate mapped to its <code>.hrs</code>; proc macros inside <code>@: … :@</code> holes and
+  in single-file <code>hrs FILE -o OUT</code>.</li>
+</ul>
+<h3 id="re-exporting-a-harsh-macro">Re-exporting a Harsh macro</h3>
+<p>As in Rust, a library can hand its users a macro from its proc-macro crate, so
+they depend on the library alone (the user's ruling, 2026-09-24, option (a)):</p>
+<pre class="code harsh"><code><span class="p">#</span> hello_macro<span class="p">/</span><span class="t">Cargo</span><span class="p">.</span>toml
+<span class="p">[</span>package<span class="p">.</span>metadata<span class="p">.</span>harsh<span class="p">]</span>
+proc<span class="p">-</span>macros <span class="p">=</span> <span class="p">[</span><span class="str">"../hello_macro_derive"</span><span class="p">]</span>
+
+<span class="p">#</span> hello_macro<span class="p">/</span>src<span class="p">/</span>lib<span class="p">.</span>hrs
+<span class="k">pub</span> <span class="k">trait</span> <span class="t">HelloMacro</span>
+    <span class="k">fn</span> hello_macro<span class="defer">$</span>
+
+<span class="k">pub</span> <span class="k">use</span> hello_macro_derive<span class="p">.</span><span class="t">HelloMacro</span>        <span class="p">#</span> resolved by hrs<span class="p">;</span> absent from the <span class="t">Rust</span>
+
+<span class="p">#</span> app<span class="p">/</span><span class="t">Cargo</span><span class="p">.</span>toml <span class="p">-</span><span class="p">-</span> depends on hello_macro only
+<span class="p">[</span>dependencies<span class="p">]</span>
+hello_macro <span class="p">=</span> <span class="p">{</span> path <span class="p">=</span> <span class="str">"../hello_macro"</span> <span class="p">}</span>
+
+<span class="p">#</span> app<span class="p">/</span>src<span class="p">/</span>main<span class="p">.</span>hrs
+<span class="k">use</span> hello_macro<span class="p">.</span><span class="t">HelloMacro</span>
+
+<span class="attr">#[derive~ HelloMacro]</span>
+<span class="k">struct</span> <span class="t">Pancakes</span></code></pre>
+<p><code>hrs</code> blanks every <code>use</code> naming a macro crate the project lists -- it has no
+Rust meaning -- and when it builds <code>app</code>, reads its path dependencies for
+<code>pub use &lt;macro crate&gt;.&lt;Name&gt;</code> (or <code>.{A, B}</code>) and adds those macros, and only
+those, to <code>app</code>'s runner.</p>
+<h2 id="rust-macros">Rust macros (!)</h2>
+<p>Your own macros, written in Rust inside a Harsh project: still supported, and called by the rules of <em>Rust DSLs</em> below.</p>
+<h3 id="declarative-macros-1">Declarative macros</h3>
+<h4 id="rule-0-macrorules-is-rust-macrorules-is-harsh">Rule 0 — <code>macro_rules!</code> is Rust, <code>macro_rules~</code> is Harsh</h4>
+<p>Harsh has two declarative macro systems, and the mark says which. Everything
+in the rules below is about <strong><code>macro_rules~</code></strong>, Harsh's own: Harsh layout,
+Harsh matchers, a Harsh transcriber, and calls written <code>twice~ 4</code>.</p>
+<p><strong><code>macro_rules!</code> is a zone of Rust.</strong> The author is writing Rust and knows
+it, so the transpiler reads none of it and rewrites none of it: the
+definition goes out byte for byte as it came in, and <code>hrs-from</code> copies a Rust
+one into a Harsh file the same way, which makes the round trip exact.</p>
+<pre class="code harsh"><code><span class="mac">macro_rules!</span> my_vec <span class="p">{</span>                      <span class="com">// copied verbatim, both directions</span>
+    <span class="p">(</span> <span class="defer">$</span><span class="p">(</span> <span class="defer">$</span>x<span class="p">:</span>expr <span class="p">)</span><span class="p">,</span><span class="p">*</span> <span class="p">)</span> <span class="op">=&gt;</span> <span class="p">{</span>
+        <span class="p">{</span> <span class="k">let</span> <span class="k">mut</span> v <span class="p">=</span> <span class="t">Vec</span><span class="op">::</span>new<span class="p">(</span><span class="p">)</span><span class="p">;</span> <span class="defer">$</span><span class="p">(</span> v<span class="p">.</span>push<span class="p">(</span><span class="defer">$</span>x<span class="p">)</span><span class="p">;</span> <span class="p">)</span><span class="p">*</span> v <span class="p">}</span>
+    <span class="p">}</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="k">let</span> v <span class="p">=</span> <span class="mac">my_vec!</span> <span class="num">1</span> <span class="num">2</span> <span class="num">3</span>                  <span class="com">// the call is Harsh: my_vec!(1, 2, 3)</span></code></pre>
+<p><code>macro_rules! name</code> opens the zone; the <code>{</code> that follows and its matching <code>}</code>
+delimit it. There is no Harsh opener — no <code>:</code>, no <code>do:</code>, no <code>raw:</code> — on
+purpose: an opener would make the body's indentation meaningful, and the body
+is Rust, laid out however its author likes. A <code>}</code> inside a string, a char, a
+raw string or a comment is text, not a brace, so <code>println!("}")</code> closes
+nothing.</p>
+<p>Only the <em>definition</em> is foreign. A call to such a macro is an ordinary Harsh
+call and is written like one.</p>
+<h3 id="procedural-macros-1">Procedural macros</h3>
+<p>A Rust proc-macro crate -- <code>proc-macro = true</code> under <code>[lib]</code>, Rust's own setting -- sits beside your Harsh crates; a Harsh crate depends on it as on any crate and brings its macros in with <code>use</code>: a function-like one is called <code>name! args</code>, a derive <code>#[derive Name]</code>, an attribute <code>#[name]</code> or <code>#[name (args)]</code>. The Book's 23.6 has the Rust Book's <code>HelloMacro</code> derive, in Rust, used from Harsh.</p>
+<h4 id="custom-derive-macros-1">Custom derive Macros</h4>
+<p>A function marked with Rust's <code>proc_macro_derive</code>, naming the derive, called <code>#[derive Name]</code> after <code>use crate_name.Name</code>; its output is added beside the item.</p>
+<h4 id="attribute-like-macros-1">Attribute-Like Macros</h4>
+<p>A function marked with Rust's <code>proc_macro_attribute</code>, taking two streams -- the attribute's arguments and the item -- and returning what replaces the item, called <code>#[name]</code> or <code>#[name (args)]</code>.</p>
+<h4 id="function-like-macros-1">Function-Like Macros</h4>
+<p>A function marked with Rust's <code>proc_macro</code>, called <code>name! args</code>, or <code>name! { … }</code> when its stream is a language of its own.</p>
+<h2 id="harsh-dsls">Harsh DSLs (~)</h2>
+<p>Macros imported from Harsh libraries: Harsh throughout, each call following the grammar its library's guide describes. Nothing here is special beyond that guide.</p>
+<h3 id="the-prelude-g-list-set-dict-m-v">The prelude: <code>g~</code>, <code>list~</code>, <code>set~</code>, <code>dict~</code>, <code>m~</code>, <code>v~</code></h3>
+<p>Four macros need no definition and no <code>use</code>. <code>g~</code> is a comprehension:</p>
+<pre class="code harsh"><code><span class="k">let</span> pairs<span class="p">:</span> <span class="t">Vec</span><span class="p">&lt;</span><span class="p">(</span>i32<span class="p">,</span> i32<span class="p">)</span><span class="p">&gt;</span> <span class="p">=</span>
+    <span class="p">(</span>g<span class="p">~</span> <span class="p">(</span>x<span class="p">,</span> y<span class="p">)</span>
+        <span class="k">for</span> x <span class="k">in</span> <span class="num">1..4</span> <span class="k">if</span> x <span class="p">&gt;</span> <span class="num">1</span>
+        <span class="k">for</span> y <span class="k">in</span> <span class="num">1..4</span> <span class="k">if</span> y <span class="op">!=</span> x
+    <span class="p">)</span> <span class="op">&lt;-</span> collect<span class="defer">$</span></code></pre>
+<p>Each <code>if</code> belongs to the <code>for</code> it follows, so a condition sees its own level's
+name and every outer one. <code>g~</code> is lazy; <code>list~</code>, <code>set~</code> and <code>dict~ k =&gt; v for …</code>
+collect it. A file that defines its own <code>g</code> shadows the prelude's, and
+<code>hrs_std.g~</code> always reaches the prelude's.</p>
+<p><code>m~ [1 2; 3 4]</code> and <code>v~ [1, 2, 3]</code> are Julia's matrix and vector literals — a
+space is <code>hcat</code>, <code>;</code> or a line break is <code>vcat</code>, a comma makes a vector's
+entries, and every entry is a block. They build <code>hrs_std::Matrix</code> and
+<code>hrs_std::Vector</code>, so a project that uses them lists <code>hrs_std = "0.1"</code> among
+its dependencies; the Book's chapter 16 and the Guide's "Matrices and linear
+algebra" cover them.</p>
+<h2 id="rust-dsls">Rust DSLs (!)</h2>
+<p>Macros imported from Rust libraries, from <code>println!</code> to a framework's <code>view!</code>, called by Harsh's rules.</p>
+<h3 id="calling-a-macro-the-shapes">Calling a macro: the shapes</h3>
+<p>Nothing here is special to macros. A call is a header, and what follows it is
+a block of the kind the header's mark names — the same kit as everywhere else
+in the language, which is why the forms can be guessed rather than recalled.</p>
+<pre class="code harsh"><code><span class="mac">m!</span> x y z                             <span class="mac">m!</span><span class="p">(</span>x<span class="p">,</span> y<span class="p">,</span> z<span class="p">)</span>          juxtaposed arguments
+<span class="mac">m!</span> <span class="p">(</span>x<span class="p">)</span> <span class="p">(</span>y<span class="p">)</span> <span class="p">(</span>z<span class="p">)</span>                       <span class="mac">m!</span><span class="p">(</span>x<span class="p">,</span> y<span class="p">,</span> z<span class="p">)</span>          the same<span class="p">,</span> isolated
+
+<span class="mac">m!</span> <span class="p">(</span><span class="k">do</span><span class="p">:</span>                              <span class="mac">m!</span><span class="p">(</span><span class="p">{</span>                 a block <span class="k">as</span> one argument<span class="p">,</span>
+    stmt                                 stmt<span class="p">;</span>            isolated like any
+    value                                value            argument
+<span class="p">)</span>                                    <span class="p">}</span><span class="p">)</span>
+<span class="mac">m!</span> <span class="p">{</span> stream <span class="p">}</span>                        <span class="mac">m!</span> <span class="p">{</span> stream <span class="p">}</span>        braces<span class="p">:</span> the macro's own
+                                                          stream<span class="p">,</span> <span class="k">as</span> <span class="t">Rust</span> expects it</code></pre>
+<p><strong>A macro is a function of one argument — a token stream — returning a token stream.</strong> The syntax and layout of that argument are the DSL's; Harsh only says where it ends. So a Harsh macro call (<code>name~</code>) is a stream, not an application. Everything
+after the mark reaches the matcher as written: the rest of the call's line and
+every following line indented deeper than the line the call sits on -- whether
+those lines continue the call or are the body of a <code>do:</code> block it opens -- or
+to the close of the group the call sits in, whichever comes first. Nothing in the stream is Harsh's — a comma is the DSL's token, and a
+<code>(…)</code> is a group, one token, so a tuple is written once. A call inside a larger
+expression is isolated as any application is: <code>((twice~ 4), 0)</code>.</p>
+<pre class="code harsh"><code><span class="k">let</span> v <span class="p">=</span>
+    lst<span class="p">~</span> <span class="num">1</span> <span class="num">2</span>                 the stream is `<span class="num">1</span> <span class="num">2</span> <span class="num">3</span> <span class="num">4</span>`<span class="p">:</span> the deeper line is the call's
+        <span class="num">3</span> <span class="num">4</span>
+
+<span class="k">let</span> n <span class="p">=</span>
+    <span class="p">(</span>lst<span class="p">~</span> <span class="num">1</span> <span class="num">2</span>                isolated<span class="p">:</span> the `<span class="p">)</span>` ends the stream<span class="p">,</span> so `<span class="op">&lt;-</span> len<span class="defer">$</span>`
+        <span class="num">3</span> <span class="num">4</span><span class="p">)</span> <span class="op">&lt;-</span> len<span class="defer">$</span>         chains on the result<span class="p">,</span> not on the stream</code></pre>
+<p>A <code>\</code> after the mark is a token like any other: a matcher that wants it names
+it, <code>(\ $a:expr)</code>. A Rust macro whose stream is not a list of values takes it
+in braces, as Rust writes it: <code>hm! { 1 =&gt; "a", 2 =&gt; "b" }</code>. (<code>hm!\</code> with the
+entries beneath was the spelling until 2026-09-22; it is retired, and refused
+with the braces named.)</p>
+<pre class="code harsh"><code>macro_rules<span class="p">~</span> pair
+    <span class="p">(</span><span class="p">(</span><span class="defer">$</span>a<span class="p">:</span>expr<span class="p">)</span> <span class="p">(</span><span class="defer">$</span>b<span class="p">:</span>expr<span class="p">)</span><span class="p">)</span> <span class="op">=&gt;</span> <span class="k">do</span><span class="p">:</span>             juxtaposed arguments <span class="p">-</span><span class="p">-</span> the <span class="t">Harsh</span> way
+        <span class="p">(</span><span class="defer">$</span>a<span class="p">,</span> <span class="defer">$</span>b<span class="p">)</span>                         the comma is the tuple's<span class="p">,</span> <span class="k">in</span> the output
+
+macro_rules<span class="p">~</span> list
+    <span class="p">(</span><span class="defer">$</span><span class="p">(</span> <span class="p">(</span><span class="defer">$</span>x<span class="p">:</span>expr<span class="p">)</span> <span class="p">)</span><span class="p">,</span><span class="p">*</span> <span class="defer">$</span><span class="p">(</span><span class="p">,</span><span class="p">)</span><span class="p">?</span><span class="p">)</span> <span class="op">=&gt;</span> <span class="k">do</span><span class="p">:</span>        a <span class="t">DSL</span> that owns commas<span class="p">,</span> trailing one optional
+        <span class="p">[</span><span class="defer">$</span><span class="p">(</span> <span class="defer">$</span>x <span class="p">)</span><span class="p">,</span><span class="p">*</span><span class="p">]</span>
+
+pair<span class="p">~</span> <span class="p">(</span><span class="num">1</span><span class="p">+</span><span class="num">3</span><span class="p">)</span> <span class="str">"more"</span>                       <span class="defer">$</span>a <span class="p">=</span> `<span class="p">(</span><span class="num">1</span><span class="p">+</span><span class="num">3</span><span class="p">)</span>`<span class="p">,</span> <span class="defer">$</span>b <span class="p">=</span> `<span class="str">"more"</span>`
+list<span class="p">~</span> <span class="num">1</span><span class="p">,</span> <span class="num">2</span><span class="p">,</span> <span class="num">3</span><span class="p">,</span>                           <span class="p">[</span><span class="num">1</span><span class="p">,</span> <span class="num">2</span><span class="p">,</span> <span class="num">3</span><span class="p">]</span></code></pre>
+<p>A fragment's extent follows the matcher's shape: to the next literal the
+matcher names or the repetition's separator; one atom when another fragment
+follows directly (<code>$a:expr $b:expr</code> is juxtaposition); the rest of the stream
+when nothing follows. The matcher's outer parens are its own delimiter; a
+DSL's brackets go inside them, <code>([ $e:expr ; $n:expr ])</code> for <code>filled~ [0u8; 2]</code>.</p>
+<p>A repetition's grammar is Rust's exactly, in the matcher and in the
+transcriber: <code>$( … )</code> is followed by <code>*</code>, <code>+</code> or <code>?</code>, with a separator before
+<code>*</code> or <code>+</code> if the DSL wants one and none before <code>?</code>. A <code>$( … )</code> with no marker
+is refused; what must appear once is written without it. A trailing comma
+that may be there is <code>$(,)?</code>; one that must be is the literal <code>,</code>.</p>
+<p>A Harsh-thinking author juxtaposes a macro's arguments and writes commas only
+where the DSL spells a construct that owns them — an array, a tuple, a
+specification block inline. The trailing-separator idiom is the tool for
+exactly those.</p>
+<p>Which one a given macro wants is a fact about that macro's grammar, not about
+Harsh. For a declarative macro it follows from the matcher and needs no
+declaration; for a procedural macro, whose layout can be anything, a crate's
+<code>dsl.hrs</code> is where the answer will live.</p>
+<h3 id="derives-and-attributes">Derives and attributes</h3>
+<p>Rust's attribute macros take Harsh between their brackets, by the application and path rules: <code>#[tokio.main]</code>, <code>#[route "/api/:id"]</code> → <code>#[route("/api/:id")]</code>, <code>#[tokio.main (flavor = "multi_thread")]</code> → <code>#[tokio::main(flavor = "multi_thread")]</code>.</p>
+<p>A derive by juxtaposition, <code>#[derive Debug Serialize]</code>; a helper attribute the same way, its arguments isolated.</p>
+<h3 id="rule-1-a-rust-macro-s-brace-body-is-rust-its-holes-are-harsh">Rule 1 — a Rust macro's brace body is Rust; its holes are Harsh</h3>
+<p>A Rust macro whose stream is not a list of values takes it in braces, and
+the braces hold <strong>Rust</strong> -- or the macro's own language, written as its
+documentation shows. Harsh sets the body aside before reading the file, and
+puts it back byte for byte into the generated Rust. The only Harsh inside is
+what the author marks: a <strong>hole</strong> opens at <code>@:</code> and <strong>always closes</strong> at
+<code>:@</code>, and holds ordinary Harsh, transpiled in place.</p>
+<pre class="code harsh"><code><span class="mac">view!</span> <span class="p">{</span>                                   <span class="mac">view!</span> <span class="p">{</span>
+    <span class="p">&lt;</span>p<span class="p">&gt;</span><span class="p">{</span>count<span class="p">}</span><span class="p">&lt;</span><span class="p">/</span>p<span class="p">&gt;</span>                            <span class="p">&lt;</span>p<span class="p">&gt;</span><span class="p">{</span>count<span class="p">}</span><span class="p">&lt;</span><span class="p">/</span>p<span class="p">&gt;</span>
+    <span class="p">&lt;</span>button on<span class="p">:</span>click<span class="p">=</span><span class="p">{</span><span class="p">@</span><span class="p">:</span> <span class="k">move</span> <span class="p">|</span>_<span class="p">|</span>             <span class="p">&lt;</span>button on<span class="p">:</span>click<span class="p">=</span><span class="p">{</span><span class="k">move</span> <span class="p">|</span>_<span class="p">|</span>
+        inc<span class="defer">$</span> <span class="p">:</span><span class="p">@</span><span class="p">}</span><span class="p">&gt;</span><span class="str">"+"</span><span class="p">&lt;</span><span class="p">/</span>button<span class="p">&gt;</span>                     inc<span class="p">(</span><span class="p">)</span><span class="p">}</span><span class="p">&gt;</span><span class="str">"+"</span><span class="p">&lt;</span><span class="p">/</span>button<span class="p">&gt;</span>
+<span class="p">}</span>                                         <span class="p">}</span>
+
+tokio<span class="p">.</span><span class="mac">select!</span> <span class="p">{</span>                           tokio<span class="op">::</span><span class="mac">select!</span> <span class="p">{</span>
+    n <span class="p">=</span> <span class="p">@</span><span class="p">:</span> slow <span class="str">"slow"</span> <span class="p">:</span><span class="p">@</span> <span class="op">=&gt;</span> n<span class="p">,</span>               n <span class="p">=</span> slow<span class="p">(</span><span class="str">"slow"</span><span class="p">)</span> <span class="op">=&gt;</span> n<span class="p">,</span>
+<span class="p">}</span>                                         <span class="p">}</span><span class="p">;</span></code></pre>
+<ul>
+<li>A hole's baseline is the indentation of the line it opens on: one line, or
+  a block beneath <code>@:</code> with <code>:@</code> where it ends.</li>
+<li>A hole may hold a macro call with braces of its own, and holes in those.</li>
+<li><code>@@:</code> is a literal <code>@:</code> in the body's text; <code>@:</code> outside a body is refused.</li>
+<li>The body may span lines, as in Rust; the formatter never touches it.</li>
+<li>Holes have two writers: the author, writing Harsh, and <code>hrs-from</code>,
+  converting Rust -- which finds each piece of Rust code in a body by shape
+  (a <code>{ … }</code> group; a value after <code>name=</code> or <code>name:</code>; a <code>for</code>/<code>if</code>
+  expression; a <code>select!</code> arm's pattern, future and handler), keeps a
+  literal as written, and writes the rest as holes. A piece it cannot write
+  as Harsh stops it, named by line.</li>
+<li>A <code>~</code> call's stream is its macro's too, but holes have no meaning in it: a
+  Harsh macro's fragments land in a Harsh transcriber.</li>
+<li><strong>A <code>~</code> macro's author expands to valid Harsh</strong> (the user's rule,
+  2026-09-23). If the expansion calls a Rust macro with a brace body, the
+  author writes its holes, as <code>filled~</code> does: <code>vec! { @: $elem :@; @: $n :@ }</code>.
+  The transpiler reads an expansion exactly as it reads a file; anything
+  that is not valid Harsh is an error, never repaired.</li>
+</ul>
+<p><em>Retired 2026-09-23, with this rule's arrival:</em> the old rules 1 (a <code>do:</code>
+body of markup, "HSX"), 2 (a macro <code>do:</code> body as a Harsh block), 3 (a brace
+body as Harsh on one line) and 6 (a brace tree written with Harsh's layout),
+and the <code>#:</code> block. <code>m! do:</code> and <code>#:</code> are refused with the braces named. They
+put Harsh inside a macro's language by guessing its grammar; Harsh no longer
+guesses.</p>
+<h2 id="what-does-not-change">What does not change</h2>
+<p>Calls are juxtaposed (<code>println! "{}" a</code>); <code>m! { … }</code> calls keep their braces, and a bracket after <code>!</code> is an array argument; the body of a <code>macro_rules~</code> transcriber may still be written in Rust's braces under rule 3 when that is wanted. Procedural macros are unaffected: they receive the transpiled tokens.</p>
+<h2 id="order-of-work-done">Order of work — done</h2>
+<p><em>History. Rules 1, 2, 3 and 6 and the <code>#:</code> block named below were retired on
+2026-09-23; see the new Rule 1.</em></p>
+<p>Every step below has landed. Step 5, the notebooks, is regenerated outside this tree.</p>
+<h3 id="the-steps-as-planned">The steps as planned</h3>
+<ol>
+<li>Transpiler: rule 3 (juxtaposition off inside macro braces — the fix the notebooks needed first; later withdrawn, see rule 3 above), rule 1 (HSX from the block's tokens, holes laid out as fragments), rule 2 (arm classification, <code>$ident</code> atoms, line-level repetition semicolons, <code>$(</code> paren block), rule 4 (matcher mapping), rule 5 (nothing to do — verify), rule 6 (the brace tree). A test per rule; round trip byte-exact.</li>
+<li>Converter: Rust <code>view! { … }</code> → <code>view! do:</code> with attribute values and holes in <code>{ }</code> (the end-of-expression heuristic lives here — depth-zero <code>&gt;</code> or the next <code>name=</code> — where permissiveness is fine); Rust matchers → rule 4 groups; other macro bodies → rule 3 with the author's whitespace kept. Round trip over the five notebooks.</li>
+<li>Book: chapter 17's <code>select!</code> and chapter 20's <code>my_vec</code> in rule 2 form; HSX and the matcher rule in chapter 20's macro section.</li>
+<li>Guide: a "Macros" section stating rules 1–5 with these examples, verified.</li>
+<li>The five notebooks regenerated.</li>
+<li>Tree-sitter and VSCode: HSX holes as code, markup as markup. Handover, changelog, archive.</li>
+</ol>
+<p>Corpus for the mapping: the Book's macros, the guide's, <code>hashmap~</code>, <code>filled~</code>, <code>log!</code> above, and the notebooks' <code>view!</code> bodies.</p>
+    </main>
+  </div>
+</div>
+<script>
+(function(){
+  var b=document.body, t=document.getElementById('nav-toggle');
+  try{ if(localStorage.getItem('harsh-nav')==='hidden') b.classList.add('nav-hidden'); }catch(e){}
+  t.addEventListener('click',function(){
+    b.classList.toggle('nav-hidden');
+    try{ localStorage.setItem('harsh-nav', b.classList.contains('nav-hidden')?'hidden':'shown'); }catch(e){}
+  });
+})();
+</script>
+</body>
+</html>

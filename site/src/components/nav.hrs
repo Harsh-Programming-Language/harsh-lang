@@ -1,0 +1,25 @@
+use dioxus.prelude.*
+
+use crate.app.Route
+use crate.components.Wordmark
+
+const LOGO: Asset = asset! "/assets/favicon.png"
+
+#[component]
+pub fn Nav$ -> Element:
+    rsx! {
+        header { class: "nav",
+            Link { class: "brand", to: Route::Home {},
+                img { src: LOGO, alt: "", class: "brand-logo" }
+                Wordmark {}
+            }
+            nav {
+                Link { to: Route::Learn {}, "Learn" }
+                Link { to: Route::Install {}, "Install" }
+                Link { to: Route::Converter {}, "Converter" }
+                Link { to: Route::Playground {}, "Playground" }
+                a { href: "https://gitlab.com/bahiminin.benoit.dah.opensource/harsh-lang", target: "_blank", rel: "noopener", "GitLab" }
+                a { href: "https://github.com/Harsh-Programming-Language/harsh-lang", target: "_blank", rel: "noopener", "GitHub" }
+            }
+        }
+    }

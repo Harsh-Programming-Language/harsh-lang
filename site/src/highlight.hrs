@@ -1,0 +1,87 @@
+//! The highlighter of the Book, *By Example* and the guide (`docs/build.py`),
+//! ported token for token: the same regular expression, the same classes,
+//! and in `main.css` the same colours (`docs/page-head.html`). The user's
+//! choice, 2026-09-26: the books' highlights, everywhere on the site.
+//! `check.sh` compares the two on every code block of the books.
+
+use regex.Regex
+use std.sync.OnceLock
+
+#[derive Clone PartialEq]
+pub struct Tok
+    pub text: String
+    /// The class `build.py` gives the text; empty where it leaves it plain.
+    pub class: &'static str
+
+/// `build.py`'s `KW`.
+const KEYWORDS: &[&str] =
+    &[
+         "as", "async", "await", "break", "const", "continue", "crate", "do", "dyn", "else",
+         "enum", "extern", "false", "fn", "for", "if", "impl", "in", "let", "loop", "match",
+         "mod", "move", "mut", "pub", "ref", "return", "self", "Self", "static", "struct",
+         "super", "trait", "true", "type", "unsafe", "use", "where", "while", "union",
+     ]
+
+/// `build.py`'s `OPS`, in the order its `sorted(…, key=len, reverse=True)`
+/// leaves them: longest first, ties in their written order.
+const OPS: &[&str] =
+    &[
+         "..=", "<-", "->", "=>", "<|", "|>", "::", "..", "&&", "||", "==", "!=", "<=", ">=",
+         "+=", "-=", "*=", "/=",
+     ]
+
+/// The groups, in `build.py`'s order: the first that matches names the text.
+const GROUPS: &[&str] =
+    &[
+         "com", "str", "attr", "num", "mac", "life", "id", "defer", "op", "p", "ws", "other",
+     ]
+
+fn pattern$ -> &'static Regex:
+    static TOK: OnceLock<Regex> = OnceLock.new$
+    TOK <- get_or_init ||:
+        let ops: Vec<String> =
+            OPS <- iter$
+                <- map (|o| regex.escape o)
+                <- collect$
+        let mut source = String.new$
+        source <- push_str r#"(?P<com>//[^\n]*)|(?P<str>"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])'|b"(?:\\.|[^"\\])*")"#
+        source <- push_str r#"|(?P<attr>#!?\[[^\]\n]*\])|(?P<num>\b\d[\w.]*\b)|(?P<mac>\b[A-Za-z_]\w*!)"#
+        source <- push_str r#"|(?P<life>'[A-Za-z_]\w*)|(?P<id>\b[A-Za-z_]\w*\b)|(?P<defer>\$)"#
+        source <- push_str "|(?P<op>"
+        source <- push_str (&ops <- join "|")
+        source <- push_str ")"
+        source <- push_str r#"|(?P<p>[()\[\]{}<>|&,;:.=+\-*/!?@#%^~])|(?P<ws>\s+)|(?P<other>.)"#
+        Regex.new (&source) <- expect "the highlighter's pattern"
+
+/// Cut code into coloured tokens, as `build.py`'s `hl` does. Every
+/// character of the input is in the output, in order.
+pub fn tokens code: &str -> Vec<Tok>:
+    let mut out: Vec<Tok> = Vec.new$
+    for caps in pattern$ <- captures_iter code:
+        let group =
+            GROUPS <- iter$
+                   <- find (|g| caps <- name g <- is_some$)
+                   <- copied$
+        let text =
+            caps <- get 0
+                 <- unwrap$
+                 <- as_str$
+        let class =
+            match group\
+                Some "id" =>
+                    if KEYWORDS <- contains (&text):
+                        "k"
+                    else if text <- starts_with (|c: char| c <- is_uppercase$):
+                        "t"
+                    else:
+                        ""
+                Some "ws" | Some "other" | Some "life" | None => ""
+                Some g => g
+        // Plain text next to plain text is one piece: fewer nodes, same page.
+        if class <- is_empty$:
+            if let Some last = out <- last_mut$:
+                if last <- class <- is_empty$:
+                    last <- text <- push_str text
+                    continue
+        out <- push (Tok\ text = text <- to_string$, class)
+    out

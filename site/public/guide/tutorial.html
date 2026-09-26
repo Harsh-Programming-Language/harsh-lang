@@ -1,0 +1,362 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Harsh — lessons</title>
+<style>
+:root{
+  --bg:#0e1418; --panel:#141c21; --line:#233039;
+  --fg:#d7e1e8; --dim:#7d919e; --faint:#5b6d79;
+  --rust:#e08b5a; --acc:#6fb3d2; --kw:#c99bdd; --str:#8fbf7f; --num:#e0c07a;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0; background:var(--bg); color:var(--fg);
+  font:16px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,
+       "Helvetica Neue",Arial,sans-serif;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1180px;margin:0 auto;padding:0 28px}
+header{padding:64px 0 40px;border-bottom:1px solid var(--line);margin-bottom:40px}
+.logo{
+  font-family:"SF Mono",SFMono-Regular,ui-monospace,"JetBrains Mono",
+              "Cascadia Code",Menlo,Consolas,monospace;
+  font-size:clamp(38px,7vw,68px); font-weight:600; letter-spacing:-.02em;
+  line-height:1; margin:0; user-select:all;
+}
+.lg-b{color:var(--faint)}
+.lg-n{color:var(--fg)}
+.lg-a{color:var(--acc)}
+.lg-r{color:var(--rust)}
+.lg-i{display:inline-block;transform:skewX(-11deg);transform-origin:50% 70%}
+.title{margin:22px 0 6px;font-size:26px;font-weight:600;letter-spacing:-.01em}
+.tag{margin:0;color:var(--dim);font-size:16px}
+.tag em{color:var(--rust);font-style:normal}
+.cols{display:grid;grid-template-columns:250px minmax(0,1fr);gap:56px;
+      align-items:start;padding-bottom:120px}
+body.nav-hidden .cols{grid-template-columns:minmax(0,1fr)}
+body.nav-hidden .toc{display:none}
+.toggle{
+  position:fixed;left:10px;top:10px;z-index:10;
+  background:transparent;color:var(--faint);border:0;
+  padding:4px 6px;font:12px/1 inherit;cursor:pointer;opacity:.5;
+}
+.toggle:hover{opacity:1;color:var(--dim)}
+.toc{position:sticky;top:24px;max-height:calc(100vh - 48px);overflow:auto;
+     font-size:14px;border-left:1px solid var(--line);padding-left:18px}
+.toc-h{margin:0 0 10px;color:var(--dim);text-transform:uppercase;
+       letter-spacing:.09em;font-size:11px}
+.toc ul{list-style:none;margin:0;padding:0}
+.toc li{margin:.22em 0}
+.toc a{color:var(--fg);text-decoration:none;display:block;padding:1px 0}
+.toc a:hover{color:var(--acc)}
+/* depth from the document's top level: a book's chapters, then sections,
+   subsections, and theirs */
+.toc .d0{font-weight:600;margin-top:.7em}
+.toc .d0:first-child{margin-top:0}
+.toc .d1{padding-left:14px;font-size:13.5px}
+.toc .d1 a{color:#c5d2db}
+.toc .d2{padding-left:28px;font-size:13px}
+.toc .d2 a{color:var(--dim)}
+.toc .d3{padding-left:42px;font-size:12.5px}
+.toc .d3 a{color:var(--dim)}
+main{min-width:0}
+h2{font-size:25px;margin:52px 0 14px;padding-top:8px;letter-spacing:-.01em;
+   border-top:1px solid var(--line)}
+h2:first-child{border-top:0;margin-top:0}
+h3{font-size:18.5px;margin:32px 0 10px;color:#eaf1f6}
+h4{font-size:15.5px;margin:24px 0 8px;color:var(--dim);
+   text-transform:uppercase;letter-spacing:.06em}
+p{margin:.75em 0}
+ul,ol{padding-left:22px}
+li{margin:.3em 0}
+li>ul,li>ol{margin:.3em 0}
+strong{color:#fff;font-weight:600}
+a{color:var(--acc)}
+code{
+  font-family:"SF Mono",SFMono-Regular,ui-monospace,"JetBrains Mono",
+              "Cascadia Code",Menlo,Consolas,monospace;
+  font-size:.9em; background:#1b252b; border:1px solid var(--line);
+  padding:.08em .34em; border-radius:4px; color:#cfe0ea;
+}
+pre.code{
+  background:var(--panel); border:1px solid var(--line); border-radius:8px;
+  padding:14px 16px; overflow:auto; margin:14px 0; line-height:1.55;
+}
+pre.code code{background:none;border:0;padding:0;font-size:13.5px;color:var(--fg)}
+pre.code.rust{border-left:3px solid var(--rust)}
+pre.code.harsh{border-left:3px solid var(--acc)}
+pre.code.diagram{border-left:3px solid var(--faint);color:var(--dim)}
+.k{color:var(--kw)} .t{color:var(--acc)} .str{color:var(--str)}
+.num{color:var(--num)} .com{color:var(--faint);font-style:italic}
+.op{color:var(--rust);font-weight:600} .mac{color:var(--num)}
+.defer{color:var(--rust);font-weight:600} .attr{color:var(--faint)}
+.p{color:var(--dim)} .blk{color:var(--rust)}
+table{border-collapse:collapse;margin:16px 0;font-size:14.5px;width:100%}
+th,td{border:1px solid var(--line);padding:7px 11px;text-align:left;
+      vertical-align:top}
+th{background:#18222a;color:#eaf1f6;font-weight:600}
+td code{font-size:.88em}
+blockquote{border-left:3px solid var(--line);margin:1em 0;padding:.1em 1em;
+           color:var(--dim)}
+footer{border-top:1px solid var(--line);padding:26px 0 60px;color:var(--faint);
+       font-size:13.5px}
+@media(max-width:900px){
+  .cols,body.nav-hidden .cols{grid-template-columns:1fr;gap:0}
+  .toc{position:static;max-height:none;border-left:0;border-bottom:1px solid
+       var(--line);padding:0 0 20px;margin-bottom:28px}
+}
+</style>
+</head>
+<body>
+  <button class="toggle" id="nav-toggle" title="Show or hide the contents">☰</button>
+  <div class="wrap">
+    <header>
+      <p class="logo"><span class="lg-b">#[</span><span class="lg-n">Ha</span><span class="lg-a">&lt;</span><span class="lg-r">rs</span><span class="lg-a">&gt;</span><span class="lg-a">.</span><span class="lg-n lg-i">h</span><span class="lg-b">]</span></p>
+      <h1 class="title">Harsh</h1>
+      <p class="tag"><em>What building Harsh taught.</em></p>
+    </header>
+    <div class="cols">
+      <nav class="toc"><p class="toc-h">Contents</p><ul>
+<li class="d0"><a href="#part-one-the-architecture">Part one — the architecture</a></li>
+<li class="d1"><a href="#the-decision-that-made-everything-else-possible">The decision that made everything else possible</a></li>
+<li class="d1"><a href="#the-pipeline">The pipeline</a></li>
+<li class="d1"><a href="#two-layout-rules-do-all-the-work">Two layout rules do all the work</a></li>
+<li class="d1"><a href="#spans-and-the-source-map">Spans and the source map</a></li>
+<li class="d0"><a href="#part-two-the-techniques">Part two — the techniques</a></li>
+<li class="d1"><a href="#empirical-verification-over-reasoning">Empirical verification over reasoning</a></li>
+<li class="d1"><a href="#behavioural-probes">Behavioural probes</a></li>
+<li class="d1"><a href="#assembly-as-the-arbiter">Assembly as the arbiter</a></li>
+<li class="d1"><a href="#self-hosting-as-a-test-oracle">Self-hosting as a test oracle</a></li>
+<li class="d1"><a href="#verify-from-a-clean-extract">Verify from a clean extract</a></li>
+<li class="d1"><a href="#verify-the-layout-before-committing-to-it">Verify the layout before committing to it</a></li>
+<li class="d0"><a href="#part-three-the-lessons">Part three — the lessons</a></li>
+<li class="d1"><a href="#permissive-was-wrong-every-single-time">Permissive was wrong every single time</a></li>
+<li class="d1"><a href="#keep-the-round-trip-byte-exact">Keep the round trip byte-exact</a></li>
+<li class="d1"><a href="#isolating-parentheses-resolve-ambiguity">Isolating parentheses resolve ambiguity</a></li>
+<li class="d1"><a href="#do-not-patch-in-a-tight-loop">Do not patch in a tight loop</a></li>
+<li class="d1"><a href="#confident-wrongness-is-the-expensive-kind">Confident wrongness is the expensive kind</a></li>
+<li class="d1"><a href="#simple-recursive-rules-beat-enumerated-cases">Simple recursive rules beat enumerated cases</a></li>
+<li class="d1"><a href="#reuse-where-the-languages-agree-rewrite-only-what-differs">Reuse where the languages agree; rewrite only what differs</a></li>
+<li class="d1"><a href="#delete-the-optimisation-that-measurement-kills">Delete the optimisation that measurement kills</a></li>
+<li class="d0"><a href="#part-four-practical-notes">Part four — practical notes</a></li>
+<li class="d1"><a href="#environment">Environment</a></li>
+<li class="d1"><a href="#the-acceptance-test-that-mattered">The acceptance test that mattered</a></li>
+<li class="d1"><a href="#documentation-drifts-faster-than-code">Documentation drifts faster than code</a></li>
+<li class="d0"><a href="#the-short-version">The short version</a></li>
+</ul></nav>
+      <main>
+  <p><em>What was used to build Harsh, and what it taught.</em></p>
+<p>This is a working account rather than a compiler course. It covers the techniques that carried the project, the ones that were tried and abandoned, and the handful of lessons that generalise beyond this particular language.</p>
+<hr />
+<h2 id="part-one-the-architecture">Part one — the architecture</h2>
+<h3 id="the-decision-that-made-everything-else-possible">The decision that made everything else possible</h3>
+<p>The original transpiler was a conventional front end: lexer, recursive-descent parser, semantic AST, emitter that reconstructed Rust from the tree. It handled a subset of Rust and would have needed to grow indefinitely to handle the rest.</p>
+<p>It was replaced with a <strong>layout transformation</strong>. The transpiler understands exactly one thing — which lines are nested inside which — and copies every token it does not explicitly rewrite.</p>
+<p>That single decision is why generics, lifetimes, <code>impl Trait</code>, <code>async</code>/<code>.await</code>, macros, closures, const generics, and every future Rust syntax addition work without the transpiler knowing they exist. It never has to keep up with Rust, because it never had to catch up in the first place.</p>
+<p>The cost is that it cannot do anything requiring semantics. That turned out to constrain almost nothing worth having.</p>
+<h3 id="the-pipeline">The pipeline</h3>
+<pre class="code harsh"><code>lex<span class="p">.</span>rs      tokens with byte spans<span class="p">;</span> two modes differing only <span class="k">in</span> what `<span class="p">.</span>` means
+layout<span class="p">.</span>rs   physical lines <span class="op">-&gt;</span> logical lines <span class="op">-&gt;</span> a tree of blocks<span class="p">;</span> validation
+juxt<span class="p">.</span>rs     expression regions<span class="p">;</span> juxtaposed application<span class="p">;</span> the pipe rewrite <span class="p">(</span>which is also partial application<span class="p">)</span>
+rules<span class="p">.</span>rs    keyword tables shared by both directions
+emit<span class="p">.</span>rs     <span class="t">Harsh</span> <span class="op">-&gt;</span> <span class="t">Rust</span><span class="p">,</span> plus the source map
+unbrace<span class="p">.</span>rs  <span class="t">Rust</span> <span class="op">-&gt;</span> <span class="t">Harsh</span>
+remap<span class="p">.</span>rs    rustc<span class="p">/</span>clippy diagnostics <span class="op">-&gt;</span> <span class="t">Harsh</span> source positions
+driver<span class="p">.</span>rs   project walk<span class="p">,</span> incremental build<span class="p">,</span> cargo invocation<span class="p">,</span> watch mode</code></pre>
+<p>Both directions live in one crate deliberately. They must agree on the carve-out list and the block-kind table, and separate crates would let those drift. That is not hypothetical: a duplicated <code>ALWAYS_SEMI</code> constant in <code>emit.rs</code> once shadowed the shared one in <code>rules.rs</code>, so edits to the shared table silently did nothing. The round-trip test found it; nothing else would have.</p>
+<h3 id="two-layout-rules-do-all-the-work">Two layout rules do all the work</h3>
+<ul>
+<li>A logical line whose last significant token is <code>:</code> opens a block.</li>
+<li>A more-indented line in any <strong>other</strong> position continues the current logical line.</li>
+</ul>
+<p>The second rule is the interesting one. Python would reject a multi-line method chain; this rule accepts it with no leading-dot convention and no explicit continuation marker. It also means the block-opening <code>:</code> can never be confused with a type annotation, because annotation colons are always mid-line.</p>
+<p>Everything structural in the language follows from those two sentences.</p>
+<h3 id="spans-and-the-source-map">Spans and the source map</h3>
+<p>Every token carries byte offsets into the original source, and the emitter records one map entry per token. That granularity is what makes diagnostics land on the correct <strong>column</strong> rather than merely the correct line.</p>
+<p>The decision that made it nearly free: <strong>whitespace between tokens is copied from the source rather than regenerated.</strong> <code>&gt;&gt;</code> never becomes <code>&gt; &gt;</code>, multi-line chains keep their shape, and the mapping is close to an identity. A pretty-printer would have destroyed all of that for no gain, since generated Rust is a build artifact nobody reads.</p>
+<p>Two facts about rustc's JSON output that the design depends on, both verified rather than assumed:</p>
+<ul>
+<li><code>byte_start</code>/<code>byte_end</code> are byte offsets while <code>column_start</code>/<code>column_end</code> are character counts. They diverge on any line with non-ASCII, so the map is keyed on bytes.</li>
+<li><code>include!</code> preserves the included file's path and line numbers with <code>expansion</code> set to null. This contradicts the common assumption and mattered for the project-layout decision.</li>
+</ul>
+<hr />
+<h2 id="part-two-the-techniques">Part two — the techniques</h2>
+<h3 id="empirical-verification-over-reasoning">Empirical verification over reasoning</h3>
+<p>The single most productive habit. Confident claims that turned out wrong when tested:</p>
+<table>
+<thead>
+<tr>
+<th>Claim</th>
+<th>Reality</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Vec&lt;i32&gt;::new()</code> works in expression position</td>
+<td>Parse error; turbofish required</td>
+</tr>
+<tr>
+<td>Turbofish is only valid in expression position</td>
+<td>Valid in type position too — which made the fix context-free</td>
+</tr>
+<tr>
+<td><code>include!</code> breaks span mapping</td>
+<td>It preserves paths and line numbers exactly</td>
+</tr>
+<tr>
+<td>Indented closure bodies are impossible</td>
+<td>Three of four forms already worked</td>
+</tr>
+<tr>
+<td>Closures cost something at runtime</td>
+<td>LLVM aliased them to the direct call: <code>.set via_closure, direct</code></td>
+</tr>
+<tr>
+<td><code>do</code>, <code>block</code>, <code>begin</code> are equivalent keyword choices</td>
+<td>Only <code>do</code> is reserved in Rust; the others are live identifiers</td>
+</tr>
+</tbody>
+</table>
+<p>Each was settled by a probe taking under a minute. The pattern is worth naming: <strong>when a claim is decidable by running something, run it.</strong> Reasoning about a compiler's behaviour is strictly worse than asking the compiler.</p>
+<h3 id="behavioural-probes">Behavioural probes</h3>
+<pre class="code harsh"><code><span class="p">#</span> <span class="t">Is</span> `<span class="op">&lt;-</span>` a real token<span class="p">,</span> or does it collide with comparison<span class="p">?</span>
+echo 'fn main<span class="p">(</span><span class="p">)</span><span class="p">{</span> <span class="k">let</span> x<span class="p">=</span><span class="num">5i32</span><span class="p">;</span> <span class="k">let</span> _ <span class="p">=</span> x<span class="op">&lt;-</span><span class="num">1</span><span class="p">;</span> <span class="p">}</span>' <span class="p">&gt;</span> t<span class="p">.</span>rs <span class="op">&amp;&amp;</span> rustc t<span class="p">.</span>rs
+<span class="p">#</span> error<span class="p">:</span> unexpected token `<span class="op">&lt;-</span>`
+<span class="p">#</span> help<span class="p">:</span> <span class="k">if</span> you meant a comparison against a negative value<span class="p">,</span> add a space</code></pre>
+<p>That answer shaped an operator choice. Similar one-liners settled which keywords are reserved, whether tuples implement <code>Index</code>, whether <code>a &lt; |x| x</code> parses, and whether closures survive optimisation.</p>
+<h3 id="assembly-as-the-arbiter">Assembly as the arbiter</h3>
+<p>When a performance claim came up — do partial applications cost stack frames? — the way to settle it was to look:</p>
+<pre class="code harsh"><code>rustc <span class="p">-</span><span class="t">O</span> <span class="p">-</span><span class="p">-</span><span class="k">crate</span><span class="p">-</span><span class="k">type</span><span class="p">=</span>lib <span class="p">-</span><span class="p">-</span>emit<span class="p">=</span>asm <span class="p">-</span>o a<span class="p">.</span>s a<span class="p">.</span>rs</code></pre>
+<p>The output contained <code>.set via_closure, direct</code> and <code>.set via_nested, direct</code>. Not similar code — the same symbol. That killed a proposed optimisation pass outright, saving a session's work on something with no payoff.</p>
+<h3 id="self-hosting-as-a-test-oracle">Self-hosting as a test oracle</h3>
+<p>The transpiler's own source is the corpus. Convert every module to Harsh, transpile back, compare token streams:</p>
+<pre class="code rust"><code><span class="attr">#[test]</span>
+<span class="k">fn</span> round_trip_own_source<span class="p">(</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">for</span> <span class="p">(</span>name<span class="p">,</span> rust<span class="p">)</span> <span class="k">in</span> corpus<span class="p">(</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">let</span> harsh <span class="p">=</span> convert<span class="p">(</span><span class="p">&amp;</span>rust<span class="p">)</span><span class="p">;</span>
+        <span class="k">let</span> back <span class="p">=</span> transpile<span class="p">(</span><span class="p">&amp;</span>harsh<span class="p">)</span><span class="p">;</span>
+        <span class="mac">assert!</span><span class="p">(</span>same_tokens<span class="p">(</span><span class="p">&amp;</span>rust<span class="p">,</span> <span class="p">&amp;</span>back<span class="p">)</span><span class="p">,</span> <span class="str">"{name}"</span><span class="p">)</span><span class="p">;</span>
+    <span class="p">}</span>
+<span class="p">}</span></code></pre>
+<p>This is the highest-leverage thing in the project. See the lessons below.</p>
+<h3 id="verify-from-a-clean-extract">Verify from a clean extract</h3>
+<p>Every packaged archive was extracted to an empty directory and the test suite run there. This caught things the working tree hid:</p>
+<ul>
+<li>An archive built from stale sources — five tests failed on extract that passed in place.</li>
+<li><code>examples/</code> breaking <code>cargo test</code> in a fresh checkout, because Cargo treats that directory as example <em>targets</em> and choked on a dot in a filename. Fixed with <code>autoexamples = false</code>.</li>
+<li>A stale <code>.hrs</code> reference file left over from before a syntax change, no longer valid input.</li>
+</ul>
+<p>The working tree lies. The extract does not.</p>
+<h3 id="verify-the-layout-before-committing-to-it">Verify the layout before committing to it</h3>
+<p>The project-layout question stayed open for most of the project. It was settled by trying the preferred option rather than reasoning about it:</p>
+<pre class="code"><code>[[bin]]
+name = "myapp"
+path = "target/hrs/main.rs"</code></pre>
+<p>Cargo accepts arbitrary target paths, <code>/target</code> is already gitignored, dependencies stay in one manifest, and <code>mod</code> works across generated files. Five minutes of testing replaced weeks of intermittent deliberation.</p>
+<hr />
+<h2 id="part-three-the-lessons">Part three — the lessons</h2>
+<h3 id="permissive-was-wrong-every-single-time">Permissive was wrong every single time</h3>
+<p>This is the one that generalises furthest.</p>
+<p>Three separate bugs came from making the lexer accommodating, and each drifted into inconsistency in files written by hand — while the converter, which has no choice but to apply rules uniformly, never drifted once. Strictness cost nothing and was the only thing that kept one spelling.</p>
+<p>The three:</p>
+<ol>
+<li>
+<p><strong>The impossible-path carve-out.</strong> A <code>.</code> after a literal or closing bracket was allowed to stay a <code>.</code>, on the grounds that <code>::</code> could not appear there. Justified as paste-compatibility. It delivered roughly one dot in four surviving a paste, unpredictably — worse than uniform failure, because the errors were scattered and the message talked about undeclared crates.</p>
+</li>
+<li>
+<p><strong><code>::</code> passing through unchanged.</strong> Ten instances accumulated across two hand-written example files while nothing was checking. The converter's output had zero.</p>
+</li>
+<li>
+<p><strong>Macro parentheses tolerated.</strong> Rust call syntax written into a macro was accepted and silently reinterpreted as a tuple argument.</p>
+</li>
+</ol>
+<p>Each time the fix was the same: reject it. And each time the objection to rejecting it — "but then pasted Rust breaks" — dissolved once the converter existed. <strong>There is a tool for translating; the language does not need to be forgiving.</strong></p>
+<p>The deeper point is about who enforces consistency. A permissive rule relies on discipline, and discipline fails silently. A strict rule is enforced by the machine on every build.</p>
+<h3 id="keep-the-round-trip-byte-exact">Keep the round trip byte-exact</h3>
+<p>Converting the transpiler's own source to Harsh and back caught roughly twenty bugs the examples never reached.</p>
+<p>A sample, none of which hand-written tests would have found:</p>
+<ul>
+<li><code>pub const X = …</code> silently lost its <code>;</code>, because the leading-keyword check did not skip modifiers.</li>
+<li><code>let x = if c: … else: …</code> put the <code>;</code> after the <code>if</code>, orphaning the <code>else</code>.</li>
+<li><code>chain_kw = if …</code> and <code>self.i += if …</code> missed their <code>;</code> — plain and compound assignment were not recognised as value contexts.</li>
+<li><code>if let Some(p) = x:</code> then over-corrected the other way, since it contains a top-level <code>=</code> that binds a pattern rather than assigning.</li>
+<li><code>return match x:</code> was classified as a statement block, so its arms got <code>;</code> instead of <code>,</code>.</li>
+<li><code>if !flag {</code> was read as a macro invocation, because an identifier followed by <code>!</code> looked like a macro bang.</li>
+<li><code>if a &amp;&amp; matches!(…) {</code> was classified as a <strong>macro body</strong>, because a macro appeared somewhere earlier in the condition.</li>
+<li><code>if expr &amp;&amp; …</code> was misread as an <code>if let</code>, because the item contained a <code>let</code> further down in its body.</li>
+<li>A duplicated constant shadowing the shared one, so edits to the shared table did nothing.</li>
+</ul>
+<p>The pattern: <strong>these are all cases where a rule was almost right.</strong> Hand-written examples exercise the cases you thought of. Real code exercises the cases you did not.</p>
+<p>Two properties make it work. It must be <strong>byte-exact</strong> — the moment "expected differences" are tolerated, real differences hide underneath them. And the corpus must be <strong>real code</strong>, not code written to demonstrate features.</p>
+<h3 id="isolating-parentheses-resolve-ambiguity">Isolating parentheses resolve ambiguity</h3>
+<p>Whenever two readings were possible, the answer was parentheses rather than a context-sensitive rule. <code>f (|x| body)</code> for a closure in an ambiguous position, <code>f ((a, b))</code> where a tuple must be distinguished, <code>(add 10) 7</code> to apply a returned closure, <code>[where T: Clone]</code> so a bound's colon cannot open a block.</p>
+<p>This is Haskell's answer and it held throughout. The alternative — a rule that decides based on surroundings — is where languages accumulate the special cases nobody can remember.</p>
+<h3 id="do-not-patch-in-a-tight-loop">Do not patch in a tight loop</h3>
+<p>A regression got in during a stretch of rapid fixing: <code>a || b</code> was read as an empty-parameter closure, because closures had just been made recognisable everywhere rather than only where unambiguous.</p>
+<p>The failure mode is characteristic. Each individual patch looked reasonable; the third one broke something the first two depended on. <strong>When two or three fixes in a row fail, stop and measure.</strong> The round-trip test names the file and the first differing token — reading that is faster than another guess.</p>
+<h3 id="confident-wrongness-is-the-expensive-kind">Confident wrongness is the expensive kind</h3>
+<p>The corrections that mattered most all followed the same shape: a claim that something was impossible, overturned by being asked to check.</p>
+<ul>
+<li>"Macros must keep parentheses permanently" — they juxtapose identically to functions.</li>
+<li>"Indented closure bodies are not possible" — three of four forms already worked.</li>
+<li>"Partial application needs name resolution" — not when written as a function returning a closure, and not when <code>$</code> counts the currying splits explicitly.</li>
+<li>"Juxtaposition needs a real expression parser" — it needed expression <em>regions</em> computed per line.</li>
+</ul>
+<p>Each was stated with more confidence than the evidence supported. The tell, in retrospect: <strong>an impossibility claim made without having tried it.</strong> The habit worth building is to notice that shape and go and check.</p>
+<h3 id="simple-recursive-rules-beat-enumerated-cases">Simple recursive rules beat enumerated cases</h3>
+<p>The <code>$</code> deferred-argument marker is the clearest example. The first design tried to enumerate arities and needed a symbol table. The rule that shipped is one sentence — <em>each <code>$</code> is one currying split</em> — and needs no arity knowledge at all:</p>
+<pre class="code harsh"><code>sub3<span class="defer">$</span> <span class="num">100</span> <span class="num">20</span>   <span class="op">-&gt;</span>  <span class="k">move</span> <span class="p">|</span>p1<span class="p">|</span> sub3<span class="p">(</span><span class="num">100</span><span class="p">,</span> <span class="num">20</span><span class="p">,</span> p1<span class="p">)</span>
+sub3<span class="defer">$</span><span class="defer">$</span> <span class="num">100</span>     <span class="op">-&gt;</span>  <span class="k">move</span> <span class="p">|</span>p1<span class="p">|</span> <span class="k">move</span> <span class="p">|</span>p2<span class="p">|</span> sub3<span class="p">(</span><span class="num">100</span><span class="p">,</span> p1<span class="p">,</span> p2<span class="p">)</span></code></pre>
+<p>Too many <code>$</code> becomes a type error rustc reports, remapped to the source. The transpiler counts nothing.</p>
+<p>(History: <code>$</code> was later rebuilt with project-wide arity, and later still folded into the pipes — <code>|&gt;</code> fills from the left, <code>&lt;|</code> from the right — so that one mechanism defers. The lesson stands; the operator does not.)</p>
+<p>The same shape appears in the inline-block separators: instead of new syntax per block kind, the inline form writes the separator the indented form would have inserted. One rule, three constructs, and a test asserting both forms emit identical Rust.</p>
+<h3 id="reuse-where-the-languages-agree-rewrite-only-what-differs">Reuse where the languages agree; rewrite only what differs</h3>
+<p>For VSCode, the grammar is a few dozen lines: <code>{"include": "source.rust"}</code> plus four operators. Keywords, strings, types, lifetimes and macros come free because none of them changed.</p>
+<p>For Zed, tree-sitter is mandatory and highlighting derives from the parse tree, so a parse error removes highlighting entirely rather than degrading it. But the reuse still applies at the grammar level — the token set is Rust's, and only block structure and the new operators needed writing.</p>
+<p>Knowing <strong>which layer</strong> the reuse lives at is the whole skill. At the token level it was near-total; at the parser level it was partial; assuming either without checking would have wasted the effort.</p>
+<h3 id="delete-the-optimisation-that-measurement-kills">Delete the optimisation that measurement kills</h3>
+<p>A proposal to eliminate closures via descriptor tracking and dataflow analysis would have taken about a session, added a symbol table to a transpiler that has none, and weakened the source map.</p>
+<p>One assembly dump ended it: the compiler had already aliased the closure forms to the direct call. <strong>Measure before optimising</strong> is old advice; what is worth adding is that measuring also protects the architecture. The optimisation's real cost was not the week — it was that the transpiler would have stopped being a layout transformation.</p>
+<hr />
+<h2 id="part-four-practical-notes">Part four — practical notes</h2>
+<h3 id="environment">Environment</h3>
+<ul>
+<li>rustc 1.75 from a package manager, with no rustup available. axum pinned to 0.7 as a result, using <code>:name</code> route syntax.</li>
+<li><code>autoexamples = false</code> in <code>Cargo.toml</code>, or Cargo tries to compile <code>examples/*.generated.rs</code> as crate targets.</li>
+<li>Watch mode uses mtime polling rather than filesystem events: no dependency, no platform differences, and editors write in stages anyway.</li>
+</ul>
+<h3 id="the-acceptance-test-that-mattered">The acceptance test that mattered</h3>
+<p>Not unit tests on the layout engine — those pass while the thing is broken. The real bar was: transpile a real axum server, have <code>cargo build</code> succeed, run it, and curl both routes. That single program exercises attributes, generics, macros, <code>async</code>/<code>.await</code>, and pattern-destructured parameters at once, and it is the smallest program that does.</p>
+<h3 id="documentation-drifts-faster-than-code">Documentation drifts faster than code</h3>
+<p>The syntax guide fell three features behind while the implementation moved, and at one point documented as valid something that had become a syntax error. A reader arriving cold would have been actively misled.</p>
+<p>The fix was a <code>docs/dev/HANDOVER.md</code> that restates the current state in compressed form and says plainly which other documents are stale. <strong>Write the handover as though the next reader has none of your context, because eventually that reader is you.</strong></p>
+<hr />
+<h2 id="the-short-version">The short version</h2>
+<ol>
+<li>Verify against a real compiler rather than asserting. Impossibility claims especially.</li>
+<li>Prefer strict to permissive. Permissiveness relies on discipline, and discipline fails silently.</li>
+<li>Round-trip real code and keep it byte-exact. Tolerating "expected differences" hides real ones.</li>
+<li>Isolating parentheses resolve ambiguity better than context-sensitive rules.</li>
+<li>One change at a time; when fixes stop working, measure instead of guessing.</li>
+<li>Simple recursive rules beat enumerated cases, and usually need less machinery.</li>
+<li>Measure before optimising — it protects the architecture as much as the schedule.</li>
+<li>Verify from a clean extract. The working tree lies.</li>
+</ol>
+    </main>
+  </div>
+</div>
+<script>
+(function(){
+  var b=document.body, t=document.getElementById('nav-toggle');
+  try{ if(localStorage.getItem('harsh-nav')==='hidden') b.classList.add('nav-hidden'); }catch(e){}
+  t.addEventListener('click',function(){
+    b.classList.toggle('nav-hidden');
+    try{ localStorage.setItem('harsh-nav', b.classList.contains('nav-hidden')?'hidden':'shown'); }catch(e){}
+  });
+})();
+</script>
+</body>
+</html>

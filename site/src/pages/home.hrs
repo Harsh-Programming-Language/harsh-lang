@@ -1,0 +1,132 @@
+use dioxus.prelude.*
+
+use crate.app.Route
+use crate.components.( Code, Compare, Wordmark)
+use crate.samples.*
+
+const BRACES: &str = r#"I(would, like, to, go) {
+    to the market so I(could buy) {
+        some groceries
+    }
+    to the laundromat in order to(get) {
+        clothes washed
+    }
+}"#
+
+const NO_BRACES: &str = r#"I would like to go
+    to the market so I could buy
+        some groceries
+    to the laundromat in order to get
+        clothes washed"#
+
+#[component]
+pub fn Home$ -> Element:
+    rsx! {
+        section { class: "hero",
+            h1 { class: "hero-mark", Wordmark {} }
+            p { class: "hero-title", "Rust without the braces." }
+            p { class: "hero-tag",
+                "A layout transformation over Rust: indentation instead of braces, "
+                "and four things Rust has no syntax for -- pipes, partial application, "
+                "comprehensions and linear algebra. Every Rust crate works unchanged."
+            }
+            div { class: "cta",
+                Link { class: "button primary", to: Route::Install {}, "Get started" }
+                Link { class: "button", to: Route::Converter {}, "Convert Harsh to Rust" }
+            }
+            Compare { harsh: HERO_HARSH, rust: HERO_RUST }
+        }
+
+        section { class: "why",
+            h2 { "Why no braces" }
+            p {
+                "Here is what a brace language looks and reads like, once you notice it, "
+                "and the message it was trying to convey:"
+            }
+            div { class: "compare",
+                div { class: "pane", pre { class: "code plain", "{BRACES}" } }
+                div { class: "pane", pre { class: "code plain", "{NO_BRACES}" } }
+            }
+            p {
+                "The second is already in the first -- the indentation was there all along; "
+                "the braces and parentheses only repeat it, in a form the eye has to skip past. "
+                "Harsh weeds out the braces to let Rust shine."
+            }
+            blockquote {
+                p { "Braces are for the compiler; indentation is for humans." }
+                footer { "-- Claude, asked early in the work to justify removing braces from Rust at all" }
+            }
+        }
+
+        section { class: "features",
+            h2 { "What Harsh adds" }
+            p {
+                "Braces are where Harsh starts, not where it stops. It adds four things "
+                "Rust has no syntax for -- and they are the reason to use it."
+            }
+
+            article {
+                h3 { "Pipes and partial application" }
+                p {
+                    "Give a function fewer arguments than it takes, and you get a function "
+                    "waiting for the rest. "
+                    code { "|>" } " fills parameters from the left, "
+                    code { "<|" } " from the right; the closure is flat and costs nothing at runtime."
+                }
+                Compare { harsh: PIPES_HARSH, rust: PIPES_RUST }
+            }
+
+            article {
+                h3 { "Generator comprehensions" }
+                p {
+                    "Say what a collection holds, not how to fill it. "
+                    code { "g~" } " is lazy; " code { "list~" } ", " code { "set~" } " and "
+                    code { "dict~" } " collect it. Each " code { "if" } " belongs to the "
+                    code { "for" } " before it."
+                }
+                Compare { harsh: COMPREHENSIONS_HARSH, rust: COMPREHENSIONS_RUST }
+            }
+
+            article {
+                h3 { "Linear algebra, as in Julia" }
+                p {
+                    "Julia's matrix literal, Julia's " code { "*" } ", slicing and broadcasting, "
+                    "and " code { "f<> a" } " for " code { "f.(a)" } " -- on nalgebra, "
+                    "through " code { "hrs_std" } "."
+                }
+                Compare { harsh: LINALG_HARSH, rust: LINALG_RUST }
+            }
+        }
+
+        section { class: "rust",
+            h2 { "Everything Rust has" }
+            p {
+                "Harsh is a superset of Rust. It states rules only for what it changes; "
+                "wherever it is silent, Rust's rules apply, and braces mean what they mean in Rust. "
+                "There is no semantic model in the transpiler -- generics, lifetimes, "
+                code { "async" } ", " code { "unsafe" } ", and Rust syntax that does not exist yet "
+                "pass through untouched. Every Rust crate works unchanged, and "
+                code { "hrs-from" } " converts existing Rust to Harsh -- byte-exact on the way back."
+            }
+            div { class: "cards",
+                Link { class: "card", to: Route::Learn {},
+                    h3 { "Learn" }
+                    p { "The Harsh Book, Harsh by Example, the language guide, and Harshlings." }
+                }
+                Link { class: "card", to: Route::Install {},
+                    h3 { "Install" }
+                    p { "One " code { "cargo install" } ". Then " code { "hrs new" } " and " code { "hrs run" } "." }
+                }
+                Link { class: "card", to: Route::Converter {},
+                    h3 { "Converter" }
+                    p { "Harsh to Rust in the browser, and a Run button for the Rust." }
+                }
+                Link { class: "card", to: Route::Playground {},
+                    h3 { "Playground" }
+                    p { "Write Harsh, press Run, read what it prints." }
+                }
+            }
+            p { class: "dim", "Rust for functional programming, data science and machine learning." }
+            Code { code: "#[Ha<rs>.h]", lang: "harsh" }
+        }
+    }

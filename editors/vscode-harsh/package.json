@@ -2,7 +2,7 @@
   "name": "harsh-lang",
   "displayName": "Harsh",
   "description": "Rust without the braces: highlighting, layout-aware Enter and Tab, format on save, and errors on your .hrs lines, for the Harsh language.",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "publisher": "harsh-lang",
   "author": "Bahiminin Benoit Dah",
   "engines": {

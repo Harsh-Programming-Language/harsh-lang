@@ -1,6 +1,6 @@
 # Harsh
 
-Development, issues and merge requests live at [gitlab.com/bahiminin.benoit.dah.opensource/harsh-lang](https://gitlab.com/bahiminin.benoit.dah.opensource/harsh-lang); [github.com/Harsh-Programming-Language/harsh-lang](https://github.com/Harsh-Programming-Language/harsh-lang) is a read-only mirror.
+Development, issues and merge requests live at [gitlab.com/bahiminin.benoit.dah.opensource/harsh-lang](https://gitlab.com/bahiminin.benoit.dah.opensource/harsh-lang); [github.com/Harsh-Programming-Language/harsh-lang](https://github.com/Harsh-Programming-Language/harsh-lang) is a read-only mirror; the website, written in Harsh, is `site/` and is published from the mirror to [harsh-programming-language.github.io/harsh-lang](https://harsh-programming-language.github.io/harsh-lang/).
 
 ```
 #[Ha<rs>.h]

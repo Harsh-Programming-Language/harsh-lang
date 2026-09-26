@@ -1,0 +1,80 @@
+use dioxus.prelude.*
+
+use crate.components.( Editor, tidy)
+use crate.samples.HERO_HARSH
+use harsh_lang.driver.( single_file, transpile_str)
+
+/// The script that compiles and runs the Rust: the Rust Playground's own
+/// API, called as mdBook's Run buttons call it. The program is compiled and
+/// run on the Rust Playground's servers; only the conversion to Rust
+/// happens here, in the browser.
+const EVALUATE: &str = r#"
+const code = await dioxus.recv();
+try {
+    const response = await fetch("https://play.rust-lang.org/evaluate.json", {
+        method: "POST",
+        mode: "cors",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ version: "stable", optimize: "0", code, edition: "2021" }),
+    });
+    const reply = await response.json();
+    return reply.result.trim() === "" ? "(no output)" : reply.result;
+} catch (error) {
+    return "Could not reach the Rust Playground: " + error.message;
+}
+"#
+
+/// The Playground: an editor and a console, as on play.rust-lang.org.
+#[component]
+pub fn Playground$ -> Element:
+    let src = use_signal (|| HERO_HARSH <- to_string$)
+    let console = use_signal (|| String.new$)
+    let running = use_signal (|| false)
+    rsx! {
+        section { class: "page play",
+            h1 { "Playground" }
+            p {
+                "Write Harsh and press Run. It is converted to Rust here, in your "
+                "browser, then compiled and run on the Rust Playground's servers, "
+                "and what it prints appears in the console below."
+            }
+            div { class: "toolbar",
+                button {
+                    class: "button primary",
+                    disabled: running(),
+                    onclick: @: move |_| run src console running :@,
+                    if running() { "Running…" } else { "Run" }
+                }
+                button { class: "button", onclick: @: move |_| tidy src :@, "Format" }
+            }
+            Editor { value: src, id: "playground-editor" }
+            div { class: "pane-label", "Console" }
+            pre { class: "code console", "{console}" }
+            p { class: "dim",
+                "Harsh's matrices travel with your code: the part of "
+                code { "hrs_std" } " your program uses is sent along with it. "
+                "Error messages point at the Rust your Harsh became."
+            }
+        }
+    }
+
+/// Convert the Harsh, then compile and run the Rust on the Rust Playground,
+/// and show what comes back. A Harsh error is shown at once; nothing is sent.
+fn run (src: Signal<String>) (mut console: Signal<String>) (mut running: Signal<bool>):
+    // With the part of `hrs_std` the program uses, when it uses any: the
+    // Rust Playground has nalgebra and num-traits, but not `hrs_std`.
+    let rust = match transpile_str (&src <- read$)\
+        Ok rust => single_file (&rust)
+        Err message =>
+            console <- set message
+            return
+    running <- set true
+    console <- set ("Compiling and running…" <- to_string$)
+    // The task runs on its own; its handle is not needed.
+    let _ = spawn async move:
+        let eval = document.eval EVALUATE
+        let out = match eval <- send rust\
+            Ok _ => eval <- join<String>$ <- await <- unwrap_or_else (|e| format! "{e}")
+            Err e => format! "{e}"
+        console <- set out
+        running <- set false

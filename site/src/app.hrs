@@ -1,0 +1,43 @@
+use dioxus.prelude.*
+
+use crate.components.( Footer, Nav)
+use crate.pages.( Converter, Home, Install, Learn, NotFound, Playground)
+
+const CSS: Asset = asset! "/assets/main.css"
+const FAVICON: Asset = asset! "/assets/favicon.png"
+
+/// The site's pages. Every page sits inside `Shell`, which draws the
+/// navigation and the footer around it.
+#[derive Routable Clone PartialEq]
+#[rustfmt.skip]
+pub enum Route
+    #[layout Shell]
+    #[route "/"]
+    Home {}
+    #[route "/learn"]
+    Learn {}
+    #[route "/install"]
+    Install {}
+    #[route "/converter"]
+    Converter {}
+    #[route "/playground"]
+    Playground {}
+    #[route "/:..segments"]
+    NotFound
+        segments: Vec<String>
+
+#[component]
+pub fn App$ -> Element:
+    rsx! {
+        document::Link { rel: "icon", href: FAVICON }
+        document::Stylesheet { href: CSS }
+        Router::<Route> {}
+    }
+
+#[component]
+fn Shell$ -> Element:
+    rsx! {
+        Nav {}
+        main { Outlet::<Route> {} }
+        Footer {}
+    }

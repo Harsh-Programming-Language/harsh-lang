@@ -1,0 +1,18 @@
+use dioxus.prelude.*
+
+/// The typographic mark, `#[Ha<rs>.h]`, set as `docs/BRAND.md` says: the
+/// brackets pushed back in grey, `rs` in Rust's orange, the structural
+/// characters in blue, and the final `h` leaning by eleven degrees.
+#[component]
+pub fn Wordmark$ -> Element:
+    rsx! {
+        span { class: "wordmark",
+            span { class: "lg-b", "#[" }
+            span { class: "lg-n", "Ha" }
+            span { class: "lg-a", "<" }
+            span { class: "lg-r", "rs" }
+            span { class: "lg-a", ">." }
+            span { class: "lg-n lg-i", "h" }
+            span { class: "lg-b", "]" }
+        }
+    }

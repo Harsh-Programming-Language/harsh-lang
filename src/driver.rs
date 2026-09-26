@@ -103,6 +103,18 @@ impl Project {
     /// Returns the units that were rebuilt, and every unit's map path so
     /// diagnostics can be remapped whether or not it was rebuilt this time.
     pub fn transpile(&self, force: bool) -> Result<(Vec<PathBuf>, Vec<PathBuf>), String> {
+        // The Harsh libraries this project depends on by path are transpiled
+        // first, recursively, so cargo finds their Rust: a Harsh app using a
+        // Harsh library, `add_one = { path = "../add_one" }` (found
+        // 2026-09-25: it never worked, though the Book's chapter 17 says `hrs`
+        // walks each member).
+        self.transpile_path_dependencies(&mut vec![self.root.canonicalize().unwrap_or(self.root.clone())])?;
+        self.transpile_only(force)
+    }
+
+    /// Transpile this project's own files (its path dependencies are the
+    /// caller's business).
+    pub fn transpile_only(&self, force: bool) -> Result<(Vec<PathBuf>, Vec<PathBuf>), String> {
         self.check_manifest()?;
         let units = self.units()?;
         // Arities of every `fn` in the project, so `$` works across modules.
@@ -141,9 +153,15 @@ impl Project {
         let stamp_path = self.root.join(GEN_DIR).join(".hrs-stamp");
         let stamp = hrs_stamp();
         let new_hrs = fs::read_to_string(&stamp_path).ok().as_deref() != Some(stamp.as_str());
+        // A `use` naming a Harsh macro crate -- a re-export,
+        // `pub use hello_macro_derive.HelloMacro` -- has no Rust meaning: it
+        // is blanked, byte for byte, before the file is transpiled (the user,
+        // 2026-09-24, option (a); `PACKAGING.md` section 5).
+        let macro_libs = self.macro_crate_libs()?;
         let mut rebuilt = Vec::new();
         let mut maps = Vec::new();
         for (u, src) in units.iter().zip(sources) {
+            let src = blank_macro_uses(&src, &macro_libs);
             maps.push(u.map.clone());
             // (A named function, not a closure over lines: the converter's
             // reflow split this closure's call across lines in a form the
@@ -230,15 +248,93 @@ impl Project {
     /// any: each listed crate transpiled, the runner's sources written under
     /// `target/hrs/proc-macros/` when they change, and cargo run over it --
     /// cargo's own freshness check is the cache (decision P4).
+    /// Transpile each Harsh project this one depends on by path, deepest
+    /// first; `seen` guards against visiting one twice.
+    fn transpile_path_dependencies(&self, seen: &mut Vec<PathBuf>) -> Result<(), String> {
+        let Ok(text) = self.manifest_text() else { return Ok(()) };
+        for path in path_dependencies(&text) {
+            let root = self.root.join(&path);
+            let canon = root.canonicalize().unwrap_or(root.clone());
+            if seen.contains(&canon) {
+                continue;
+            }
+            seen.push(canon);
+            let dep = Project { root };
+            // Harsh when it has `.hrs` sources; a Rust crate is cargo's.
+            if dep.units().map_or(true, |u| u.is_empty()) {
+                continue;
+            }
+            dep.transpile_path_dependencies(seen)?;
+            dep.transpile_only(false).map_err(|e| format!("in the Harsh library `{path}`:\n{e}"))?;
+        }
+        Ok(())
+    }
+
+    /// The library names of the Harsh macro crates this project lists.
+    pub fn macro_crate_libs(&self) -> Result<Vec<String>, String> {
+        let mut libs = Vec::new();
+        for rel in &self.meta()?.proc_macros {
+            let dep = Project { root: self.root.join(rel) };
+            if let Ok(text) = dep.manifest_text() {
+                if let Some(p) = crate::procmac::package_name(&text) {
+                    libs.push(p.replace('-', "_"));
+                }
+            }
+        }
+        Ok(libs)
+    }
+
+    /// Harsh macros re-exported by this project's path dependencies:
+    /// `(macro crate's directory, the names re-exported)` -- a library that
+    /// lists a macro crate under `proc-macros` and says
+    /// `pub use hello_macro_derive.HelloMacro` hands `HelloMacro` to every
+    /// crate that depends on it, as a Rust re-export does.
+    fn reexported_macros(&self) -> Result<Vec<(PathBuf, Vec<String>)>, String> {
+        let mut out: Vec<(PathBuf, Vec<String>)> = Vec::new();
+        for path in path_dependencies(&self.manifest_text()?) {
+            let dep = Project { root: self.root.join(&path) };
+            let Ok(meta) = dep.meta() else { continue };
+            for rel in &meta.proc_macros {
+                let mroot = dep.root.join(rel);
+                let Ok(text) = (Project { root: mroot.clone() }).manifest_text() else { continue };
+                let Some(pkg) = crate::procmac::package_name(&text) else { continue };
+                let lib = pkg.replace('-', "_");
+                let mut names = Vec::new();
+                for u in dep.units().unwrap_or_default() {
+                    let src = fs::read_to_string(&u.source).unwrap_or_default();
+                    names.extend(reexports_of(&src, &lib));
+                }
+                if !names.is_empty() {
+                    let mroot = mroot.canonicalize().unwrap_or(mroot);
+                    out.push((mroot, names));
+                }
+            }
+        }
+        Ok(out)
+    }
+
     pub fn proc_runner(&self) -> Result<Option<crate::procmac::Runner>, String> {
         let meta = self.meta()?;
-        if meta.proc_macros.is_empty() {
+        // The macro crates to build the runner from: those this project lists
+        // (every macro), and those its path dependencies re-export (the names
+        // re-exported).
+        let mut wanted: Vec<(String, PathBuf, Option<Vec<String>>)> = Vec::new();
+        for rel in &meta.proc_macros {
+            wanted.push((rel.clone(), self.root.join(rel), None));
+        }
+        for (root, names) in self.reexported_macros()? {
+            if !wanted.iter().any(|(_, r, _)| r.canonicalize().ok().as_ref() == Some(&root)) {
+                wanted.push((root.display().to_string(), root, Some(names)));
+            }
+        }
+        if wanted.is_empty() {
             return Ok(None);
         }
         let mut crates: Vec<crate::procmac::MacroCrate> = Vec::new();
         let mut runtime: Option<String> = None;
-        for rel in &meta.proc_macros {
-            let root = self.root.join(rel);
+        for (rel, root, only) in &wanted {
+            let rel = rel.as_str();
+            let root = root.clone();
             let root = root.canonicalize().map_err(|_| {
                 format!("{}: proc-macros: `{rel}` is not a directory", self.root.join("Cargo.toml").display())
             })?;
@@ -251,7 +347,10 @@ impl Project {
                 ));
             }
             dep.transpile(false).map_err(|e| format!("in the proc-macro crate `{rel}`:\n{e}"))?;
-            let macros = dep.registrations()?;
+            let mut macros = dep.registrations()?;
+            if let Some(names) = only {
+                macros.retain(|m| names.contains(&m.name));
+            }
             for m in &macros {
                 if let Some(other) = crates.iter().find(|c| c.macros.iter().any(|o| o.name == m.name)) {
                     return Err(format!("the proc macro `{}` is defined by both `{}` and `{rel}`", m.name, other.package));
@@ -379,6 +478,62 @@ impl Project {
             fs::write(&rust, &em.out).map_err(|e| format!("{}: {}", rust.display(), e))?;
             files.push(rust);
         }
+        // `hrs_std` is a Harsh crate, and the export carries none (the user,
+        // 2026-09-25; `PACKAGING.md` section 4): when the code uses it, its
+        // sources become the crate's own module, `matrix`, and its Rust
+        // dependencies replace it in the manifest. Module-level for now --
+        // the whole of `hrs_std` when any of it is used; item-level shaking
+        // is the next step.
+        // (A named function and `cfg!`, not a nested closure under an
+        // attributed `let`: the converter misread that -- the self-host,
+        // 2026-09-25.)
+        let uses_std = cfg!(feature = "remap") && exports_name_hrs_std(&files);
+        #[cfg(feature = "remap")]
+        if uses_std {
+            for f in &files {
+                let t = fs::read_to_string(f).map_err(|e| e.to_string())?;
+                fs::write(f, vendor_paths(&t, "hrs_std::", "matrix")).map_err(|e| e.to_string())?;
+            }
+            let module = out_src.join("matrix");
+            fs::create_dir_all(&module).map_err(|e| e.to_string())?;
+            let mut vendored: Vec<(String, String)> = Vec::new();
+            for (path, text) in crate::dist::FILES {
+                let Some(name) = path.strip_prefix("hrs_std/src/") else { continue };
+                let target = if name == "lib.rs" { module.join("mod.rs") } else { module.join(name) };
+                // Its `//!` notes describe Harsh's own workings; the export is
+                // plain Rust, and carries the code only.
+                let text: String = text
+                    .split_inclusive('\n')
+                    .filter(|l| {
+                        let t = l.trim_start();
+                        !(t.starts_with("//!") || (t.starts_with("//") && speaks_of_harsh(t)))
+                    })
+                    .collect();
+                let text = strip_test_modules(&vendor_paths(&text, "crate::", "matrix"));
+                vendored.push((target.display().to_string(), text));
+            }
+            // Item level: only what the exported code reaches, closed over
+            // what each kept item uses (`shake`). The roots are every name the
+            // exported code writes -- generous on purpose.
+            let mut roots = std::collections::HashSet::new();
+            for f in &files {
+                if let Ok(t) = fs::read_to_string(f) {
+                    if let Ok(toks) = crate::lex::lex_rust(&t) {
+                        roots.extend(toks.into_iter().filter(|x| x.kind == crate::lex::Tk::Ident).map(|x| x.text));
+                    }
+                }
+            }
+            for (target, text) in crate::shake::shake(&vendored, &roots) {
+                fs::write(&target, text).map_err(|e| format!("{target}: {e}"))?;
+            }
+            for root in ["main.rs", "lib.rs"] {
+                let f = out_src.join(root);
+                if let Ok(t) = fs::read_to_string(&f) {
+                    let decl = "/// Matrices, vectors and element-wise operations.\n#[allow(dead_code, unused_imports, unused_macros)]\nmod matrix;\n\n";
+                    fs::write(&f, format!("{decl}{t}")).map_err(|e| e.to_string())?;
+                }
+            }
+        }
         // The manifest: the same file with its targets under `src/`, which
         // is also where cargo would find them unaided.
         let manifest = self.root.join("Cargo.toml");
@@ -387,8 +542,51 @@ impl Project {
         // No Harsh table in pure Rust: `[package.metadata.harsh]` stays in
         // the Harsh project.
         let text = without_harsh_table(&text);
+        // No `hrs_std`: its own dependencies instead, when the code used it.
+        let text = {
+            // Nor a manifest comment about the Harsh sources, which the export
+            // does not have.
+            #[cfg_attr(not(feature = "remap"), allow(unused_mut))]
+            let mut lines: Vec<String> = text
+                .lines()
+                .filter(|l| {
+                    let t = l.trim_start();
+                    !t.starts_with("hrs_std") && !(t.starts_with('#') && !t.starts_with("#[") && speaks_of_harsh(t))
+                })
+                .map(String::from)
+                .collect();
+            #[cfg(feature = "remap")]
+            if uses_std {
+                let std_manifest = crate::dist::FILES.iter().find(|(p, _)| *p == "hrs_std/Cargo.toml").map(|(_, t)| *t).unwrap_or("");
+                let deps: Vec<&str> = std_manifest
+                    .lines()
+                    .skip_while(|l| l.trim() != "[dependencies]")
+                    .skip(1)
+                    .take_while(|l| !l.trim_start().starts_with('['))
+                    .filter(|l| !l.trim().is_empty())
+                    .collect();
+                match lines.iter().position(|l| l.trim() == "[dependencies]") {
+                    Some(i) => {
+                        for (k, d) in deps.iter().enumerate() {
+                            lines.insert(i + 1 + k, d.to_string());
+                        }
+                    }
+                    None => {
+                        lines.push(String::new());
+                        lines.push("[dependencies]".into());
+                        lines.extend(deps.iter().map(|d| d.to_string()));
+                    }
+                }
+            }
+            lines.join("\n") + "\n"
+        };
         fs::write(dir.join("Cargo.toml"), text).map_err(|e| e.to_string())?;
         for extra in ["Cargo.lock", "README.md", "LICENSE"] {
+            // A lock naming `hrs_std`, which the export no longer has, is
+            // left for cargo to write afresh.
+            if extra == "Cargo.lock" && uses_std {
+                continue;
+            }
             let from = self.root.join(extra);
             if from.is_file() {
                 let _ = fs::copy(&from, dir.join(extra));
@@ -668,6 +866,67 @@ fn collect(dir: &Path, src_root: &Path, gen_root: &Path, out: &mut Vec<Unit>) ->
 /// A generated file is also stale when the transpiler itself is newer than
 /// it: a `cargo install` of a new `hrs` must not leave the Rust the old one
 /// wrote in place. The executable's own mtime is the version stamp.
+/// `name = { path = "…" }` entries under `[dependencies]`: the paths.
+fn path_dependencies(manifest: &str) -> Vec<String> {
+    let mut out = Vec::new();
+    let mut in_deps = false;
+    for line in manifest.lines() {
+        let t = line.trim();
+        if t.starts_with('[') {
+            in_deps = t == "[dependencies]";
+            continue;
+        }
+        if in_deps {
+            if let Some(i) = t.find("path") {
+                let rest = t[i + 4..].trim_start();
+                if let Some(r) = rest.strip_prefix('=') {
+                    if let Some(p) = r.trim_start().strip_prefix('"').and_then(|r| r.split('"').next()) {
+                        out.push(p.to_string());
+                    }
+                }
+            }
+        }
+    }
+    out
+}
+
+/// The first path segment of a `use` line, if the line is one.
+fn use_root(line: &str) -> Option<&str> {
+    let t = line.trim_start();
+    let t = t.strip_prefix("pub(crate) ").or_else(|| t.strip_prefix("pub ")).unwrap_or(t);
+    let rest = t.strip_prefix("use ")?.trim_start();
+    Some(rest.split(|c: char| c == '.' || c == '{' || c.is_whitespace() || c == ';').next().unwrap_or(""))
+}
+
+/// Blank, byte for byte, every `use` line whose path starts with one of
+/// `libs`: a Harsh macro crate, which has no Rust meaning.
+fn blank_macro_uses(src: &str, libs: &[String]) -> String {
+    if libs.is_empty() {
+        return src.to_string();
+    }
+    src.split_inclusive('\n')
+        .map(|l| match use_root(l) {
+            Some(r) if libs.iter().any(|x| x == r) => l.chars().map(|c| if c == '\n' { '\n' } else { ' ' }).collect(),
+            _ => l.to_string(),
+        })
+        .collect()
+}
+
+/// The names `src` re-exports from the macro crate `lib`:
+/// `pub use lib.Name` or `pub use lib.{A, B}`.
+fn reexports_of(src: &str, lib: &str) -> Vec<String> {
+    let mut out = Vec::new();
+    for line in src.lines() {
+        let t = line.trim_start();
+        let Some(rest) = t.strip_prefix("pub use ") else { continue };
+        let Some(after) = rest.trim_start().strip_prefix(lib).and_then(|r| r.strip_prefix('.')) else { continue };
+        let after = after.trim_end().trim_end_matches(';');
+        let items = after.strip_prefix('{').and_then(|r| r.strip_suffix('}')).unwrap_or(after);
+        out.extend(items.split(',').map(|n| n.trim().to_string()).filter(|n| !n.is_empty()));
+    }
+    out
+}
+
 /// The crates of Harsh's standard distribution, which ship inside `hrs`
 /// (the user, 2026-09-25): named in a `Cargo.toml` as Rust names `syn` or
 /// `quote` -- `hrs_quote = "0.1"` -- and never fetched: `hrs` writes them
@@ -779,6 +1038,148 @@ fn caret_allows(asked: &str, shipped: &str) -> bool {
         return at(&a, 1) == at(&s, 1) && (a.len() < 3 || at(&s, 2) >= at(&a, 2));
     }
     (at(&s, 1), at(&s, 2)) >= (at(&a, 1), at(&a, 2))
+}
+
+/// `prefix` (`hrs_std::` in the exported code, `crate::` in `hrs_std`'s own)
+/// rewritten to `crate::<module>::`, where `hrs_std` now lives -- `matrix` in
+/// an export, `hrs_std` in a single file (`single_file`) -- except before a
+/// macro, `each!`, which `#[macro_export]` puts at the crate's root:
+/// `crate::each!`. `$crate::` likewise, for the macros' own bodies.
+fn vendor_paths(text: &str, prefix: &str, module: &str) -> String {
+    let mut out = String::with_capacity(text.len() + 64);
+    let mut i = 0;
+    let b = text.as_bytes();
+    while i < text.len() {
+        let at_word_start = i == 0 || !(b[i - 1].is_ascii_alphanumeric() || b[i - 1] == b'_');
+        let dollar = text[i..].starts_with("$crate::");
+        let plain = !dollar && at_word_start && text[i..].starts_with(prefix);
+        if dollar || plain {
+            let skip = if dollar { "$crate::".len() } else { prefix.len() };
+            let rest = &text[i + skip..];
+            let name_len = rest.find(|c: char| !(c.is_alphanumeric() || c == '_')).unwrap_or(rest.len());
+            let is_macro = rest[name_len..].starts_with('!') && name_len > 0;
+            out.push_str(if dollar { "$crate::" } else { "crate::" });
+            if !is_macro {
+                out.push_str(module);
+                out.push_str("::");
+            }
+            i += skip;
+            continue;
+        }
+        let ch = text[i..].chars().next().unwrap();
+        out.push(ch);
+        i += ch.len_utf8();
+    }
+    out
+}
+
+/// `#[cfg(test)] mod name { … }` removed: the export carries the code, not
+/// `hrs_std`'s own tests. Found with the Rust lexer, so a brace in a string
+/// is text.
+fn strip_test_modules(text: &str) -> String {
+    let Ok(toks) = crate::lex::lex_rust(text) else { return text.to_string() };
+    let sig: Vec<&crate::lex::Token> = toks.iter().filter(|t| !t.is_comment()).collect();
+    let mut cuts: Vec<(usize, usize)> = Vec::new();
+    let mut k = 0;
+    while k + 8 < sig.len() {
+        let is_cfg_test = sig[k].text == "#" && sig[k + 1].text == "[" && sig[k + 2].text == "cfg" && sig[k + 3].text == "("
+            && sig[k + 4].text == "test" && sig[k + 5].text == ")" && sig[k + 6].text == "]" && sig[k + 7].text == "mod";
+        if is_cfg_test && sig.get(k + 9).map_or(false, |t| t.text == "{") {
+            let mut d = 0i32;
+            let mut j = k + 9;
+            while j < sig.len() {
+                match sig[j].text.as_str() {
+                    "{" => d += 1,
+                    "}" => {
+                        d -= 1;
+                        if d == 0 {
+                            break;
+                        }
+                    }
+                    _ => {}
+                }
+                j += 1;
+            }
+            if j < sig.len() {
+                cuts.push((sig[k].span.lo as usize, sig[j].span.hi as usize));
+                k = j + 1;
+                continue;
+            }
+        }
+        k += 1;
+    }
+    let mut out = text.to_string();
+    for (lo, hi) in cuts.into_iter().rev() {
+        out.replace_range(lo..hi, "");
+    }
+    out
+}
+
+/// The Rust of a Harsh program as one file, for a place that takes one file
+/// and has no `hrs_std`: the Rust Playground, which the website's Playground
+/// sends its code to (the user, 2026-09-26). When the code names `hrs_std`,
+/// the items of `hrs_std` it reaches follow it as an inline module,
+/// `mod hrs_std { … }`, shaken as `hrs export` shakes them (`shake`), its
+/// own modules nested inside. The code comes first, its lines where they
+/// were, so rustc's line numbers for it stand; only its `hrs_std::` paths
+/// change, to `crate::hrs_std::`. Code that does not name `hrs_std` is
+/// returned as it is. `hrs_std`'s dependencies, nalgebra and num-traits, are
+/// the receiver's to provide -- the Rust Playground has both.
+pub fn single_file(rust: &str) -> String {
+    let Ok(toks) = crate::lex::lex_rust(rust) else { return rust.to_string() };
+    let roots: std::collections::HashSet<String> =
+        toks.into_iter().filter(|x| x.kind == crate::lex::Tk::Ident).map(|x| x.text).collect();
+    if !roots.contains("hrs_std") {
+        return rust.to_string();
+    }
+    let code = vendor_paths(rust, "hrs_std::", "hrs_std");
+    let mut vendored: Vec<(String, String)> = Vec::new();
+    for (path, text) in crate::dist::FILES {
+        let Some(name) = path.strip_prefix("hrs_std/src/") else { continue };
+        // As in an export: the code, not the notes on Harsh's workings.
+        let text: String = text
+            .split_inclusive('\n')
+            .filter(|l| {
+                let t = l.trim_start();
+                !(t.starts_with("//!") || (t.starts_with("//") && speaks_of_harsh(t)))
+            })
+            .collect();
+        vendored.push((name.to_string(), strip_test_modules(&vendor_paths(&text, "crate::", "hrs_std"))));
+    }
+    let shaken = crate::shake::shake(&vendored, &roots);
+    let mut lib = shaken.iter().find(|(n, _)| n == "lib.rs").map(|(_, t)| t.clone()).unwrap_or_default();
+    for (name, text) in &shaken {
+        let Some(module) = name.strip_suffix(".rs") else { continue };
+        if module == "lib" {
+            continue;
+        }
+        let decl = format!("mod {module};");
+        let inline = format!("mod {module} {{\n{}\n}}", text.trim_end());
+        lib = lib.replacen(&decl, &inline, 1);
+    }
+    format!(
+        "{}\n\n/// Harsh's matrices and vectors, as much of them as this program uses.\n#[allow(dead_code, unused_imports, unused_macros)]\nmod hrs_std {{\n{}\n}}\n",
+        code.trim_end(),
+        lib.trim_end()
+    )
+}
+
+/// Whether any exported file names `hrs_std`.
+fn exports_name_hrs_std(files: &[PathBuf]) -> bool {
+    for f in files {
+        if let Ok(t) = fs::read_to_string(f) {
+            if t.contains("hrs_std::") {
+                return true;
+            }
+        }
+    }
+    false
+}
+
+/// Whether a comment is about the Harsh world -- the language, its tool,
+/// its sources -- which the export, plain Rust, does not carry.
+fn speaks_of_harsh(comment: &str) -> bool {
+    comment.contains("Harsh") || comment.contains("harsh") || comment.contains("hrs ") || comment.contains(".hrs") || comment.contains("`hrs`")
 }
 
 /// A manifest without its `[package.metadata.harsh]` table, for `export`.

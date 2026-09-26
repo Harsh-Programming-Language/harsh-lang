@@ -1,0 +1,16 @@
+use dioxus.prelude.*
+
+#[component]
+pub fn Footer$ -> Element:
+    rsx! {
+        footer { class: "footer",
+            p {
+                "Harsh is "
+                a { href: "https://gitlab.com/bahiminin.benoit.dah.opensource/harsh-lang/-/blob/main/LICENSE", target: "_blank", rel: "noopener", "MPL-2.0" }
+                ". The mark is reserved; anyone may fork the language under another name."
+            }
+            p { class: "dim",
+                "Braces are for the compiler; indentation is for humans."
+            }
+        }
+    }

@@ -1,14 +1,15 @@
 [build-system]
-requires = ["setuptools>=61"]
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "harsh-kernel"
-version = "0.1.0"
+version = "0.1.2"
 description = "A Jupyter kernel for Harsh: cells are transpiled with hrs and evaluated by evcxr."
 requires-python = ">=3.9"
 dependencies = ["ipykernel>=6", "jupyter_client>=7"]
-license = { text = "MPL-2.0" }
+license = "MPL-2.0"
+readme = "README.md"
 
 [tool.setuptools.packages.find]
 include = ["harsh_kernel*"]

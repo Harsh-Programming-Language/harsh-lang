@@ -1028,6 +1028,21 @@ fn rejects_bare_parameter_followed_by_group() {
 /// A Rust macro's brace body is Rust, even in Harsh, and copied verbatim; only
 /// its holes, `@: … :@`, are Harsh (the user's principle 2 and ruling 16,
 /// "always closing", 2026-09-23). It replaced the rule that a brace body was
+/// A character of several bytes inside a hole -- or on either side of its
+/// marks -- is carried through, not a panic (found 2026-09-26 writing the
+/// website: the hole scan stepped one byte at a time and sliced inside `…`).
+/// The website's Converter and Playground run this code in the browser,
+/// where a panic stops the page.
+#[test]
+fn a_hole_carries_characters_of_several_bytes() {
+    check(&[
+        ("fn m$:\n    view! { <p>{@: \"…\" :@}</p> }\n", "view! { <p>{\"…\"}</p> }"),
+        ("fn m$:\n    view! { <p>{@: \"café\" <- len$ :@}</p> }\n", "view! { <p>{\"café\".len()}</p> }"),
+        ("fn m$:\n    view! { <p>\"é\"{@: n :@}\"😀\"</p> }\n", "view! { <p>\"é\"{n}\"😀\"</p> }"),
+        ("fn m$:\n    view! { <p>{@: f \"日本\" :@}</p> }\n", "view! { <p>{f(\"日本\")}</p> }"),
+    ]);
+}
+
 /// Harsh on one line.
 #[test]
 fn a_macro_brace_body_is_rust_and_its_holes_are_harsh() {
@@ -2202,7 +2217,6 @@ fn a_derive_or_attribute_needs_its_macro() {
 /// that every `cargo test` reports it until it is fixed; remove the `ignore`
 /// with the fix, and `procmac.rs` may then build its message in place again.
 #[test]
-#[ignore = "known converter gap: `if` with a continued string as a struct field value (ROADMAP, open)"]
 fn converter_writes_an_if_with_a_continued_string_as_a_field_value() {
     let rust = "fn f(a: bool) -> E {\n    E { m: if a { \"x \\\n y\".into() } else { \"y\".into() } }\n}\n";
     let harsh = convert(rust);
@@ -2292,7 +2306,6 @@ fn a_structs_where_clause_stands_on_its_header_line() {
 /// inside the parentheses, and the `else` loses its `if`. Ignored so every
 /// `cargo test` reports it until it is fixed.
 #[test]
-#[ignore = "known converter gap: an `if` expression as a macro argument (ROADMAP, open)"]
 fn converter_writes_an_if_as_a_macro_argument() {
     // The arguments one per line, as rustfmt lays out a long call; on one
     // line the same call converts.
@@ -2345,4 +2358,32 @@ fn a_metavariable_is_written_in_its_parentheses_and_the_rest_is_literal() {
     // `(4)` is captured as written; in Harsh, isolation parens around one
     // argument, so the Rust is the same call.
     assert!(flat(&rust).contains("letx=adding(4,5)"), "{rust}");
+}
+
+/// The converter's "`while … matches!` in a nested `match`" bug (found
+/// 2026-09-10, reproduction in the handover): the inner match's last arm kept
+/// its `,` and the outer arm's `},` was dropped, which the transpiler refused.
+/// Fixed by 2026-09-25's brace look-back stopping at an arm's `=>`: it now
+/// converts, and the Harsh transpiles back to the same Rust.
+#[test]
+fn a_while_matches_inside_a_nested_match_converts_and_reads_back() {
+    let rust = "fn f(v: &[i32], last: usize) -> usize {\n    let opener = match v.first() {\n        Some(i) if *i > 0 => 1,\n        _ => match v.last() {\n            Some(t) if *t == 2 => {\n                let mut h = last;\n                while h > 0 && matches!(v[h - 1], 1 | 2) && v[h - 1] == v[h] {\n                    h -= 1;\n                }\n                h\n            }\n            _ => last,\n        },\n    };\n    opener + 1\n}\n";
+    let harsh = convert(rust);
+    let back = harsh_lang::driver::transpile_str(&harsh).unwrap_or_else(|e| panic!("{e}\n--- harsh:\n{harsh}"));
+    // (`norm_tokens` treats a `,` after a block-bodied arm as the layout's,
+    // meaningless: the round trip is exact.)
+    assert_eq!(norm_tokens(rust), norm_tokens(&back), "\n--- harsh:\n{harsh}");
+}
+
+/// Several `if`/`else` arguments in a row, isolated, with a plain argument
+/// between and a chain after a group (2026-09-25): each is the call's next
+/// argument -- the tail after an `else:` branch continues the argument list,
+/// as a tail after a literal did -- and `) <- len$` is still a chain.
+#[test]
+fn several_if_arguments_in_a_row_are_one_argument_list() {
+    let rust = transpile("fn f (c: bool) -> String:\n    format!\n        \"{} {} {}\"\n        (\n            if c:\n                \"a\"\n            else:\n                \"b\"\n        )\n        7\n        (\n            if c:\n                \"c\"\n            else:\n                \"d\"\n        )\n\nfn g (xs: Vec<i32>) -> usize:\n    (\n        if true:\n            xs\n        else:\n            vec! 1\n    ) <- len$\n");
+    assert_eq!(
+        norm_tokens(&rust),
+        norm_tokens("fn f(c: bool) -> String { format!(\"{} {} {}\", if c { \"a\" } else { \"b\" }, 7, if c { \"c\" } else { \"d\" }) } fn g(xs: Vec<i32>) -> usize { (if true { xs } else { vec!(1) }).len() }")
+    );
 }

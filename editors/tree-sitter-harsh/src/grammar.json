@@ -144,6 +144,18 @@
         },
         {
           "type": "SYMBOL",
+          "name": "hole_escape"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "hole_open"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "hole_close"
+        },
+        {
+          "type": "SYMBOL",
           "name": "metavariable"
         },
         {
@@ -507,6 +519,10 @@
         },
         {
           "type": "STRING",
+          "value": "\\"
+        },
+        {
+          "type": "STRING",
           "value": "->"
         },
         {
@@ -685,6 +701,39 @@
             "value": "!"
           }
         ]
+      }
+    },
+    "hole_escape": {
+      "type": "TOKEN",
+      "content": {
+        "type": "PREC",
+        "value": 2,
+        "content": {
+          "type": "STRING",
+          "value": "@@:"
+        }
+      }
+    },
+    "hole_open": {
+      "type": "TOKEN",
+      "content": {
+        "type": "PREC",
+        "value": 1,
+        "content": {
+          "type": "STRING",
+          "value": "@:"
+        }
+      }
+    },
+    "hole_close": {
+      "type": "TOKEN",
+      "content": {
+        "type": "PREC",
+        "value": 1,
+        "content": {
+          "type": "STRING",
+          "value": ":@"
+        }
       }
     },
     "punctuation": {

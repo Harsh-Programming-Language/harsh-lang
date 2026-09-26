@@ -1,0 +1,85 @@
+# Build the website in site/ and publish it to GitHub Pages on every push to
+# main. The site is written in Harsh, so the build has one step a Dioxus app
+# does not: `hrs`, built from this very checkout, transpiles site/src/**.hrs
+# to site/target/hrs/ before `dx` builds the Rust. The Converter's
+# transpiler is the same checkout, as a library.
+name: Publish the site
+
+on:
+  push:
+    branches: [main]
+    paths: [site/**, src/**, Cargo.toml, .github/workflows/pages.yml]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            .
+            site
+
+      - name: Install hrs from this checkout
+        run: cargo install --path . --locked
+
+      - name: Install the Dioxus CLI
+        uses: cargo-bins/cargo-binstall@main
+      # The newest 0.7.x, matching the site's `dioxus = "0.7"`: never a newer
+      # minor line (0.8 is in alpha as of 2026-09-26), which may not build 0.7.
+      - run: cargo binstall --no-confirm dioxus-cli@0.7
+
+      - name: Transpile the Harsh
+        # `hrs` transpiles src/**.hrs before running any cargo subcommand;
+        # `metadata` is the one that builds nothing.
+        working-directory: site
+        run: hrs cargo metadata --no-deps --format-version 1 > /dev/null
+
+      - name: Build the site
+        working-directory: site
+        run: dx build --release --platform web
+
+      - name: Assemble the pages
+        working-directory: site
+        run: |
+          out=$(find target/dx -type d -path '*release/web/public' | head -n 1)
+          test -n "$out" && test -f "$out/index.html"
+          rm -rf dist && mkdir dist
+          cp -r "$out"/. dist/
+          # The books and the guide come from public/ (`public_dir`), copied
+          # by dx itself; fail here rather than publish dead links.
+          test -f dist/book/index.html && test -f dist/by-example/index.html && test -f dist/guide/index.html
+          # The router handles every path: serve the app for unknown ones too.
+          cp dist/index.html dist/404.html
+          touch dist/.nojekyll
+          ls dist
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

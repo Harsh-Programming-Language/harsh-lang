@@ -68,6 +68,8 @@ Harsh is Rust with indentation instead of braces. This bundle contains the compl
 | `book/sources/` | The Book's **sources**: the numbered chapter files (prose with `@@ name` where a snippet goes), `src/` (every snippet, one file or one project each) and `build.py`, the harness. Development only — the public tree carries the book, not what makes it. |
 | `` | Regenerates `language.ipynb` and `language.html` from `docs/LANGUAGE.md`. The `.md` is the source; the rendered forms are never edited by hand. Run after any guide change. Development bundle only. |
 | `README.md` | What the project is, how to build it, how to run the examples. |
+| `RELEASE.md` | Publishing and installing every product -- the crate, the Jupyter kernel, the editor extensions, Harshlings, the website -- in order. |
+| `site/` | The website, a Dioxus app written in Harsh, with its own `README.md`: how to build and publish it. |
 | `language.ipynb` | The language guide as a notebook, one cell per heading. Same content as `docs/LANGUAGE.md`. |
 | `tutorial.ipynb` | The tutorial as a notebook, one cell per heading. Same content as `docs/TUTORIAL.md`. |
 | `docs/LANGUAGE.md` | **The language guide.** Every construct, with the Rust it produces. Start here to learn Harsh. |

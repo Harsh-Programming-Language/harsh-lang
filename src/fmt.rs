@@ -64,6 +64,8 @@ fn format_around_bodies(src: &str, dz: &[crate::dslzone::Zone]) -> String {
     let sl: Vec<&str> = src.split('\n').collect();
     let line_of = |at: usize| src[..at].matches('\n').count();
     let mut lines: Vec<String> = ol.iter().map(|l| l.to_string()).collect();
+    let mut holes = lines.clone();
+    let norm = crate::dslzone::normalize_hole_line;
     for (n, z) in dz.iter().enumerate() {
         let (first, last) = (line_of(z.open), line_of(z.close));
         let ph = format!("{{/*Z{n}*/}}");
@@ -72,12 +74,21 @@ fn format_around_bodies(src: &str, dz: &[crate::dslzone::Zone]) -> String {
         // from the body's `{` to the end of that line.
         let col = z.open - (src[..z.open].rfind('\n').map_or(0, |k| k + 1));
         let tail = &sl[first][col..];
+        holes[first] = format!("{}{}", &lines[first][..at], norm(tail));
         lines[first] = format!("{}{}", &lines[first][..at], tail);
         for k in first + 1..=last {
             lines[k] = sl[k].to_string();
+            holes[k] = norm(sl[k]);
         }
     }
-    lines.join("\n")
+    // B7 (a): the holes' marks with one space inside (the user, 2026-09-25),
+    // kept only when the Rust is the same, token for token -- Rule 0.
+    let plain = lines.join("\n");
+    let spaced = holes.join("\n");
+    if spaced != plain && rust_tokens(&spaced).is_some() && rust_tokens(&spaced) == rust_tokens(&plain) {
+        return spaced;
+    }
+    plain
 }
 
 fn format_harsh(src: &str) -> String {

@@ -1,0 +1,13 @@
+use dioxus.prelude.*
+
+use crate.app.Route
+
+#[component]
+pub fn NotFound segments: Vec<String> -> Element:
+    rsx! {
+        section { class: "page",
+            h1 { "Not found" }
+            p { "There is no page at /" {@: segments <- join "/" :@} "." }
+            Link { to: Route::Home {}, "Back to the start" }
+        }
+    }

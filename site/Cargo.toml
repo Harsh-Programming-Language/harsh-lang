@@ -1,0 +1,31 @@
+[package]
+name = "harsh-site"
+version = "0.1.0"
+edition = "2021"
+publish = false
+description = "The Harsh language website, written in Harsh with Dioxus"
+
+# A Harsh project: the sources are `src/**.hrs`, `hrs build` writes the Rust
+# to `target/hrs/`, and the target below points at it. `dx` then builds the
+# Rust as any Dioxus app. See docs/HANDOVER.md.
+[[bin]]
+name = "harsh-site"
+path = "target/hrs/main.rs"
+
+[dependencies]
+dioxus = { version = "0.7", features = ["router"] }
+# The highlighter: the books' regular expression, ported (src/highlight.hrs).
+regex = "1"
+# The transpiler itself, for the Converter page: the library only, no features
+# (the driver's remapper and the language server stay out of the wasm).
+harsh-lang = { path = "..", default-features = false }
+
+[features]
+default = ["web"]
+web = ["dioxus/web"]
+
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+strip = true

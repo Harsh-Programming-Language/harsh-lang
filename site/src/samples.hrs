@@ -1,0 +1,160 @@
+//! The code samples on the site. Each pair is Harsh and Rust: for the
+//! first two the Rust is what `hrs` emits (compiled and run before it was
+//! pasted here); for comprehensions and linear algebra it is the Rust a
+//! programmer would write by hand instead, as the language guide shows it.
+//!
+//! Laid out by hand to sit side by side (the user's, 2026-09-26): no
+//! line longer than 52 characters, indentation included -- 430px at
+//! 13.5px monospace, the width each pane gives its text (`main.css`,
+//! `.compare`); `check.sh` holds every sample to it. Chains continue under
+//! their `<-` or `.`, comments break where the line would. The hero and
+//! pipes Rust columns are `hrs`'s output line for line, re-aligned; the
+//! Harsh is not what `hrs fmt` would write, deliberately. Every sample
+//! still transpiles, compiles and prints what it did.
+
+pub const HERO_HARSH: &str = r#"use std.collections.HashMap
+
+/// Count how often each word appears.
+fn count words: &[&str] -> HashMap<String, usize>:
+    let mut counts = HashMap.new$
+    for w in words:
+        *counts <- entry (w <- to_lowercase$)
+                <- or_insert 0 += 1
+    counts
+
+fn main$:
+    let text = "the fox and the dog and the cat"
+    let words: Vec<&str> = text <- split_whitespace$
+                                <- collect$
+    let counts = count (&words)
+    let mut top: Vec<_> = counts <- iter$
+                                 <- collect$
+    top <- sort_by
+        |a, b|:
+            b <- 1
+              <- cmp (a <- 1)
+              <- then (a <- 0 <- cmp (b <- 0))
+    for (word, n) in top <- iter$ <- take 3:
+        println! "{word}: {n}"
+"#
+
+pub const HERO_RUST: &str = r#"use std::collections::HashMap;
+
+/// Count how often each word appears.
+fn count(words: &[&str]) -> HashMap<String, usize> {
+    let mut counts = HashMap::new();
+    for w in words {
+        *counts.entry(w.to_lowercase())
+               .or_insert(0) += 1
+    }
+    counts
+}
+
+fn main() {
+    let text = "the fox and the dog and the cat";
+    let words: Vec<&str> = text.split_whitespace()
+                               .collect();
+    let counts = count(&words);
+    let mut top: Vec<_> = counts.iter()
+                                .collect();
+    top.sort_by(|a, b| {
+        b.1
+         .cmp(a.1)
+         .then(a.0.cmp(b.0))
+    });
+    for (word, n) in top.iter().take(3) {
+        println!("{word}: {n}")
+    }
+}
+"#
+
+pub const PIPES_HARSH: &str = r#"fn scale (factor: f64) (offset: f64) (x: f64)
+        -> f64:
+    x * factor + offset
+
+fn main$:
+    // Two of three arguments given:
+    //     a closure waiting for x.
+    let f = 2.0 0.5 |> scale
+    let readings = vec! 1.0 2.0 3.0
+    let scaled: Vec<f64> =
+        readings <- iter$
+                 <- map (|&x| f x)
+                 <- collect$
+    println! "{scaled:?}"
+    // All three given: a plain call.
+    println! "{}" (7.0 |> f)
+"#
+
+pub const PIPES_RUST: &str = r#"fn scale(factor: f64, offset: f64, x: f64)
+        -> f64 {
+    x * factor + offset
+}
+
+fn main() {
+    // Two of three arguments given:
+    //     a closure waiting for x.
+    let f = move |__hrs1| scale(2.0, 0.5, __hrs1);
+    let readings = vec!(1.0, 2.0, 3.0);
+    let scaled: Vec<f64> =
+        readings.iter()
+                .map(|&x| f(x))
+                .collect();
+    println!("{scaled:?}");
+    // All three given: a plain call.
+    println!("{}", f(7.0))
+}
+"#
+
+pub const COMPREHENSIONS_HARSH: &str = r#"fn main$:
+    // Pythagorean triples below 20:
+    //     say what the list holds.
+    let triples =
+        list~ (a, b, c)
+            for a in 1..20
+            for b in a..20
+            for c in b..20 if a * a + b * b == c * c
+    println! "{triples:?}"
+"#
+
+pub const COMPREHENSIONS_RUST: &str = r#"fn main() {
+    // Pythagorean triples below 20:
+    //     say how to fill the list.
+    let triples: Vec<_> = (1..20)
+        .flat_map(|a| {
+            (a..20).flat_map(move |b| {
+                (b..20).map(move |c| (a, b, c))
+            })
+        })
+        .filter(|&(a, b, c)| a * a + b * b == c * c)
+        .collect();
+    println!("{triples:?}")
+}
+"#
+
+pub const LINALG_HARSH: &str = r#"use hrs_std.*
+
+fn main$:
+    // A line fitted by least squares:
+    //     Julia's literal, Julia's solve.
+    let x = m~ [1.0 1.0; 1.0 2.0; 1.0 3.0]
+    let y = v~ [1.0, 2.0, 2.9]
+    let beta = x <- solve (&y)
+    println! "{beta}"
+"#
+
+pub const LINALG_RUST: &str = r#"use nalgebra::{DMatrix, DVector};
+
+fn main() {
+    // A line fitted by least squares,
+    //     with nalgebra directly.
+    let x = DMatrix::from_row_slice(
+        3, 2, &[1.0, 1.0, 1.0, 2.0, 1.0, 3.0],
+    );
+    let y = DVector::from_vec(vec![1.0, 2.0, 2.9]);
+    let beta = x.svd(true, true)
+                .solve(&y, 1e-12)
+                .unwrap();
+    println!("{beta}")
+}
+"#

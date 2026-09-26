@@ -3,8 +3,15 @@
   "name": "Harsh",
   "scopeName": "source.harsh",
   "patterns": [
-    { "include": "#harsh" },
-    { "include": "source.rust" }
+    {
+      "include": "#dsl-body"
+    },
+    {
+      "include": "#harsh"
+    },
+    {
+      "include": "source.rust"
+    }
   ],
   "repository": {
     "harsh": {
@@ -32,10 +39,113 @@
         {
           "comment": "A `where` clause bracketed so its bound's `:` cannot open a block",
           "begin": "\\[(?=\\s*where\\b)",
-          "beginCaptures": { "0": { "name": "punctuation.brackets.where.harsh" } },
+          "beginCaptures": {
+            "0": {
+              "name": "punctuation.brackets.where.harsh"
+            }
+          },
           "end": "\\]",
-          "endCaptures": { "0": { "name": "punctuation.brackets.where.harsh" } },
-          "patterns": [{ "include": "source.rust" }]
+          "endCaptures": {
+            "0": {
+              "name": "punctuation.brackets.where.harsh"
+            }
+          },
+          "patterns": [
+            {
+              "include": "source.rust"
+            }
+          ]
+        }
+      ]
+    },
+    "dsl-body": {
+      "comment": "A Rust macro's brace body, `view! { … }`: the DSL's own text, left unscoped as Harsh; holes inside are Harsh (the user's rulings of 2026-09-22/23).",
+      "begin": "\\b([A-Za-z_][A-Za-z0-9_]*)(!)\\s*(\\{)",
+      "beginCaptures": {
+        "1": {
+          "name": "entity.name.function.macro.harsh"
+        },
+        "2": {
+          "name": "entity.name.function.macro.harsh"
+        },
+        "3": {
+          "name": "punctuation.section.embedded.begin.dsl.harsh"
+        }
+      },
+      "end": "\\}",
+      "endCaptures": {
+        "0": {
+          "name": "punctuation.section.embedded.end.dsl.harsh"
+        }
+      },
+      "contentName": "meta.embedded.dsl.harsh",
+      "patterns": [
+        {
+          "include": "#hole-escape"
+        },
+        {
+          "include": "#hole"
+        },
+        {
+          "include": "#dsl-string"
+        },
+        {
+          "include": "#dsl-brace"
+        }
+      ]
+    },
+    "dsl-brace": {
+      "begin": "\\{",
+      "end": "\\}",
+      "patterns": [
+        {
+          "include": "#hole-escape"
+        },
+        {
+          "include": "#hole"
+        },
+        {
+          "include": "#dsl-string"
+        },
+        {
+          "include": "#dsl-brace"
+        }
+      ]
+    },
+    "dsl-string": {
+      "name": "string.quoted.double.dsl.harsh",
+      "begin": "\"",
+      "end": "\"",
+      "patterns": [
+        {
+          "match": "\\\\.",
+          "name": "constant.character.escape.harsh"
+        }
+      ]
+    },
+    "hole-escape": {
+      "comment": "`@@:` is a literal `@:`, not a hole.",
+      "match": "@@:",
+      "name": "constant.character.escape.hole.harsh"
+    },
+    "hole": {
+      "comment": "`@: … :@`, Harsh inside a DSL body.",
+      "begin": "@:",
+      "end": ":@",
+      "beginCaptures": {
+        "0": {
+          "name": "punctuation.section.embedded.begin.hole.harsh"
+        }
+      },
+      "endCaptures": {
+        "0": {
+          "name": "punctuation.section.embedded.end.hole.harsh"
+        }
+      },
+      "contentName": "meta.embedded.hole.harsh source.harsh",
+      "patterns": [
+        {
+          "include": "$self"
         }
       ]
     }

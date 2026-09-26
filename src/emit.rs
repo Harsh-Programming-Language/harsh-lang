@@ -1532,7 +1532,15 @@ impl<'a> Emitter<'a> {
                 // `)` that closed the first, any plain arguments, then the
                 // second's `(`. Until 2026-09-22 it was written as a block of
                 // its own, `f(P { .. })(Q { .. })`, a call on the result.
-                Node::Block(b2) if first && !whole_group && last_open.is_some() && continues_args(b2) => {
+                // (After an `else:` branch too, as for a line tail above: the
+                // call's `(` is in the `if` block's header, not this one's --
+                // two `if`/`else` arguments in a row, 2026-09-25.)
+                Node::Block(b2)
+                    if first
+                        && !whole_group
+                        && (last_open.is_some() || head.iter().find(|t| !t.is_comment()).map_or(false, |t| t.is_kw("else")))
+                        && continues_args(b2) =>
+                {
                     let toks = &b2.header.toks;
                     let close = toks.iter().position(|t| !t.is_comment()).unwrap_or(0);
                     // The second block's own `(`: the last one left open.

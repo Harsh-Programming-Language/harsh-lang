@@ -1,0 +1,71 @@
+use dioxus.prelude.*
+
+use crate.components.( Editor, spans, tidy)
+use crate.samples.*
+use harsh_lang.driver.transpile_str
+
+/// The online converter: the transpiler, compiled to WebAssembly with the
+/// rest of the site. What you type on the left becomes Rust on the right, in
+/// the browser, as you type; Run opens that Rust on play.rust-lang.org. It
+/// converts and does not render -- rendering a page is the Playground's job.
+#[component]
+pub fn Converter$ -> Element:
+    let mut src = use_signal (|| HERO_HARSH <- to_string$)
+    let code: String = src <- read$ <- clone$
+    let (rust, ok) = match transpile_str (&code)\
+        Ok r => (r, true)
+        Err e => (e, false)
+    let run = format! "https://play.rust-lang.org/?version=stable&edition=2021&code={}" (encode (&rust))
+    rsx! {
+        section { class: "page play",
+            h1 { "Converter" }
+            p {
+                "Harsh on the left, the Rust it becomes on the right -- the transpiler itself, "
+                "running in your browser. Run opens the Rust on the Rust Playground. "
+                "Run sends only this Rust; for the matrix sample, use the Playground, "
+                "which sends the part of " code { "hrs_std" } " a program uses along with it."
+            }
+            div { class: "examples",
+                for (name, text) in @: EXAMPLES :@ {
+                    button { class: "chip", onclick: @: move |_| src <- set (text <- to_string$) :@, "{name}" }
+                }
+                button { class: "chip", onclick: @: move |_| tidy src :@, "Format" }
+            }
+            div { class: "compare play-panes",
+                div { class: "pane",
+                    div { class: "pane-label", "Harsh" }
+                    Editor { value: src, id: "converter-editor" }
+                }
+                div { class: "pane",
+                    div { class: "pane-label",
+                        "Rust"
+                        if ok {
+                            a { class: "run", href: "{run}", target: "_blank", rel: "noopener", "Run ↗" }
+                        }
+                    }
+                    pre { class: @: if ok: "code rust" else: "code error" :@,
+                        code {
+                            if ok { {@: spans (&rust) :@} } else { "{rust}" }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+/// The samples the chips load.
+const EXAMPLES: &[(&str, &str)] = &[
+    ("Word count", HERO_HARSH),
+    ("Pipes", PIPES_HARSH),
+    ("Comprehensions", COMPREHENSIONS_HARSH),
+    ("Linear algebra", LINALG_HARSH),
+]
+
+/// Percent-encode text for a URL's query string.
+fn encode s: &str -> String:
+    let mut out = String.new$
+    for b in s <- bytes$:
+        match b\
+            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => out <- push (b as char)
+            _ => out <- push_str (&format! "%{:02X}" b)
+    out

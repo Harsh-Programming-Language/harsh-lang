@@ -24,6 +24,18 @@
           "named": true
         },
         {
+          "type": "hole_close",
+          "named": true
+        },
+        {
+          "type": "hole_escape",
+          "named": true
+        },
+        {
+          "type": "hole_open",
+          "named": true
+        },
+        {
           "type": "identifier",
           "named": true
         },
@@ -117,6 +129,18 @@
           "named": true
         },
         {
+          "type": "hole_close",
+          "named": true
+        },
+        {
+          "type": "hole_escape",
+          "named": true
+        },
+        {
+          "type": "hole_open",
+          "named": true
+        },
+        {
           "type": "identifier",
           "named": true
         },
@@ -199,6 +223,18 @@
           "named": true
         },
         {
+          "type": "hole_close",
+          "named": true
+        },
+        {
+          "type": "hole_escape",
+          "named": true
+        },
+        {
+          "type": "hole_open",
+          "named": true
+        },
+        {
           "type": "identifier",
           "named": true
         },
@@ -267,6 +303,18 @@
           "named": true
         },
         {
+          "type": "hole_close",
+          "named": true
+        },
+        {
+          "type": "hole_escape",
+          "named": true
+        },
+        {
+          "type": "hole_open",
+          "named": true
+        },
+        {
           "type": "identifier",
           "named": true
         },
@@ -327,6 +375,18 @@
         },
         {
           "type": "group",
+          "named": true
+        },
+        {
+          "type": "hole_close",
+          "named": true
+        },
+        {
+          "type": "hole_escape",
+          "named": true
+        },
+        {
+          "type": "hole_open",
           "named": true
         },
         {
@@ -596,6 +656,10 @@
     "named": false
   },
   {
+    "type": "\\",
+    "named": false
+  },
+  {
     "type": "]",
     "named": false
   },
@@ -674,6 +738,18 @@
   {
     "type": "for",
     "named": false
+  },
+  {
+    "type": "hole_close",
+    "named": true
+  },
+  {
+    "type": "hole_escape",
+    "named": true
+  },
+  {
+    "type": "hole_open",
+    "named": true
   },
   {
     "type": "identifier",

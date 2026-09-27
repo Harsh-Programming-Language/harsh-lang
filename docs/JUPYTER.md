@@ -11,9 +11,16 @@ by the kernel itself.
 cargo install harsh-lang                 # hrs, on your PATH
 cargo install evcxr_jupyter              # the Rust kernel
 evcxr_jupyter --install                  # registers it with Jupyter as "rust"
-pip install ./kernel                     # from the harsh-lang checkout
-python3 -m harsh_kernel.install          # registers "Harsh"
+python -m pip install ./kernel           # from the harsh-lang checkout (or: python -m pip install harsh-kernel)
+cd ~                                     # away from the checkout, so the installed kernel is the one found
+python -m harsh_kernel.install           # registers "Harsh"
 ```
+
+Use `python -m …` for every Python command, as above: pip, the kernel and
+Jupyter must be the same Python, and on a Mac `python3` can be Xcode's while
+`pip` is another's (conda's, Homebrew's). To reinstall the kernel alone,
+without upgrading Jupyter's own packages under other tools (Spyder, for
+one): `python -m pip install --force-reinstall --no-deps <the wheel>`.
 
 Then start Jupyter and pick **Harsh** as the kernel. Cells are `.hrs`
 fragments: statements, items, or a trailing expression, exactly as a doc
@@ -42,6 +49,22 @@ pair~ 1 2
 evcxr's own commands pass through untouched — `:dep rand = "0.8"`, `:vars`,
 `:help` — since they are the kernel's, not the language's.
 
+## Matrices
+
+Harsh's matrices work in a notebook as in a project: `v~`, `m~`, `.*`,
+slicing, `f<>`. They live in `hrs_std`, which ships inside `hrs`, not on
+crates.io; so the first time a cell uses it, the kernel writes it with
+`hrs dist` into its own folder and gives it to evcxr (`:dep`), once per
+session. That first cell says so, and takes a minute or two while evcxr
+compiles nalgebra; later cells are quick.
+
+```
+let v = v~ [1, 3, 4]
+v
+```
+
+Needs kernel 0.1.3 and `hrs` 0.1.34 or later.
+
 ## Errors
 
 A Harsh error points at the cell's line and column (`cell:2:5`), the same
@@ -60,6 +83,3 @@ the transpiler's doing.
 ## What it does not do yet
 
 - Completion and hover: those come from `hrs-lsp`, once it has types.
-- A Rust error's line is evcxr's line in the transpiled cell, not always the
-  Harsh line that produced it — the map through the transpiler is not applied
-  across evcxr's own wrapping yet.

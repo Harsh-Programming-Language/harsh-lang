@@ -6,3 +6,4 @@ __pycache__/
 /kernel/dist
 /kernel/build
 *.egg-info
+.DS_Store

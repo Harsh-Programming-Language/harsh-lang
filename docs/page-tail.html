@@ -6,6 +6,17 @@
     b.classList.toggle('nav-hidden');
     try{ localStorage.setItem('harsh-nav', b.classList.contains('nav-hidden')?'hidden':'shown'); }catch(e){}
   });
+  // The back-to-top arrow: shown once the page has scrolled a screen or so.
+  var up=document.createElement('button');
+  up.className='to-top'; up.textContent='\u2191';
+  up.title='Back to the top'; up.setAttribute('aria-label','Back to the top');
+  up.addEventListener('click',function(){
+    var still=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    window.scrollTo({top:0,behavior:still?'auto':'smooth'});
+  });
+  b.appendChild(up);
+  var show=function(){ up.classList.toggle('shown', window.scrollY>400); };
+  window.addEventListener('scroll',show,{passive:true}); show();
 })();
 </script>
 </body>

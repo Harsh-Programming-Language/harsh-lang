@@ -11,7 +11,7 @@ it is uploaded anywhere: a fix afterwards gets the next number.
 **Verified for this delivery:** 277 tests, 0 ignored, no warnings;
 `check.sh`, with the self-host and the website's four gates; the public
 tree's own 277 tests; the Jupyter kernel's 6 tests. Under 0.1.31, whose
-transpiler 0.1.32 keeps unchanged: the guide's 99 blocks, the Book's 248
+transpiler 0.1.34 keeps unchanged: the guide's 99 blocks, the Book's 248
 snippets and *By Example*'s 62 built and run, Harshlings' 65 exercises with
 0 problems.
 
@@ -19,7 +19,7 @@ snippets and *By Example*'s 62 built and run, Harshlings' 65 exercises with
 
 In the delivery bundle, this file sits in `_Installation & Deployment/` with
 `TESTING.md` (what is new, and how to try it) and `DEPLOY-WEBSITE.md` (a copy
-of `site/DEPLOY.md`). Beside that folder: `harsh-public-0.1.32.tar.gz` (the public tree: the
+of `site/DEPLOY.md`). Beside that folder: `harsh-public-0.1.34.tar.gz` (the public tree: the
 crate, the kernel's sources in `kernel/`, the website in `site/`),
 `harshlings-0.1.6.tar.gz`, `editors/` (the VS Code `.vsix`, the Zed
 repositories), `jupyter/` (the kernel's wheel). Everything else is in the
@@ -30,12 +30,12 @@ public tree: what is new in `CHANGELOG.md`; the website's full guide in
 
 | Product | Version | Where it is published | From |
 |---|---|---|---|
-| `harsh-lang` -- `hrs`, `hrs-from`, `hrs-remap`, `hrs-lsp` | **0.1.32** | crates.io | this repository |
+| `harsh-lang` -- `hrs`, `hrs-from`, `hrs-remap`, `hrs-lsp` | **0.1.34** | crates.io | this repository |
 | Harsh's standard distribution -- `hrs_std` 0.1.2, `hrs_proc_macro` 0.2.0, `hrs_quote` 0.1.0, `hrs_syn` 0.1.0 | inside `hrs` | nowhere: shipped inside `harsh-lang` | this repository |
-| The Jupyter kernel, `harsh-kernel` | **0.1.2** | PyPI | `kernel/` |
+| The Jupyter kernel, `harsh-kernel` | **0.1.3** | PyPI | `kernel/` |
 | The VS Code extension, `harsh-lang.harsh-lang` | **0.1.5** | the VS Code Marketplace (Open VSX: not yet) | `editors/vscode-harsh/`; the `.vsix` in the bundle |
 | Harshlings, the exercises | **0.1.6** | its own GitLab repository | the bundle's `harshlings-0.1.6.tar.gz` |
-| The website | -- | GitHub Pages, from the GitHub mirror | `site/` |
+| The website, **https://harsh-lang.com/** | -- | GitHub Pages, from the GitHub mirror | `site/` |
 | The Zed extension and its tree-sitter grammar | 0.1.0 | not yet: the Zed registry, when ready | `editors/zed-harsh/`, `editors/tree-sitter-harsh/` |
 
 The home repository is GitLab,
@@ -68,7 +68,7 @@ From a fresh copy of the public tree:
 
 ```sh
 mkdir -p ~/harsh-release && cd ~/harsh-release
-tar -xzf /path/to/bundle/harsh-public-0.1.32.tar.gz        # makes harsh/
+tar -xzf /path/to/bundle/harsh-public-0.1.34.tar.gz        # makes harsh/
 cd harsh
 cargo test                                          # 277 passed, 0 ignored
 ./check.sh                                          # the examples, the self-host, the site's gates (the editor's needs node)
@@ -106,7 +106,7 @@ From the same `harsh/` folder, your own build first:
 
 ```sh
 cargo install --path . --force                      # hrs and its tools, from this tree
-hrs --version                                       # 0.1.32
+hrs --version                                       # 0.1.34
 ```
 
 **The website, locally:**
@@ -117,8 +117,7 @@ rustup target add wasm32-unknown-unknown            # once
 cd site && hrs build && dx serve                    # hrs build transpiles, then lets cargo build
 ```
 
-Open **http://127.0.0.1:8080/harsh-lang/** -- with the prefix, where the site
-lives on GitHub Pages. Then:
+Open **http://127.0.0.1:8080/**. Then:
 
 - **Learn** → the Book, *By Example*, the guide (served from `site/public/`);
 - **Converter**: type Harsh, read the Rust; **Format**; the sample chips;
@@ -131,14 +130,25 @@ lives on GitHub Pages. Then:
   `()`, Enter between brackets; Tab never leaves the editor (Escape, then
   Tab, does); Ctrl-Z undoes each.
 
-**The Jupyter kernel, from the bundle's wheel:**
+**The Jupyter kernel, from the bundle's wheel.** `python -m …` for every
+command, so pip, the kernel and Jupyter are the same Python (on a Mac,
+`python3` can be Xcode's while `pip` is conda's); `--no-deps`, so the
+reinstall touches only Harsh's kernel, not Jupyter's own packages; and from
+outside the repository (`cd ~`), so Python finds the installed kernel, not
+the tree's `kernel/` folder:
 
 ```sh
-pip install --force-reinstall /path/to/bundle/jupyter/harsh_kernel-0.1.2-py3-none-any.whl
-python3 -m harsh_kernel.install                     # needs evcxr_jupyter, installed once
-jupyter lab                                         # the "Harsh" kernel: a cell with a type error
+cd ~
+python -m pip install --force-reinstall --no-deps /path/to/bundle/jupyter/harsh_kernel-0.1.3-py3-none-any.whl
+python -m harsh_kernel.install                      # needs evcxr_jupyter, installed once
+python -m jupyter kernelspec list                   # lists harsh (and rust, from evcxr)
+python -m jupyter lab                               # the "Harsh" kernel: a cell with a type error
                                                     # reports it at the cell's own line
 ```
+
+Matrices work in the notebook: a cell with `let v = v~ [1, 3, 4]` then `v`
+prints the vector. The first such cell says `hrs_std` was added, and takes a
+minute or two while evcxr compiles nalgebra; later ones are quick.
 
 **The VS Code extension:**
 `code --install-extension /path/to/bundle/editors/harsh-lang-0.1.5.vsix`.
@@ -152,13 +162,13 @@ carries `.github/workflows/pages.yml`, which GitHub refuses otherwise.
 
 ```sh
 cd harsh-lang                                       # your clone of the GitLab home
-tar -xzf /path/to/bundle/harsh-public-0.1.32.tar.gz --strip-components=1
-test ! -d harsh && grep '^version' Cargo.toml       # version = "0.1.32", and no harsh/ folder
+tar -xzf /path/to/bundle/harsh-public-0.1.34.tar.gz --strip-components=1
+test ! -d harsh && grep '^version' Cargo.toml       # version = "0.1.34", and no harsh/ folder
 git status
 git add -A
-git commit -m "0.1.32: the website; Harsh libraries by path; re-exports of Harsh macros; hrs_std in hrs export; the Jupyter kernel for PyPI"
-git tag -a v0.1.32 -m "0.1.32"
-git push origin main v0.1.32                        # if it times out: push main, then the tag
+git commit -m "0.1.34: matrices in Jupyter notebooks (hrs dist); the website at harsh-lang.com"
+git tag -a v0.1.34 -m "0.1.34"
+git push origin main v0.1.34                        # if it times out: push main, then the tag
 ```
 
 Then check GitLab's pipeline is green, and the GitHub mirror has the commit
@@ -183,10 +193,10 @@ After step 3 (the kernel runs `hrs`, which users install from crates.io):
 
 ```sh
 cd kernel
-python3 -m pip install --upgrade build twine
+python -m pip install --upgrade build twine
 rm -rf dist *.egg-info
-python3 -m build                                    # dist/harsh_kernel-0.1.2-py3-none-any.whl and .tar.gz
-python3 -m twine upload dist/*                      # paste the PyPI token at the prompt
+python -m build                                     # dist/harsh_kernel-0.1.3-py3-none-any.whl and .tar.gz
+python -m twine upload dist/*                       # paste the PyPI token at the prompt
 rm -rf dist *.egg-info build
 cd ..
 ```
@@ -239,10 +249,10 @@ git push origin main
 Nothing to run: GitHub builds and deploys it from the push of step 2, once
 Pages' source is *GitHub Actions* (step 0). Then GitHub → Actions →
 *Publish the site* is green, and the site is at
-**https://harsh-programming-language.github.io/harsh-lang/**.
+**https://harsh-lang.com/**.
 
 Everything else -- committing `site/Cargo.lock`, the checks after a deploy,
-what to do when a step fails, and moving to your own domain -- is in
+what to do when a step fails, and how the domain is set up -- is in
 **`site/DEPLOY.md`** in the public tree.
 
 ### 9. Zed — not yet published
@@ -262,10 +272,10 @@ repositories, when the two known Enter issues are settled. When you decide:
 
 ### 10. Check it all landed
 
-- `cargo search harsh-lang` shows 0.1.32
-- GitLab: the `v0.1.32` tag, a green pipeline; GitHub: the same commit
+- `cargo search harsh-lang` shows 0.1.34
+- GitLab: the `v0.1.34` tag, a green pipeline; GitHub: the same commit
 - GitHub → Actions: *Publish the site* green; the site passes the checks of step 8
-- `pip index versions harsh-kernel` shows 0.1.2
+- `pip index versions harsh-kernel` shows 0.1.3
 - the Marketplace shows the extension at 0.1.5
 - Harshlings' pipeline is green against the `harsh-lang` just published
 
@@ -284,7 +294,7 @@ What anyone does, once the products are published.
 
 ```sh
 cargo install harsh-lang          # hrs, hrs-from, hrs-remap, hrs-lsp
-hrs --version                     # 0.1.32
+hrs --version                     # 0.1.34
 hrs new hello && cd hello && hrs run
 ```
 
@@ -297,8 +307,9 @@ PATH for formatting, indentation and diagnostics.
 
 ```sh
 cargo install evcxr_jupyter && evcxr_jupyter --install   # Rust's kernel, which runs the code
-pip install harsh-kernel                                 # or the bundle's jupyter/harsh_kernel-0.1.2-py3-none-any.whl
-python3 -m harsh_kernel.install                          # registers "Harsh"
+cd ~
+python -m pip install harsh-kernel                       # or --no-deps with the bundle's wheel, as in step 1b
+python -m harsh_kernel.install                           # registers "Harsh"
 ```
 
 Then pick the **Harsh** kernel. More in `docs/JUPYTER.md`.
@@ -310,11 +321,10 @@ git clone https://gitlab.com/bahiminin.benoit.dah.opensource/harshlings
 cd harshlings && hrs run
 ```
 
-**The website:** nothing to install --
-https://harsh-programming-language.github.io/harsh-lang/ (or your domain,
-later). To run it locally: `cargo install dioxus-cli@0.7 --locked`,
-`rustup target add wasm32-unknown-unknown`, then in `site/`: `hrs build`,
-`dx serve`, and open `http://127.0.0.1:8080/harsh-lang/`.
+**The website:** nothing to install -- **https://harsh-lang.com/**. To run it
+locally: `cargo install dioxus-cli@0.7 --locked`, `rustup target add
+wasm32-unknown-unknown`, then in `site/`: `hrs build`, `dx serve`, and open
+`http://127.0.0.1:8080/`.
 
 **Zed** (until it is in the registry): *zed: install dev extension* on
 `zed-harsh` from the bundle's `editors/harsh-zed-repos.tar.gz`.

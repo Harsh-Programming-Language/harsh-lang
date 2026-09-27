@@ -22,6 +22,9 @@ usage:
                              formatted with cargo fmt (default: target/export)
   hrs fmt   [--check] [files] reformat .hrs files in place (default: src/**.hrs);
                              --check lists the files that would change, exit 1
+  hrs dist  <dir>             write Harsh's standard distribution (hrs_std,
+                             hrs_proc_macro, hrs_quote, hrs_syn) into <dir>,
+                             for building outside a Harsh project
 
   hrs <input.hrs> [-o out.rs] [--map out.map.json]
                              transpile a single file
@@ -56,7 +59,29 @@ fn main() -> ExitCode {
         "export" => export(&rest),
         "fmt" => fmt(&rest),
         "expand" => expand(&rest),
+        "dist" => dist(&rest),
         _ => single_file(&args),
+    }
+}
+
+/// `hrs dist <dir>`: Harsh's standard distribution, written into `dir` --
+/// `dir/hrs_std` and the other three -- for what builds outside a Harsh
+/// project and still wants `hrs_std`: the Jupyter kernel gives it to evcxr.
+fn dist(args: &[String]) -> ExitCode {
+    let Some(dir) = args.first() else {
+        eprintln!("hrs dist <dir>");
+        return ExitCode::from(2);
+    };
+    let dir = PathBuf::from(dir);
+    match driver::write_distribution(&dir) {
+        Ok(()) => {
+            eprintln!("hrs: wrote Harsh's standard distribution to {}", dir.display());
+            ExitCode::SUCCESS
+        }
+        Err(e) => {
+            eprintln!("hrs: {}", e);
+            ExitCode::FAILURE
+        }
     }
 }
 

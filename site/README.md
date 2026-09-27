@@ -33,7 +33,5 @@ the Learn page's links to the Book, *By Example* and the guide work under
 ## Publishing
 
 See [`DEPLOY.md`](DEPLOY.md): the one-time settings on GitHub, what
-each deploy does and how to check it landed, and the steps for a domain of
-your own. In short, a push to `main` publishes the site to
-`https://harsh-programming-language.github.io/harsh-lang/` (the `base_path`
-in `Dioxus.toml`, removed when the site moves to its own domain).
+each deploy does and how to check it landed, and how the domain is set up.
+In short, a push to `main` publishes the site to **https://harsh-lang.com/**.

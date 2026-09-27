@@ -12,6 +12,10 @@ from jupyter_client import KernelManager
 
 from . import __version__
 
+# A cell's Rust that names Harsh's `hrs_std` needs it in evcxr's session;
+# evcxr takes it as a path dependency, written by `hrs dist`.
+_NAMES_STD = re.compile(r"\bhrs_std\b")
+
 # evcxr's own commands pass through untouched: they are the kernel's, not the
 # language's.
 _EVCXR_COMMAND = re.compile(r"^\s*:(dep|help|vars|clear|opt|timing|explain|last_error_json|efmt|fmt|preserve_vars_on_panic|quit|internal_debug|sccache|linker|version|last_compile_dir|allow_static_memory|offline|cache|toolchain|type|doc|toolchain_version)\b")
@@ -148,6 +152,51 @@ class HarshKernel(Kernel):
 
     # -- execution ----------------------------------------------------------
 
+    # -- hrs_std, for cells that use it ---------------------------------------
+
+    def _std_dep(self, rust):
+        """The `:dep` line that gives evcxr Harsh's `hrs_std`, the first time a
+        cell's Rust names it; None otherwise. `hrs_std` ships inside `hrs`, not
+        on crates.io, so `hrs dist` writes it into the kernel's own folder and
+        evcxr takes it by path -- as `hrs build` does for a project (the user,
+        2026-09-26). Raises RuntimeError if `hrs dist` fails."""
+        if getattr(self, "_std_ready", False) or not _NAMES_STD.search(rust):
+            return None
+        dist = os.path.join(self._workdir, "dist")
+        r = subprocess.run([self._hrs, "dist", dist], capture_output=True, text=True)
+        if r.returncode != 0 or not os.path.isfile(os.path.join(dist, "hrs_std", "Cargo.toml")):
+            raise RuntimeError(
+                "Harsh's hrs_std could not be written for this notebook: "
+                + (r.stderr.strip() or "hrs dist failed")
+                + "\nThis kernel needs hrs 0.1.34 or later: `cargo install harsh-lang --force`.\n")
+        path = os.path.join(dist, "hrs_std").replace("\\", "\\\\").replace('"', '\\"')
+        return f':dep hrs_std = {{ path = "{path}" }}'
+
+    def _backend_run(self, code):
+        """Run `code` in evcxr, waiting for it to finish; its errors, as text
+        (empty when it went well)."""
+        msg_id = self._kc.execute(code, silent=True, store_history=False, allow_stdin=False)
+        errors = []
+        while True:
+            try:
+                msg = self._kc.get_iopub_msg(timeout=600)
+            except Exception:
+                break
+            if msg["parent_header"].get("msg_id") != msg_id:
+                continue
+            t, c = msg["msg_type"], msg["content"]
+            if t == "status" and c.get("execution_state") == "idle":
+                break
+            if t == "error":
+                errors.append("\n".join(c.get("traceback", [])) or c.get("evalue", ""))
+            elif t == "stream" and c.get("name") == "stderr":
+                errors.append(c.get("text", ""))
+        try:
+            self._kc.get_shell_msg(timeout=5)
+        except Exception:
+            pass
+        return "".join(errors)
+
     def do_execute(self, code, silent, store_history=True, user_expressions=None, allow_stdin=False):
         if not code.strip():
             return {"status": "ok", "execution_count": self.execution_count, "payload": [], "user_expressions": {}}
@@ -168,6 +217,22 @@ class HarshKernel(Kernel):
             self.send_response(self.iopub_socket, "stream", {"name": "stderr", "text": msg})
             return {"status": "error", "execution_count": self.execution_count, "ename": "BackendError", "evalue": msg, "traceback": []}
 
+        # A cell that uses hrs_std, the first time: give it to evcxr, as its
+        # own step, so the cell's lines stay where they are.
+        if not _EVCXR_COMMAND.match(code):
+            try:
+                dep = self._std_dep(rust)
+            except RuntimeError as e:
+                self.send_response(self.iopub_socket, "stream", {"name": "stderr", "text": str(e)})
+                return {"status": "error", "execution_count": self.execution_count, "ename": "HarshError", "evalue": str(e), "traceback": []}
+            if dep:
+                trouble = self._backend_run(dep)
+                if trouble:
+                    self.send_response(self.iopub_socket, "stream", {"name": "stderr", "text": trouble})
+                    return {"status": "error", "execution_count": self.execution_count, "ename": "HarshError", "evalue": "hrs_std could not be added", "traceback": []}
+                self._std_ready = True
+                if not silent:
+                    self.send_response(self.iopub_socket, "stream", {"name": "stdout", "text": "(hrs_std added to this notebook; its first build compiles nalgebra and takes a minute or two)\n"})
         msg_id = self._kc.execute(rust, silent=silent, store_history=store_history, allow_stdin=False)
         status = "ok"
         while True:

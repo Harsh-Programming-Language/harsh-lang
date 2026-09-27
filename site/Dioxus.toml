@@ -6,9 +6,9 @@ public_dir = "public"
 
 [web.app]
 title = "Harsh — Rust without the braces"
-# The site is served from https://harsh-programming-language.github.io/harsh-lang/ ; with a
-# custom domain (or a repository named Harsh-Programming-Language.github.io) remove this line.
-# base_path = "harsh-lang"
+# Served at the root of https://harsh-lang.com/ (GitHub Pages, with the domain
+# attached), so no base_path: `dx serve` serves at http://127.0.0.1:8080/ too.
+# At a github.io project address, the site would need base_path = "harsh-lang".
 
 [web.watcher]
 watch_path = ["src", "assets"]

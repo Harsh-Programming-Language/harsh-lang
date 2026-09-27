@@ -167,6 +167,7 @@ def render(SRC, IPYNB, HTML, TITLE, TAG):
   header = '''
   <button class="toggle" id="nav-toggle" title="Show or hide the contents">☰</button>
   <div class="wrap">
+    <a class="home" href="https://harsh-lang.com/">&larr; harsh-lang.com</a>
     <header>
       <p class="logo"><span class="lg-b">#[</span><span class="lg-n">Ha</span><span class="lg-a">&lt;</span><span class="lg-r">rs</span><span class="lg-a">&gt;</span><span class="lg-a">.</span><span class="lg-n lg-i">h</span><span class="lg-b">]</span></p>
       <h1 class="title">Harsh</h1>

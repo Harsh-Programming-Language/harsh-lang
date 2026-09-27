@@ -22,6 +22,17 @@ hrs watch      rebuild on every save
 hrs export     the project as pure Rust, nothing of Harsh left in it
 hrs-from       convert a Rust file or project to Harsh"#
 
+const VSCODE: &str = r#"code --install-extension harsh-lang.harsh-lang"#
+
+const JUPYTER: &str = r#"cargo install evcxr_jupyter
+evcxr_jupyter --install
+python -m pip install harsh-kernel
+python -m harsh_kernel.install"#
+
+const HARSHLINGS: &str = r#"git clone https://gitlab.com/bahiminin.benoit.dah.opensource/harshlings
+cd harshlings
+hrs run"#
+
 #[component]
 pub fn Install$ -> Element:
     rsx! {
@@ -48,15 +59,59 @@ pub fn Install$ -> Element:
             h2 { "The commands" }
             Code { code: COMMANDS, lang: "shell" }
 
-            h2 { "Editors" }
+            h2 { "The toolset" }
             p {
-                "The VS Code extension "
-                a { href: "https://marketplace.visualstudio.com/items?itemName=harsh-lang.harsh-lang", target: "_blank", rel: "noopener", code { "harsh-lang" } }
-                " is on the Marketplace: "
-                "highlighting, indentation on Enter, formatting, and diagnostics on save "
-                "through " code { "hrs-lsp" } ". A Zed extension and a tree-sitter grammar "
-                "are in the repository. A Jupyter kernel runs Harsh cells through evcxr."
+                "Everything Harsh offers beside the compiler's commands, and where it stands."
             }
+
+            h3 { "VS Code" }
+            p {
+                "The extension "
+                a { href: "https://marketplace.visualstudio.com/items?itemName=harsh-lang.harsh-lang", target: "_blank", rel: "noopener", code { "harsh-lang" } }
+                ", on the Marketplace: highlighting, indentation on Enter and Tab, formatting, "
+                "and diagnostics on save, through " code { "hrs-lsp" } " -- installed with "
+                code { "harsh-lang" } " above. Search " em { "Harsh" } " in the Extensions view, or:"
+            }
+            Code { code: VSCODE, lang: "shell" }
+            p { class: "dim",
+                "For VSCodium, Cursor and the other editors built on VS Code, the same extension "
+                "on Open VSX is coming."
+            }
+
+            h3 { "Jupyter" }
+            p {
+                "A Harsh kernel for notebooks: each cell is transpiled by " code { "hrs" }
+                " and run by evcxr, Rust's own Jupyter kernel, which it needs; an error points "
+                "at the cell's own line. Then pick " em { "Harsh" } " in Jupyter."
+            }
+            Code { code: JUPYTER, lang: "shell" }
+            p { class: "dim",
+                "Use " code { "python -m" } " for each Python command, so pip, the kernel and "
+                "Jupyter are one Python. Matrices work in notebooks too: the first cell that "
+                "uses them takes a minute or two while nalgebra compiles."
+            }
+
+            h3 { "Zed -- coming" }
+            p {
+                "A Zed extension and a tree-sitter grammar for Harsh are written and in the "
+                "repository, " code { "editors/" } "; they go to the Zed extension registry "
+                "once two indentation issues in Zed are settled. Until then, Zed can open "
+                code { ".hrs" } " files as plain text."
+            }
+
+            h3 { "Other editors" }
+            p {
+                code { "hrs-lsp" } " is a language server: any editor that speaks LSP -- Neovim, "
+                "Helix, Emacs -- can run it for formatting, indentation and diagnostics. The "
+                "tree-sitter grammar, in the repository, gives them highlighting."
+            }
+
+            h3 { "Harshlings" }
+            p {
+                "Small exercises, broken on purpose, to learn Harsh by fixing them -- as "
+                "Rustlings does for Rust. 65 of them, with hints and solutions."
+            }
+            Code { code: HARSHLINGS, lang: "shell" }
 
             h2 { "Bringing existing Rust in" }
             p {

@@ -1,5 +1,24 @@
 # Changelog
 
+## The website, 2026-09-27  (no new version: `site/` is not in the crate, so 0.1.34 is unchanged)
+
+- **A new home page**: a jumbotron across the top, 75% of the screen's height -- a night-time desk with Harsh on its screens -- where four boxes take turns, typing themselves and erasing: *Rust without the braces*; *Functional programming* (partial function application, pipes); *Linear Algebra* (matrices and vectors, matrix arithmetic); *Artificial Intelligence & Data Sciences*. Titles in Rust's orange, the lines under them white.
+- **The navbar**, the same on every page, lies over the image on the home page, translucent and blurring it; on phones its links fold behind a three-line menu button, on every page.
+
+## 0.1.34 — 2026-09-26  (the Jupyter kernel 0.1.3; everything else as in 0.1.33)
+
+- **Matrices in Jupyter notebooks.** A cell using `v~`, `m~` or anything else of `hrs_std` now just works: the first time a cell's Rust names `hrs_std`, the kernel writes Harsh's standard distribution into its own folder and gives `hrs_std` to evcxr, once per session. The first such cell takes a minute or two while nalgebra compiles. Needs kernel 0.1.3 and `hrs` 0.1.34.
+- **`hrs dist <dir>`** writes Harsh's standard distribution -- `hrs_std`, `hrs_proc_macro`, `hrs_quote`, `hrs_syn` -- into a folder, as `hrs build` does inside a project, for whatever builds outside one.
+
+## 0.1.33 — 2026-09-26  (the Jupyter kernel 0.1.2, and everything else, as in 0.1.32)
+
+- **The website is at https://harsh-lang.com/**, its own domain; the old github.io address redirects there. `site/Dioxus.toml` has no `base_path` any more, and `dx serve` serves at the root.
+- **The Book, *By Example* and the guide show Harsh's logo in the browser's tab, and link back to harsh-lang.com** above every page -- the same pages in the repository, on the website, and offline.
+- **A discreet back-to-top arrow**, in the corner of every page of the website and of the books, once a page has scrolled a screen or so.
+- **The website's Install page lists the whole toolset**: VS Code, Jupyter, Zed (coming), other editors through `hrs-lsp`, Harshlings.
+- **Installing the Jupyter kernel**: `python -m` for every Python command, `--no-deps` to reinstall the kernel alone, and away from the checkout (`docs/JUPYTER.md`, `RELEASE.md`). The old commands could install into one Python and run another, or upgrade Jupyter's own packages under other tools.
+- `site/DEPLOY.md` records how the domain was set up, and the mirror's token as it must be.
+
 ## 0.1.32 — 2026-09-26  (the Jupyter kernel 0.1.2; everything else as in 0.1.31)
 
 0.1.31 was handed over and never published; its number is spent, and 0.1.32 carries all of it (below) with these additions:

@@ -6,9 +6,9 @@ is free for a public repository: a soft limit of 100 GB of traffic a month
 and 1 GB of site, which throttle rather than bill; the build runs on GitHub
 Actions, free for public repositories.
 
-First at the free address,
-**https://harsh-programming-language.github.io/harsh-lang/**; later, at a
-domain of your own (part C).
+Live at **https://harsh-lang.com/** since 2026-09-26 (part C tells how the
+domain is set up). The old address,
+`https://harsh-programming-language.github.io/harsh-lang/`, redirects there.
 
 ## A. Once, before the first deploy
 
@@ -17,10 +17,23 @@ domain of your own (part C).
    read and write*. GitHub refuses a push that adds or changes a file under
    `.github/workflows/` unless the token also has **Workflows: read and
    write**. On GitHub: Settings → Developer settings → Personal access
-   tokens → Fine-grained tokens → the mirror's token → add *Workflows: read
-   and write* (or make a new token with both, and paste it into GitLab:
-   Settings → Repository → Mirroring repositories → the GitHub mirror →
-   edit).
+   tokens → Fine-grained tokens → **Generate new token**: resource owner
+   `Harsh-Programming-Language`, *Only select repositories* → `harsh-lang`,
+   permissions **Contents: Read and write** and **Workflows: Read and
+   write** (*Metadata: Read* comes by itself). **Not** *Actions*: that one
+   governs workflow runs, not workflow files. Choose a long expiration and
+   note the date: an expired token stops the mirror.
+
+   GitLab cannot edit a saved mirror's password, so a new token means a new
+   mirror row: GitLab → Settings → Repository → Mirroring repositories →
+   delete the old row → **Add new**: URL
+   `https://github.com/Harsh-Programming-Language/harsh-lang.git`, direction
+   *Push*, *Username and Password* -- the GitHub username, the token as the
+   password -- then **Update now**.
+
+   What a token without the permission looks like, in the mirror row's
+   *Error* tooltip: `refusing to allow a Personal Access Token to create or
+   update workflow .github/workflows/pages.yml without workflow scope`.
 
 2. **Turn Pages on, with Actions as its source.** On the GitHub repository
    `Harsh-Programming-Language/harsh-lang`: Settings → Pages → *Build and
@@ -72,52 +85,78 @@ address under *deploy*. Open it, then check a few things by hand:
 - the push never reached GitHub: the mirror's token lacks *Workflows* (A.1);
   GitLab's mirror settings show the error.
 
-## C. Later: a domain of your own
+## C. The domain, harsh-lang.com
 
-With a domain -- say `harsh-lang.org` -- the site moves from
-`…github.io/harsh-lang/` to the domain's root. In this order:
+Set up on 2026-09-26, at IONOS. What it took, in order, for the record and
+for the next domain:
 
-1. **The site: remove the prefix.** In `site/Dioxus.toml`, delete the line
-   `base_path = "harsh-lang"`. (It exists only because a project site lives
-   under `/harsh-lang/`; at a domain's root there is no prefix. Locally,
-   `dx serve` then serves at `http://127.0.0.1:8080/` too.) Commit and push.
+1. **Verify the domain with GitHub first** (so no one else can attach it to
+   a Pages site). GitHub, signed in as `Harsh-Programming-Language`: the
+   profile's Settings → Pages → *Add a domain* → `harsh-lang.com`; the TXT
+   record it shows goes into IONOS (host name: only the part before
+   `.harsh-lang.com`); then *Verify*. **Keep that TXT record for good.**
 
-2. **Verify the domain with GitHub first** (protects it from being claimed
-   by someone else's Pages site). GitHub: your profile's Settings → Pages →
-   *Add a domain*, enter it, and add the TXT record GitHub shows you at your
-   DNS provider; wait for *Verified*.
+2. **DNS at IONOS** (the domain → DNS). IONOS's *Default Site* service owns
+   the domain's first `A`, `AAAA` and `_dep_ws_mutex` records; they cannot be
+   deleted, only disabled -- adding or editing a record for `@` offers to
+   disable the service: accept. **IONOS allows one A record per host name**
+   (each new one replaces the last), so the site has one of GitHub's four
+   addresses, which is enough. The records, now:
 
-3. **DNS, at your registrar or DNS provider** -- for the apex domain:
-
-   | Type | Name | Value |
+   | Type | Host name | Points to |
    |---|---|---|
    | A | `@` | `185.199.108.153` |
-   | A | `@` | `185.199.109.153` |
-   | A | `@` | `185.199.110.153` |
-   | A | `@` | `185.199.111.153` |
-   | AAAA (optional, IPv6) | `@` | `2606:50c0:8000::153`, `…8001::153`, `…8002::153`, `…8003::153` |
    | CNAME | `www` | `harsh-programming-language.github.io` |
+   | TXT | `_github-pages-challenge-Harsh-Programming-Language` | GitHub's code |
 
-   Remove any default record your provider created for `@` first. Or, for
-   a subdomain only (`www.harsh-lang.org`), the CNAME alone.
+   Plus IONOS's Mail records (MX, SPF, DMARC, DKIM, autodiscover) and
+   `_domainconnect`, left alone: they do not touch the website. GitHub's
+   four addresses are in its documentation, *Managing a custom domain for
+   your GitHub Pages site*; `dig harsh-programming-language.github.io +short`
+   shows the same four.
 
-4. **Tell GitHub.** Repository → Settings → Pages → *Custom domain*: enter
-   the domain, Save. No `CNAME` file is needed: with a site deployed by a
-   workflow, GitHub ignores one.
+   Check against IONOS's own nameserver, not a cache:
+   `dig NS harsh-lang.com +short` names them; then
+   `dig @ns1046.ui-dns.com harsh-lang.com +noall +answer -t A`.
 
-5. **HTTPS.** Once GitHub has issued the certificate (from minutes to an
-   hour or so), tick **Enforce HTTPS** on the same page.
+3. **The site at the domain's root.** `site/Dioxus.toml` has no
+   `base_path`: a github.io *project* address lives under `/harsh-lang/`
+   and needs one; a domain's root does not.
 
-6. **Check.** `dig harsh-lang.org +noall +answer -t A` shows the four
-   addresses; the site loads at `https://harsh-lang.org/` and at `www.`;
-   the old `…github.io/harsh-lang/` address redirects to the domain.
+4. **Attach the domain to the site.** The **repository's** Settings → Pages
+   (not the profile's) → *Custom domain* → `harsh-lang.com` → *Save*; wait
+   for *DNS check successful*. No `CNAME` file: a site deployed by a
+   workflow ignores it. Then **Run workflow** once, so a build made after
+   both changes is deployed.
+
+5. **Wait.** Even with everything right, GitHub's servers answered "Site
+   not found" (`Server: GitHub.com`, 404) for a while after the domain was
+   attached, while the old address already redirected to it. It cleared on
+   its own. If it has not after half an hour: *Remove* the custom domain,
+   add it again, *Save*, and *Run workflow*.
+
+6. **HTTPS.** When the certificate is issued, *Enforce HTTPS* stops being
+   greyed out on the same page: tick it.
+
+7. **Afterwards**, raise the records' TTL in IONOS from 1 minute (used while
+   setting up) to an hour.
+
+**Checking, at any time:**
+
+```sh
+curl -sI http://harsh-lang.com | grep -i -E '^(HTTP|server)'        # 200 (or 301 to https), GitHub.com
+curl -sI https://harsh-programming-language.github.io/harsh-lang/ | grep -i -E '^(HTTP|location)'   # 301 to the domain
+```
+
+A 404 with `Server: nginx` means an old IONOS address, still cached; one
+with `Server: GitHub.com` and "Site not found" means step 4 or 5.
 
 ## Later, when it matters
 
 - **Search engines.** The site renders in the browser, so a crawler that
   runs no JavaScript sees little. Static generation (`dx build --ssg`)
-  writes each page's HTML at build time; it is the first improvement once
-  the site is live.
+  writes each page's HTML at build time; it is the first improvement now
+  that the site is live.
 - **Another host.** If traffic ever outgrows GitHub Pages, the same build
   output (`dist/`) can be served by Cloudflare's static hosting, which
   meters no bandwidth; only the workflow's last step changes.

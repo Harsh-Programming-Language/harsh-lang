@@ -945,20 +945,7 @@ pub const DISTRIBUTION: [&str; 4] = ["hrs_std", "hrs_proc_macro", "hrs_quote", "
 #[cfg(feature = "remap")]
 pub fn distribution(root: &Path, manifests: &[PathBuf]) -> Result<Vec<String>, String> {
     let dist = root.join(GEN_DIR).join("dist");
-    for (path, text) in crate::dist::FILES {
-        let file = dist.join(path);
-        let text = if *path == "hrs_proc_macro/Cargo.toml" {
-            text.replace(", path = \"..\"", "")
-        } else {
-            text.to_string()
-        };
-        if fs::read_to_string(&file).ok().as_deref() != Some(text.as_str()) {
-            if let Some(dir) = file.parent() {
-                fs::create_dir_all(dir).map_err(|e| format!("{}: {}", dir.display(), e))?;
-            }
-            fs::write(&file, text).map_err(|e| format!("{}: {}", file.display(), e))?;
-        }
-    }
+    write_distribution(&dist)?;
     let toml_path = |p: &Path| p.display().to_string().replace('\\', "\\\\").replace('"', "\\\"");
     // Which crates the manifests name, and what those need: `hrs_syn` needs
     // `hrs_quote`, which needs `hrs_proc_macro`, which needs `harsh-lang`.
@@ -1022,6 +1009,32 @@ pub fn distribution(root: &Path, manifests: &[PathBuf]) -> Result<Vec<String>, S
         args.push(format!("patch.crates-io.harsh-lang.path=\"{}\"", toml_path(own)));
     }
     Ok(args)
+}
+
+/// Write Harsh's standard distribution -- `hrs_std`, `hrs_proc_macro`,
+/// `hrs_quote`, `hrs_syn` -- into `dir`, one folder per crate, as `hrs build`
+/// writes it under a project's `target/hrs/dist/`: a file only when its text
+/// differs, so cargo rebuilds nothing needlessly. Also `hrs dist <dir>`, for
+/// what builds outside a Harsh project and still wants `hrs_std` -- the
+/// Jupyter kernel, whose evcxr takes it by `:dep hrs_std = { path = … }`
+/// (the user, 2026-09-26).
+#[cfg(feature = "remap")]
+pub fn write_distribution(dir: &Path) -> Result<(), String> {
+    for (path, text) in crate::dist::FILES {
+        let file = dir.join(path);
+        let text = if *path == "hrs_proc_macro/Cargo.toml" {
+            text.replace(", path = \"..\"", "")
+        } else {
+            text.to_string()
+        };
+        if fs::read_to_string(&file).ok().as_deref() != Some(text.as_str()) {
+            if let Some(parent) = file.parent() {
+                fs::create_dir_all(parent).map_err(|e| format!("{}: {}", parent.display(), e))?;
+            }
+            fs::write(&file, text).map_err(|e| format!("{}: {}", file.display(), e))?;
+        }
+    }
+    Ok(())
 }
 
 /// Whether cargo's default (caret) requirement `asked` admits `shipped`:

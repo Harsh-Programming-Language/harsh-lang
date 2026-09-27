@@ -64,5 +64,46 @@ class EvcxrReport(unittest.TestCase):
         self.assertIn("expected `i32`, found `&str`", out)
 
 
+
+class StandardDistribution(unittest.TestCase):
+    """A cell that uses Harsh's `hrs_std` gets it in evcxr's session, once:
+    `hrs dist` writes it, and evcxr takes it by `:dep` (2026-09-26)."""
+
+    def kernel(self):
+        k = HarshKernel.__new__(HarshKernel)
+        k._hrs = os.environ.get("HRS", os.path.expanduser("~/.cargo/bin/hrs"))
+        k._workdir = tempfile.mkdtemp(prefix="harsh-kernel-test-")
+        return k
+
+    def test_a_cell_without_hrs_std_needs_nothing(self):
+        k = self.kernel()
+        rust, err, _ = k._transpile("let x = 2\nx * 21")
+        self.assertIsNone(k._std_dep(rust))
+        self.assertFalse(os.path.exists(os.path.join(k._workdir, "dist")))
+
+    def test_a_matrix_cell_gets_hrs_std_by_path(self):
+        k = self.kernel()
+        rust, err, _ = k._transpile("let v = v~ [1, 3, 4]\nv")
+        self.assertIsNone(err)
+        dep = k._std_dep(rust)
+        self.assertTrue(dep.startswith(":dep hrs_std = { path = "), dep)
+        path = dep.split('"')[1]
+        self.assertTrue(os.path.isfile(os.path.join(path, "Cargo.toml")))
+        self.assertTrue(os.path.isfile(os.path.join(path, "src", "lib.rs")))
+
+    def test_once_added_it_is_not_added_again(self):
+        k = self.kernel()
+        rust, _, _ = k._transpile("let v = v~ [1, 3, 4]\nv")
+        k._std_ready = True
+        self.assertIsNone(k._std_dep(rust))
+
+    def test_an_hrs_without_dist_says_what_to_do(self):
+        k = self.kernel()
+        rust, _, _ = k._transpile("let v = v~ [1, 3, 4]\nv")
+        k._hrs = "/bin/false"
+        with self.assertRaises(RuntimeError) as e:
+            k._std_dep(rust)
+        self.assertIn("hrs 0.1.34 or later", str(e.exception))
+
 if __name__ == "__main__":
     unittest.main()

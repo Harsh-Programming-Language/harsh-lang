@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "harsh-kernel"
-version = "0.1.2"
+version = "0.1.3"
 description = "A Jupyter kernel for Harsh: cells are transpiled with hrs and evaluated by evcxr."
 requires-python = ">=3.9"
 dependencies = ["ipykernel>=6", "jupyter_client>=7"]

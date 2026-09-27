@@ -594,6 +594,34 @@ fn single_file_carries_the_hrs_std_it_uses() {
     assert_eq!(opens, one.matches('}').count());
 }
 
+/// `hrs dist <dir>` writes Harsh's standard distribution as `hrs build`
+/// writes it into a project -- every file the distribution holds, with the
+/// same text (`hrs_proc_macro`'s manifest without its development `path`) --
+/// and a second run changes nothing. The Jupyter kernel gives the `hrs_std`
+/// it writes to evcxr (the user, 2026-09-26).
+#[test]
+fn hrs_dist_writes_the_standard_distribution() {
+    let dir = std::env::temp_dir().join(format!("harsh-dist-test-{}", std::process::id()));
+    let _ = fs::remove_dir_all(&dir);
+    let run = || Command::new(env!("CARGO_BIN_EXE_hrs")).arg("dist").arg(&dir).output().unwrap();
+    let out = run();
+    assert!(out.status.success(), "{}", String::from_utf8_lossy(&out.stderr));
+    for (path, text) in harsh_lang::dist::FILES {
+        let want = if *path == "hrs_proc_macro/Cargo.toml" { text.replace(", path = \"..\"", "") } else { text.to_string() };
+        assert_eq!(fs::read_to_string(dir.join(path)).unwrap(), want, "{path}");
+    }
+    assert!(dir.join("hrs_std/src/lib.rs").is_file());
+    // A second run writes nothing: the files' times stay as they were.
+    let stamp = fs::metadata(dir.join("hrs_std/src/lib.rs")).unwrap().modified().unwrap();
+    std::thread::sleep(std::time::Duration::from_millis(20));
+    assert!(run().status.success());
+    assert_eq!(fs::metadata(dir.join("hrs_std/src/lib.rs")).unwrap().modified().unwrap(), stamp);
+    // Without a folder: the usage, and a failure.
+    let bare = Command::new(env!("CARGO_BIN_EXE_hrs")).arg("dist").output().unwrap();
+    assert!(!bare.status.success());
+    let _ = fs::remove_dir_all(&dir);
+}
+
 fn walk(dir: &Path) -> Vec<PathBuf> {
     let mut out = Vec::new();
     for e in fs::read_dir(dir).unwrap().flatten() {

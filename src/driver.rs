@@ -1283,6 +1283,30 @@ fn expand_harsh_macros(
     crate::mac::expand_all_with(toks, &taken, procs).map_err(|e| render_error(from, src, e.span, &e.msg))
 }
 
+/// Rust to Harsh, in memory: what `hrs-from` writes. The converter, then the
+/// formatter -- only when the result transpiles, since a converter gap left
+/// as the converter wrote it is easier to see than one reflowed -- then the
+/// examples in doc comments, converted like the rest. `hrs-from` and the
+/// website's Converter both call this, so they cannot disagree (the user,
+/// 2026-09-27).
+pub fn convert_str(rust: &str) -> Result<String, String> {
+    let mut out = format_if_sound(crate::unbrace::convert(rust)?);
+    crate::docex::to_harsh_in(&mut out);
+    Ok(out)
+}
+
+/// The converter's output through the formatter -- when it transpiles. When
+/// it does not (a gap in the converter), it is returned as the converter
+/// wrote it: the formatter, guarded only against changing a *working* file,
+/// would otherwise reflow the gap away from where it was found.
+pub fn format_if_sound(harsh: String) -> String {
+    if transpile_str(&harsh).is_ok() {
+        crate::fmt::format(&harsh)
+    } else {
+        harsh
+    }
+}
+
 /// A whole Harsh source to Rust, in memory: the driver's path without files
 /// or a source map. Used for the holes of a Rust macro's brace body, which
 /// may hold brace bodies with holes of their own.

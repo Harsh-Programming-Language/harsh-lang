@@ -156,9 +156,11 @@ blockquote footer { color: var(--dim); font-size: 14px; }
   margin: 0; padding: 14px 16px; border-radius: 10px;
   background: var(--panel); border: 1px solid var(--line);
   font: 13.5px/1.55 var(--mono); tab-size: 4; color: var(--fg);
-  /* Never a sideways scroll: a line too long for its pane (a phone, the
-     playground's output) wraps rather than overflowing. */
-  white-space: pre-wrap; overflow-wrap: anywhere;
+  /* Code keeps its layout (the user, 2026-09-27: wrapping destroyed it on
+     phones): a line too wide for its box scrolls inside the box, never the
+     page. The samples' 52-character rule keeps the panes from scrolling on
+     a computer; only narrow phones scroll. */
+  white-space: pre; overflow-x: auto; overflow-wrap: normal;
 }
 .code code { font: inherit; color: inherit; }
 .code.plain { color: var(--fg); }
@@ -201,6 +203,7 @@ blockquote footer { color: var(--dim); font-size: 14px; }
   background: var(--panel); color: var(--fg); border: 1px solid var(--line);
 }
 .chip:hover { border-color: var(--acc); }
+.chip.on { border-color: var(--acc); color: var(--acc); }
 .play-panes { align-items: stretch; }
 /* The editor: a textarea whose own text is transparent, over a highlighted
    copy of the same text. The two layers share every metric -- font, size,

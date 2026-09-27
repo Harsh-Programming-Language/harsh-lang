@@ -10,7 +10,7 @@ const { execFileSync } = require("child_process");
 const fs = require("fs");
 const listeners = {};
 const area = {
-  value: "", selectionStart: 0, selectionEnd: 0,
+  value: "", selectionStart: 0, selectionEnd: 0, dataset: {},
   addEventListener: (k, f) => (listeners[k] = f),
   focus() {}, dispatchEvent() {},
   setSelectionRange(a, b) { this.selectionStart = a; this.selectionEnd = b; },
@@ -120,6 +120,22 @@ function expect(name, want) {
   at("g ▮a◆"); await press("'");
   const w2 = area.value === "g 'a'" && area.selectionStart === 3 && area.selectionEnd === 4;
   console.log((w2 ? "ok   " : "FAIL ") + "`'` wraps a selection, though it never closes"); if (!w2) failures++;
+  // Rust mode (the Converter's Rust -> Harsh direction): four spaces, no
+  // layout rules from the wasm.
+  area.dataset.lang = "rust";
+  at("fn main() {▮"); await key("Enter");
+  expect("Rust: Enter after `{` goes in four spaces", "fn main() {\n    ▮");
+  at("fn main() {▮}"); await key("Enter");
+  expect("Rust: Enter between braces splits them, the closer back at the line's indentation", "fn main() {\n    ▮\n}");
+  at("    let x = 1;▮"); await key("Enter");
+  expect("Rust: Enter after a statement keeps the indentation", "    let x = 1;\n    ▮");
+  at("  ▮x"); await key("Tab");
+  expect("Rust: Tab goes to the next multiple of four", "    ▮x");
+  at("      ▮x"); await key("Tab", true);
+  expect("Rust: Shift-Tab goes to the previous multiple of four", "    ▮x");
+  at("fn main() {\n    let x = 1;\n    ▮"); await press("}");
+  expect("Rust: `}` on an empty line steps back a level", "fn main() {\n    let x = 1;\n}▮");
+  area.dataset.lang = undefined;
   console.log(failures ? failures + " failed" : "all passed");
   process.exit(failures ? 1 : 0);
 })();

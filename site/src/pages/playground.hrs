@@ -47,7 +47,7 @@ pub fn Playground$ -> Element:
                 }
                 button { class: "button", onclick: @: move |_| tidy src :@, "Format" }
             }
-            Editor { value: src, id: "playground-editor" }
+            Editor { value: src, id: "playground-editor", lang: "harsh" }
             div { class: "pane-label", "Console" }
             pre { class: "code console", "{console}" }
             p { class: "dim",

@@ -49,6 +49,9 @@ area.addEventListener("keydown", async (e) => {
     if (end < 0) end = v.length;
     const line = v.slice(0, start).split("\n").length - 1;
     const ws = /^ */.exec(v.slice(start, end))[0].length;
+    // Harsh's layout rules, from the wasm, for Harsh; for Rust (the
+    // Converter's other direction), the common editor rules: four spaces.
+    const harsh = area.dataset.lang !== "rust";
     if (e.isComposing) return;
     // Pairs, as the VS Code extension declares them (language-configuration
     // .json) and VS Code closes them: `'` is not closed -- lifetimes -- but
@@ -107,10 +110,10 @@ area.addEventListener("keydown", async (e) => {
     if (e.key === "Enter" && !e.shiftKey && s === t && "([{".includes(prev) && next === PAIRS[prev]) {
         e.preventDefault();
         const head = v.slice(0, s);
-        const [column] = await ask(head, line + 1);
+        const [column] = harsh ? await ask(head, line + 1) : [ws + 4];
         const middle = "\n" + " ".repeat(column);
         let close = ws;
-        if (prev !== "{") {
+        if (harsh && prev !== "{") {
             const answer = await ask(head + middle + "\n", line + 2);
             if (answer[3] >= 0) close = answer[3];
         }
@@ -142,6 +145,11 @@ area.addEventListener("keydown", async (e) => {
             }
             return;
         }
+        if (!harsh) {
+            const target = e.shiftKey ? Math.max(Math.ceil(ws / 4) * 4 - 4, 0) : Math.floor(ws / 4) * 4 + 4;
+            if (target !== ws) edit(start, start + ws, " ".repeat(target), start + target);
+            return;
+        }
         const [, legal, unit] = await ask(v, line);
         let target;
         if (!e.shiftKey) {
@@ -163,9 +171,16 @@ area.addEventListener("keydown", async (e) => {
             edit(s, t, pad, s + pad.length);
             return;
         }
-        const [column] = await ask(v, line + 1);
+        const column = harsh ? (await ask(v, line + 1))[0] : ws + (/[{(\[]\s*$/.test(v.slice(start, s)) ? 4 : 0);
         const pad = "\n" + " ".repeat(column);
         edit(s, s, pad, s + pad.length);
+        return;
+    }
+    // Rust: a closer typed on an empty line steps back one level.
+    if (!harsh && (e.key === ")" || e.key === "]" || e.key === "}") && s === t && v.slice(start, s).trim() === "") {
+        e.preventDefault();
+        const back = Math.max(ws - 4, 0);
+        edit(start, s, " ".repeat(back) + e.key, start + back + 1);
         return;
     }
     if ((e.key === ")" || e.key === "]") && s === t && v.slice(start, s).trim() === "") {
@@ -186,17 +201,18 @@ await new Promise(() => {});
 /// with Enter, Tab and closing brackets placed by Harsh's layout rules.
 /// A textarea whose own text is transparent lies over the highlighted copy.
 #[component]
-pub fn Editor (value: Signal<String>) (id: &'static str) -> Element:
+pub fn Editor (value: Signal<String>) (id: &'static str) (lang: &'static str) -> Element:
     let mut value = value
     use_effect move ||:
         let _ = spawn (keys id)
     rsx! {
         div { class: "editor",
-            pre { class: "code harsh editor-view", aria_hidden: "true",
+            pre { class: "code {lang} editor-view", aria_hidden: "true",
                 code { {@: spans (&value <- read$) :@} "\n" }
             }
             textarea {
                 id: id,
+                "data-lang": "{lang}",
                 class: "editor-input",
                 spellcheck: "false",
                 autocomplete: "off",

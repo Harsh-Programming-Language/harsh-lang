@@ -622,6 +622,27 @@ fn hrs_dist_writes_the_standard_distribution() {
     let _ = fs::remove_dir_all(&dir);
 }
 
+/// The website's Converter (Rust to Harsh) and `hrs-from` give the same
+/// Harsh, byte for byte: both call `driver::convert_str` -- the converter,
+/// the formatter when the result transpiles, the doc examples (2026-09-27).
+#[test]
+fn convert_str_is_what_hrs_from_writes() {
+    let rust = "/// Adds one.\n///\n/// ```\n/// let x = add_one(1);\n/// assert_eq!(x, 2);\n/// ```\npub fn add_one(x: i32) -> i32 {\n    x + 1\n}\n\nfn main() {\n    let v: Vec<i32> = (1..4).map(|x| add_one(x)).collect();\n    println!(\"{:?}\", v);\n}\n";
+    let dir = std::env::temp_dir().join(format!("harsh-convert-test-{}", std::process::id()));
+    fs::create_dir_all(&dir).unwrap();
+    let file = dir.join("main.rs");
+    fs::write(&file, rust).unwrap();
+    let out = Command::new(env!("CARGO_BIN_EXE_hrs-from")).arg(&file).output().unwrap();
+    assert!(out.status.success(), "{}", String::from_utf8_lossy(&out.stderr));
+    let from_cli = String::from_utf8(out.stdout).unwrap();
+    let from_lib = harsh_lang::driver::convert_str(rust).unwrap();
+    assert_eq!(from_cli, from_lib);
+    // And the Harsh is Harsh: it transpiles, and the doc example was converted.
+    assert!(harsh_lang::driver::transpile_str(&from_lib).is_ok(), "{from_lib}");
+    assert!(from_lib.contains("fn add_one"), "{from_lib}");
+    let _ = fs::remove_dir_all(&dir);
+}
+
 fn walk(dir: &Path) -> Vec<PathBuf> {
     let mut out = Vec::new();
     for e in fs::read_dir(dir).unwrap().flatten() {

@@ -4,7 +4,7 @@ version = 3
 
 [[package]]
 name = "harsh-lang"
-version = "0.1.34+2026.09.26"
+version = "0.1.35+2026.09.27"
 
 [[package]]
 name = "hrs_proc_macro"

@@ -46,13 +46,17 @@ fn main() -> ExitCode {
     // is in the recommended layout.
     // `--raw`: the converter's own output, before the formatter.
     let raw = std::env::args().any(|a| a == "--raw");
-    match harsh_lang::unbrace::convert(&src)
-        .map(|o| if raw { o } else { format_if_sound(o) })
-        .map(|mut o| {
-            // A doc example is code, so it is converted like the rest.
+    // `driver::convert_str` is the whole path (convert, format if sound,
+    // doc examples); `--raw` skips only the formatter.
+    let converted = if raw {
+        harsh_lang::unbrace::convert(&src).map(|mut o| {
             harsh_lang::docex::to_harsh_in(&mut o);
             o
-        }) {
+        })
+    } else {
+        harsh_lang::driver::convert_str(&src)
+    };
+    match converted {
         Ok(out) => match output {
             Some(p) => {
                 if let Err(e) = fs::write(&p, out) {
@@ -68,17 +72,4 @@ fn main() -> ExitCode {
         }
     }
     ExitCode::SUCCESS
-}
-
-/// The conversion, formatted -- when it transpiles. When it does not (a gap in
-/// the converter), it is returned as the converter wrote it: the formatter,
-/// guarded only against changing a *working* file, would otherwise reflow the
-/// broken one, and the gap would look like a second problem (found
-/// 2026-09-25: the "width-reflowed layout" seen twice was this).
-fn format_if_sound(o: String) -> String {
-    if harsh_lang::driver::transpile_str(&o).is_ok() {
-        harsh_lang::fmt::format(&o)
-    } else {
-        o
-    }
 }

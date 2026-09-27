@@ -34,6 +34,7 @@ pub fn Nav$ -> Element:
                 }
                 // A click on any link closes the phone menu.
                 nav { id: "site-links", onclick: @: move |_| open <- set false :@,
+                    Link { to: Route::Home {}, "Home" }
                     Link { to: Route::Learn {}, "Learn" }
                     Link { to: Route::Install {}, "Install" }
                     Link { to: Route::Converter {}, "Converter" }

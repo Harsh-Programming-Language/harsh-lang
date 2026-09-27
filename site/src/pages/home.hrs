@@ -25,7 +25,7 @@ const BOXES: &[&[(&str, &str)]] = &[
     &[("title", "Rust without the braces")],
     &[("title", "Functional programming"), ("item", "Partial function application"), ("item", "Pipes")],
     &[("title", "Linear Algebra"), ("item", "Matrices and Vectors"), ("item", "Matrix Arithmetic")],
-    &[("title", "Artificial Intelligence"), ("title", "& Data Sciences")],
+    &[("title", "Artificial Intelligence"), ("title", "& Data Science")],
 ]
 
 #[component]
@@ -38,7 +38,7 @@ pub fn Home$ -> Element:
                 h1 { class: "sr-only",
                     "Harsh: Rust without the braces. Functional programming: partial function "
                     "application, pipes. Linear algebra: matrices and vectors, matrix arithmetic. "
-                    "Artificial intelligence and data sciences."
+                    "Artificial intelligence and data science."
                 }
                 div { class: "stage", aria_hidden: "true",
                     for (n, lines) in @: BOXES <- iter$ <- enumerate$ :@ {

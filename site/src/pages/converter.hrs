@@ -2,50 +2,88 @@ use dioxus.prelude.*
 
 use crate.components.( Editor, spans, tidy)
 use crate.samples.*
-use harsh_lang.driver.transpile_str
+use harsh_lang.driver.( convert_str, transpile_str)
 
-/// The online converter: the transpiler, compiled to WebAssembly with the
-/// rest of the site. What you type on the left becomes Rust on the right, in
-/// the browser, as you type; Run opens that Rust on play.rust-lang.org. It
-/// converts and does not render -- rendering a page is the Playground's job.
+/// The online converter, both ways (the user, 2026-09-27): Harsh to Rust
+/// with the transpiler, Rust to Harsh with the converter `hrs-from` uses
+/// (`driver::convert_str`), both compiled to WebAssembly with the site. What
+/// you type on the left is converted on the right as you type; Swap turns the
+/// output into the input and the other way round; Run opens the Rust side --
+/// the output one way, the input the other -- on play.rust-lang.org.
 #[component]
 pub fn Converter$ -> Element:
     let mut src = use_signal (|| HERO_HARSH <- to_string$)
+    let mut to_rust = use_signal (|| true)
     let code: String = src <- read$ <- clone$
-    let (rust, ok) = match transpile_str (&code)\
-        Ok r => (r, true)
+    let forward = to_rust$
+    let converted = if forward: transpile_str (&code) else: convert_str (&code)
+    let (out, ok) = match converted\
+        Ok text => (text, true)
         Err e => (e, false)
-    let run = format! "https://play.rust-lang.org/?version=stable&edition=2021&code={}" (encode (&rust))
+    let rust_side = if forward: out <- clone$ else: code <- clone$
+    let run = format! "https://play.rust-lang.org/?version=stable&edition=2021&code={}" (encode (&rust_side))
+    let swapped = out <- clone$
+    let (from, into) = if forward: ("Harsh", "Rust") else: ("Rust", "Harsh")
+    let (from_lang, into_lang) = if forward: ("harsh", "rust") else: ("rust", "harsh")
     rsx! {
         section { class: "page play",
             h1 { "Converter" }
             p {
-                "Harsh on the left, the Rust it becomes on the right -- the transpiler itself, "
-                "running in your browser. Run opens the Rust on the Rust Playground. "
-                "Run sends only this Rust; for the matrix sample, use the Playground, "
-                "which sends the part of " code { "hrs_std" } " a program uses along with it."
+                "Harsh to Rust, or Rust to Harsh -- the transpiler and the converter "
+                "themselves, running in your browser; the Harsh a Rust file becomes here "
+                "is what " code { "hrs-from" } " writes. Run opens the Rust side on the "
+                "Rust Playground. For the matrix sample, use the Playground, which sends "
+                "the part of " code { "hrs_std" } " a program uses along with it."
             }
             div { class: "examples",
-                for (name, text) in @: EXAMPLES :@ {
-                    button { class: "chip", onclick: @: move |_| src <- set (text <- to_string$) :@, "{name}" }
+                button {
+                    class: @: if forward: "chip on" else: "chip" :@,
+                    onclick: @: move |_| to_rust <- set true :@,
+                    "Harsh → Rust"
                 }
-                button { class: "chip", onclick: @: move |_| tidy src :@, "Format" }
+                button {
+                    class: @: if forward: "chip" else: "chip on" :@,
+                    onclick: @: move |_| to_rust <- set false :@,
+                    "Rust → Harsh"
+                }
+                button {
+                    class: "chip",
+                    title: "The output becomes the input, and the direction turns",
+                    onclick: @: move |_| swap src to_rust (swapped <- clone$) ok :@,
+                    "⇄ Swap"
+                }
+            }
+            div { class: "examples",
+                for (name, harsh, rust) in @: EXAMPLES :@ {
+                    button {
+                        class: "chip",
+                        onclick: @: move |_| src <- set (sample forward harsh rust) :@,
+                        "{name}"
+                    }
+                }
+                if forward {
+                    button { class: "chip", onclick: @: move |_| tidy src :@, "Format" }
+                }
             }
             div { class: "compare play-panes",
                 div { class: "pane",
-                    div { class: "pane-label", "Harsh" }
-                    Editor { value: src, id: "converter-editor" }
-                }
-                div { class: "pane",
-                    div { class: "pane-label",
-                        "Rust"
-                        if ok {
+                    div { class: "pane-label", "{from}"
+                        if !forward {
                             a { class: "run", href: "{run}", target: "_blank", rel: "noopener", "Run ↗" }
                         }
                     }
-                    pre { class: @: if ok: "code rust" else: "code error" :@,
+                    Editor { value: src, id: "converter-editor", lang: from_lang }
+                }
+                div { class: "pane",
+                    div { class: "pane-label",
+                        "{into}"
+                        if ok && forward {
+                            a { class: "run", href: "{run}", target: "_blank", rel: "noopener", "Run ↗" }
+                        }
+                    }
+                    pre { class: @: if ok: format! "code {into_lang}" else: "code error" <- to_string$ :@,
                         code {
-                            if ok { {@: spans (&rust) :@} } else { "{rust}" }
+                            if ok { {@: spans (&out) :@} } else { "{out}" }
                         }
                     }
                 }
@@ -53,13 +91,27 @@ pub fn Converter$ -> Element:
         }
     }
 
-/// The samples the chips load.
-const EXAMPLES: &[(&str, &str)] = &[
-    ("Word count", HERO_HARSH),
-    ("Pipes", PIPES_HARSH),
-    ("Comprehensions", COMPREHENSIONS_HARSH),
-    ("Linear algebra", LINALG_HARSH),
+/// The samples the chips load: each in Harsh and in Rust.
+const EXAMPLES: &[(&str, &str, &str)] = &[
+    ("Word count", HERO_HARSH, HERO_RUST),
+    ("Pipes", PIPES_HARSH, PIPES_RUST),
+    ("Comprehensions", COMPREHENSIONS_HARSH, COMPREHENSIONS_RUST),
+    ("Linear algebra", LINALG_HARSH, LINALG_RUST),
 ]
+
+/// A sample, in the language the input is in.
+fn sample (forward: bool) (harsh: &str) (rust: &str) -> String:
+    if forward:
+        harsh <- to_string$
+    else:
+        rust <- to_string$
+
+/// Swap: the output becomes the input, and the direction turns. When the
+/// output is an error, only the direction turns.
+fn swap (mut src: Signal<String>) (mut to_rust: Signal<bool>) (output: String) (ok: bool):
+    if ok:
+        src <- set output
+    to_rust <- set (!to_rust$)
 
 /// Percent-encode text for a URL's query string.
 fn encode s: &str -> String:

@@ -1,8 +1,16 @@
 # Changelog
 
+## 0.1.35 — 2026-09-27  (the Jupyter kernel 0.1.3, unchanged)
+
+- **The Converter works both ways, Harsh ⇄ Rust.** Rust to Harsh gives exactly what `hrs-from` writes: both call the new **`driver::convert_str`** -- the converter, the formatter when the result transpiles, the doc examples -- so they cannot disagree (`hrs-from` keeps `--raw`). A switch sets the direction; **⇄ Swap** turns the output into the input; the samples load in either language; Run opens the Rust side. In Rust, the editor indents as editors do for braces: four spaces.
+- **Code blocks keep their layout** on the website: a line too wide scrolls inside its box, instead of wrapping.
+- **`Home`** leads the navbar.
+- **The books link back to https://harsh-lang.com/learn**, the page that lists them.
+- The home page's last box reads *Artificial Intelligence & Data Science*.
+
 ## The website, 2026-09-27  (no new version: `site/` is not in the crate, so 0.1.34 is unchanged)
 
-- **A new home page**: a jumbotron across the top, 75% of the screen's height -- a night-time desk with Harsh on its screens -- where four boxes take turns, typing themselves and erasing: *Rust without the braces*; *Functional programming* (partial function application, pipes); *Linear Algebra* (matrices and vectors, matrix arithmetic); *Artificial Intelligence & Data Sciences*. Titles in Rust's orange, the lines under them white.
+- **A new home page**: a jumbotron across the top, 75% of the screen's height -- a night-time desk with Harsh on its screens -- where four boxes take turns, typing themselves and erasing: *Rust without the braces*; *Functional programming* (partial function application, pipes); *Linear Algebra* (matrices and vectors, matrix arithmetic); *Artificial Intelligence & Data Science*. Titles in Rust's orange, the lines under them white.
 - **The navbar**, the same on every page, lies over the image on the home page, translucent and blurring it; on phones its links fold behind a three-line menu button, on every page.
 
 ## 0.1.34 — 2026-09-26  (the Jupyter kernel 0.1.3; everything else as in 0.1.33)

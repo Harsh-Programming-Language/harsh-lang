@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.1.36 — 2026-09-27  (the Jupyter kernel 0.1.3, unchanged)
+
+- **A statement at a file's top level is an error that says so.** Rust's top level holds items only; a `let x = f 3 2` there used to go through untouched -- Harsh's call syntax and all -- and the website's Converter showed broken Rust. Now: *a `let` at the top level: Rust's top level holds only items (`fn`, `struct`, `enum`, `impl`, `use`, `const` …); it belongs inside a function -- `fn main$:`, for one; or, for a value of the whole program, `const` or `static`*, pointing at the line. (rustc caught a plain `let x = 3` there too, in a project; but not in the Converter, which has no rustc, and not clearly when the line held Harsh, which it passed on untransformed.) Items, attributes (`#![…]` included) and macro calls stay allowed, as in Rust; notebook cells, holes and doc examples are wrapped in a function, so statements stay at home there.
+- **The website's editor drops a stale edit**: Enter or Tab waited for the columns, and a change to the text meanwhile left the edit at old positions, scrambling it (`3, 2` once became `3 3 32`). Every sample of the site now round-trips both ways in a test.
+- The home page's second box reads *Functional Programming*: Partial Function Application, Pipes.
+
+## The website, 2026-09-27, later  (no new version: the crate is as in 0.1.35)
+
+- **A copy button on every code block** -- on the site and in the books -- discreet, shown on hovering the block.
+- **Fixed: the editor could scramble text**: Enter and Tab wait for the page's layout answer, and a change to the text meanwhile left their edit at stale positions (a round trip once showed `3, 2` as `3 3 32`). A stale edit is now dropped. The language's tools were never at fault; a new test round-trips every sample of the site both ways.
+
 ## 0.1.35 — 2026-09-27  (the Jupyter kernel 0.1.3, unchanged)
 
 - **The Converter works both ways, Harsh ⇄ Rust.** Rust to Harsh gives exactly what `hrs-from` writes: both call the new **`driver::convert_str`** -- the converter, the formatter when the result transpiles, the doc examples -- so they cannot disagree (`hrs-from` keeps `--raw`). Two buttons choose the direction: choosing the other one turns the output into the input, so the text always matches the direction (and while the output is an error, the other direction waits); the samples load in either language; Run opens the Rust side. In Rust, the editor indents as editors do for braces: four spaces.
@@ -10,7 +21,7 @@
 
 ## The website, 2026-09-27  (no new version: `site/` is not in the crate, so 0.1.34 is unchanged)
 
-- **A new home page**: a jumbotron across the top, 75% of the screen's height -- a night-time desk with Harsh on its screens -- where four boxes take turns, typing themselves and erasing: *Rust without the braces*; *Functional programming* (partial function application, pipes); *Linear Algebra* (matrices and vectors, matrix arithmetic); *Artificial Intelligence & Data Science*. Titles in Rust's orange, the lines under them white.
+- **A new home page**: a jumbotron across the top, 75% of the screen's height -- a night-time desk with Harsh on its screens -- where four boxes take turns, typing themselves and erasing: *Rust without the braces*; *Functional Programming* (Partial Function Application, Pipes); *Linear Algebra* (matrices and vectors, matrix arithmetic); *Artificial Intelligence & Data Science*. Titles in Rust's orange, the lines under them white.
 - **The navbar**, the same on every page, lies over the image on the home page, translucent and blurring it; on phones its links fold behind a three-line menu button, on every page.
 
 ## 0.1.34 — 2026-09-26  (the Jupyter kernel 0.1.3; everything else as in 0.1.33)

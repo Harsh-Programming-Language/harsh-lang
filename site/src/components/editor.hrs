@@ -44,6 +44,10 @@ area.addEventListener("keydown", async (e) => {
     release = false;
     if (e.ctrlKey || e.metaKey || e.altKey) return;
     const v = area.value, s = area.selectionStart, t = area.selectionEnd;
+    // The text may change while the wasm answers (the page re-rendering it,
+    // a fast keystroke): an edit placed at the old positions would duplicate
+    // or scramble characters -- so after every wait, a stale edit is dropped.
+    const stale = () => area.value !== v;
     const start = v.lastIndexOf("\n", s - 1) + 1;
     let end = v.indexOf("\n", s);
     if (end < 0) end = v.length;
@@ -111,10 +115,12 @@ area.addEventListener("keydown", async (e) => {
         e.preventDefault();
         const head = v.slice(0, s);
         const [column] = harsh ? await ask(head, line + 1) : [ws + 4];
+        if (stale()) return;
         const middle = "\n" + " ".repeat(column);
         let close = ws;
         if (harsh && prev !== "{") {
             const answer = await ask(head + middle + "\n", line + 2);
+            if (stale()) return;
             if (answer[3] >= 0) close = answer[3];
         }
         edit(s, s, middle + "\n" + " ".repeat(close), s + middle.length);
@@ -151,6 +157,7 @@ area.addEventListener("keydown", async (e) => {
             return;
         }
         const [, legal, unit] = await ask(v, line);
+        if (stale()) return;
         let target;
         if (!e.shiftKey) {
             target = legal.find((c) => c > ws);
@@ -172,6 +179,7 @@ area.addEventListener("keydown", async (e) => {
             return;
         }
         const column = harsh ? (await ask(v, line + 1))[0] : ws + (/[{(\[]\s*$/.test(v.slice(start, s)) ? 4 : 0);
+        if (stale()) return;
         const pad = "\n" + " ".repeat(column);
         edit(s, s, pad, s + pad.length);
         return;
@@ -186,6 +194,7 @@ area.addEventListener("keydown", async (e) => {
     if ((e.key === ")" || e.key === "]") && s === t && v.slice(start, s).trim() === "") {
         e.preventDefault();
         const [, , , closer] = await ask(v, line);
+        if (stale()) return;
         if (closer >= 0) edit(start, s, " ".repeat(closer) + e.key, start + closer + 1);
         else edit(s, s, e.key, s + 1);
     }

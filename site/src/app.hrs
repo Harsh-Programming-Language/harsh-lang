@@ -42,6 +42,7 @@ fn Shell$ -> Element:
     // The arrow shows once the page has scrolled past a screen or so.
     use_effect ||:
         let _ = document.eval SHOW_ARROW
+        let _ = document.eval COPY_BUTTONS
     rsx! {
         Nav {}
         main { class: @: if home: "full" else: "" :@, Outlet::<Route> {} }
@@ -70,4 +71,29 @@ fn to_top$:
 const TO_TOP: &str = r#"
 const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 window.scrollTo({ top: 0, behavior: still ? "auto" : "smooth" });
+"#
+
+/// A discreet copy button on every code block, on every page.
+const COPY_BUTTONS: &str = r#"
+// A discreet copy button on every code block (the user's, 2026-09-27): shown
+// on hovering the block; copies the block's text; says so for a moment.
+// Editors are left alone -- their text is the textarea's.
+(function(){
+  function add(pre){
+    if (pre.dataset.copy || pre.classList.contains('editor-view')) return;
+    pre.dataset.copy = '1';
+    var b = document.createElement('button');
+    b.className = 'copy'; b.type = 'button'; b.textContent = 'Copy';
+    b.title = 'Copy the code'; b.setAttribute('aria-label', 'Copy the code');
+    b.addEventListener('click', function(){
+      var text = pre.innerText.replace(/Copy(ied)?$/, '').replace(/\n$/, '');
+      var done = function(){ b.textContent = 'Copied'; setTimeout(function(){ b.textContent = 'Copy'; }, 1400); };
+      if (navigator.clipboard) navigator.clipboard.writeText(text).then(done, function(){});
+    });
+    pre.appendChild(b);
+  }
+  function all(){ document.querySelectorAll('pre.code').forEach(add); }
+  all();
+  new MutationObserver(all).observe(document.body, { childList: true, subtree: true });
+})();
 "#

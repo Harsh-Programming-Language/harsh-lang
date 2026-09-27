@@ -643,6 +643,53 @@ fn convert_str_is_what_hrs_from_writes() {
     let _ = fs::remove_dir_all(&dir);
 }
 
+/// Every sample on the website survives a round trip, both ways, as the
+/// Converter makes it (found 2026-09-27: a screenshot of the Converter showed
+/// `from_row_slice(3, 2, …)` come back as `3 3 32`; the tools, driven every
+/// way, never did -- this pins that they do not). Rust → Harsh → Rust gives
+/// the same tokens; Harsh → Rust → Harsh → Rust gives the same Rust; and a
+/// second Rust → Harsh changes nothing.
+#[test]
+fn every_website_sample_round_trips_both_ways() {
+    use harsh_lang::driver::{convert_str, transpile_str};
+    let src = fs::read_to_string(Path::new(env!("CARGO_MANIFEST_DIR")).join("site/src/samples.hrs")).unwrap();
+    let mut samples: Vec<(String, String)> = Vec::new();
+    let mut rest = src.as_str();
+    while let Some(i) = rest.find("pub const ") {
+        rest = &rest[i + "pub const ".len()..];
+        let name = rest[..rest.find(':').unwrap()].to_string();
+        let open = rest.find("r#\"").unwrap() + 3;
+        let close = rest[open..].find("\"#").unwrap() + open;
+        samples.push((name, rest[open..close].to_string()));
+        rest = &rest[close..];
+    }
+    let tight = |s: &str| s.chars().filter(|c| !c.is_whitespace()).collect::<String>();
+    let mut checked = 0;
+    for (name, text) in &samples {
+        if name.ends_with("_RUST") && !text.contains("list~") {
+            let harsh = convert_str(text).unwrap_or_else(|e| panic!("{name}: {e}"));
+            let back = transpile_str(&harsh).unwrap_or_else(|e| panic!("{name} back: {e}\n{harsh}"));
+            // Same program: the same characters, spacing and line breaks aside
+            // (the converter writes `vec!(…)` for `vec![…]`, and a trailing
+            // comma may go).
+            let norm = |s: &str| tight(s).replace("vec![", "vec!(").replace("],)", "])").replace("]);", "));").replace(",)", ")");
+            assert_eq!(norm(&back), norm(text), "{name}: Rust → Harsh → Rust changed the program\n{harsh}\n{back}");
+            assert_eq!(convert_str(&back).unwrap(), harsh, "{name}: a second Rust → Harsh differs");
+            checked += 1;
+        }
+        if name.ends_with("_HARSH") {
+            let rust = transpile_str(text).unwrap_or_else(|e| panic!("{name}: {e}"));
+            let harsh = convert_str(&rust).unwrap_or_else(|e| panic!("{name} to Harsh: {e}\n{rust}"));
+            let again = transpile_str(&harsh).unwrap_or_else(|e| panic!("{name} again: {e}\n{harsh}"));
+            // Spacing aside: the converter writes a deref as `* counts`, the
+            // same Rust as `*counts`.
+            assert_eq!(tight(&again), tight(&rust), "{name}: Harsh → Rust → Harsh → Rust changed the program\n{harsh}");
+            checked += 1;
+        }
+    }
+    assert!(checked >= 6, "only {checked} samples checked");
+}
+
 fn walk(dir: &Path) -> Vec<PathBuf> {
     let mut out = Vec::new();
     for e in fs::read_dir(dir).unwrap().flatten() {

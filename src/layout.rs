@@ -1449,6 +1449,62 @@ pub fn names_in_scope(toks: &[Token]) -> Vec<String> {
     out
 }
 
+/// Rust's top level holds items only -- `fn`, `struct`, `enum`, `impl`,
+/// `trait`, `use`, `mod`, `const`, `static`, `type`, their attributes -- so a
+/// statement there is an error, said plainly (the user, 2026-09-27: a
+/// top-level `let x = f 3 2` used to go through untouched, Harsh and all, and
+/// the Converter showed broken Rust). What stays allowed, as in Rust: any
+/// item, attributes `#[…]` and `#![…]`, and a macro call `name!` or `name~`,
+/// which may expand to items -- rustc, or the `~` expansion, has the last
+/// word. Called where a file is transpiled; a notebook cell, a hole and a doc
+/// example are wrapped in a function first, so statements are at home there.
+pub fn check_top_level(nodes: &[Node]) -> Result<(), LayoutError> {
+    for n in nodes {
+        let toks = match n {
+            Node::Line(l) => &l.toks,
+            Node::Block(b) => &b.header.toks,
+            Node::Group(_) => continue,
+        };
+        let Some(first) = toks.first() else { continue };
+        let what = match first.kind {
+            Tk::Int | Tk::Float | Tk::Str | Tk::Char => Some("an expression".to_string()),
+            Tk::Ident => {
+                let w = first.text.as_str();
+                let macro_call = toks.get(1).map_or(false, |t| t.text == "!" || t.text == "~");
+                if matches!(w, "let" | "for" | "while" | "loop" | "if" | "match" | "return" | "break" | "continue") {
+                    Some(format!("a `{w}`"))
+                } else if macro_call || is_item_word(w) {
+                    None
+                } else {
+                    Some("an expression".to_string())
+                }
+            }
+            _ => None,
+        };
+        if let Some(what) = what {
+            // For a `let`, rustc's own hint too: a value for the whole
+            // program is a `const` or a `static`.
+            let global = if what == "a `let`" { "; or, for a value of the whole program, `const` or `static`" } else { "" };
+            return Err(LayoutError {
+                msg: format!(
+                    "{what} at the top level: Rust's top level holds only items (`fn`, `struct`, `enum`, `impl`, `use`, `const` …); it belongs inside a function -- `fn main$:`, for one{global}"
+                ),
+                span: first.span,
+            });
+        }
+    }
+    Ok(())
+}
+
+/// A word an item can begin with, keywords and Rust's contextual ones.
+fn is_item_word(w: &str) -> bool {
+    matches!(
+        w,
+        "pub" | "fn" | "struct" | "enum" | "union" | "impl" | "trait" | "type" | "use" | "mod" | "const" | "static"
+            | "extern" | "unsafe" | "async" | "crate" | "auto" | "default" | "macro_rules" | "safe"
+    )
+}
+
 /// Build with arities known from beyond this file -- the driver collects them
 /// across the project so `$` works on functions defined in other modules.
 pub fn build_with(

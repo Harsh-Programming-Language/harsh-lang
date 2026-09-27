@@ -23,7 +23,7 @@ const NO_BRACES: &str = r#"I would like to go
 /// typed, held, erased (`TYPING`). Each line is a title or an item.
 const BOXES: &[&[(&str, &str)]] = &[
     &[("title", "Rust without the braces")],
-    &[("title", "Functional programming"), ("item", "Partial function application"), ("item", "Pipes")],
+    &[("title", "Functional Programming"), ("item", "Partial Function Application"), ("item", "Pipes")],
     &[("title", "Linear Algebra"), ("item", "Matrices and Vectors"), ("item", "Matrix Arithmetic")],
     &[("title", "Artificial Intelligence"), ("title", "& Data Science")],
 ]

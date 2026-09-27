@@ -273,3 +273,15 @@ button.button:disabled { opacity: .6; cursor: progress; }
   .bar nav a { padding: 10px 2px; border-top: 1px solid rgba(255, 255, 255, .06); font-size: 16px; }
   .jumbo-inner { padding: 104px 18px 44px; }
 }
+
+/* The copy button on code blocks: discreet, shown on hovering the block. */
+pre.code { position: relative; }
+.copy {
+  position: absolute; top: 8px; right: 8px; padding: 3px 9px;
+  font: 12px var(--sans); color: var(--dim); cursor: pointer;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 6px;
+  opacity: 0; transition: opacity .15s, color .15s, border-color .15s;
+}
+pre.code:hover .copy, .copy:focus-visible { opacity: 1; }
+.copy:hover { color: var(--acc); border-color: var(--acc); }
+@media (hover: none) { .copy { opacity: .8; } }

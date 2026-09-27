@@ -8,9 +8,12 @@ points at the line of the cell it is on.
 ```sh
 cargo install harsh-lang                               # hrs
 cargo install evcxr_jupyter && evcxr_jupyter --install  # the Rust kernel underneath
-pip install harsh-kernel
-python3 -m harsh_kernel.install                        # registers "Harsh" with Jupyter
+python -m pip install harsh-kernel
+python -m harsh_kernel.install                         # registers "Harsh" with Jupyter
 ```
+
+`python -m …` for both, so pip and the kernel are the same Python -- on a
+Mac, `python3` can be Xcode's while `pip` is conda's or Homebrew's.
 
 Then pick the **Harsh** kernel in Jupyter. Variables, functions and types
 carry from one cell to the next, as in evcxr.

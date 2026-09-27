@@ -461,6 +461,8 @@ impl Project {
             let (toks, expansions) = expand_harsh_macros(toks, &u.source, &src, procs)?;
             let tree = crate::layout::build_with(toks, &arities)
                 .map_err(|e| render_error(&u.source, &src, crate::mac::at_call(e.span, &expansions), &e.msg))?;
+            crate::layout::check_top_level(&tree)
+                .map_err(|e| render_error(&u.source, &src, crate::mac::at_call(e.span, &expansions), &e.msg))?;
             // What a derive removed is not copied back through a gap.
             let emitted = crate::mac::erase(&work, &expansions);
             let mut em = crate::emit::Emitter::new(&emitted);
@@ -1322,6 +1324,7 @@ pub fn transpile_str(src: &str) -> Result<String, String> {
     }
     let arities = crate::juxt::collect_arities(&toks);
     let tree = crate::layout::build_with(toks, &arities).map_err(|e| e.msg)?;
+    crate::layout::check_top_level(&tree).map_err(|e| e.msg)?;
     let mut em = crate::emit::Emitter::new(&work);
     em.program(&tree);
     crate::dslzone::restore(&mut em.out, &work1, &dz, &hole, &mut em.map)?;
@@ -1412,6 +1415,8 @@ fn transpile_tokens(
     dsl: (&str, &[crate::dslzone::Zone]),
 ) -> Result<PathBuf, String> {
     let tree = crate::layout::build_with(toks, arities)
+        .map_err(|e| render_error(from, src, crate::mac::at_call(e.span, expansions), &e.msg))?;
+    crate::layout::check_top_level(&tree)
         .map_err(|e| render_error(from, src, crate::mac::at_call(e.span, expansions), &e.msg))?;
     // What a derive removed -- its `#[derive~ …]`, the helper attributes it
     // consumed -- is not copied back through a gap (`mac::erase`).

@@ -21,7 +21,9 @@ global.document = { getElementById: () => area, execCommand: () => false };
 let pending = null;
 global.dioxus = {
   send: ([text, line]) => { pending = execFileSync(process.env.COLS, [String(line)], { input: text }).toString(); },
-  recv: async () => JSON.parse(pending),
+  // `meanwhile`, when set, runs while the wasm "answers": the page changing
+  // the text during the wait, as a re-render or a fast keystroke can.
+  recv: async () => { if (global.meanwhile) { const f = global.meanwhile; global.meanwhile = null; f(); } return JSON.parse(pending); },
 };
 const script = fs.readFileSync(process.env.KEYS, "utf8");
 eval(script)();
@@ -136,6 +138,15 @@ function expect(name, want) {
   at("fn main() {\n    let x = 1;\n    ▮"); await press("}");
   expect("Rust: `}` on an empty line steps back a level", "fn main() {\n    let x = 1;\n}▮");
   area.dataset.lang = undefined;
+  // A stale edit is dropped: the text changes while the wasm answers an
+  // Enter, and the edit meant for the old text is not applied at its old
+  // positions -- which would scramble it, as `3, 2` once became `3 3 32`.
+  at("fn main$:\n    let x = f 3 2▮");
+  global.meanwhile = () => { area.value = "fn main$:\n    let x = f 3 2 (y)"; };
+  await key("Enter");
+  const kept = area.value === "fn main$:\n    let x = f 3 2 (y)";
+  console.log((kept ? "ok   " : "FAIL ") + "a stale edit is dropped when the text changes during the wait: " + JSON.stringify(area.value));
+  if (!kept) failures++;
   console.log(failures ? failures + " failed" : "all passed");
   process.exit(failures ? 1 : 0);
 })();

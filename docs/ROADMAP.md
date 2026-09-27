@@ -18,7 +18,7 @@ Sizing is relative: XS, S, M, L. "Blocked by" matters more than the estimate.
 
 ## Open, in order (2026-09-25)
 
-**Where things stand.** 0.1.35 is delivered (2026-09-27); 0.1.32 is on
+**Where things stand.** 0.1.36 is delivered (2026-09-27); 0.1.32 is on
 GitLab, and the website is live at https://harsh-lang.com/. `RELEASE.md` has
 publishing and installing every product, in order; publishing is the
 user's. 0.1.30 and 0.1.31 were handed over and are spent. The design questions
@@ -39,7 +39,11 @@ after a few days with it. What needs no decision is done, or listed last below.
 - **Zed** -- the two Enter causes in `ZED-FINDINGS.md`, then the registry PR:
   his editor.
 - **sr-auto** -- the hand-written rewrite: his to run.
-- **Publishing**, always his.
+- **Publishing**, always his. The Jupyter kernel is on PyPI (`harsh-kernel` 0.1.3, 2026-09-27); its page still says `python3 -m` -- the tree's README says `python -m`, for the next kernel version.
+- **`try_solve` and `try_inv`** in `hrs_std`, if he wants them: `solve` and
+  `inv` stay Julia's (a panic on a singular matrix, as Julia throws), and the
+  twins would return a `Result` for `unwrap`, `expect` or `?` -- no breakage,
+  `hrs_std` 0.1.3. Discussed 2026-09-27; he found nothing to fix, so it waits.
 
 ### In 0.1.31 and 0.1.32 (delivered 2026-09-26; the changelog lists it)
 
@@ -102,6 +106,28 @@ check); the matcher ruling's leftovers (the kernel's test).
 items done since -- is kept in the handover and the changelog.)*
 
 ## Known bugs, open — fix before the next release that touches the converter
+
+- ~~**A statement at the top level went through untouched**~~ -- **fixed
+  2026-09-27 (0.1.36).** `let x = f 3 2` outside a function came out as `let
+  x = f 3 2;` -- Harsh left in the Rust, no word of it. Now an error that
+  says Rust's top level holds items only, at the line
+  (`layout::check_top_level`, at the three places a file is transpiled).
+  Tests: `a_statement_at_the_top_level_is_refused`,
+  `the_top_level_keeps_every_item`, `a_statement_inside_a_function_is_fine`.
+  Chosen over reading the Converter's input as a notebook cell (the user,
+  2026-09-27): strict, and Rust's own rule.
+
+- ~~**A round trip on the website changed numbers**~~ -- **found and fixed
+  2026-09-27.** The tools were not at fault: driven every way (Rust → Harsh
+  → Rust, the formatter, one argument per line, Harsh read as Rust), `3, 2`
+  stayed `3, 2`, and `every_website_sample_round_trips_both_ways` now pins
+  every sample of the site both ways. The cause was the website's editor:
+  Enter and Tab read the text, then wait for the wasm's columns; a change
+  meanwhile (a re-render, a fast key) left the edit at stale positions,
+  scrambling the text -- reproduced in the editor's harness (`f 3 2 (y)` came
+  out `f 3 2` / `(y)`). Every wait now drops a stale edit; the harness has
+  the case (32 behaviours), which fails without the guards. Cosmetic, left:
+  the converter writes a deref as `* counts` (the same Rust as `*counts`).
 
 - **Converter, found converting the website back (2026-09-26):** an empty
   record variant `Home {}` converts to `Home` over a `()` line, which

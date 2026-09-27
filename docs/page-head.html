@@ -121,6 +121,13 @@ footer{border-top:1px solid var(--line);padding:26px 0 60px;color:var(--faint);
   transition:opacity .2s,color .2s,border-color .2s}
 .to-top.shown{opacity:.75;pointer-events:auto}
 .to-top:hover,.to-top:focus-visible{opacity:1;color:var(--acc);border-color:var(--acc);outline:none}
+/* The copy button on code blocks (added by page-tail.html). */
+pre.code{position:relative}
+.copy{position:absolute;top:8px;right:8px;padding:3px 9px;font:12px sans-serif;color:var(--dim);cursor:pointer;
+  background:var(--panel);border:1px solid var(--line);border-radius:6px;opacity:0;transition:opacity .15s,color .15s,border-color .15s}
+pre.code:hover .copy,.copy:focus-visible{opacity:1}
+.copy:hover{color:var(--acc);border-color:var(--acc)}
+@media (hover:none){.copy{opacity:.8}}
 </style>
 </head>
 <body>

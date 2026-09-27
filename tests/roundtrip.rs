@@ -2387,3 +2387,65 @@ fn several_if_arguments_in_a_row_are_one_argument_list() {
         norm_tokens("fn f(c: bool) -> String { format!(\"{} {} {}\", if c { \"a\" } else { \"b\" }, 7, if c { \"c\" } else { \"d\" }) } fn g(xs: Vec<i32>) -> usize { (if true { xs } else { vec!(1) }).len() }")
     );
 }
+
+/// Rust's top level holds items only, so a statement there is an error that
+/// says so (the user, 2026-09-27: a top-level `let x = f 3 2` used to pass
+/// through as Harsh, and the website's Converter showed broken Rust).
+#[test]
+fn a_statement_at_the_top_level_is_refused() {
+    let refused = [
+        ("let x = f 3 2\n", "a `let` at the top level"),
+        ("for i in 0..3:\n    i\n", "a `for` at the top level"),
+        ("while true:\n    break\n", "a `while` at the top level"),
+        ("loop:\n    break\n", "a `loop` at the top level"),
+        ("if true:\n    1\n", "a `if` at the top level"),
+        ("match 1\\\n    _ => 2\n", "a `match` at the top level"),
+        ("return\n", "a `return` at the top level"),
+        ("x = 3\n", "an expression at the top level"),
+        ("f 3 2\n", "an expression at the top level"),
+        ("42\n", "an expression at the top level"),
+    ];
+    for (src, want) in refused {
+        let e = harsh_lang::driver::transpile_str(src).expect_err(src);
+        assert!(e.contains(want) && e.contains("belongs inside a function"), "{src:?}: {e}");
+        // rustc's hint for a global, on a `let` only.
+        assert_eq!(e.contains("`const` or `static`"), src.starts_with("let "), "{src:?}: {e}");
+    }
+}
+
+/// Everything Rust allows at the top level stays allowed: items with their
+/// attributes, inner attributes, and macro calls, which may expand to items.
+#[test]
+fn the_top_level_keeps_every_item() {
+    let accepted = [
+        "#![allow(dead_code)]\nfn main$:\n    let x = 1\n",
+        "use std.collections.HashMap\n",
+        "pub fn f x: i32 -> i32:\n    x\n",
+        "struct P\n    x: i32\n",
+        "enum E\n    A\n    B\n",
+        "impl P:\n    fn new$ -> P:\n        P: x = 0\n",
+        "trait T:\n    fn t$\n",
+        "mod m:\n    pub fn g$:\n        ()\n",
+        "const N: i32 = 3\n",
+        "static S: &str = \"s\"\n",
+        "type Id = u32\n",
+        "unsafe fn u$:\n    ()\n",
+        "async fn a$:\n    ()\n",
+        "#[derive Debug]\nstruct Q\n    y: i32\n",
+        "thread_local! \\\n    static C: i32 = 0\n",
+    ];
+    for src in accepted {
+        if let Err(e) = harsh_lang::driver::transpile_str(src) {
+            assert!(!e.contains("at the top level"), "{src:?} refused as a statement: {e}");
+        }
+    }
+}
+
+/// Wrapped in a function -- as the Jupyter kernel does with a cell, and the
+/// doc-example harness with an example -- the same statements are at home.
+#[test]
+fn a_statement_inside_a_function_is_fine() {
+    let rust = harsh_lang::driver::transpile_str("fn f x: i32 -> i32:\n    x\n\nfn __cell$:\n    let y = f 3\n").unwrap();
+    assert!(rust.contains("let y = f(3);"), "{rust}");
+}
+

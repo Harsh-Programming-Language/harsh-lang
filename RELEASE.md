@@ -121,7 +121,8 @@ Open **http://127.0.0.1:8080/**. Then:
 
 - **Learn** → the Book, *By Example*, the guide (served from `site/public/`);
 - **Converter**: type Harsh, read the Rust; **Format**; the sample chips;
-  then **Rust → Harsh** (a sample's Rust becomes its Harsh) and **⇄ Swap**;
+  then **Rust → Harsh** (the Rust on the right becomes the input, its Harsh on
+  the right), and back with **Harsh → Rust**;
 - **Playground**: Run the word count (`the: 3`, `and: 2`, `cat: 1`); then
   `let vector = v~ [1,3,4]` / `println! "{}" vector` -- the matrix check,
   against the Rust Playground's nalgebra;

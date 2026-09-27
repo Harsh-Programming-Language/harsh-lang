@@ -204,6 +204,8 @@ blockquote footer { color: var(--dim); font-size: 14px; }
 }
 .chip:hover { border-color: var(--acc); }
 .chip.on { border-color: var(--acc); color: var(--acc); }
+.chip:disabled { opacity: .45; cursor: not-allowed; }
+.chip:disabled:hover { border-color: var(--line); }
 .play-panes { align-items: stretch; }
 /* The editor: a textarea whose own text is transparent, over a highlighted
    copy of the same text. The two layers share every metric -- font, size,

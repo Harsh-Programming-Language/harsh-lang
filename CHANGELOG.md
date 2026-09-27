@@ -2,7 +2,7 @@
 
 ## 0.1.35 — 2026-09-27  (the Jupyter kernel 0.1.3, unchanged)
 
-- **The Converter works both ways, Harsh ⇄ Rust.** Rust to Harsh gives exactly what `hrs-from` writes: both call the new **`driver::convert_str`** -- the converter, the formatter when the result transpiles, the doc examples -- so they cannot disagree (`hrs-from` keeps `--raw`). A switch sets the direction; **⇄ Swap** turns the output into the input; the samples load in either language; Run opens the Rust side. In Rust, the editor indents as editors do for braces: four spaces.
+- **The Converter works both ways, Harsh ⇄ Rust.** Rust to Harsh gives exactly what `hrs-from` writes: both call the new **`driver::convert_str`** -- the converter, the formatter when the result transpiles, the doc examples -- so they cannot disagree (`hrs-from` keeps `--raw`). Two buttons choose the direction: choosing the other one turns the output into the input, so the text always matches the direction (and while the output is an error, the other direction waits); the samples load in either language; Run opens the Rust side. In Rust, the editor indents as editors do for braces: four spaces.
 - **Code blocks keep their layout** on the website: a line too wide scrolls inside its box, instead of wrapping.
 - **`Home`** leads the navbar.
 - **The books link back to https://harsh-lang.com/learn**, the page that lists them.

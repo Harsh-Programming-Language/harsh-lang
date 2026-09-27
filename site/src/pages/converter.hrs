@@ -7,8 +7,8 @@ use harsh_lang.driver.( convert_str, transpile_str)
 /// The online converter, both ways (the user, 2026-09-27): Harsh to Rust
 /// with the transpiler, Rust to Harsh with the converter `hrs-from` uses
 /// (`driver::convert_str`), both compiled to WebAssembly with the site. What
-/// you type on the left is converted on the right as you type; Swap turns the
-/// output into the input and the other way round; Run opens the Rust side --
+/// you type on the left is converted on the right as you type; choosing the
+/// other direction turns the output into the input (`turn`); Run opens the Rust side --
 /// the output one way, the input the other -- on play.rust-lang.org.
 #[component]
 pub fn Converter$ -> Element:
@@ -22,7 +22,9 @@ pub fn Converter$ -> Element:
         Err e => (e, false)
     let rust_side = if forward: out <- clone$ else: code <- clone$
     let run = format! "https://play.rust-lang.org/?version=stable&edition=2021&code={}" (encode (&rust_side))
-    let swapped = out <- clone$
+    // What the other direction starts from: the output, as its input.
+    let for_rust = out <- clone$
+    let for_harsh = out <- clone$
     let (from, into) = if forward: ("Harsh", "Rust") else: ("Rust", "Harsh")
     let (from_lang, into_lang) = if forward: ("harsh", "rust") else: ("rust", "harsh")
     rsx! {
@@ -36,21 +38,23 @@ pub fn Converter$ -> Element:
                 "the part of " code { "hrs_std" } " a program uses along with it."
             }
             div { class: "examples",
+                // The two directions. The one in use is lit; choosing the other
+                // turns the output into the input, so the text always matches the
+                // direction. While the output is an error there is nothing to
+                // turn back, so the other direction waits.
                 button {
                     class: @: if forward: "chip on" else: "chip" :@,
-                    onclick: @: move |_| to_rust <- set true :@,
+                    disabled: !forward && !ok,
+                    title: @: if !forward && !ok: FIX_FIRST else: "" :@,
+                    onclick: @: move |_| turn src to_rust true (for_rust <- clone$) ok :@,
                     "Harsh → Rust"
                 }
                 button {
                     class: @: if forward: "chip" else: "chip on" :@,
-                    onclick: @: move |_| to_rust <- set false :@,
+                    disabled: forward && !ok,
+                    title: @: if forward && !ok: FIX_FIRST else: "" :@,
+                    onclick: @: move |_| turn src to_rust false (for_harsh <- clone$) ok :@,
                     "Rust → Harsh"
-                }
-                button {
-                    class: "chip",
-                    title: "The output becomes the input, and the direction turns",
-                    onclick: @: move |_| swap src to_rust (swapped <- clone$) ok :@,
-                    "⇄ Swap"
                 }
             }
             div { class: "examples",
@@ -106,12 +110,18 @@ fn sample (forward: bool) (harsh: &str) (rust: &str) -> String:
     else:
         rust <- to_string$
 
-/// Swap: the output becomes the input, and the direction turns. When the
-/// output is an error, only the direction turns.
-fn swap (mut src: Signal<String>) (mut to_rust: Signal<bool>) (output: String) (ok: bool):
-    if ok:
-        src <- set output
-    to_rust <- set (!to_rust$)
+/// Choosing a direction: the one in use does nothing; the other turns the
+/// output into the input, and the direction with it -- so the input is always
+/// in the language its direction reads. Never with an error as the output:
+/// its button is disabled then (`FIX_FIRST`).
+fn turn (mut src: Signal<String>) (mut to_rust: Signal<bool>) (want_rust: bool) (output: String) (ok: bool):
+    if to_rust$ == want_rust || !ok:
+        return
+    src <- set output
+    to_rust <- set want_rust
+
+/// Why the other direction waits while the output is an error.
+const FIX_FIRST: &str = "Fix the error first: there is nothing to convert back"
 
 /// Percent-encode text for a URL's query string.
 fn encode s: &str -> String:

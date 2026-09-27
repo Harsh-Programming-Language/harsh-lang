@@ -8,7 +8,7 @@ public_dir = "public"
 title = "Harsh — Rust without the braces"
 # The site is served from https://harsh-programming-language.github.io/harsh-lang/ ; with a
 # custom domain (or a repository named Harsh-Programming-Language.github.io) remove this line.
-base_path = "harsh-lang"
+# base_path = "harsh-lang"
 
 [web.watcher]
 watch_path = ["src", "assets"]

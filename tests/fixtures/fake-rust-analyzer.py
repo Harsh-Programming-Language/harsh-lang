@@ -61,7 +61,12 @@ while True:
     elif method == "textDocument/hover":
         pos, uri = p["position"], p["textDocument"]["uri"]
         name = uri.rsplit("/", 1)[1]
-        result = {"contents": {"kind": "markdown" if markdown else "plaintext", "value": f"fake hover at {pos['line']}:{pos['character']} in {name}"},
+        # Shaped as rust-analyzer's: the crate, the signature, then text --
+        # and a long example block, which is to stay Rust.
+        example = "```rust\n" + "".join(f"let v{i} = {i};\n" for i in range(8)) + "```"
+        text = f"fake hover at {pos['line']}:{pos['character']} in {name}"
+        value = f"```rust\nlsp\n```\n\n```rust\nfn helper(x: i32) -> i32\n```\n\n---\n\n{text}\n\n{example}" if markdown else text
+        result = {"contents": {"kind": "markdown" if markdown else "plaintext", "value": value},
                   "range": {"start": pos, "end": {"line": pos["line"], "character": pos["character"] + 6}}}
     elif method == "textDocument/definition":
         uri = p["textDocument"]["uri"]

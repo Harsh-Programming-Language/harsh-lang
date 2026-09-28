@@ -97,7 +97,7 @@ hrs new hello && cd hello && hrs run                              # a first proj
 
 If the last line prints `Hello from Harsh`, you are ready. The tools are the crate [`harsh-lang`](https://crates.io/crates/harsh-lang); for the editor, install [Harsh](https://marketplace.visualstudio.com/items?itemName=harsh-lang.harsh-lang) from the VSCode Marketplace, and `hrs-lsp` — already on your `PATH` — gives it the layout-aware Enter, Tab and format-on-save the rest of this book assumes you have.
 
-Add rust-analyzer, Rust's own language server, once — `rustup component add rust-analyzer` — — or have VSCode's rust-analyzer extension, whose copy is used — and `hrs-lsp` gives the editor three more things: hover over a name to see its type and documentation, jump to where it is defined (F12 in VSCode), and completion as you type. `hrs-lsp` asks rust-analyzer about the Rust your file becomes and points the answer back at your Harsh, so the types read as Rust writes them — `Vec<i32>`, `&str` — and a definition in your project opens in its `.hrs` file, one in the standard library in Rust's. Hover and definition follow your last save: after you change a line, save, and they work on it again; completion works on what you are typing. Without rust-analyzer everything else works, and the editor says what to install.
+Add rust-analyzer, Rust's own language server, once — `rustup component add rust-analyzer`, or have VSCode's rust-analyzer extension, whose copy is used — and `hrs-lsp` gives the editor three more things: hover over a name to see its type and documentation, jump to where it is defined (F12 in VSCode), and completion as you type. `hrs-lsp` asks rust-analyzer about the Rust your file becomes and points the answer back at your Harsh, and converts the answer into Harsh — a signature reads `fn adding (x: i32) (y: i32) -> i32`, a path `std.slice.Iter` — and a definition in your project opens in its `.hrs` file, one in the standard library in Rust's. Hover and definition follow your last save: after you change a line, save, and they work on it again; completion works on what you are typing. Without rust-analyzer everything else works, and the editor says what to install.
 
 # 1. Getting started
 
@@ -6523,7 +6523,7 @@ $ hrs test
 running 1 test
 test target/hrs/lib.rs - add_one (line 10) ... ok
 
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.20s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.19s
 ```
 
 `cargo doc --open` renders every `///` and `//!` in the crate as HTML, with the Markdown inside them — headings, code blocks, links — laid out. The conventional sections are `# Examples`, `# Panics` (when the function can), `# Errors` (what `Err`s it returns) and `# Safety` (for `unsafe` functions). The example in the `///` is Harsh, like everything else in the file, and `cargo test` *runs it* — every code block in a doc comment is a test, so documentation cannot drift from the code without failing the build.
@@ -6962,8 +6962,8 @@ fn main$:
 ```
 
 ```text
-main is waiting
 hi number 1 from the spawned thread!
+main is waiting
 hi number 2 from the spawned thread!
 hi number 3 from the spawned thread!
 main is done

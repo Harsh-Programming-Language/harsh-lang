@@ -462,7 +462,7 @@ pre.code:hover .copy,.copy:focus-visible{opacity:1}
 cargo install harsh-lang                                               # hrs, hrs-from, hrs-remap, hrs-lsp
 hrs new hello &amp;&amp; cd hello &amp;&amp; hrs run                              # a first project</code></pre>
 <p>If the last line prints <code>Hello from Harsh</code>, you are ready. The tools are the crate <a href="https://crates.io/crates/harsh-lang"><code>harsh-lang</code></a>; for the editor, install <a href="https://marketplace.visualstudio.com/items?itemName=harsh-lang.harsh-lang">Harsh</a> from the VSCode Marketplace, and <code>hrs-lsp</code> — already on your <code>PATH</code> — gives it the layout-aware Enter, Tab and format-on-save the rest of this book assumes you have.</p>
-<p>Add rust-analyzer, Rust's own language server, once — <code>rustup component add rust-analyzer</code> — — or have VSCode's rust-analyzer extension, whose copy is used — and <code>hrs-lsp</code> gives the editor three more things: hover over a name to see its type and documentation, jump to where it is defined (F12 in VSCode), and completion as you type. <code>hrs-lsp</code> asks rust-analyzer about the Rust your file becomes and points the answer back at your Harsh, so the types read as Rust writes them — <code>Vec&lt;i32&gt;</code>, <code>&amp;str</code> — and a definition in your project opens in its <code>.hrs</code> file, one in the standard library in Rust's. Hover and definition follow your last save: after you change a line, save, and they work on it again; completion works on what you are typing. Without rust-analyzer everything else works, and the editor says what to install.</p>
+<p>Add rust-analyzer, Rust's own language server, once — <code>rustup component add rust-analyzer</code>, or have VSCode's rust-analyzer extension, whose copy is used — and <code>hrs-lsp</code> gives the editor three more things: hover over a name to see its type and documentation, jump to where it is defined (F12 in VSCode), and completion as you type. <code>hrs-lsp</code> asks rust-analyzer about the Rust your file becomes and points the answer back at your Harsh, and converts the answer into Harsh — a signature reads <code>fn adding (x: i32) (y: i32) -&gt; i32</code>, a path <code>std.slice.Iter</code> — and a definition in your project opens in its <code>.hrs</code> file, one in the standard library in Rust's. Hover and definition follow your last save: after you change a line, save, and they work on it again; completion works on what you are typing. Without rust-analyzer everything else works, and the editor says what to install.</p>
 <h2 id="1-getting-started">1. Getting started</h2>
 <h3 id="1-1-a-first-program">1.1 A first program</h3>
 <p>Every program in this book is a complete file that you could save as <code>src/main.hrs</code> in a project made by <code>hrs new</code> and run with <code>hrs run</code>. Here is the smallest one:</p>
@@ -5066,7 +5066,7 @@ opt-level = 3</code></pre>
 running 1 test
 test target/hrs/lib.rs - add_one (line 10) ... ok
 
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.20s</code></pre>
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.19s</code></pre>
 <p><code>cargo doc --open</code> renders every <code>///</code> and <code>//!</code> in the crate as HTML, with the Markdown inside them — headings, code blocks, links — laid out. The conventional sections are <code># Examples</code>, <code># Panics</code> (when the function can), <code># Errors</code> (what <code>Err</code>s it returns) and <code># Safety</code> (for <code>unsafe</code> functions). The example in the <code>///</code> is Harsh, like everything else in the file, and <code>cargo test</code> <em>runs it</em> — every code block in a doc comment is a test, so documentation cannot drift from the code without failing the build.</p>
 <blockquote>
 <p><strong>Harsh —</strong> A fenced block in a doc comment is the one kind of comment the transpiler reads. The documentation tool lifts such a block out, compiles it and runs it — it is code, not prose — so it is written in Harsh and the transpiler writes out the Rust that tool expects, the same translation it does everywhere else. A fence tagged with another language — <code>text</code>, <code>toml</code> — is prose and is left exactly as you wrote it. A line beginning <code>#</code> inside the fence is the documentation tool's own mark for <em>compile this but do not show it</em>, and it survives the translation.</p>
@@ -5381,8 +5381,8 @@ leaf strong = 1, weak = 0</code></pre>
     <span class="mac">println!</span> <span class="str">"main is waiting"</span>
     handle <span class="op">&lt;-</span> join<span class="defer">$</span> <span class="op">&lt;-</span> unwrap<span class="defer">$</span>      <span class="com">// block until the spawned thread finishes</span>
     <span class="mac">println!</span> <span class="str">"main is done"</span></code></pre>
-<pre class="code"><code>main is waiting
-hi number 1 from the spawned thread!
+<pre class="code"><code>hi number 1 from the spawned thread!
+main is waiting
 hi number 2 from the spawned thread!
 hi number 3 from the spawned thread!
 main is done</code></pre>

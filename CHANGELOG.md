@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.43 — 2026-09-27  (`hrs_std` 0.1.3 and the Jupyter kernel 0.1.3, unchanged)
+
+- **Hover in Harsh.** rust-analyzer's answer is Rust; `hrs-lsp` now converts its signatures and paths with Harsh's own converter (the one behind `hrs-from` and the website's Converter) and shows them as Harsh, coloured as Harsh: `fn adding (x: i32) (y: i32) -> i32`, `std.slice.Iter`. A line the converter cannot take, and a long documentation example, stay Rust -- never half translated.
+
 ## 0.1.42 — 2026-09-27  (`hrs_std` 0.1.3 and the Jupyter kernel 0.1.3, unchanged)
 
 - **Hover, coloured.** The first working hover on the user's Mac showed the signature in plain text: `hrs-lsp` told rust-analyzer nothing of what the editor can show, so it answered plain text. It now asks for Markdown, and a hover's Rust comes in a code block the editor highlights; completion's documentation too.

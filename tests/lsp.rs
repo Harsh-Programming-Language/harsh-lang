@@ -142,7 +142,13 @@ fn hover_and_definition_go_through_rust_analyzer_and_back() {
     let uri = c.open(&root, &text);
     // `helper` at its call: Harsh 0-based 4:12, Rust 5:12 (`let y = helper(41);`).
     let h = c.request("textDocument/hover", Client::at(&uri, 4, 12));
-    assert_eq!(h["contents"]["value"], "fake hover at 5:12 in main.rs", "{h}");
+    let value = h["contents"]["value"].as_str().unwrap();
+    assert!(value.contains("fake hover at 5:12 in main.rs"), "{h}");
+    // In Harsh's words (the user, 2026-09-27): the crate and the signature
+    // as Harsh blocks; a long example block left in Rust.
+    assert!(value.contains("```harsh\nlsp\n```"), "{value}");
+    assert!(value.contains("```harsh\nfn helper (x: i32) -> i32\n```"), "{value}");
+    assert!(value.contains("```rust\nlet v0 = 0;"), "{value}");
     // Markdown asked for, so the editor colours the hover's code.
     assert_eq!(h["contents"]["kind"], "markdown", "{h}");
     assert_eq!(h["range"]["start"], serde_json::json!({"line": 4, "character": 12}), "{h}");

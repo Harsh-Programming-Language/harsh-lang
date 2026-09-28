@@ -22,8 +22,8 @@ fn main$:
 ```
 
 ```text
-main is waiting
 hi number 1 from the spawned thread!
+main is waiting
 hi number 2 from the spawned thread!
 hi number 3 from the spawned thread!
 main is done

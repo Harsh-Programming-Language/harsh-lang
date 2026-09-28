@@ -566,6 +566,70 @@ fn hrs_exe() -> PathBuf {
         .unwrap_or_else(|| PathBuf::from("hrs"))
 }
 
+/// A hover's Markdown with its Rust in Harsh: every ```rust block of a few
+/// lines -- a signature, a `const`, a path -- converted line by line with
+/// Harsh's converter (`driver::convert_str`, as `hrs-from`). A block with a
+/// line the converter cannot take, or a long one (a documentation example),
+/// stays Rust: never half translated.
+fn harsh_hover(md: &str) -> String {
+    let mut out = String::new();
+    let mut rest = md;
+    while let Some(start) = rest.find("```rust\n") {
+        out.push_str(&rest[..start]);
+        let body_at = start + "```rust\n".len();
+        let Some(end) = rest[body_at..].find("```") else {
+            out.push_str(&rest[start..]);
+            return out;
+        };
+        let body = &rest[body_at..body_at + end];
+        let lines: Vec<&str> = body.lines().collect();
+        let harsh: Option<Vec<String>> = if lines.len() <= 6 { lines.iter().map(|l| harsh_line(l)).collect() } else { None };
+        match harsh {
+            Some(h) => {
+                out.push_str("```harsh\n");
+                for l in h {
+                    out.push_str(&l);
+                    out.push('\n');
+                }
+            }
+            None => {
+                out.push_str("```rust\n");
+                out.push_str(body);
+            }
+        }
+        out.push_str("```");
+        rest = &rest[body_at + end + 3..];
+    }
+    out.push_str(rest);
+    out
+}
+
+/// One line of a hover's Rust, in Harsh -- or None, when the converter cannot take it.
+fn harsh_line(line: &str) -> Option<String> {
+    let t = line.trim();
+    if t.is_empty() {
+        return Some(String::new());
+    }
+    let first = |rust: String| -> Option<String> {
+        let h = harsh_lang::driver::convert_str(&rust).ok()?;
+        h.lines().find(|l| !l.trim().is_empty()).map(|l| l.to_string())
+    };
+    // A path -- the crate or module a name is in: dots for `::`.
+    if !t.contains(['(', ' ', '{', '<', '=', ':']) || (t.contains("::") && !t.contains([' ', '(', '='])) {
+        return Some(t.replace("::", "."));
+    }
+    // A local: `let x: i32`, as the statement it is.
+    if t.starts_with("let ") {
+        let h = harsh_lang::driver::convert_str(&format!("fn main() {{\n    {};\n}}\n", t.trim_end_matches(';'))).ok()?;
+        return h.lines().nth(1).map(|l| l.trim().trim_end_matches(';').to_string());
+    }
+    // An item's head: with a body to convert, then the head alone.
+    if let Some(h) = first(format!("{} {{}}\n", t.trim_end_matches(';'))) {
+        return Some(h.trim_end_matches(':').trim_end().to_string());
+    }
+    first(format!("{};\n", t.trim_end_matches(';')))
+}
+
 /// A range in a generated `.rs`, back to its `.hrs` (0-based, as LSP counts).
 fn range_back(m: &harsh_lang::remap::SourceMap, r: &Value) -> Option<Value> {
     let at = |p: &Value| -> Option<Value> {
@@ -675,6 +739,13 @@ impl Bridge {
             let mut h = answer;
             if h.is_null() {
                 return None;
+            }
+            // In Harsh's words: each short Rust block the converter can take
+            // becomes a `harsh` block, coloured as Harsh (the user,
+            // 2026-09-27: "showing me Rust code instead of Harsh").
+            if let Some(v) = h["contents"]["value"].as_str() {
+                let harsh = harsh_hover(v);
+                h["contents"]["value"] = json!(harsh);
             }
             let back = h.get("range").and_then(|r| range_back(m, r));
             match back {

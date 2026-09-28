@@ -1,7 +1,7 @@
 use dioxus.prelude.*
 
 use crate.app.Route
-use crate.components.( Code, Compare, Wordmark)
+use crate.components.( Code, Compare)
 use crate.samples.*
 
 const BRACES: &str = r#"I(would, like, to, go) {

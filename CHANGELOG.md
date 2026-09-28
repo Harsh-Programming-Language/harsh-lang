@@ -1,8 +1,13 @@
 # Changelog
 
+## 0.1.40 — 2026-09-27  (`hrs_std` 0.1.3 and the Jupyter kernel 0.1.3, unchanged)
+
+- **Hover, go-to-definition and completion answer on a real rust-analyzer.** It loads nothing under a project's `target/` from disk -- the generated Rust included -- so every question came back empty (found on the user's Mac with `HRS_LSP_LOG`: each hover mapped right, each answer `null`). `hrs-lsp` now hands it the text of every generated file, as an editor hands it an open file, when it starts and after each save; completion updates that text in place. The suite's fake rust-analyzer now ignores unopened `target/` files as the real one does, so the tests catch this.
+
 ## The website, 2026-09-27, later  (no new version: the workflow and `site/` are not in the crate)
 
 - **harsh-lang.com is published with every page pre-rendered as HTML** (static generation): the deploy builds `dx bundle --web --ssg`, checks each page's content is in its HTML, and publishes that. Tried first on the user's Mac. The separate trial job is retired.
+- The first deploy found `dx` 0.7.10 building both sides and pre-rendering nothing (and in debug): the build is now `--release`, and a step does the pre-rendering by hand when `dx` does not -- the site's own server, asked for every page. Nothing was published by the failed run. Two compiler warnings in the site fixed (an unused import, an unneeded `mut`).
 
 ## 0.1.39 — 2026-09-27  (`hrs_std` 0.1.3 and the Jupyter kernel 0.1.3, unchanged)
 

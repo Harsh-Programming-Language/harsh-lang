@@ -13,7 +13,7 @@ use harsh_lang.driver.( convert_str, transpile_str)
 #[component]
 pub fn Converter$ -> Element:
     let mut src = use_signal (|| HERO_HARSH <- to_string$)
-    let mut to_rust = use_signal (|| true)
+    let to_rust = use_signal (|| true)
     let code: String = src <- read$ <- clone$
     let forward = to_rust$
     let converted = if forward: transpile_str (&code) else: convert_str (&code)

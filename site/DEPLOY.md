@@ -162,8 +162,11 @@ its CLI runs the app, asks it for the list of pages (the server function
 and makes the Converter, the Playground and the jumbotron interactive.
 
 The `build` job adds the `server` feature the fullstack build needs to its
-own copy of `Cargo.toml`, builds, and checks each page's HTML holds its
-content -- the home page's "Rust without the braces", Learn's "The Harsh
+own copy of `Cargo.toml` and builds, `--release`. If `dx` did not pre-render
+the pages -- dx 0.7.10 built both sides and rendered none on the first try,
+2026-09-27 -- the next step does what `--ssg` does: it starts the site's own
+server, beside `public/`, and requests every page, and the server writes each
+one's HTML there. Then it checks each page's HTML holds its content -- the home page's "Rust without the braces", Learn's "The Harsh
 Book", Install's "rust-analyzer" -- before publishing. Tried first on the
 user's Mac ("blazingly fast"), then made the deploy by his decision.
 

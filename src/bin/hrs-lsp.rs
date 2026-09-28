@@ -282,6 +282,14 @@ struct Ra {
     ready: Arc<AtomicBool>,
     started: Instant,
     version: i64,
+    /// The generated files handed to rust-analyzer, with the text given.
+    /// rust-analyzer loads nothing under a project's `target/` from disk --
+    /// the generated Rust included -- and answered every question about it
+    /// with nothing (found 2026-09-27 on the user's Mac: `HRS_LSP_LOG` showed
+    /// each hover mapped right and answered `null`; the same file opened in
+    /// VS Code was answered). So `hrs-lsp` hands it the text, as an editor
+    /// hands it an open file.
+    given: HashMap<Url, String>,
 }
 
 /// A line in the log, when `HRS_LSP_LOG` names a file: what `hrs-lsp` asked
@@ -403,7 +411,7 @@ impl Ra {
                 }
             }
         });
-        let mut ra = Ra { child, stdin, rx, next: 0, ready, started: Instant::now(), version: 0 };
+        let mut ra = Ra { child, stdin, rx, next: 0, ready, started: Instant::now(), version: 0, given: HashMap::new() };
         let root_uri = Url::from_directory_path(root).map_err(|_| "the project's root is not a path".to_string())?;
         // Harsh's standard distribution, only for a project that names it.
         let patches = harsh_lang::driver::distribution(root, &[root.join("Cargo.toml")]).unwrap_or_default();
@@ -430,6 +438,59 @@ impl Ra {
 
     fn notify(&self, method: &str, params: Value) -> Result<(), String> {
         self.send(json!({"jsonrpc": "2.0", "method": method, "params": params}))
+    }
+
+    /// Hand rust-analyzer the text of every generated Rust file of the
+    /// project (`target/hrs/**/*.rs`, the distribution's crates included, the
+    /// completion side-file not), opening the new and updating the changed.
+    fn give(&mut self, root: &Path) {
+        let mut files = Vec::new();
+        let mut stack = vec![root.join("target/hrs")];
+        while let Some(dir) = stack.pop() {
+            let Ok(entries) = std::fs::read_dir(&dir) else { continue };
+            for e in entries.flatten() {
+                let p = e.path();
+                if p.is_dir() {
+                    if p.file_name().map_or(true, |n| n != ".complete" && n != "target") {
+                        stack.push(p);
+                    }
+                } else if p.extension().map_or(false, |x| x == "rs") {
+                    files.push(p);
+                }
+            }
+        }
+        let (mut opened, mut changed) = (0, 0);
+        for f in files {
+            let (Ok(uri), Ok(text)) = (Url::from_file_path(&f), std::fs::read_to_string(&f)) else { continue };
+            self.version += 1;
+            let v = self.version;
+            match self.given.get(&uri) {
+                None => {
+                    let _ = self.notify("textDocument/didOpen", json!({"textDocument": {"uri": uri, "languageId": "rust", "version": v, "text": text}}));
+                    opened += 1;
+                }
+                Some(old) if *old != text => {
+                    let _ = self.notify("textDocument/didChange", json!({"textDocument": {"uri": uri, "version": v}, "contentChanges": [{"text": text}]}));
+                    changed += 1;
+                }
+                Some(_) => continue,
+            }
+            self.given.insert(uri, text);
+        }
+        log(&format!("gave rust-analyzer the generated Rust: {opened} opened, {changed} updated"));
+    }
+
+    /// One file's text, as rust-analyzer should see it now (completion's
+    /// marked text, then the file's own again).
+    fn set_text(&mut self, uri: &Url, text: &str) -> Result<(), String> {
+        self.version += 1;
+        let v = self.version;
+        if self.given.contains_key(uri) {
+            self.notify("textDocument/didChange", json!({"textDocument": {"uri": uri, "version": v}, "contentChanges": [{"text": text}]}))
+        } else {
+            self.given.insert(uri.clone(), text.to_string());
+            self.notify("textDocument/didOpen", json!({"textDocument": {"uri": uri, "languageId": "rust", "version": v, "text": text}}))
+        }
     }
 
     /// Wait for rust-analyzer to finish loading the project, a minute at most.
@@ -524,10 +585,8 @@ impl Bridge {
         if let Ok(text) = std::fs::read_to_string(&file) {
             self.good.insert(uri.clone(), text);
         }
-        if let (Some(ra), Some((rs, _))) = (self.ras.get(&root), generated(&root, &file)) {
-            if let Ok(rs_uri) = Url::from_file_path(&rs) {
-                let _ = ra.notify("workspace/didChangeWatchedFiles", json!({"changes": [{"uri": rs_uri, "type": 2}]}));
-            }
+        if let Some(ra) = self.ras.get_mut(&root) {
+            ra.give(&root);
         }
     }
 
@@ -581,7 +640,8 @@ impl Bridge {
     fn ensure(&mut self, root: &Path, conn: &Connection) -> Option<()> {
         if !self.ras.contains_key(root) {
             match Ra::start(root) {
-                Ok(ra) => {
+                Ok(mut ra) => {
+                    ra.give(root);
                     self.ras.insert(root.to_path_buf(), ra);
                 }
                 Err(e) => {
@@ -686,13 +746,12 @@ impl Bridge {
         log(&format!("-> completion at .hrs {}:{} = .rs {rl}:{rc}", line + 1, col + 1));
         self.ensure(&root, conn)?;
         let rs_uri = Url::from_file_path(&rs).ok()?;
+        let on_disk = std::fs::read_to_string(&rs).unwrap_or_default();
         let ra = self.ras.get_mut(&root)?;
         ra.wait_ready();
-        ra.version += 1;
-        let version = ra.version;
-        ra.notify("textDocument/didOpen", json!({"textDocument": {"uri": rs_uri, "languageId": "rust", "version": version, "text": rust}})).ok()?;
+        ra.set_text(&rs_uri, &rust).ok()?;
         let answer = ra.request("textDocument/completion", json!({"textDocument": {"uri": rs_uri}, "position": {"line": rl - 1, "character": rc - 1}}), 30);
-        let _ = ra.notify("textDocument/didClose", json!({"textDocument": {"uri": rs_uri}}));
+        let _ = ra.set_text(&rs_uri, &on_disk);
         let answer = match answer {
             Ok(v) => v,
             Err(e) => {

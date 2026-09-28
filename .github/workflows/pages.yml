@@ -60,12 +60,35 @@ jobs:
         working-directory: site
         run: |
           sed -i '/^ssg = /a server = ["dioxus/server", "ssg"]' Cargo.toml
-          dx bundle --web --ssg --features ssg
+          dx bundle --web --ssg --release --features ssg
+
+      - name: Pre-render the pages, if dx did not
+        # What `--ssg` does, done by hand when it does not (dx 0.7.10 built
+        # both sides and pre-rendered nothing, 2026-09-27): start the site's
+        # own server, beside public/, and request every page; its incremental
+        # renderer (src/main.hrs) writes each one's HTML into public/.
+        working-directory: site
+        run: |
+          out=$(find target/dx -type d -path '*release/web/public' | head -n 1)
+          test -n "$out" || { echo "no release build"; find target/dx -maxdepth 4 -type d; exit 1; }
+          if [ -f "$out/learn/index.html" ]; then echo "dx pre-rendered the pages"; exit 0; fi
+          dir=$(dirname "$out")
+          ls -la "$dir"
+          server="$dir/server"
+          test -x "$server" || { echo "no server binary in $dir"; exit 1; }
+          (cd "$dir" && IP=127.0.0.1 PORT=8080 ./server > /tmp/server.log 2>&1 &)
+          for i in $(seq 1 30); do curl -s -o /dev/null http://127.0.0.1:8080/ && break; sleep 1; done
+          for page in / /learn /install /converter /playground; do
+            curl -sf -o /dev/null "http://127.0.0.1:8080$page" && echo "rendered $page" || echo "could not render $page"
+          done
+          sleep 2
+          pkill -f "$server" || true
+          tail -20 /tmp/server.log
 
       - name: Assemble the pages
         working-directory: site
         run: |
-          out=$(find target/dx -type d -name public | head -n 1)
+          out=$(find target/dx -type d -path '*release/web/public' | head -n 1)
           test -n "$out" && test -f "$out/index.html"
           rm -rf dist && mkdir dist
           cp -r "$out"/. dist/

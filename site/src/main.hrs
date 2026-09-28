@@ -1,5 +1,9 @@
 //! The Harsh website: a Dioxus app written in Harsh. `hrs build` writes the
 //! Rust to `target/hrs/`; `dx` builds that as any Dioxus web app.
+//!
+//! With the `ssg` feature -- the deploy's `dx bundle --web --ssg --features
+//! ssg` -- it is also a Dioxus fullstack app, so the CLI pre-renders every page
+//! as HTML (static generation, Dioxus 0.7's guide). `dx serve` builds without it.
 
 mod app
 mod components
@@ -10,4 +14,28 @@ mod samples
 use dioxus.prelude.*
 
 fn main$:
+    // The site as deployed: a web app, rendered in the browser.
+    #[cfg (not (feature = "ssg"))]
     dioxus.launch app.App
+    // For static generation: incremental rendering into `public/`, where the
+    // CLI collects the pages it pre-renders.
+    #[cfg (feature = "ssg")]
+    dioxus.LaunchBuilder.new$
+        <- with_cfg (server_only! {
+            dioxus::server::ServeConfig::builder()
+                .incremental(
+                    dioxus::server::IncrementalRendererConfig::new()
+                        .static_dir(std::env::current_exe().unwrap().parent().unwrap().join("public"))
+                        .clear_cache(false),
+                )
+                .enable_out_of_order_streaming()
+        })
+        <- launch app.App
+
+/// The pages the CLI pre-renders: every route without a dynamic part -- all
+/// but the not-found page. Called by `dx bundle --ssg` at build time, at the
+/// endpoint the CLI looks for.
+#[cfg (feature = "ssg")]
+#[server (endpoint = "static_routes") (output = server_fn.codec.Json)]
+async fn static_routes$ -> Result<Vec<String>, ServerFnError>:
+    Ok (app.Route.static_routes$ <- iter$ <- map ToString.to_string <- collect$)

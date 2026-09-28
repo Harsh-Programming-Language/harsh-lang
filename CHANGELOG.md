@@ -1,5 +1,17 @@
 # Changelog
 
+## The website, 2026-09-27, later  (no new version: the workflow and `site/` are not in the crate)
+
+- **harsh-lang.com is published with every page pre-rendered as HTML** (static generation): the deploy builds `dx bundle --web --ssg`, checks each page's content is in its HTML, and publishes that. Tried first on the user's Mac. The separate trial job is retired.
+
+## 0.1.39 — 2026-09-27  (`hrs_std` 0.1.3 and the Jupyter kernel 0.1.3, unchanged)
+
+- **Completion in `.hrs` files**, through rust-analyzer, on the text as you type it.
+- **Hover and go-to-definition, fixed after the first try on a Mac**: a name passed to a macro (`apply~ adding (4)`) now maps; `hrs-lsp` waits for rust-analyzer to finish loading instead of answering nothing; Harsh's distribution is handed to it only when a project uses it; and the rust-analyzer inside VS Code's extension is used when none is installed with rustup.
+- **`HRS_LSP_LOG`**: set it to a file, and `hrs-lsp` writes every question to rust-analyzer and every answer there.
+- **The website's static generation**, tried by a CI job that deploys nothing (`site/DEPLOY.md`, part D); the site gains an inert `ssg` feature.
+- Taught: the Book's *Setting up*, the guide, the language-server page, the Install page.
+
 ## 0.1.38 — 2026-09-27  (`hrs_std` 0.1.3 and the Jupyter kernel 0.1.3, unchanged)
 
 - **Types on hover and go-to-definition in `.hrs` files**, in every editor that runs `hrs-lsp` (VS Code, Zed, Neovim, Helix …). The server asks rust-analyzer about the Rust a file became and maps positions both ways through the source maps -- `SourceMap::find` (`.hrs` to `.rs`), new, beside `locate`. rust-analyzer starts on the first request, one per project; answers follow the last save, and a line changed since is answered after the next save rather than wrongly; no rust-analyzer installed is said once (`rustup component add rust-analyzer`). Tested end to end against a fake rust-analyzer (`tests/lsp.rs`); the real one is the user's to try. Completion comes next, by the same path.

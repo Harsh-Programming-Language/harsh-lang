@@ -1,5 +1,5 @@
-# Build the website in site/ and publish it to GitHub Pages on every push to
-# main. The site is written in Harsh, so the build has one step a Dioxus app
+# Build the website in site/, every page pre-rendered as HTML (static
+# generation), and publish it to GitHub Pages on every push to main. The site is written in Harsh, so the build has one step a Dioxus app
 # does not: `hrs`, built from this very checkout, transpiles site/src/**.hrs
 # to site/target/hrs/ before `dx` builds the Rust. The Converter's
 # transpiler is the same checkout, as a library.
@@ -51,21 +51,38 @@ jobs:
         working-directory: site
         run: hrs cargo metadata --no-deps --format-version 1 > /dev/null
 
-      - name: Build the site
+      - name: Build the site, every page pre-rendered
+        # Static generation (the user's decision, 2026-09-27, after trying it
+        # on his Mac): Dioxus's fullstack build renders each page to HTML at
+        # build time (site/DEPLOY.md, part D). Its server side needs the
+        # `server` feature, added here to this job's copy of Cargo.toml only,
+        # so `dx serve` on a Mac keeps building the plain web app.
         working-directory: site
-        run: dx build --release --platform web
+        run: |
+          sed -i '/^ssg = /a server = ["dioxus/server", "ssg"]' Cargo.toml
+          dx bundle --web --ssg --features ssg
 
       - name: Assemble the pages
         working-directory: site
         run: |
-          out=$(find target/dx -type d -path '*release/web/public' | head -n 1)
+          out=$(find target/dx -type d -name public | head -n 1)
           test -n "$out" && test -f "$out/index.html"
           rm -rf dist && mkdir dist
           cp -r "$out"/. dist/
+          # Every page pre-rendered: its content is in its HTML, not only
+          # filled in by the browser. Fail here rather than publish shells.
+          for page in "" learn install converter playground; do
+            f="dist/${page:+$page/}index.html"
+            test -f "$f" || { echo "missing: $f"; exit 1; }
+          done
+          grep -q "Rust without the braces" dist/index.html
+          grep -q "The Harsh Book" dist/learn/index.html
+          grep -q "rust-analyzer" dist/install/index.html
           # The books and the guide come from public/ (`public_dir`), copied
           # by dx itself; fail here rather than publish dead links.
           test -f dist/book/index.html && test -f dist/by-example/index.html && test -f dist/guide/index.html
-          # The router handles every path: serve the app for unknown ones too.
+          # An unknown path: the app loads and its router shows the
+          # not-found page.
           cp dist/index.html dist/404.html
           touch dist/.nojekyll
           ls dist

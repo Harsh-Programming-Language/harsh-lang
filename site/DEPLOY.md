@@ -54,7 +54,7 @@ workflow itself changed (or by hand: GitHub → Actions → *Publish the site*
 1. installs Rust and the wasm target, then `hrs` from the same commit;
 2. installs the Dioxus CLI, pinned to the newest **0.7.x**, matching the
    site's `dioxus = "0.7"`;
-3. transpiles the site's Harsh, runs `dx build --release --platform web`;
+3. transpiles the site's Harsh, runs `dx bundle --web --ssg --features ssg` -- every page pre-rendered (part D);
 4. checks that the Book, *By Example* and the guide are in the output
    (they come from `site/public/`), adds `404.html` so every route loads,
    and deploys.
@@ -80,7 +80,7 @@ address under *deploy*. Open it, then check a few things by hand:
 - *Build the site*: a Dioxus or Rust error, the same one `dx build` gives
   on your Mac.
 - *Assemble the pages*, at `find target/dx …`: the Dioxus CLI changed where
-  it writes its output. Run `dx build --release --platform web` on the Mac,
+  it writes its output. Run the build of part D on the Mac (`dx bundle --web --ssg --features ssg`),
   find the folder holding `index.html`, and adjust the path in the workflow.
 - the push never reached GitHub: the mirror's token lacks *Workflows* (A.1);
   GitLab's mirror settings show the error.
@@ -150,6 +150,39 @@ curl -sI https://harsh-programming-language.github.io/harsh-lang/ | grep -i -E '
 
 A 404 with `Server: nginx` means an old IONOS address, still cached; one
 with `Server: GitHub.com` and "Site not found" means step 4 or 5.
+
+## D. Static generation (the deploy, since 2026-09-27)
+
+Pages built in the browser show search engines almost nothing, and show
+visitors nothing until the WebAssembly has loaded. The site is published with
+every page pre-rendered as HTML: Dioxus 0.7 does it as a *fullstack* app --
+its CLI runs the app, asks it for the list of pages (the server function
+`static_routes`, in `src/main.hrs`), and saves each rendered page (`dx bundle
+--web --ssg`). The browser shows the HTML at once; the WebAssembly loads after
+and makes the Converter, the Playground and the jumbotron interactive.
+
+The `build` job adds the `server` feature the fullstack build needs to its
+own copy of `Cargo.toml`, builds, and checks each page's HTML holds its
+content -- the home page's "Rust without the braces", Learn's "The Harsh
+Book", Install's "rust-analyzer" -- before publishing. Tried first on the
+user's Mac ("blazingly fast"), then made the deploy by his decision.
+
+**On your Mac**, the same build (a plain `dx serve` stays the web app alone):
+
+```sh
+cd site
+hrs build
+cp Cargo.toml Cargo.toml.orig
+sed -i '' '/^ssg = /a\
+server = ["dioxus/server", "ssg"]
+' Cargo.toml
+dx bundle --web --ssg --features ssg
+mv Cargo.toml.orig Cargo.toml
+public=$(find target/dx -type d -name public | head -n 1)
+grep -c "Rust without the braces" "$public/index.html"   # 1 or more: pre-rendered
+grep -c "The Harsh Book" "$public/learn/index.html"
+python3 -m http.server -d "$public" 8080                  # the pages still work as the app
+```
 
 ## Later, when it matters
 

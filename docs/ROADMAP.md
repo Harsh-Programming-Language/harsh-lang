@@ -18,7 +18,7 @@ Sizing is relative: XS, S, M, L. "Blocked by" matters more than the estimate.
 
 ## Open, in order (2026-09-25)
 
-**Where things stand.** 0.1.38 is delivered (2026-09-27); 0.1.32 is on
+**Where things stand.** 0.1.39 is delivered (2026-09-27); 0.1.32 is on
 GitLab, and the website is live at https://harsh-lang.com/. `RELEASE.md` has
 publishing and installing every product, in order; publishing is the
 user's. 0.1.30 and 0.1.31 were handed over and are spent. The design questions
@@ -32,10 +32,10 @@ after a few days with it. What needs no decision is done, or listed last below.
   rust-analyzer: a type on hover, a function's definition, and a project
   using `hrs_std` (whether rust-analyzer takes the distribution through
   `cargo.extraArgs` -- not verifiable here). **Completion** next, same path.
-- **The website's static generation** -- his ruling (2026-09-27): (a) a CI
-  job that builds the static version and checks the pages are HTML, without
-  deploying; the live site untouched until it passes. Not built yet: needs
-  Dioxus 0.7's server-side build, written blind here and judged by CI.
+- ~~**The website's static generation**~~ -- **the deploy, 2026-09-27**: tried
+  on his Mac ("blazingly fast"), then the `build` job made the static build
+  with the page checks, the trial job retired (`site/DEPLOY.md`, part D).
+- **Completion** -- built 2026-09-27 (0.1.39), on the text being typed.
 
 - **Matrix views as values** -- `VIEWS-DESIGN.md`: the spelling (methods
   `view`/`view_mut`, or a `view~` macro), `&a[range, range]` then refused,

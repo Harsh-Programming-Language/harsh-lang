@@ -124,11 +124,15 @@ impl SourceMap {
         let start = *self.line_starts.get(line.checked_sub(1)?)?;
         let text = &self.src[start..];
         let off = (start + text.char_indices().nth(col.saturating_sub(1)).map_or(text.len(), |(i, _)| i)) as u32;
+        // Code written as it stands first; else code that came out of a
+        // macro expansion -- a name passed to a macro, `apply~ adding (4)`,
+        // is written by you and becomes Rust inside the expansion (found
+        // 2026-09-27: hover on such a name answered nothing).
         let e = self
             .entries
             .iter()
-            .filter(|e| e.src_lo <= off && off < e.src_hi && e.ctx == 0)
-            .min_by_key(|e| e.src_hi - e.src_lo)?;
+            .filter(|e| e.src_lo <= off && off < e.src_hi)
+            .min_by_key(|e| (e.ctx != 0, e.src_hi - e.src_lo))?;
         let gen_off = (e.gen_lo + (off - e.src_lo).min(e.gen_hi.saturating_sub(e.gen_lo + 1))) as usize;
         let gen = std::fs::read_to_string(&self.generated_path).ok()?;
         let gen_off = gen_off.min(gen.len());

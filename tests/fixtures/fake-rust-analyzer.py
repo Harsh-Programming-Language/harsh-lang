@@ -29,6 +29,9 @@ while True:
     m = read()
     if m is None or m.get("method") == "exit":
         break
+    if m.get("method") == "initialized":
+        # As rust-analyzer does once the project is loaded.
+        send({"jsonrpc": "2.0", "method": "experimental/serverStatus", "params": {"health": "ok", "quiescent": True}})
     if "id" not in m:
         continue
     method, p = m["method"], m.get("params") or {}
@@ -46,4 +49,7 @@ while True:
         for i, line in enumerate(open(path).read().split("\n")):
             if line.startswith("fn helper"):
                 result = {"uri": uri, "range": {"start": {"line": i, "character": 3}, "end": {"line": i, "character": 9}}}
+    elif method == "textDocument/completion":
+        pos = p["position"]
+        result = [{"label": f"at {pos['line']}:{pos['character']}"}, {"label": "len()", "kind": 2}, {"label": "hrsCompletionMark"}]
     send({"jsonrpc": "2.0", "id": m["id"], "result": result})

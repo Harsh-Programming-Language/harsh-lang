@@ -69,7 +69,7 @@ pub fn Install$ -> Element:
                 "The extension "
                 a { href: "https://marketplace.visualstudio.com/items?itemName=harsh-lang.harsh-lang", target: "_blank", rel: "noopener", code { "harsh-lang" } }
                 ", on the Marketplace: highlighting, indentation on Enter and Tab, formatting, "
-                "and types on hover and go-to-definition through rust-analyzer -- all through " code { "hrs-lsp" } ", installed with "
+                "and types on hover, go-to-definition and completion through rust-analyzer -- all through " code { "hrs-lsp" } ", installed with "
                 code { "harsh-lang" } " above. Search " em { "Harsh" } " in the Extensions view, or:"
             }
             Code { code: VSCODE, lang: "shell" }

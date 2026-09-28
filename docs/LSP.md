@@ -20,7 +20,10 @@ The server still learns no names or types: it asks rust-analyzer, which knows th
 - Hover answers in rust-analyzer's words -- types and docs, Rust's spelling, `Vec<i32>` -- at the `.hrs` range. A definition inside the project opens at its `.hrs` line; one elsewhere (the standard library, a Rust dependency) is a Rust file and opens as such.
 - On save the server transpiles the project again and tells rust-analyzer the Rust changed. While typing, answers come from the last good translation, for lines unchanged since; a changed line is answered with nothing rather than something wrong. After the next good save everything is current.
 - No rust-analyzer installed: said once -- `rustup component add rust-analyzer` -- and formatting carries on.
-- Completion comes next, by the same path.
+- **Completion** (0.1.39) works on the text as you type it, so it cannot wait for a save: a marker is put at the cursor, the text is transpiled on the side (`target/hrs/.complete/`), rust-analyzer is shown that Rust in memory, asked at the marker, and set back to the file on disk. Rust's snippets (`len()`) come as plain names (`len`), since Harsh calls differently.
+- **Which rust-analyzer** (0.1.39): `HRS_RA` if set; else the one on the PATH (`rustup component add rust-analyzer`); else the one inside an editor's rust-analyzer extension (VS Code, Insiders, Cursor, VSCodium). One that exits at once -- rustup's stand-in when the component is missing -- is passed over.
+- It waits for rust-analyzer to finish loading a project (its `experimental/serverStatus`), a minute at most, instead of answering nothing meanwhile. Harsh's standard distribution is handed to it only for a project that uses it. A name passed to a macro -- `apply~ adding (4)` -- maps to its Rust.
+- **The log:** set `HRS_LSP_LOG` to a file path in the environment the editor starts `hrs-lsp` from -- for VS Code, quit it and start it from a terminal: `HRS_LSP_LOG=/tmp/hrs-lsp.log code .` -- and every question to rust-analyzer and every answer is written there -- the way to see why an answer is empty.
 
 ## Name-blind by construction
 
@@ -95,7 +98,8 @@ The second row is the style rule from "Layout style" — a block indents past th
 - `harsh/columns` (custom request), params `{ textDocument, position }`, result `{ legal, default, unit, current }` where `current` is the line's present indent. The VSCode client binds Tab and Shift-Tab to it when the cursor is inside the leading whitespace; the client applies the edit. It also binds Enter at the end of a line to it: asking for the column *before* inserting the newline and writing both in one edit makes the cursor land once, where the on-type route — VSCode's guess first, the server's correction a few milliseconds later — showed a double jump wherever the two disagreed, which is after every closer. Mid-line Enter stays VSCode's, so bracket splitting runs, and on-type formatting places those lines. This request exists because Tab does not pass through `type` in VSCode, so on-type formatting never sees it; a custom request is the honest shape rather than abusing a trigger character.
 - `textDocument/didOpen`, `didChange` (full sync), `didClose` — the server keeps the current text of each open file and nothing else.
 - `textDocument/hover` and `textDocument/definition`, through rust-analyzer (above); `didSave` re-transpiles.
-- No diagnostics and no completion yet. Capabilities advertise only what exists.
+- `textDocument/completion`, on the text being typed (above).
+- No diagnostics yet. Capabilities advertise only what exists.
 
 Transport is stdio via the `lsp-server` crate, the one rust-analyzer uses; `lsp-types` for the wire types. Both are pinned to versions that build on rustc 1.75 so the container and the Mac see the same server.
 

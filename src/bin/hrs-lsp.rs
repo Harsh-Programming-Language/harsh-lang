@@ -15,8 +15,9 @@ use std::io::{BufRead, BufReader, Write};
 use std::path::{Path, PathBuf};
 use std::process::{Child, ChildStdin, Command, Stdio};
 use std::sync::mpsc::{channel, Receiver};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use serde_json::{json, Value};
 
@@ -24,7 +25,7 @@ use lsp_server::{Connection, Message, Request, RequestId, Response};
 use lsp_types::notification::{
     DidChangeTextDocument, DidCloseTextDocument, DidOpenTextDocument, DidSaveTextDocument, Notification,
 };
-use lsp_types::request::{Formatting, GotoDefinition, HoverRequest, OnTypeFormatting, Request as _};
+use lsp_types::request::{Completion, Formatting, GotoDefinition, HoverRequest, OnTypeFormatting, Request as _};
 use lsp_types::{
     DocumentFormattingParams, DocumentOnTypeFormattingOptions, DocumentOnTypeFormattingParams,
     InitializeParams, OneOf, Position, Range, ServerCapabilities, TextDocumentPositionParams,
@@ -61,6 +62,10 @@ fn main() -> Result<(), Box<dyn Error + Sync + Send>> {
         })),
         hover_provider: Some(lsp_types::HoverProviderCapability::Simple(true)),
         definition_provider: Some(OneOf::Left(true)),
+        completion_provider: Some(lsp_types::CompletionOptions {
+            trigger_characters: Some(vec![".".into()]),
+            ..Default::default()
+        }),
         document_on_type_formatting_provider: Some(DocumentOnTypeFormattingOptions {
             first_trigger_character: "\n".into(),
             more_trigger_character: Some(vec![")".into(), "]".into()]),
@@ -82,8 +87,9 @@ fn main() -> Result<(), Box<dyn Error + Sync + Send>> {
                 if connection.handle_shutdown(&req)? {
                     break;
                 }
-                if req.method == HoverRequest::METHOD || req.method == GotoDefinition::METHOD {
+                if req.method == HoverRequest::METHOD || req.method == GotoDefinition::METHOD || req.method == Completion::METHOD {
                     let result = match serde_json::from_value::<TextDocumentPositionParams>(req.params.clone()) {
+                        Ok(p) if req.method == Completion::METHOD => bridge.complete(&docs, &connection, &p),
                         Ok(p) => bridge.ask(&docs, &connection, &req.method, &p),
                         Err(_) => Value::Null,
                     };
@@ -270,6 +276,48 @@ struct Ra {
     stdin: Arc<Mutex<ChildStdin>>,
     rx: Receiver<Value>,
     next: i64,
+    /// Set when rust-analyzer says it has finished loading the project
+    /// (`experimental/serverStatus`, quiescent): until then it answers
+    /// questions with nothing, so they wait for it -- a minute at most.
+    ready: Arc<AtomicBool>,
+    started: Instant,
+    version: i64,
+}
+
+/// A line in the log, when `HRS_LSP_LOG` names a file: what `hrs-lsp` asked
+/// rust-analyzer and what came back, so a silent answer explains itself.
+fn log(msg: &str) {
+    if let Ok(path) = std::env::var("HRS_LSP_LOG") {
+        if let Ok(mut f) = std::fs::OpenOptions::new().create(true).append(true).open(path) {
+            let _ = writeln!(f, "{msg}");
+        }
+    }
+}
+
+/// The rust-analyzers to try, in order: `HRS_RA` alone when set; else the
+/// one on the PATH (rustup's), then the one inside an editor's rust-analyzer
+/// extension -- VS Code's, Insiders', Cursor's, VSCodium's -- the newest.
+fn candidates() -> Vec<PathBuf> {
+    if let Ok(p) = std::env::var("HRS_RA") {
+        return vec![PathBuf::from(p)];
+    }
+    let mut v = vec![PathBuf::from("rust-analyzer")];
+    if let Ok(home) = std::env::var("HOME") {
+        for dir in [".vscode/extensions", ".vscode-insiders/extensions", ".cursor/extensions", ".vscode-oss/extensions"] {
+            let Ok(entries) = std::fs::read_dir(Path::new(&home).join(dir)) else { continue };
+            let mut found: Vec<PathBuf> = entries
+                .filter_map(|e| e.ok().map(|e| e.path()))
+                .filter(|p| p.file_name().map_or(false, |n| n.to_string_lossy().starts_with("rust-lang.rust-analyzer-")))
+                .map(|p| p.join("server").join("rust-analyzer"))
+                .filter(|p| p.is_file())
+                .collect();
+            found.sort();
+            if let Some(newest) = found.pop() {
+                v.push(newest);
+            }
+        }
+    }
+    v
 }
 
 fn frame(v: &Value) -> Vec<u8> {
@@ -303,7 +351,24 @@ impl Ra {
     /// shipped inside `hrs`) are handed to its cargo as `--config` arguments,
     /// so a project naming `hrs_std = "0.1"` resolves for it as for `hrs`.
     fn start(root: &Path) -> Result<Ra, String> {
-        let exe = std::env::var("HRS_RA").unwrap_or_else(|_| "rust-analyzer".into());
+        let mut last = String::from("no rust-analyzer found");
+        for exe in candidates() {
+            match Ra::start_with(root, &exe) {
+                Ok(ra) => {
+                    log(&format!("rust-analyzer started: {}", exe.display()));
+                    return Ok(ra);
+                }
+                Err(e) => {
+                    log(&format!("rust-analyzer {} did not start: {e}", exe.display()));
+                    last = e;
+                }
+            }
+        }
+        Err(last)
+    }
+
+    fn start_with(root: &Path, exe: &Path) -> Result<Ra, String> {
+        let exe = exe.display().to_string();
         let mut child = Command::new(&exe)
             .current_dir(root)
             .stdin(Stdio::piped())
@@ -315,9 +380,14 @@ impl Ra {
         let stdout = child.stdout.take().ok_or("no stdout")?;
         let (tx, rx) = channel();
         let writer = stdin.clone();
+        let ready = Arc::new(AtomicBool::new(false));
+        let ready_in = ready.clone();
         std::thread::spawn(move || {
             let mut r = BufReader::new(stdout);
             while let Some(v) = read_frame(&mut r) {
+                if v["method"] == "experimental/serverStatus" && v["params"]["quiescent"] == json!(true) {
+                    ready_in.store(true, Ordering::SeqCst);
+                }
                 // A request from rust-analyzer: answered with nothing, as an
                 // editor that asked for no such features would.
                 if v.get("method").is_some() {
@@ -333,16 +403,19 @@ impl Ra {
                 }
             }
         });
-        let mut ra = Ra { child, stdin, rx, next: 0 };
+        let mut ra = Ra { child, stdin, rx, next: 0, ready, started: Instant::now(), version: 0 };
         let root_uri = Url::from_directory_path(root).map_err(|_| "the project's root is not a path".to_string())?;
+        // Harsh's standard distribution, only for a project that names it.
         let patches = harsh_lang::driver::distribution(root, &[root.join("Cargo.toml")]).unwrap_or_default();
+        let options = if patches.is_empty() { json!({}) } else { json!({"cargo": {"extraArgs": patches}}) };
+        log(&format!("initialize {} with {options}", root.display()));
         ra.request(
             "initialize",
             json!({
                 "processId": std::process::id(),
                 "rootUri": root_uri,
-                "capabilities": {},
-                "initializationOptions": {"cargo": {"extraArgs": patches}},
+                "capabilities": {"experimental": {"serverStatusNotification": true}},
+                "initializationOptions": options,
             }),
             120,
         )?;
@@ -359,6 +432,13 @@ impl Ra {
         self.send(json!({"jsonrpc": "2.0", "method": method, "params": params}))
     }
 
+    /// Wait for rust-analyzer to finish loading the project, a minute at most.
+    fn wait_ready(&self) {
+        while !self.ready.load(Ordering::SeqCst) && self.started.elapsed() < Duration::from_secs(60) {
+            std::thread::sleep(Duration::from_millis(200));
+        }
+    }
+
     fn request(&mut self, method: &str, params: Value, secs: u64) -> Result<Value, String> {
         self.next += 1;
         let id = self.next;
@@ -366,7 +446,10 @@ impl Ra {
         loop {
             let v = self.rx.recv_timeout(Duration::from_secs(secs)).map_err(|_| format!("rust-analyzer did not answer {method}"))?;
             if v["id"] == json!(id) {
-                return Ok(v.get("result").cloned().unwrap_or(Value::Null));
+                let result = v.get("result").cloned().unwrap_or(Value::Null);
+                let shown = result.to_string();
+                log(&format!("<- {method}: {}", if shown.len() > 300 { &shown[..300] } else { &shown }));
+                return Ok(result);
             }
         }
     }
@@ -471,16 +554,40 @@ impl Bridge {
             return None;
         }
         let m = harsh_lang::remap::SourceMap::load(map.to_str()?).ok()?;
-        let (rl, rc) = m.find(line + 1, p.position.character as usize + 1)?;
-        if !self.ras.contains_key(&root) {
-            match Ra::start(&root) {
+        let Some((rl, rc)) = m.find(line + 1, p.position.character as usize + 1) else {
+            log(&format!("{method} at {}:{}: no Rust came from there", line + 1, p.position.character + 1));
+            return None;
+        };
+        log(&format!("-> {method} at .hrs {}:{} = .rs {rl}:{rc}", line + 1, p.position.character + 1));
+        self.ensure(&root, conn)?;
+        let params = json!({
+            "textDocument": {"uri": Url::from_file_path(&rs).ok()?},
+            "position": {"line": rl - 1, "character": rc - 1},
+        });
+        let ra = self.ras.get_mut(&root)?;
+        ra.wait_ready();
+        let answer = match ra.request(method, params, 30) {
+            Ok(v) => v,
+            Err(e) => {
+                log(&format!("{method}: {e}; rust-analyzer restarted on the next request"));
+                self.ras.remove(&root);
+                return None;
+            }
+        };
+        self.shape(method, &root, &m, answer)
+    }
+
+    /// rust-analyzer for a project, started on first need; a missing one said once.
+    fn ensure(&mut self, root: &Path, conn: &Connection) -> Option<()> {
+        if !self.ras.contains_key(root) {
+            match Ra::start(root) {
                 Ok(ra) => {
-                    self.ras.insert(root.clone(), ra);
+                    self.ras.insert(root.to_path_buf(), ra);
                 }
                 Err(e) => {
                     if !self.told_missing {
                         self.told_missing = true;
-                        let msg = format!("hover and go-to-definition need rust-analyzer ({e}): `rustup component add rust-analyzer`");
+                        let msg = format!("hover, go-to-definition and completion need rust-analyzer ({e}): `rustup component add rust-analyzer`, or the rust-analyzer extension in VS Code");
                         let _ = conn.sender.send(Message::Notification(lsp_server::Notification::new(
                             "window/showMessage".into(),
                             json!({"type": 2, "message": msg}),
@@ -490,24 +597,17 @@ impl Bridge {
                 }
             }
         }
-        let params = json!({
-            "textDocument": {"uri": Url::from_file_path(&rs).ok()?},
-            "position": {"line": rl - 1, "character": rc - 1},
-        });
-        let answer = match self.ras.get_mut(&root)?.request(method, params, 30) {
-            Ok(v) => v,
-            Err(_) => {
-                // A crash or a hang: started afresh on the next request.
-                self.ras.remove(&root);
-                return None;
-            }
-        };
+        Some(())
+    }
+
+    /// An answer's positions, back from the `.rs` to the `.hrs`.
+    fn shape(&self, method: &str, root: &Path, m: &harsh_lang::remap::SourceMap, answer: Value) -> Option<Value> {
         if method == HoverRequest::METHOD {
             let mut h = answer;
             if h.is_null() {
                 return None;
             }
-            let back = h.get("range").and_then(|r| range_back(&m, r));
+            let back = h.get("range").and_then(|r| range_back(m, r));
             match back {
                 Some(r) => h["range"] = r,
                 None => {
@@ -518,7 +618,7 @@ impl Bridge {
             }
             Some(h)
         } else {
-            Some(self.locations_back(&root, answer))
+            Some(self.locations_back(root, answer))
         }
     }
 
@@ -547,6 +647,85 @@ impl Bridge {
             Value::Null => Value::Null,
             loc => one(loc),
         }
+    }
+
+    /// Completion, at the text as it is now -- being typed, so it cannot wait
+    /// for a save. A marker is put at the cursor, making `x <- ` a complete
+    /// `x <- MARK` (rust-analyzer does the same inside); the text is
+    /// transpiled on the side; rust-analyzer is shown that Rust in memory,
+    /// asked at the marker, and set back to the file on disk. Its answers are
+    /// Rust's names, given as plain names: Rust's snippets (`len()`) are not
+    /// Harsh's calls (`len$`).
+    fn complete(&mut self, docs: &HashMap<Url, String>, conn: &Connection, p: &TextDocumentPositionParams) -> Value {
+        self.try_complete(docs, conn, p).unwrap_or(Value::Null)
+    }
+
+    fn try_complete(&mut self, docs: &HashMap<Url, String>, conn: &Connection, p: &TextDocumentPositionParams) -> Option<Value> {
+        const MARK: &str = "hrsCompletionMark";
+        let uri = &p.text_document.uri;
+        let file = uri.to_file_path().ok()?;
+        let root = root_of(&file)?;
+        let (rs, _) = generated(&root, &file)?;
+        let now = docs.get(uri).cloned().or_else(|| std::fs::read_to_string(&file).ok())?;
+        let (line, col) = (p.position.line as usize, p.position.character as usize);
+        let start = now.split_inclusive('\n').take(line).map(str::len).sum::<usize>();
+        let at = start + now[start..].chars().take(col).map(char::len_utf8).sum::<usize>();
+        let marked = format!("{}{MARK}{}", &now[..at], &now[at..]);
+        let side = root.join("target/hrs/.complete");
+        std::fs::create_dir_all(&side).ok()?;
+        let (hrs, rs_side, map) = (side.join("cell.hrs"), side.join("cell.rs"), side.join("cell.map.json"));
+        std::fs::write(&hrs, &marked).ok()?;
+        let out = Command::new(hrs_exe()).arg(&hrs).arg("-o").arg(&rs_side).arg("--map").arg(&map).output().ok()?;
+        if !out.status.success() {
+            log(&format!("completion at {}:{}: the text does not transpile: {}", line + 1, col + 1, String::from_utf8_lossy(&out.stderr).lines().next().unwrap_or("")));
+            return None;
+        }
+        let m = harsh_lang::remap::SourceMap::load(map.to_str()?).ok()?;
+        let (rl, rc) = m.find(line + 1, col + 1)?;
+        let rust = std::fs::read_to_string(&rs_side).ok()?;
+        log(&format!("-> completion at .hrs {}:{} = .rs {rl}:{rc}", line + 1, col + 1));
+        self.ensure(&root, conn)?;
+        let rs_uri = Url::from_file_path(&rs).ok()?;
+        let ra = self.ras.get_mut(&root)?;
+        ra.wait_ready();
+        ra.version += 1;
+        let version = ra.version;
+        ra.notify("textDocument/didOpen", json!({"textDocument": {"uri": rs_uri, "languageId": "rust", "version": version, "text": rust}})).ok()?;
+        let answer = ra.request("textDocument/completion", json!({"textDocument": {"uri": rs_uri}, "position": {"line": rl - 1, "character": rc - 1}}), 30);
+        let _ = ra.notify("textDocument/didClose", json!({"textDocument": {"uri": rs_uri}}));
+        let answer = match answer {
+            Ok(v) => v,
+            Err(e) => {
+                log(&format!("completion: {e}; rust-analyzer restarted on the next request"));
+                self.ras.remove(&root);
+                return None;
+            }
+        };
+        let items = match answer {
+            Value::Array(a) => a,
+            v => v.get("items").and_then(|i| i.as_array()).cloned().unwrap_or_default(),
+        };
+        let items: Vec<Value> = items
+            .into_iter()
+            .filter_map(|it| {
+                let label = it["label"].as_str()?.to_string();
+                let name = label.split(['(', ' ']).next().unwrap_or(&label).trim_end_matches('!').to_string();
+                if name.is_empty() || name.contains(MARK) {
+                    return None;
+                }
+                let mut o = serde_json::Map::new();
+                o.insert("label".into(), json!(label));
+                o.insert("insertText".into(), json!(name));
+                o.insert("filterText".into(), json!(name));
+                for k in ["kind", "detail", "documentation", "sortText", "deprecated"] {
+                    if let Some(v) = it.get(k) {
+                        o.insert(k.into(), v.clone());
+                    }
+                }
+                Some(Value::Object(o))
+            })
+            .collect();
+        Some(json!({"isIncomplete": true, "items": items}))
     }
 }
 

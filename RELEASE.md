@@ -11,7 +11,7 @@ it is uploaded anywhere: a fix afterwards gets the next number.
 **Verified for this delivery:** 277 tests, 0 ignored, no warnings;
 `check.sh`, with the self-host and the website's four gates; the public
 tree's own 277 tests; the Jupyter kernel's 6 tests. Under 0.1.31, whose
-transpiler 0.1.38 keeps unchanged: the guide's 99 blocks, the Book's 248
+transpiler 0.1.39 keeps unchanged: the guide's 99 blocks, the Book's 248
 snippets and *By Example*'s 62 built and run, Harshlings' 65 exercises with
 0 problems.
 
@@ -19,7 +19,7 @@ snippets and *By Example*'s 62 built and run, Harshlings' 65 exercises with
 
 In the delivery bundle, this file sits in `_Installation & Deployment/` with
 `TESTING.md` (what is new, and how to try it) and `DEPLOY-WEBSITE.md` (a copy
-of `site/DEPLOY.md`). Beside that folder: `harsh-public-0.1.38.tar.gz` (the public tree: the
+of `site/DEPLOY.md`). Beside that folder: `harsh-public-0.1.39.tar.gz` (the public tree: the
 crate, the kernel's sources in `kernel/`, the website in `site/`),
 `harshlings-0.1.7.tar.gz`, `editors/` (the VS Code `.vsix`, the Zed
 repositories), `jupyter/` (the kernel's wheel). Everything else is in the
@@ -30,7 +30,7 @@ public tree: what is new in `CHANGELOG.md`; the website's full guide in
 
 | Product | Version | Where it is published | From |
 |---|---|---|---|
-| `harsh-lang` -- `hrs`, `hrs-from`, `hrs-remap`, `hrs-lsp` | **0.1.38** | crates.io | this repository |
+| `harsh-lang` -- `hrs`, `hrs-from`, `hrs-remap`, `hrs-lsp` | **0.1.39** | crates.io | this repository |
 | Harsh's standard distribution -- `hrs_std` 0.1.2, `hrs_proc_macro` 0.2.0, `hrs_quote` 0.1.0, `hrs_syn` 0.1.0 | inside `hrs` | nowhere: shipped inside `harsh-lang` | this repository |
 | The Jupyter kernel, `harsh-kernel` | **0.1.3** | PyPI | `kernel/` |
 | The VS Code extension, `harsh-lang.harsh-lang` | **0.1.5** | the VS Code Marketplace (Open VSX: not yet) | `editors/vscode-harsh/`; the `.vsix` in the bundle |
@@ -68,7 +68,7 @@ From a fresh copy of the public tree:
 
 ```sh
 mkdir -p ~/harsh-release && cd ~/harsh-release
-tar -xzf /path/to/bundle/harsh-public-0.1.38.tar.gz        # makes harsh/
+tar -xzf /path/to/bundle/harsh-public-0.1.39.tar.gz        # makes harsh/
 cd harsh
 cargo test                                          # 277 passed, 0 ignored
 ./check.sh                                          # the examples, the self-host, the site's gates (the editor's needs node)
@@ -106,7 +106,7 @@ From the same `harsh/` folder, your own build first:
 
 ```sh
 cargo install --path . --force                      # hrs and its tools, from this tree
-hrs --version                                       # 0.1.38
+hrs --version                                       # 0.1.39
 ```
 
 **The website, locally:**
@@ -164,13 +164,13 @@ carries `.github/workflows/pages.yml`, which GitHub refuses otherwise.
 
 ```sh
 cd harsh-lang                                       # your clone of the GitLab home
-tar -xzf /path/to/bundle/harsh-public-0.1.38.tar.gz --strip-components=1
-test ! -d harsh && grep '^version' Cargo.toml       # version = "0.1.38", and no harsh/ folder
+tar -xzf /path/to/bundle/harsh-public-0.1.39.tar.gz --strip-components=1
+test ! -d harsh && grep '^version' Cargo.toml       # version = "0.1.39", and no harsh/ folder
 git status
 git add -A
-git commit -m "0.1.38: the Converter both ways (driver::convert_str); the new home page"
-git tag -a v0.1.38 -m "0.1.38"
-git push origin main v0.1.38                        # if it times out: push main, then the tag
+git commit -m "0.1.39: the Converter both ways (driver::convert_str); the new home page"
+git tag -a v0.1.39 -m "0.1.39"
+git push origin main v0.1.39                        # if it times out: push main, then the tag
 ```
 
 Then check GitLab's pipeline is green, and the GitHub mirror has the commit
@@ -248,7 +248,7 @@ git push origin main
 
 ### 8. The website
 
-Nothing to run: GitHub builds and deploys it from the push of step 2, once
+Nothing to run: GitHub builds it -- every page pre-rendered as HTML -- and deploys it from the push of step 2, once
 Pages' source is *GitHub Actions* (step 0). Then GitHub → Actions →
 *Publish the site* is green, and the site is at
 **https://harsh-lang.com/**.
@@ -274,8 +274,8 @@ repositories, when the two known Enter issues are settled. When you decide:
 
 ### 10. Check it all landed
 
-- `cargo search harsh-lang` shows 0.1.38
-- GitLab: the `v0.1.38` tag, a green pipeline; GitHub: the same commit
+- `cargo search harsh-lang` shows 0.1.39
+- GitLab: the `v0.1.39` tag, a green pipeline; GitHub: the same commit
 - GitHub → Actions: *Publish the site* green; the site passes the checks of step 8
 - `pip index versions harsh-kernel` shows 0.1.3
 - the Marketplace shows the extension at 0.1.5
@@ -296,13 +296,15 @@ What anyone does, once the products are published.
 
 ```sh
 cargo install harsh-lang          # hrs, hrs-from, hrs-remap, hrs-lsp
-hrs --version                     # 0.1.38
+hrs --version                     # 0.1.39
 hrs new hello && cd hello && hrs run
 ```
 
-**Hover and go-to-definition** in any editor need rust-analyzer, once:
-`rustup component add rust-analyzer`. Without it everything else works, and
-the editor says so once.
+**Hover, go-to-definition and completion** in any editor need rust-analyzer,
+once: `rustup component add rust-analyzer` -- or VS Code's rust-analyzer
+extension, whose copy is used. Without either, everything else works, and the
+editor says so once. `HRS_LSP_LOG=/some/file` makes `hrs-lsp` log what it asked
+and what came back.
 
 **VS Code:** search *Harsh* in the Extensions view, or
 `code --install-extension harsh-lang.harsh-lang` (from a file:

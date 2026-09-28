@@ -50,7 +50,17 @@ struct Client {
 
 impl Client {
     fn start(ra: &str) -> Client {
-        let mut child = Command::new(env!("CARGO_BIN_EXE_hrs-lsp"))
+        Client::spawn(ra, None)
+    }
+    fn start_with_log(ra: &str, log: &Path) -> Client {
+        Client::spawn(ra, Some(log))
+    }
+    fn spawn(ra: &str, log: Option<&Path>) -> Client {
+        let mut cmd = Command::new(env!("CARGO_BIN_EXE_hrs-lsp"));
+        if let Some(l) = log {
+            cmd.env("HRS_LSP_LOG", l);
+        }
+        let mut child = cmd
             .env("HRS_RA", ra)
             .env("HRS", env!("CARGO_BIN_EXE_hrs"))
             .stdin(std::process::Stdio::piped())
@@ -167,3 +177,65 @@ fn a_missing_rust_analyzer_is_said_once() {
     c.stop();
     let _ = fs::remove_dir_all(&root);
 }
+
+/// A name passed through a macro -- `apply~ adding (4) (5)` -- is written by
+/// you and becomes Rust inside the expansion: it maps (found 2026-09-27 on the
+/// user's Mac, where hover on it answered nothing).
+#[test]
+fn a_name_passed_to_a_macro_maps_to_its_rust() {
+    let root = project("macro");
+    fs::write(root.join("src/main.hrs"), "macro_rules~ apply\n    (($v:ident) $( ($x:expr) )*) => do:\n        $v $( $x )*\n\nfn adding (x:i32) (y:i32) -> i32 do:\n    x + y\n\nfn main$:\n    let x = apply~ adding (4) (5)\n    println! \"{x}\"\n").unwrap();
+    let out = Command::new(env!("CARGO_BIN_EXE_hrs")).args(["cargo", "metadata", "--no-deps", "--format-version", "1"]).current_dir(&root).output().unwrap();
+    assert!(out.status.success(), "{}", String::from_utf8_lossy(&out.stderr));
+    let m = harsh_lang::remap::SourceMap::load(root.join("target/hrs/main.map.json").to_str().unwrap()).unwrap();
+    let rust = fs::read_to_string(root.join("target/hrs/main.rs")).unwrap();
+    let (line, text) = rust.lines().enumerate().find(|(_, l)| l.contains("adding(4")).unwrap();
+    let col = text.find("adding").unwrap() + 1;
+    // `adding` at the call, Harsh 9:20.
+    assert_eq!(m.find(9, 20), Some((line + 1, col)), "{rust}");
+    let _ = fs::remove_dir_all(&root);
+}
+
+/// Completion works on the text as it is being typed: `y <- ` completes to
+/// the names rust-analyzer offers at `y.`, given as plain names.
+#[test]
+fn completion_asks_at_the_text_being_typed() {
+    let root = project("complete");
+    let text = fs::read_to_string(root.join("src/main.hrs")).unwrap();
+    let mut c = Client::start(&fake_ra());
+    let uri = c.open(&root, &text);
+    let typing = text.replace("    println! \"{y}\"\n", "    let z = y <- \n    println! \"{y}\"\n");
+    c.notify("textDocument/didChange", serde_json::json!({"textDocument": {"uri": uri, "version": 2}, "contentChanges": [{"text": typing}]}));
+    // The cursor after `y <- `: line 5 (0-based), column 17.
+    let r = c.request("textDocument/completion", Client::at(&uri, 5, 17));
+    let items = r["items"].as_array().unwrap_or_else(|| panic!("{r}"));
+    let labels: Vec<&str> = items.iter().map(|i| i["label"].as_str().unwrap()).collect();
+    // The fake answers with where it was asked: the marker in `y.hrsCompletionMark`.
+    let side = fs::read_to_string(root.join("target/hrs/.complete/cell.rs")).unwrap();
+    let (line, l) = side.lines().enumerate().find(|(_, l)| l.contains("y.hrsCompletionMark")).unwrap();
+    let col = l.find("hrsCompletionMark").unwrap();
+    assert!(labels.contains(&format!("at {line}:{col}").as_str()), "{labels:?}\n{side}");
+    // `len()` comes as the plain name `len`; the marker itself is never offered.
+    let len = items.iter().find(|i| i["label"] == "len()").unwrap();
+    assert_eq!(len["insertText"], "len");
+    assert!(!labels.contains(&"hrsCompletionMark"));
+    c.stop();
+    let _ = fs::remove_dir_all(&root);
+}
+
+/// The log, when asked for: each question and answer, so a silent answer on
+/// someone's machine explains itself.
+#[test]
+fn the_log_records_what_was_asked_and_answered() {
+    let root = project("log");
+    let log = root.join("lsp.log");
+    let text = fs::read_to_string(root.join("src/main.hrs")).unwrap();
+    let mut child_env = Client::start_with_log(&fake_ra(), &log);
+    let uri = child_env.open(&root, &text);
+    child_env.request("textDocument/hover", Client::at(&uri, 4, 12));
+    child_env.stop();
+    let written = fs::read_to_string(&log).unwrap();
+    assert!(written.contains("rust-analyzer started") && written.contains("-> textDocument/hover at .hrs 5:13 = .rs 6:13") && written.contains("<- textDocument/hover"), "{written}");
+    let _ = fs::remove_dir_all(&root);
+}
+

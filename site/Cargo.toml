@@ -23,6 +23,11 @@ harsh-lang = { path = "..", default-features = false }
 [features]
 default = ["web"]
 web = ["dioxus/web"]
+# Static generation, which the deploy builds (site/DEPLOY.md, part D): the app
+# as a Dioxus fullstack app, so `dx bundle --ssg` pre-renders every page. The
+# deploy adds the `server` feature the fullstack build needs to its own copy of
+# this file, so a plain `dx serve` here keeps building the web app alone.
+ssg = ["dioxus/fullstack"]
 
 [profile.release]
 opt-level = "z"

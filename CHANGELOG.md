@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.41 — 2026-09-27  (no change of code: `hrs_std` 0.1.3 and the Jupyter kernel 0.1.3, as in 0.1.40)
+
+- **The version, aligned.** 0.1.40's tree was pushed under the message and tag 0.1.39; a version is never reused, so the next is 0.1.41 -- the same code as 0.1.40, to be committed and tagged `v0.1.41` (`RELEASE.md`, step 2).
+
 ## 0.1.40 — 2026-09-27  (`hrs_std` 0.1.3 and the Jupyter kernel 0.1.3, unchanged)
 
 - **Hover, go-to-definition and completion answer on a real rust-analyzer.** It loads nothing under a project's `target/` from disk -- the generated Rust included -- so every question came back empty (found on the user's Mac with `HRS_LSP_LOG`: each hover mapped right, each answer `null`). `hrs-lsp` now hands it the text of every generated file, as an editor hands it an open file, when it starts and after each save; completion updates that text in place. The suite's fake rust-analyzer now ignores unopened `target/` files as the real one does, so the tests catch this.

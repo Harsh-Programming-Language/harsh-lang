@@ -143,6 +143,8 @@ fn hover_and_definition_go_through_rust_analyzer_and_back() {
     // `helper` at its call: Harsh 0-based 4:12, Rust 5:12 (`let y = helper(41);`).
     let h = c.request("textDocument/hover", Client::at(&uri, 4, 12));
     assert_eq!(h["contents"]["value"], "fake hover at 5:12 in main.rs", "{h}");
+    // Markdown asked for, so the editor colours the hover's code.
+    assert_eq!(h["contents"]["kind"], "markdown", "{h}");
     assert_eq!(h["range"]["start"], serde_json::json!({"line": 4, "character": 12}), "{h}");
     // Its definition: `fn helper` on the first line of the `.hrs`, not the `.rs`.
     let d = c.request("textDocument/definition", Client::at(&uri, 4, 12));

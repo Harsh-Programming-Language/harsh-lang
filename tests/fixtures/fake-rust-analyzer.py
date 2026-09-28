@@ -31,6 +31,7 @@ def send(v):
     sys.stdout.buffer.flush()
 
 opened = {}
+markdown = False
 
 while True:
     m = read()
@@ -51,13 +52,16 @@ while True:
     method, p = m["method"], m.get("params") or {}
     result = None
     if method == "initialize":
+        # As the real one: Markdown only for a client that says it shows it.
+        formats = (((p.get("capabilities") or {}).get("textDocument") or {}).get("hover") or {}).get("contentFormat") or []
+        markdown = "markdown" in formats
         result = {"capabilities": {"hoverProvider": True, "definitionProvider": True}}
     elif method in ("textDocument/hover", "textDocument/definition") and "/target/" in p["textDocument"]["uri"] and p["textDocument"]["uri"] not in opened:
         result = None
     elif method == "textDocument/hover":
         pos, uri = p["position"], p["textDocument"]["uri"]
         name = uri.rsplit("/", 1)[1]
-        result = {"contents": {"kind": "plaintext", "value": f"fake hover at {pos['line']}:{pos['character']} in {name}"},
+        result = {"contents": {"kind": "markdown" if markdown else "plaintext", "value": f"fake hover at {pos['line']}:{pos['character']} in {name}"},
                   "range": {"start": pos, "end": {"line": pos["line"], "character": pos["character"] + 6}}}
     elif method == "textDocument/definition":
         uri = p["textDocument"]["uri"]

@@ -422,7 +422,16 @@ impl Ra {
             json!({
                 "processId": std::process::id(),
                 "rootUri": root_uri,
-                "capabilities": {"experimental": {"serverStatusNotification": true}},
+                // Markdown, so a hover's code comes in a ```rust block the
+                // editor colours: without it rust-analyzer answers plain text
+                // (found 2026-09-27, the first working hover on the Mac).
+                "capabilities": {
+                    "experimental": {"serverStatusNotification": true},
+                    "textDocument": {
+                        "hover": {"contentFormat": ["markdown", "plaintext"]},
+                        "completion": {"completionItem": {"documentationFormat": ["markdown", "plaintext"]}},
+                    },
+                },
                 "initializationOptions": options,
             }),
             120,

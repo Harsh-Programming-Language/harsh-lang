@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.42 — 2026-09-27  (`hrs_std` 0.1.3 and the Jupyter kernel 0.1.3, unchanged)
+
+- **Hover, coloured.** The first working hover on the user's Mac showed the signature in plain text: `hrs-lsp` told rust-analyzer nothing of what the editor can show, so it answered plain text. It now asks for Markdown, and a hover's Rust comes in a code block the editor highlights; completion's documentation too.
+
 ## 0.1.41 — 2026-09-27  (no change of code: `hrs_std` 0.1.3 and the Jupyter kernel 0.1.3, as in 0.1.40)
 
 - **The version, aligned.** 0.1.40's tree was pushed under the message and tag 0.1.39; a version is never reused, so the next is 0.1.41 -- the same code as 0.1.40, to be committed and tagged `v0.1.41` (`RELEASE.md`, step 2).

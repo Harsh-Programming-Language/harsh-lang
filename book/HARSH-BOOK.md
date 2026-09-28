@@ -6327,12 +6327,13 @@ fn main$:
     println! "{first_two_days}"
     let day_one = readings <- slice 1 (..)
     println! "{day_one}"
-    // The index borrows: a view, nothing copied.
-    println! "{}" (&readings[1.., ..=1])
-    let kept = readings[1.., ..=1] <- copy$
+    // A view borrows: a window, nothing copied.
+    let window = readings <- view (1..) (..=1)
+    println! "{window}"
+    let kept = window <- copy$
     // An element, then a whole row, written through.
     readings[0, 0] = 20
-    readings[2, ..] <- fill 0
+    readings <- view_mut 2 (..) <- fill 0
     println! "{readings}"
     println! "{kept}"
 ```
@@ -6360,9 +6361,11 @@ $ hrs run
 
 A matrix is rarely wanted whole. `readings <- slice (0..2) (..)` takes rows 0 and 1 and every column, as a matrix of its own. The ranges are the ones you know from chapter 8 — counted from 0, the end left out — and `..` by itself means *all of it*. Name an axis with a single number and that axis disappears: `slice 1 (..)` is one day, a vector, not a 1×3 matrix.
 
-The index does the same without copying. `&readings[1.., ..=1]` is a *view*: a window onto `readings`, borrowed, exactly as `&names[1..3]` is a window onto a vector in chapter 4 — and the borrow checker guards it in the same way, so a view cannot outlive or be written under the matrix it looks into. `<- copy$` turns a view into a matrix you own. What can be read this way can be written: `readings[0, 0] = 20` sets one element, and `readings[2, ..] <- fill 0` a whole row.
+A view does the same without copying. `readings <- view (1..) (..=1)` is a window onto `readings`, borrowed, exactly as `&names[1..3]` is a window onto a vector in chapter 4 — and the borrow checker guards it in the same way, so a view cannot outlive or be written under the matrix it looks into. It is a value: you can name it, pass it, print it, use it in `.*` like a matrix, and `<- copy$` turns it into a matrix you own. Julia writes it `view(readings, 2:3, 1:2)`.
 
-An index with several axes is written with a comma, `readings[0, 0]`. The comma makes the axes one value, a tuple, so `readings[(0, 0)]` means the same; the rule is the language's, not the matrix's, and any type indexed by a tuple may be written so.
+What can be read can be written. `readings[0, 0] = 20` sets one element; for more than one, `view_mut` is the view that writes through: `readings <- view_mut 2 (..) <- fill 0` sets a whole row, and `*(readings <- view_mut 1 1) = 5` one element through it.
+
+An index with several axes is written with a comma, `readings[0, 0]`. The comma makes the axes one value, a tuple, so `readings[(0, 0)]` means the same; the rule is the language's, not the matrix's, and any type indexed by a tuple may be written so. An index gives one element; a part of a matrix is a `slice` or a `view` — Rust's index must hand back something stored in the matrix, and a window onto it is not.
 
 Julia writes a part `readings[2:3, 1:2]`, counting from 1 and including the end. Harsh keeps the ranges of every other collection, so there is one way to count in a program.
 
@@ -6518,7 +6521,7 @@ $ hrs test
 running 1 test
 test target/hrs/lib.rs - add_one (line 10) ... ok
 
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.20s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.18s
 ```
 
 `cargo doc --open` renders every `///` and `//!` in the crate as HTML, with the Markdown inside them — headings, code blocks, links — laid out. The conventional sections are `# Examples`, `# Panics` (when the function can), `# Errors` (what `Err`s it returns) and `# Safety` (for `unsafe` functions). The example in the `///` is Harsh, like everything else in the file, and `cargo test` *runs it* — every code block in a doc comment is a test, so documentation cannot drift from the code without failing the build.
@@ -6579,6 +6582,10 @@ Inside, `PrimaryColor` lives in `kinds` and `mix` in `utils`, which is a sensibl
 ## 17.3 Publishing
 
 `crates.io` is the registry `cargo` fetches dependencies from, and publishing to it is `cargo publish` after `cargo login` once with a token from the site. `Cargo.toml` needs `name` (unique on the registry), `version`, `description` and `license` before the registry will accept it; a publish is permanent, since other crates may depend on it — versions can be *yanked* (`cargo yank --vers 1.0.1`) to stop new projects picking them up, but never deleted. For a Harsh crate, `hrs export` writes the transpiled Rust as a plain crate under `target/export`, which is what you publish: the registry, and the people who depend on you, see Rust.
+
+That is the way to share Harsh code *with Rust users*: they get readable Rust, formatted by `cargo fmt`, with no Harsh anywhere — the parts of `hrs_std` you use become the crate's own `matrix` module — and they never need `hrs`. It is not the way to share it with Harsh users, because of what a Rust crate cannot carry: Harsh's own macros. A `~` macro unfolds in Harsh, before anything is transpiled, and leaves nothing in the Rust; so the exported crate has no `macro_rules~` in it, and a Harsh program that depends on it cannot call them. (Rust's `!` macros, which are Rust, survive the export.)
+
+To share a library *as Harsh*, macros and all, share its Harsh: another project depends on it by path, as the next section shows, and `hrs` transpiles it first — its `~` macros, and those it re-exports with `pub use`, reach the program that uses it. A registry of Harsh's own is planned, so that a Harsh library can be published and added by name as a Rust crate is; until it exists, a path is how Harsh travels as Harsh.
 
 ## 17.4 Workspaces
 

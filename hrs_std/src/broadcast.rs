@@ -13,7 +13,7 @@
 //! Shapes stretch as Julia's do: along an axis two lengths must be equal, or
 //! one of them 1. A number is 1×1, a vector n×1.
 
-use crate::slicing::{VectorView, View};
+use crate::slicing::{VectorView, VectorViewMut, View, ViewMut};
 use crate::{mismatch, Matrix, Vector};
 use nalgebra::{DMatrix, DVector, Scalar};
 use std::marker::PhantomData;
@@ -41,16 +41,19 @@ impl<T: Scalar + Copy> Operand for Vector<T> {
     fn dims(&self) -> (usize, usize) { (self.0.len(), 1) }
     fn get(&self, i: usize, _: usize) -> T { self.0[i] }
 }
-impl<T: Scalar + Copy> Operand for View<T> {
-    type Elem = T; type Kind = KM;
-    fn dims(&self) -> (usize, usize) { self.size() }
-    fn get(&self, i: usize, j: usize) -> T { let (m, [r0, _, c0, _]) = self.parts(); m.0[(r0 + i, c0 + j)] }
+// A view looks like what it views: a window a matrix, a row or column a vector.
+macro_rules! view_operand {
+    ($($V:ident $K:ident;)*) => {$(
+        impl<'v, T: Scalar + Copy> Operand for $V<'v, T> {
+            type Elem = T; type Kind = $K;
+            fn dims(&self) -> (usize, usize) { view_dims!($K, self) }
+            fn get(&self, i: usize, j: usize) -> T { view_get!($K, self, i, j) }
+        }
+    )*};
 }
-impl<T: Scalar + Copy> Operand for VectorView<T> {
-    type Elem = T; type Kind = KV;
-    fn dims(&self) -> (usize, usize) { (self.len(), 1) }
-    fn get(&self, i: usize, _: usize) -> T { self.entry(i) }
-}
+macro_rules! view_dims { (KM, $s:expr) => { $s.size() }; (KV, $s:expr) => { ($s.len(), 1) }; }
+macro_rules! view_get { (KM, $s:expr, $i:expr, $j:expr) => { $s.get($i, $j) }; (KV, $s:expr, $i:expr, $j:expr) => {{ let _ = $j; $s.get($i) }}; }
+view_operand! { View KM; ViewMut KM; VectorView KV; VectorViewMut KV; }
 impl<'a, X: Operand + ?Sized> Operand for &'a X {
     type Elem = X::Elem; type Kind = X::Kind;
     fn dims(&self) -> (usize, usize) { (**self).dims() }
@@ -149,8 +152,10 @@ macro_rules! ops {
         impl<'a, T: Scalar + Copy> $Tr<Dot> for &'a Matrix<T> { type Output = Half<&'a Matrix<T>, $Tag>; fn $m(self, _: Dot) -> Self::Output { Half(self, PhantomData) } }
         impl<T: Scalar + Copy> $Tr<Dot> for Vector<T> { type Output = Half<Vector<T>, $Tag>; fn $m(self, _: Dot) -> Self::Output { Half(self, PhantomData) } }
         impl<'a, T: Scalar + Copy> $Tr<Dot> for &'a Vector<T> { type Output = Half<&'a Vector<T>, $Tag>; fn $m(self, _: Dot) -> Self::Output { Half(self, PhantomData) } }
-        impl<'a, T: Scalar + Copy> $Tr<Dot> for &'a View<T> { type Output = Half<&'a View<T>, $Tag>; fn $m(self, _: Dot) -> Self::Output { Half(self, PhantomData) } }
-        impl<'a, T: Scalar + Copy> $Tr<Dot> for &'a VectorView<T> { type Output = Half<&'a VectorView<T>, $Tag>; fn $m(self, _: Dot) -> Self::Output { Half(self, PhantomData) } }
+        impl<'v, T: Scalar + Copy> $Tr<Dot> for View<'v, T> { type Output = Half<View<'v, T>, $Tag>; fn $m(self, _: Dot) -> Self::Output { Half(self, PhantomData) } }
+        impl<'a, 'v, T: Scalar + Copy> $Tr<Dot> for &'a View<'v, T> { type Output = Half<&'a View<'v, T>, $Tag>; fn $m(self, _: Dot) -> Self::Output { Half(self, PhantomData) } }
+        impl<'v, T: Scalar + Copy> $Tr<Dot> for VectorView<'v, T> { type Output = Half<VectorView<'v, T>, $Tag>; fn $m(self, _: Dot) -> Self::Output { Half(self, PhantomData) } }
+        impl<'a, 'v, T: Scalar + Copy> $Tr<Dot> for &'a VectorView<'v, T> { type Output = Half<&'a VectorView<'v, T>, $Tag>; fn $m(self, _: Dot) -> Self::Output { Half(self, PhantomData) } }
         impl<L: Operand, R: Operand<Elem = L::Elem>> $Tr<R> for Half<L, $Tag>
         where L::Kind: Shape<L::Elem, R::Kind>, L::Elem: $Tr<Output = L::Elem> {
             type Output = <L::Kind as Shape<L::Elem, R::Kind>>::Out;
@@ -205,8 +210,8 @@ mod tests {
         assert_eq!(&v * DOT * &v, Vector::from_vec(vec![1.0, 4.0]));
         assert_eq!(&v * DOT * 3.0, Vector::from_vec(vec![3.0, 6.0]));
         // A view is an operand like any other.
-        assert_eq!(&a[(0..1, ..)] * DOT * &row, m(vec![vec![100.0, 400.0]]));
-        assert_eq!(&a[(.., 1)] * DOT * &v, Vector::from_vec(vec![2.0, 8.0]));
+        assert_eq!(a.view(0..1, ..) * DOT * &row, m(vec![vec![100.0, 400.0]]));
+        assert_eq!(a.view(.., 1) * DOT * &v, Vector::from_vec(vec![2.0, 8.0]));
     }
 
     #[test]

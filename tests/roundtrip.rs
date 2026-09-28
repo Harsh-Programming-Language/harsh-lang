@@ -2449,3 +2449,41 @@ fn a_statement_inside_a_function_is_fine() {
     assert!(rust.contains("let y = f(3);"), "{rust}");
 }
 
+/// Rust -> Harsh -> Rust through the converter and back, as the website's
+/// Converter does it: the Harsh, and the Rust it gives back.
+fn there_and_back(rust: &str) -> (String, String) {
+    let harsh = harsh_lang::driver::convert_str(rust).unwrap_or_else(|e| panic!("convert: {e}\n{rust}"));
+    let back = harsh_lang::driver::transpile_str(&harsh).unwrap_or_else(|e| panic!("transpile: {e}\n{harsh}"));
+    (harsh, back)
+}
+
+/// An empty record variant stays `Home {}`: it once became `Home` over a `()`
+/// line, and came back `Home { (), }` (found 2026-09-26, converting the
+/// website back; fixed 2026-09-27).
+#[test]
+fn converter_keeps_an_empty_record_variant() {
+    let (harsh, back) = there_and_back("enum Route {\n    Home {},\n    Page { id: u32 },\n}\n");
+    assert!(harsh.contains("    Home {}\n"), "{harsh}");
+    assert!(back.contains("Home {},") && !back.contains("()"), "{back}");
+}
+
+/// An empty struct keeps its braces on its line, and the item after it starts
+/// a line of its own: it once glued on, `struct Empty { } fn g$`, and the
+/// next function's body was misread (found and fixed 2026-09-27).
+#[test]
+fn converter_keeps_an_empty_struct_on_its_own_line() {
+    let (harsh, back) = there_and_back("struct Empty {}\nfn f() -> u8 {\n    let e = Empty {};\n    3\n}\n");
+    assert!(harsh.starts_with("struct Empty { }\nfn f$ -> u8:\n"), "{harsh}");
+    assert!(back.contains("fn f() -> u8 {") && back.contains("let e = Empty { };"), "{back}");
+}
+
+/// Two shapes recorded as converter gaps that convert and read back today:
+/// kept so, by these tests.
+#[test]
+fn converter_reads_a_tuple_field_after_an_index_and_an_if_as_an_argument() {
+    let (harsh, back) = there_and_back("fn main() {\n    let v = vec![(1, 2), (3, 4)];\n    let x = v[0].1;\n    println!(\"{}\", x);\n}\n");
+    assert!(harsh.contains("let x = v[0].1") && back.contains("let x = v[0].1;"), "{harsh}\n{back}");
+    let (_, back) = there_and_back("fn main() {\n    let n = 3;\n    println!(\"{}\", if n > 2 { \"big\" } else { \"small\" });\n}\n");
+    assert!(back.contains("println!(\"{}\", if n") && back.contains("\"small\""), "{back}");
+}
+

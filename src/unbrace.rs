@@ -587,6 +587,12 @@ fn classify_brace(toks: &[Token], open: usize, brace: &[Brace]) -> Brace {
             // A `}` at depth zero closes the previous item: the segment ends
             // -- unless that brace was a literal or a pattern (verbatim),
             // which is part of this very line: `if let E::G { .. } = &m {`.
+            // A `}` that ends its line ends the item before, verbatim or not:
+            // an empty `struct Empty {}` keeps its braces (verbatim), and the
+            // `fn` on the next line is not part of its line (found 2026-09-27:
+            // `struct Empty { } fn g$`). A pattern's `}` inside a condition,
+            // `if let E::G { .. } = &m {`, is followed on its own line.
+            Tk::Close('}') if depth == 0 && start < open && toks[start].line > t.line => break,
             Tk::Close('}') if depth == 0 => {
                 let is_verbatim = {
                     // find the partner `{` by walking back
@@ -2753,6 +2759,26 @@ impl<'a> Writer<'a> {
                                 || (kind == Kind::Items
                                     && (named("impl") || named("trait") || named("mod") || named("extern")))
                         };
+                        // An empty record -- a variant `Home {}`, a `struct
+                        // Empty {}` -- stays as Rust writes it, on its line
+                        // (Harsh reads `Home {}` so): a block would need a
+                        // statement, and the unit `()` that fills an empty
+                        // function body is no field (found 2026-09-26
+                        // converting the website back: `Home { (), }`).
+                        if decl && kind == Kind::Commas && close != usize::MAX && close == i + 1 {
+                            while self.out.ends_with(' ') {
+                                self.out.pop();
+                            }
+                            self.out.push_str(" {}");
+                            self.at_line_start = false;
+                            // An item ends its line; a variant's `,` does that itself.
+                            if toks.get(close + 1).map_or(true, |t| t.text != ",") {
+                                self.newline();
+                            }
+                            prev = Some(&toks[close]);
+                            i = close + 1;
+                            continue;
+                        }
                         // A match's arms are a specification block in use:
                         // opened by `\`, like a literal's fields (2026-09-18).
                         let is_match = kind == Kind::Commas && {
@@ -3059,7 +3085,22 @@ impl<'a> Writer<'a> {
                     p if p != usize::MAX && cl.brace[p] == Brace::UseGroup => {
                         self.word(")", false)
                     }
-                    _ => self.word("}", true),
+                    p => {
+                        self.word("}", true);
+                        // An empty body kept in braces, `struct Empty {}`,
+                        // ends its item: an item that follows on a later
+                        // line starts a line of its own (found 2026-09-27:
+                        // `struct Empty { } fn g$`).
+                        let empty = p != usize::MAX && p + 1 == i;
+                        let item_next = toks.get(i + 1).map_or(false, |n| {
+                            n.line > t.line
+                                && (n.kind == Tk::Hash
+                                    || matches!(n.text.as_str(), "fn" | "struct" | "enum" | "union" | "impl" | "trait" | "mod" | "use" | "const" | "static" | "type" | "pub" | "extern" | "unsafe" | "async"))
+                        });
+                        if empty && item_next {
+                            self.newline();
+                        }
+                    }
                 },
                 Tk::PathSep => {
                     // `::<T>` turbofish loses its `::`; Harsh writes `Vec<i32>.new()`.

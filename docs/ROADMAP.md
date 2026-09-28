@@ -18,7 +18,7 @@ Sizing is relative: XS, S, M, L. "Blocked by" matters more than the estimate.
 
 ## Open, in order (2026-09-25)
 
-**Where things stand.** 0.1.36 is delivered (2026-09-27); 0.1.32 is on
+**Where things stand.** 0.1.38 is delivered (2026-09-27); 0.1.32 is on
 GitLab, and the website is live at https://harsh-lang.com/. `RELEASE.md` has
 publishing and installing every product, in order; publishing is the
 user's. 0.1.30 and 0.1.31 were handed over and are spent. The design questions
@@ -26,6 +26,16 @@ are gathered in the development notes and wait on his use of what exists -- he d
 after a few days with it. What needs no decision is done, or listed last below.
 
 ### Waiting on the user, after his testing
+
+- ~~**Hover, go-to-definition through rust-analyzer**~~ -- **built 2026-09-27
+  (0.1.38)** with his three rulings. To try on the Mac with the real
+  rust-analyzer: a type on hover, a function's definition, and a project
+  using `hrs_std` (whether rust-analyzer takes the distribution through
+  `cargo.extraArgs` -- not verifiable here). **Completion** next, same path.
+- **The website's static generation** -- his ruling (2026-09-27): (a) a CI
+  job that builds the static version and checks the pages are HTML, without
+  deploying; the live site untouched until it passes. Not built yet: needs
+  Dioxus 0.7's server-side build, written blind here and judged by CI.
 
 - **Matrix views as values** -- `VIEWS-DESIGN.md`: the spelling (methods
   `view`/`view_mut`, or a `view~` macro), `&a[range, range]` then refused,
@@ -100,12 +110,34 @@ check); the matcher ruling's leftovers (the kernel's test).
 
 ### Last
 
+- **Review: `&a[range, range]` as a view** (the user, 2026-09-27: an error
+  for now, reviewed last). Since 0.1.37 it does not compile -- a part of a
+  matrix is `a <- view …` (borrowed) or `a <- slice …` (copied), and the
+  index is one element. To decide once he has used matrices in Harsh:
+  whether the index form should come back, and only if a sound way is found
+  (Rust's `Index` must return a reference to something stored; a window is
+  not -- the forged reference behind it until 0.1.36 was undefined
+  behaviour). Also possible then: a clearer message than rustc's for it.
 - **A Harsh crate registry** -- deliberately last; `PACKAGING.md` section 6.
 
 *(The detailed list this replaces -- the DSL build plan of 2026-09-22 and the
 items done since -- is kept in the handover and the changelog.)*
 
 ## Known bugs, open — fix before the next release that touches the converter
+
+- ~~**Matrix views undefined behaviour under Stacked Borrows**~~ -- **fixed
+  2026-09-27 (0.1.37, `hrs_std` 0.1.3)**: views are values (`View`,
+  `ViewMut`, `VectorView`, `VectorViewMut`), `a <- view …` / `a <- view_mut
+  …`; no `unsafe` left in `hrs_std`. `&a[range, range]` is an error (rustc's:
+  no `Index` for a range pair); its review is in *Last*, below. Miri's final
+  word is his to run (`RELEASE.md`, step 1).
+- ~~**The converter's empty records**~~ -- **fixed 2026-09-27 (0.1.37)**: an
+  empty variant stays `Home {}`; an empty `struct Empty {}` keeps its line
+  (the backward walk took its `}` for part of the next item's line). `v[0].1`
+  and an `if` as a macro argument convert and read back: pinned
+  (`converter_keeps_*`, `converter_reads_a_tuple_field_after_an_index_and_an_if_as_an_argument`).
+  Left, cosmetic: the converter drops spaces around comparisons (`n> 2`,
+  `i<cs <- len$`) -- valid Rust back, only its look.
 
 - ~~**A statement at the top level went through untouched**~~ -- **fixed
   2026-09-27 (0.1.36).** `let x = f 3 2` outside a function came out as `let
@@ -585,6 +617,17 @@ in the development tree and not built. Untouched.
 - ~~**Converter: a `while … matches! …` condition inside a block-bodied arm of a nested `match`**~~ — **fixed by 2026-09-25**'s brace look-back stopping at an arm's `=>`: it converts and reads back exactly (`a_while_matches_inside_a_nested_match_converts_and_reads_back`). It was never updated and does nothing; noted so it isn't mistaken for load-bearing.
 
 ## Last: a Harsh crate registry
+
+**Chosen (the user, 2026-09-27): Harsh's own registry, served as static
+files** -- cargo's sparse alternative-registry index on GitHub Pages
+(`harsh-lang.com/registry/`), packages (`.hrs` sources and `Cargo.toml`) as
+GitHub release downloads with checksums in the index, `hrs publish` with a
+GitHub token, `hrs` transpiling a registry dependency's Harsh before cargo
+builds it, so its `~` macros reach the user's code. Why not crates.io: `hrs
+export` unfolds `~` macros away, so a Harsh library shared as Rust loses them.
+`hrs export` to crates.io stays the way to make *Rust* crates from Harsh.
+Design document first (`REGISTRY-DESIGN.md`), then the build.
+
 
 An online repository of Harsh crates, the user's request of 2026-09-17,
 placed last deliberately. It is not a prerequisite for anything above:

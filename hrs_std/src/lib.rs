@@ -17,7 +17,7 @@ mod broadcast;
 mod refs;
 mod slicing;
 pub use broadcast::{each1, each2, each3, Join, Dot, Half, Operand, Shape, DOT, KM, KS, KV};
-pub use slicing::{Pick, Span, VectorView, View};
+pub use slicing::{Pick, Span, VectorView, VectorViewMut, View, ViewMut, ViewMutPick, ViewPick};
 
 /// A matrix. Its shape is the inner matrix's own: one source of truth.
 #[derive(Clone, Debug, PartialEq)]

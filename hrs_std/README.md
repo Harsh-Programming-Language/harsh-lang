@@ -18,16 +18,17 @@ for a tall one); `inv`, `det`, `transpose`, `dot`, `norm`, `UniformScaling`,
 `I`, `hcat`, `vcat`. Sizes are values, and a mismatch is a `DimensionMismatch`
 in Julia's words, reported at the caller's line.
 
-**Slicing** keeps Harsh's 0-based ranges, `..` alone being Julia's `:`. The
-method copies, `a <- slice (0..2) (..)`; the index borrows, `&a[0..2, ..]` — a
-*view*, as `&v[1..3]` is of a `Vec` — and an axis taken by a number is dropped,
-as in Julia. **Broadcasting** is Julia's: `a .* b`, `.+`, `.-`, `./`, shapes
-stretched where a length is 1, and `f<> a` for Julia's `f.(a)`. From Rust these
-are `&a * DOT * &b`, `each!(f, a)`, `a.slice(0..2, ..)` and `&a[(0..2, ..)]`.
+**Slicing** keeps Harsh's 0-based ranges, `..` alone being Julia's `:`.
+`a <- slice (0..2) (..)` copies; `a <- view (0..2) (..)` borrows -- a *view*,
+Julia's `view(a, 1:2, :)`, a value holding the matrix's reference and its
+window -- and `a <- view_mut …` writes through. An axis taken by a number is
+dropped, as in Julia. **Broadcasting** is Julia's: `a .* b`, `.+`, `.-`, `./`,
+shapes stretched where a length is 1, and `f<> a` for Julia's `f.(a)`. From
+Rust these are `&a * DOT * &b`, `each!(f, a)`, `a.slice(0..2, ..)` and
+`a.view(0..2, ..)`.
 
-The views hold their window in the spare word of an unsized reference, the
-technique `bitvec` uses; that is the crate's only `unsafe`, and its argument is
-written once in `src/slicing.rs`.
+The crate has no `unsafe` (since 0.1.3: views were once references forged
+over a zero-sized slice, which Miri found undefined behaviour).
 
 The literals `m~` and `v~` are part of the language; a Harsh project that uses
 them adds one line:

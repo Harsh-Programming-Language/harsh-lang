@@ -282,12 +282,13 @@ fn main$:
     println! "{first_two_days}"
     let day_one = readings <- slice 1 (..)
     println! "{day_one}"
-    // The index borrows: a view, nothing copied.
-    println! "{}" (&readings[1.., ..=1])
-    let kept = readings[1.., ..=1] <- copy$
+    // A view borrows: a window, nothing copied.
+    let window = readings <- view (1..) (..=1)
+    println! "{window}"
+    let kept = window <- copy$
     // An element, then a whole row, written through.
     readings[0, 0] = 20
-    readings[2, ..] <- fill 0
+    readings <- view_mut 2 (..) <- fill 0
     println! "{readings}"
     println! "{kept}"
 ```
@@ -315,9 +316,11 @@ $ hrs run
 
 A matrix is rarely wanted whole. `readings <- slice (0..2) (..)` takes rows 0 and 1 and every column, as a matrix of its own. The ranges are the ones you know from chapter 8 — counted from 0, the end left out — and `..` by itself means *all of it*. Name an axis with a single number and that axis disappears: `slice 1 (..)` is one day, a vector, not a 1×3 matrix.
 
-The index does the same without copying. `&readings[1.., ..=1]` is a *view*: a window onto `readings`, borrowed, exactly as `&names[1..3]` is a window onto a vector in chapter 4 — and the borrow checker guards it in the same way, so a view cannot outlive or be written under the matrix it looks into. `<- copy$` turns a view into a matrix you own. What can be read this way can be written: `readings[0, 0] = 20` sets one element, and `readings[2, ..] <- fill 0` a whole row.
+A view does the same without copying. `readings <- view (1..) (..=1)` is a window onto `readings`, borrowed, exactly as `&names[1..3]` is a window onto a vector in chapter 4 — and the borrow checker guards it in the same way, so a view cannot outlive or be written under the matrix it looks into. It is a value: you can name it, pass it, print it, use it in `.*` like a matrix, and `<- copy$` turns it into a matrix you own. Julia writes it `view(readings, 2:3, 1:2)`.
 
-An index with several axes is written with a comma, `readings[0, 0]`. The comma makes the axes one value, a tuple, so `readings[(0, 0)]` means the same; the rule is the language's, not the matrix's, and any type indexed by a tuple may be written so.
+What can be read can be written. `readings[0, 0] = 20` sets one element; for more than one, `view_mut` is the view that writes through: `readings <- view_mut 2 (..) <- fill 0` sets a whole row, and `*(readings <- view_mut 1 1) = 5` one element through it.
+
+An index with several axes is written with a comma, `readings[0, 0]`. The comma makes the axes one value, a tuple, so `readings[(0, 0)]` means the same; the rule is the language's, not the matrix's, and any type indexed by a tuple may be written so. An index gives one element; a part of a matrix is a `slice` or a `view` — Rust's index must hand back something stored in the matrix, and a window onto it is not.
 
 Julia writes a part `readings[2:3, 1:2]`, counting from 1 and including the end. Harsh keeps the ranges of every other collection, so there is one way to count in a program.
 

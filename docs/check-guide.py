@@ -34,8 +34,20 @@ def is_items(harsh):
     """Does the block begin with an item? Otherwise it is statements, and is
     transpiled inside `fn main$:` -- at file level there is no expression
     region and `f x` would be copied through unapplied."""
-    first = next((l for l in harsh.split("\n") if l.strip()), "")
-    return bool(ITEM.match(first.lstrip()))
+    # Every line at the left margin must begin an item (or be an attribute,
+    # a comment, or a macro call, which may expand to items): one statement
+    # among them -- `use std.collections.HashMap` then `let v = …` -- and the
+    # block is statements, wrapped. Looking at the first line only let such a
+    # block through, and since 0.1.36 a statement at the top level is an error.
+    for l in harsh.split("\n"):
+        if not l.strip() or l[0].isspace():
+            continue
+        t = l.lstrip()
+        if t.startswith(("#", "//")) or re.match(r"[A-Za-z_][A-Za-z0-9_]*[!~]", t):
+            continue
+        if not ITEM.match(t):
+            return False
+    return True
 
 def transpile(harsh):
     """The transpiler's Rust for a block, or (None, error)."""

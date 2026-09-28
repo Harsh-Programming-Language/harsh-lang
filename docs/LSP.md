@@ -10,7 +10,17 @@ Editors indent by pattern: VSCode's `onEnterRules` and Zed's `indents.scm` can s
 - Enter after a line ending in `=` lands **one level in**: the next line is a continuation of the binding, and the block that follows indents from there.
 - Tab on the fresh line **moves between the layout's legal columns** — the body of the innermost block, the indent of each enclosing block, the continuation column, the arrow column — and nothing in between, since every other column is either an error or a shape the style rejects.
 
-The server does exactly this. Hover and go-to-definition stay in `docs/ROADMAP.md` under "Further out"; they need the source map in both directions and error recovery in the layout pass, and neither is on the path to on-type formatting.
+The server does this, and since 0.1.38 **hover and go-to-definition**, through rust-analyzer (below).
+
+## Hover and go-to-definition, through rust-analyzer (0.1.38)
+
+The server still learns no names or types: it asks rust-analyzer, which knows them, about the Rust a `.hrs` became, and maps positions both ways through the source maps `hrs` writes -- `.hrs` to `.rs` with `SourceMap::find`, back with `locate` (design: `LSP-RA-DESIGN`, in the development notes).
+
+- rust-analyzer is started on the first hover or definition request -- not at startup, so formatting stays instant -- one per project, as a child process; `HRS_RA` names another program, else `rust-analyzer` on the PATH. Harsh's standard distribution is handed to its cargo as `--config` arguments, so a project naming `hrs_std` resolves for it as for `hrs`.
+- Hover answers in rust-analyzer's words -- types and docs, Rust's spelling, `Vec<i32>` -- at the `.hrs` range. A definition inside the project opens at its `.hrs` line; one elsewhere (the standard library, a Rust dependency) is a Rust file and opens as such.
+- On save the server transpiles the project again and tells rust-analyzer the Rust changed. While typing, answers come from the last good translation, for lines unchanged since; a changed line is answered with nothing rather than something wrong. After the next good save everything is current.
+- No rust-analyzer installed: said once -- `rustup component add rust-analyzer` -- and formatting carries on.
+- Completion comes next, by the same path.
 
 ## Name-blind by construction
 
@@ -84,7 +94,8 @@ The second row is the style rule from "Layout style" — a block indents past th
 - `textDocument/onTypeFormatting`, trigger characters `\n`, `)` and `]`. The editor sends the document *after* the newline and any indentation its own rules inserted; the server computes `columns(src, line).default` and returns one `TextEdit` replacing the new line's leading whitespace. Returning an edit rather than a position keeps the editor's undo stack whole: Enter and the re-indent are one operation.
 - `harsh/columns` (custom request), params `{ textDocument, position }`, result `{ legal, default, unit, current }` where `current` is the line's present indent. The VSCode client binds Tab and Shift-Tab to it when the cursor is inside the leading whitespace; the client applies the edit. It also binds Enter at the end of a line to it: asking for the column *before* inserting the newline and writing both in one edit makes the cursor land once, where the on-type route — VSCode's guess first, the server's correction a few milliseconds later — showed a double jump wherever the two disagreed, which is after every closer. Mid-line Enter stays VSCode's, so bracket splitting runs, and on-type formatting places those lines. This request exists because Tab does not pass through `type` in VSCode, so on-type formatting never sees it; a custom request is the honest shape rather than abusing a trigger character.
 - `textDocument/didOpen`, `didChange` (full sync), `didClose` — the server keeps the current text of each open file and nothing else.
-- No diagnostics, no completion, no hover. Capabilities advertise only what exists.
+- `textDocument/hover` and `textDocument/definition`, through rust-analyzer (above); `didSave` re-transpiles.
+- No diagnostics and no completion yet. Capabilities advertise only what exists.
 
 Transport is stdio via the `lsp-server` crate, the one rust-analyzer uses; `lsp-types` for the wire types. Both are pinned to versions that build on rustc 1.75 so the container and the Mac see the same server.
 

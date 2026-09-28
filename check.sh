@@ -141,4 +141,10 @@ else
 fi
 grep -q "formatted with cargo fmt" "$WORK/export.log" && echo "  formatted with cargo fmt" || echo "  (rustfmt not installed here; export left unformatted)"
 
+say "The guide: every code block transpiles"
+# docs/check-guide.py, which the Book's build also runs. Not run here before
+# 2026-09-27, so 0.1.36's top-level check broke a guide block unseen.
+PATH="$ROOT/target/release:$PATH" python3 "$ROOT/docs/check-guide.py" > "$WORK/guide.log" 2>&1 || { cat "$WORK/guide.log"; exit 1; }
+echo "  $(tail -1 "$WORK/guide.log" | sed 's|^docs/LANGUAGE.md: ||')"
+
 say "All checks complete. Artifacts in $WORK"

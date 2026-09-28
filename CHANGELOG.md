@@ -1,10 +1,24 @@
 # Changelog
 
+## 0.1.38 — 2026-09-27  (`hrs_std` 0.1.3 and the Jupyter kernel 0.1.3, unchanged)
+
+- **Types on hover and go-to-definition in `.hrs` files**, in every editor that runs `hrs-lsp` (VS Code, Zed, Neovim, Helix …). The server asks rust-analyzer about the Rust a file became and maps positions both ways through the source maps -- `SourceMap::find` (`.hrs` to `.rs`), new, beside `locate`. rust-analyzer starts on the first request, one per project; answers follow the last save, and a line changed since is answered after the next save rather than wrongly; no rust-analyzer installed is said once (`rustup component add rust-analyzer`). Tested end to end against a fake rust-analyzer (`tests/lsp.rs`); the real one is the user's to try. Completion comes next, by the same path.
+- The user's rulings (2026-09-27): the distribution shown to rust-analyzer by `hrs`, not a file in the project; answers from the last good translation for unchanged lines; hover and definition first.
+- `&a[range, range]` stays an error; its review is last on the roadmap.
+
+## 0.1.37 — 2026-09-27  (`hrs_std` 0.1.3; the Jupyter kernel 0.1.3, unchanged)
+
+- **Matrix views are values, and sound.** `a <- view (1..) (..=1)` borrows a window onto a matrix, as Julia's `view(a, 2:3, 1:2)`: nothing copied, guarded by the borrow checker like any borrow, printed, used in `.*`, and `<- copy$` for a matrix of its own. `a <- view_mut 2 (..) <- fill 0` writes through. `hrs_std` has no `unsafe` any more: views were references forged over a zero-sized slice, which Miri found undefined behaviour under Stacked Borrows (the known issue since 0.1.30).
+- **Breaking: `&a[range, range]` no longer compiles.** An index is one element, `a[i, j]`; a part of a matrix is a `slice` (a copy) or a `view` (a borrow). Accepted for now, to be reviewed once the user has used matrices in Harsh -- the index form may come back if a sound way is found.
+- **The converter keeps empty records**: an empty variant stays `Home {}` (it came back `Home { (), }`), and an empty `struct Empty {}` keeps its line (the next item was glued onto it, `struct Empty { } fn g$`, and misread). `v[0].1` and an `if` as a macro argument, recorded as gaps, convert and read back: now pinned by tests.
+- **Taught**: the Book's chapter 16, *By Example*'s matrices, the guide's slicing table, `hrs_std`'s README; the Book's chapter 17 on sharing Harsh code. Harshlings 0.1.7: `matrices05` uses `view`.
+- The Book's build removes each program's temporary project once its output is taken (the 248 of them filled the disk).
+
 ## 0.1.36 — 2026-09-27  (the Jupyter kernel 0.1.3, unchanged)
 
 - **A statement at a file's top level is an error that says so.** Rust's top level holds items only; a `let x = f 3 2` there used to go through untouched -- Harsh's call syntax and all -- and the website's Converter showed broken Rust. Now: *a `let` at the top level: Rust's top level holds only items (`fn`, `struct`, `enum`, `impl`, `use`, `const` …); it belongs inside a function -- `fn main$:`, for one; or, for a value of the whole program, `const` or `static`*, pointing at the line. (rustc caught a plain `let x = 3` there too, in a project; but not in the Converter, which has no rustc, and not clearly when the line held Harsh, which it passed on untransformed.) Items, attributes (`#![…]` included) and macro calls stay allowed, as in Rust; notebook cells, holes and doc examples are wrapped in a function, so statements stay at home there.
 - **The website's editor drops a stale edit**: Enter or Tab waited for the columns, and a change to the text meanwhile left the edit at old positions, scrambling it (`3, 2` once became `3 3 32`). Every sample of the site now round-trips both ways in a test.
-- The home page's second box reads *Functional Programming*: Partial Function Application, Pipes.
+- The home page's boxes, in one form: *Functional Programming* -- Comprehensions, Pipes, and Partial Functions; *Linear Algebra* -- Vectors, Matrices, and Matrix Arithmetic.
 
 ## The website, 2026-09-27, later  (no new version: the crate is as in 0.1.35)
 

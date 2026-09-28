@@ -250,13 +250,14 @@ fn main$:
     println! "{}" (a <- slice (0..2) (..))
     // An axis taken by a number is dropped: a row is a vector.
     println! "{}" (a <- slice 1 (..))
-    // The index borrows: a view, as `&v[1..3]` is a view of a `Vec`.
-    println! "{}" (&a[1.., ..=1])
-    let corner = a[1.., ..=1] <- copy$
+    // A view borrows, as Julia's `view(a, 2:3, 1:2)`: nothing copied.
+    let window = a <- view (1..) (..=1)
+    println! "{}" window
+    let corner = window <- copy$
     println! "{}" corner
-    // An element, and a whole row, written through.
+    // An element by its index; a whole row through a view that writes.
     a[1, 1] = 50
-    a[2, ..] <- fill 0
+    a <- view_mut 2 (..) <- fill 0
     println! "{}" a
 ```
 
@@ -282,15 +283,17 @@ fn main$:
 
 Julia writes `a[1:2, :]`. Harsh keeps its own ranges -- 0-based, the end left
 out, as for every collection -- and `..` alone is Julia's `:`. There are two
-spellings with one meaning. The method `a <- slice (0..2) (..)` *copies*, as
-Julia does. The index `&a[0..2, ..]` *borrows*: it is a view onto `a`, exactly
-as `&v[1..3]` is a view onto a `Vec`, and `<- copy$` makes it a matrix of its
-own. An axis taken by a number is dropped, so `a[1, ..]` is a vector and
-`a[1, 1]` a number; and what can be read can be written, `a[1, 1] = 50`,
-`a[2, ..] <- fill 0`.
+ways to take a part. `a <- slice (0..2) (..)` *copies*, as Julia's `a[1:2, :]`
+does. `a <- view (0..2) (..)` *borrows*, as Julia's `view(a, 1:2, :)`: a
+window onto `a`, guarded by the borrow checker like any borrow, and a value you
+can name, print or use in `.*`; `<- copy$` makes it a matrix of its own. An
+axis taken by a number is dropped, so `slice 1 (..)` and `view 1 (..)` are a
+row, read as a vector. To write, `a[1, 1] = 50` sets an element, and
+`view_mut` is the view that writes through: `a <- view_mut 2 (..) <- fill 0`.
 
 An index takes its axes with a comma, `a[i, j]`; the parenthesised `a[(i, j)]`
-means the same and is what the comma stands for.
+means the same and is what the comma stands for. An index is one element: a
+part of a matrix is a `slice` or a `view`.
 
 ## 17.8 Broadcasting
 

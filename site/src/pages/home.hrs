@@ -23,8 +23,8 @@ const NO_BRACES: &str = r#"I would like to go
 /// typed, held, erased (`TYPING`). Each line is a title or an item.
 const BOXES: &[&[(&str, &str)]] = &[
     &[("title", "Rust without the braces")],
-    &[("title", "Functional Programming"), ("item", "Partial Function Application"), ("item", "Pipes")],
-    &[("title", "Linear Algebra"), ("item", "Matrices and Vectors"), ("item", "Matrix Arithmetic")],
+    &[("title", "Functional Programming"), ("item", "Comprehensions, Pipes,"), ("item", "and Partial Functions")],
+    &[("title", "Linear Algebra"), ("item", "Vectors, Matrices,"), ("item", "and Matrix Arithmetic")],
     &[("title", "Artificial Intelligence"), ("title", "& Data Science")],
 ]
 
@@ -36,8 +36,8 @@ pub fn Home$ -> Element:
         section { class: "jumbo",
             div { class: "jumbo-inner",
                 h1 { class: "sr-only",
-                    "Harsh: Rust without the braces. Functional programming: partial function "
-                    "application, pipes. Linear algebra: matrices and vectors, matrix arithmetic. "
+                    "Harsh: Rust without the braces. Functional programming: comprehensions, pipes "
+                    "and partial functions. Linear algebra: vectors, matrices and matrix arithmetic. "
                     "Artificial intelligence and data science."
                 }
                 div { class: "stage", aria_hidden: "true",

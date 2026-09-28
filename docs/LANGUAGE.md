@@ -191,9 +191,14 @@ hrs watch [subcommand]     rebuild on every save (default: check)
 hrs new   <name>           create a project laid out for Harsh
 hrs export [dir]           write the project as a plain Rust crate,
                            formatted with cargo fmt (default: target/export)
+hrs dist  <dir>            write Harsh's standard distribution (hrs_std and
+                           the macro crates) into <dir>, for building
+                           outside a Harsh project -- the Jupyter kernel's use
 hrs <input.hrs> [-o out.rs] [--map out.map.json]
                            transpile a single file
 ```
+
+`hrs export` is how Harsh code is shared with Rust users -- publish the exported crate to crates.io, and they get Rust. Harsh's `~` macros unfold before transpiling, so they are not in the export; to share a library with Harsh users, macros included, share its Harsh (a path dependency, for now; a Harsh registry is planned). The Book's chapter 17 has both.
 
 Anything after the subcommand goes to cargo unchanged: `hrs run --release`, `hrs test -- --nocapture`. Each command first reports what the transpile step did — `hrs: transpiled 1 of 3 file(s)` or `hrs: 3 file(s) up to date` — so a build that does nothing says so.
 
@@ -217,7 +222,7 @@ None of this is required. A `.hrs` file is plain text and `hrs` does not care wh
 
 ### What is not there yet
 
-The language server, `hrs-lsp`, does two things: on-type formatting, as described under Editors, and formatting on save — `hrs fmt` on the buffer. Types on hover, go-to-definition and inline errors are not available in `.hrs` files; errors appear when you run `hrs check` or `hrs watch`, mapped to the right line. `hrs fmt` applies the layout style this guide follows: `hrs fmt --check` lists the files that would change, `hrs fmt` rewrites them in place; it changes no token and never joins lines. Design in `docs/FMT.md`.
+The language server, `hrs-lsp`, does on-type formatting, as described under Editors, and formatting on save — `hrs fmt` on the buffer — and, since 0.1.38, **types on hover and go-to-definition**, asked of rust-analyzer about the Rust the file became and mapped back to your lines (install it with `rustup component add rust-analyzer`; the answers are in Rust's words). They follow your last save: a line you have changed since is answered after the next. Completion and inline errors are not there yet; errors appear when you run `hrs check` or `hrs watch`, mapped to the right line. `hrs fmt` applies the layout style this guide follows: `hrs fmt --check` lists the files that would change, `hrs fmt` rewrites them in place; it changes no token and never joins lines. Design in `docs/FMT.md`.
 
 # Part one — a tutorial
 
@@ -2115,14 +2120,16 @@ x <- norm$         x <- dot (&y)     x[0]                   a[0, 1]
 ```fragment
 a <- slice (0..2) (..)      a copy, as Julia's is: rows 0 and 1, every column
 a <- slice 1 (..)           an axis taken by a number is dropped: a row, as a vector
-&a[0..2, ..]                a view: borrowed, nothing copied, as &v[1..3] is
-a[1.., ..=1] <- copy$       the view made a matrix of its own
+a <- view (0..2) (..)       a view: borrowed, nothing copied -- Julia's view(a, 1:2, :)
+a <- view 1 (..)            a row, borrowed, read as a vector
+a <- view (1..) (..=1) <- copy$    the view made a matrix of its own
 a[1, 1]      a[1, 1] = 50   an element, read and written
-a[2, ..] <- fill 0          a row written through
+a <- view_mut 2 (..) <- fill 0     a row written through
 ```
 
 - **An index takes its axes with a comma**, `a[i, j]`, as Julia writes it. Rust's index takes one value, so the axes are a tuple and `a[(i, j)]` means the same: *a top-level comma in an index makes a tuple.* The rule is the language's, not the matrix's — any type indexed by a tuple may be written so.
-- **The method copies, the index borrows.** Rust's `Index` must hand back a reference, so `a[0..2, ..]` is a *view* and is used behind `&`, exactly as a slice of a `Vec` is; `<- copy$` is Julia's copy. A view prints, stretches and combines like the matrix it looks into.
+- **`slice` copies, `view` borrows.** A view is a value -- a window onto the matrix, guarded by the borrow checker like any borrow, so it cannot outlive the matrix or be held while the matrix is written. It prints, stretches and combines in `.*` like the matrix it looks into; `<- copy$` is Julia's copy. `view_mut` writes through: `<- fill x` for the whole window, `*(w <- at i j) = x` for one entry.
+- **An index is one element.** `a[i, j]` reads or writes a number; a part of a matrix is a `slice` or a `view`. (Until 0.1.37 a view was written `&a[0..2, ..]`: Rust's `Index` must hand back a reference to something stored in the matrix, and a window is not, so `hrs_std` made one up, and Miri found that undefined behaviour. The index form may come back if a sound way is found.)
 - A range past the end stops the program with `BoundsError`, reported at the caller's line.
 
 **Broadcasting** — a dot before an operator applies it element by element, Julia's own spelling: `.*`, `.+`, `.-`, `./`.

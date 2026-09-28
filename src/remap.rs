@@ -113,6 +113,30 @@ impl SourceMap {
         Some((l, c))
     }
 
+    /// The other direction: a 1-based `line:column` in the Harsh source to the
+    /// 1-based `line:column` of the generated Rust it became -- for asking
+    /// rust-analyzer about a place in the `.hrs` (the language server's hover
+    /// and go-to-definition). The narrowest entry whose source range holds the
+    /// position gives the Rust range, and the offset inside the token is
+    /// carried over. None where the position produced no Rust (a comment, a
+    /// blank). Columns count characters.
+    pub fn find(&self, line: usize, col: usize) -> Option<(usize, usize)> {
+        let start = *self.line_starts.get(line.checked_sub(1)?)?;
+        let text = &self.src[start..];
+        let off = (start + text.char_indices().nth(col.saturating_sub(1)).map_or(text.len(), |(i, _)| i)) as u32;
+        let e = self
+            .entries
+            .iter()
+            .filter(|e| e.src_lo <= off && off < e.src_hi && e.ctx == 0)
+            .min_by_key(|e| e.src_hi - e.src_lo)?;
+        let gen_off = (e.gen_lo + (off - e.src_lo).min(e.gen_hi.saturating_sub(e.gen_lo + 1))) as usize;
+        let gen = std::fs::read_to_string(&self.generated_path).ok()?;
+        let gen_off = gen_off.min(gen.len());
+        let l = gen[..gen_off].matches('\n').count() + 1;
+        let line_start = gen[..gen_off].rfind('\n').map_or(0, |i| i + 1);
+        Some((l, gen[line_start..gen_off].chars().count() + 1))
+    }
+
     /// Narrowest entry containing `off`, else the next entry that starts after
     /// it. Inserted braces and separators have no entry of their own, so a
     /// diagnostic pointing at one lands on the following real token.

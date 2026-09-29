@@ -271,7 +271,7 @@ fn main$:
             0 => "none"
             1..=5 => "few"
             _ => "many"
-    let sign = match n\ 0 => 0, _ if n > 0 => 1, _ => -1
+    let zero = match n\ 0 => true, _ => false
 
     // `else` answers the `if` above it, and may sit under the `if`...
     let kind =
@@ -292,13 +292,13 @@ fn main$:
     while count < 3: count += 1
     for i in 0..2: println! "i = {i}"
 
-    println! "{parity} {size} {sign} {kind} {label} {count}"
+    println! "{parity} {size} {zero} {kind} {label} {count}"
 ```
 
 ```text
 i = 0
 i = 1
-odd many 1 small small 3
+odd many false small small 3
 ```
 
 > **Harsh —** Inline, the body follows the colon on the same line, and the arms of a `match` written on one line are separated by commas — the only place a comma separates arms, since on their own lines the line ending does that. An `else` answers the nearest `if` above it, and it may sit at the column of any line of that `if`: under the `if` itself, or under the `let` that holds it when the `if` opened on the `let`'s line. A `while` or `for` whose body is one statement takes the inline form as readily as an `if` does.

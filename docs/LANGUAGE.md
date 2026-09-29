@@ -49,7 +49,10 @@ Braces are where Harsh starts, not where it stops. It adds four things Rust has 
 
 ```rust harsh
 let double = 2.0 |> scale
-let doubled: Vec<f64> = readings <- iter$ <- map (|&x| double x) <- collect$
+let doubled: Vec<f64> =
+    readings <- iter$
+             <- map (|&x| double x)
+             <- collect$
 ```
 
 ```rust
@@ -234,7 +237,9 @@ Harsh has no braces. A colon at the end of a line opens a block, and the block i
 
 ```rust harsh
 fn tokenize text: &str -> Vec<String>:
-    text <- split_whitespace$ <- map (|w| w <- to_lowercase$) <- collect$
+    text <- split_whitespace$
+         <- map (|w| w <- to_lowercase$)
+         <- collect$
 ```
 
 Three things are visible already.
@@ -367,7 +372,10 @@ Struct fields go one per line with no commas, and the declaration's body follows
         match &self <- format\
             Format.Plain => format! "{word} {n}"
             Format.Ranked => format! "{}. {word} {n}" (idx + 1)
-            Format.Boxed\ width => format! "|{:<w$}|{n:>3}|" word (w = *width)
+            Format.Boxed\ width => format!
+                                       "|{:<w$}|{n:>3}|"
+                                       word
+                                       (w = *width)
 ```
 
 - `match` opens a block; each arm is one line, pattern `=>` body, and the commas Rust needs are inserted.
@@ -661,6 +669,88 @@ let listener =
 
 None of this is enforced by the transpiler; all of it is what the formatter will produce. Every form on this page, on both sides, is valid Harsh.
 
+
+#### Breaking long lines
+
+The rules the Harsh in this guide and the books is written by (2026-09-29).
+They are for people writing Harsh, and they ask for judgment: the
+transpiler accepts every form, and no tool enforces them.
+
+- **A chain of more than two steps** — three or more `<-` in one chain — is
+  broken: the value goes on the line after the `=`, and each step beneath the
+  first, its `<-` under the first `<-`.
+
+```rust harsh
+let args =
+    args <- into_iter$
+         <- map (|a| fold a)
+         <- collect$
+```
+
+- **A struct literal of more than two fields** takes one field per line,
+  beneath its `\`, with no commas — the newline separates them.
+
+```rust harsh
+let v =
+    Value\
+        value = None
+        getter = getter
+        status = |x: &i32| if *x > 1: Status.Stale else: Status.Fresh
+```
+
+- **More than two clauses of `if` and `else`** go on several lines, each
+  `else` under its `if`. As the value of a `let`, the chain is the last line of
+  a `do:` block.
+
+```rust harsh
+let x = do:
+    if n == 1: 10
+    else:
+        if n == 2: 20
+        else: 30
+```
+
+- **A `match` on a chain of more than two steps** matches a name: bind the
+  chain first. An inline `match` has at most two arms; more go beneath, one per
+  line.
+
+```rust harsh
+let count =
+    items <- iter$
+          <- filter (|x| **x > 1)
+          <- count$
+let n = match count\
+    0 => "none"
+    _ => "some"
+```
+
+- **Long function and macro calls caused by long arguments, not the number of
+  arguments,** go vertical: the name on its own line, each argument beneath
+  it, one per line. It is the length of the arguments that decides — a long list of short
+  arguments stays on its line (`v~ 2 3 5 6 7 8 8 89 9 …`), and a short call
+  with one long argument breaks. Some calls sit on the fence; the writer
+  decides. Where an argument's position is awkward — deep inside another
+  call, after a `=>` — naming it first often reads better than breaking.
+
+```rust harsh
+fn describe (good: bool) (name: &str) -> String:
+    format!
+        "{} ({})"
+        name                                    // on the fence: short
+        (if good: "good dog" else: "dog")       // a long argument
+```
+
+- **A literal holding another literal** is broken, the outer one field per
+  line — an inner literal written inline ends with its line, so it cannot take
+  the outer one's fields.
+
+```rust harsh
+let d =
+    Dog\
+        inner = Animal\ name = String.from "Rex"
+        good = true
+```
+
 ### Blank lines and comments
 
 - Blank lines are insignificant. Up to two consecutive blank lines are preserved in the output.
@@ -779,11 +869,21 @@ if t: 1 else: 2              →  if t { 1 } else { 2 }
 for i in 0..3: f i           →  for i in 0..3 { f(i) }
 ```
 
-Each `else` binds to the nearest open `if`. Braces select the other reading:
+Each `else` binds to the nearest open `if`; written on several lines — the
+style this guide keeps for more than two clauses — the indentation shows
+which. Braces select the other reading:
 
 ```rust harsh
-if a: if b: 1 else: 2 else: 3        →  if a { if b { 1 } else { 2 } } else { 3 }
-if a: if b { 1 } else { 0 } else: 2  →  if a { if b { 1 } else { 0 } } else { 2 }
+if a:                                if a { if b { 1 } else { 2 } } else { 3 }
+    if b: 1
+    else: 2
+else: 3
+```
+
+```rust harsh
+if a:                                if a { if b { 1 } else { 0 } } else { 2 }
+    if b { 1 } else { 0 }
+else: 2
 ```
 
 The inline and indented forms of the same program emit identical Rust; this is enforced by a test.
@@ -795,7 +895,7 @@ The inline and indented forms of the same program emit identical Rust; this is e
 ```rust harsh
 if t: 1 else: 2
 if let Some n = v: n else: -1
-match n\ 0 => "zero", 1 | 2 => "small", _ => "big"
+match n\ 0 => "zero", _ => "some"
 for i in 0..3: s += i
 while let Some top = st <- pop$: popped += top
 { let a = 1; a * 2 }
@@ -806,7 +906,10 @@ struct P\ x: i32, y: i32
 - An inline block ends at the end of its logical line. Writing `else: if …` on one line and `else:` on the next therefore orphans the second `else`, and it is rejected; both the fully inline and the fully indented chain work.
 
 ```rust fragment
-if n == 1: 10 else: if n == 2: 20 else: 30      ✓ one line
+if n == 1: 10                                    ✓ several lines
+else:
+    if n == 2: 20
+    else: 30
 
 if n == 1:                                       ✓ indented
     10
@@ -838,7 +941,10 @@ let a = T.new "s" <- run (&mut p)       let a = T::new("s").run(&mut p);
 let a = x <- f a <- g b                 let a = x.f(a).g(b);
 let a = f a b <- m$                     let a = f(a, b).m();
 let a = x <- field                      let a = x.field;
-let a = x <- f$ <- g <- h$              let a = x.f().g.h();
+let a =                                 let a = x.f().g.h();
+    x <- f$
+      <- g
+      <- h$
 let a = x <- get i?                     let a = x.get(i)?;
 let a = !x <- is_empty$                 let a = !x.is_empty();
 let a = x <- ptr$ as usize + 1          let a = x.ptr() as usize + 1;
@@ -976,8 +1082,12 @@ let d: Vec<i32> =
 - The same holds on one line. A closure's prototype `|p|` followed by `:` opens an inline block, and the block ends at the `)` of its group; whatever follows the `)` carries on the statement, and may open another such block:
 
 ```rust harsh
-xs <- iter$ <- map (|p|: if *p > 1: *p else: 0) <- collect$      xs.iter().map(|p| { if *p > 1 { *p } else { 0 } }).collect()
-xs <- iter$ <- map (|p: &i32|: *p + 1) <- sum$                     xs.iter().map(|p: &i32| { *p + 1 }).sum()
+xs <- iter$                                                       xs.iter().map(|p| { if *p > 1 { *p } else { 0 } }).collect()
+   <- map (|p|: if *p > 1: *p else: 0)
+   <- collect$
+xs <- iter$                                                       xs.iter().map(|p: &i32| { *p + 1 }).sum()
+   <- map (|p: &i32|: *p + 1)
+   <- sum$
 xs <- iter$ <- fold 0 (|acc, x|: acc + x)                          xs.iter().fold(0, |acc, x| { acc + x })
 let f = |x|: x + 1                                                let f = |x| { x + 1 };
 ```
@@ -1097,7 +1207,10 @@ A left arrow is field access and method call, replacing Rust's dot.
 
 ```rust harsh
 self <- x * self <- x + self <- y * self <- y
-let name = params <- name <- as_deref$ <- unwrap_or "World"
+let name =
+    params <- name
+           <- as_deref$
+           <- unwrap_or "World"
 ```
 
 - The arrow binds tightly, so whitespace around it is dropped in the output while line breaks are kept. This is what allows the vertical chain style.
@@ -1131,7 +1244,11 @@ let c = v <- len$<-to_string$
 - A horizontal chain and a vertical one are the same expression; the vertical form is the continuation rule with `<-` leading each line.
 
 ```rust harsh
-let e = v <- iter$ <- max$ <- copied$ <- unwrap_or 0
+let e =
+    v <- iter$
+      <- max$
+      <- copied$
+      <- unwrap_or 0
 
 let d =
     v <- iter$
@@ -1163,7 +1280,9 @@ Generic argument lists pass through unchanged in type position and are automatic
 ```rust harsh
 let v = Vec<i32>.new$
 let m = HashMap<String, usize>.new$
-let counts: Vec<(String, usize)> = tally (&words) <- into_iter$ <- collect$
+let counts: Vec<(String, usize)> =
+    tally (&words) <- into_iter$
+                   <- collect$
 ```
 
 ```rust
@@ -1259,7 +1378,7 @@ There are three forms of struct — **record** (named fields; Rust's docs call t
 
 ```rust harsh
 struct Point\ x: f64, y: f64
-enum Shape\ Empty, Circle f64, Rect Point Point, (Named\ name: String, sides: u8)
+enum Shape\ Circle f64, (Named\ name: String, sides: u8)
 struct Wrapper<T> [where T: Display]\ field: T, other: u32
 ```
 
@@ -1657,7 +1776,7 @@ match s\    // indented arms
         format! "rect {area}"
     Shape.Named { name, sides } => format! "{name}/{sides}"
 
-match n\ 0 => "zero", 1 | 2 => "small", _ => "big"    // inline arms
+match n\ 0 => "zero", _ => "other"    // inline arms
 
 match n { 0 => "zero", _ => "other" }    // braced
 ```
@@ -1688,7 +1807,7 @@ match n\    // bindings
     v @ 1..=5 => format! "low {v}"
     v => format! "hi {v}"
 
-match n\ 0 => "zero", 1 | 2 => "small", _ => "big"    // or-patterns
+match n\ 1 | 2 => "small", _ => "other"    // or-patterns
 ```
 
 ### Match as a value and nested matches
@@ -1721,11 +1840,17 @@ else if n == 0:
 else:
     "pos"
 
-if n < 0: "neg" else: if n == 0: "zero" else: "pos"      inline
+if n < 0: "neg"                                          inline arms, several lines
+else:
+    if n == 0: "zero"
+    else: "pos"
 
 if n < 0 { "neg" } else if n == 0 { "zero" } else { "pos" }   braced
 
-if a: if b: 1 else: 2 else: 3                   else binds to the nearest if   → 2 when a && !b
+if a:                                            else binds to the nearest if   → 2 when a && !b
+    if b: 1
+    else: 2
+else: 3
 if a: if b { 1 } else { 0 } else: 2             braces select the outer binding → 0 when a && !b
 ```
 
@@ -1952,7 +2077,10 @@ pub fn route (attr: TokenStream) (item: TokenStream) -> TokenStream:
     let body = &f <- block
     quote~ do:
         #vis #sig:
-            println! "[ROUTE LOG] Dispatched handler '{}' for {}" #name #route
+            println!
+                "[ROUTE LOG] Dispatched handler '{}' for {}"
+                #name
+                #route
             #body
 ```
 
@@ -2121,7 +2249,9 @@ g~ x * 10 + y
 fn main$:
     let evens = list~ x for x in 0..10 if x % 2 == 0
     let pairs = list~ (x, y) for x in 1..4 for y in 1..4 if y > x
-    let squares: Vec<u64> = (g~ n * n for n in 1..) <- take 5 <- collect$
+    let squares: Vec<u64> =
+        (g~ n * n for n in 1..) <- take 5
+                                <- collect$
     println! "{evens:?} {pairs:?} {squares:?}"
 ```
 

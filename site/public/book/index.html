@@ -440,7 +440,10 @@ pre.code:hover .copy,.copy:focus-visible{opacity:1}
 <p>Braces are where Harsh starts, not where it stops. It adds four things Rust has no syntax for — and they are the reason to use it. Each below is Harsh, then the Rust it replaces.</p>
 <p><strong>Pipes and partial application.</strong> Give a function fewer arguments than it takes, and you get a function waiting for the rest:</p>
 <pre class="code harsh"><code><span class="k">let</span> double <span class="p">=</span> <span class="num">2.0</span> <span class="op">|&gt;</span> scale
-<span class="k">let</span> doubled<span class="p">:</span> <span class="t">Vec</span><span class="p">&lt;</span>f64<span class="p">&gt;</span> <span class="p">=</span> readings <span class="op">&lt;-</span> iter<span class="defer">$</span> <span class="op">&lt;-</span> map <span class="p">(</span><span class="p">|</span><span class="p">&amp;</span>x<span class="p">|</span> double x<span class="p">)</span> <span class="op">&lt;-</span> collect<span class="defer">$</span></code></pre>
+<span class="k">let</span> doubled<span class="p">:</span> <span class="t">Vec</span><span class="p">&lt;</span>f64<span class="p">&gt;</span> <span class="p">=</span>
+    readings <span class="op">&lt;-</span> iter<span class="defer">$</span>
+             <span class="op">&lt;-</span> map <span class="p">(</span><span class="p">|</span><span class="p">&amp;</span>x<span class="p">|</span> double x<span class="p">)</span>
+             <span class="op">&lt;-</span> collect<span class="defer">$</span></code></pre>
 <p><strong>Generator comprehensions.</strong> Say what a collection holds, not how to fill it:</p>
 <pre class="code harsh"><code><span class="k">let</span> triples <span class="p">=</span>
     list<span class="p">~</span> <span class="p">(</span>a<span class="p">,</span> b<span class="p">,</span> c<span class="p">)</span>
@@ -835,7 +838,7 @@ big
             <span class="num">0</span> <span class="op">=&gt;</span> <span class="str">"none"</span>
             <span class="num">1</span><span class="op">..=</span><span class="num">5</span> <span class="op">=&gt;</span> <span class="str">"few"</span>
             _ <span class="op">=&gt;</span> <span class="str">"many"</span>
-    <span class="k">let</span> sign <span class="p">=</span> <span class="k">match</span> n\ <span class="num">0</span> <span class="op">=&gt;</span> <span class="num">0</span><span class="p">,</span> _ <span class="k">if</span> n <span class="p">&gt;</span> <span class="num">0</span> <span class="op">=&gt;</span> <span class="num">1</span><span class="p">,</span> _ <span class="op">=&gt;</span> <span class="p">-</span><span class="num">1</span>
+    <span class="k">let</span> zero <span class="p">=</span> <span class="k">match</span> n\ <span class="num">0</span> <span class="op">=&gt;</span> <span class="k">true</span><span class="p">,</span> _ <span class="op">=&gt;</span> <span class="k">false</span>
 
     <span class="com">// `else` answers the `if` above it, and may sit under the `if`...</span>
     <span class="k">let</span> kind <span class="p">=</span>
@@ -856,10 +859,10 @@ big
     <span class="k">while</span> count <span class="p">&lt;</span> <span class="num">3</span><span class="p">:</span> count <span class="op">+=</span> <span class="num">1</span>
     <span class="k">for</span> i <span class="k">in</span> <span class="num">0..2</span><span class="p">:</span> <span class="mac">println!</span> <span class="str">"i = {i}"</span>
 
-    <span class="mac">println!</span> <span class="str">"{parity} {size} {sign} {kind} {label} {count}"</span></code></pre>
+    <span class="mac">println!</span> <span class="str">"{parity} {size} {zero} {kind} {label} {count}"</span></code></pre>
 <pre class="code"><code>i = 0
 i = 1
-odd many 1 small small 3</code></pre>
+odd many false small small 3</code></pre>
 <blockquote>
 <p><strong>Harsh —</strong> Inline, the body follows the colon on the same line, and the arms of a <code>match</code> written on one line are separated by commas — the only place a comma separates arms, since on their own lines the line ending does that. An <code>else</code> answers the nearest <code>if</code> above it, and it may sit at the column of any line of that <code>if</code>: under the <code>if</code> itself, or under the <code>let</code> that holds it when the <code>if</code> opened on the <code>let</code>'s line. A <code>while</code> or <code>for</code> whose body is one statement takes the inline form as readily as an <code>if</code> does.</p>
 </blockquote>
@@ -3374,7 +3377,12 @@ Problem parsing arguments: not enough arguments</code></pre>
         <span class="k">let</span> query <span class="p">=</span> args<span class="p">[</span><span class="num">1</span><span class="p">]</span> <span class="op">&lt;-</span> clone<span class="defer">$</span>
         <span class="k">let</span> file_path <span class="p">=</span> args<span class="p">[</span><span class="num">2</span><span class="p">]</span> <span class="op">&lt;-</span> clone<span class="defer">$</span>
         <span class="k">let</span> ignore_case <span class="p">=</span> env<span class="p">.</span>var <span class="str">"IGNORE_CASE"</span> <span class="op">&lt;-</span> is_ok<span class="defer">$</span>
-        <span class="t">Ok</span> <span class="p">(</span><span class="t">Config</span>\ query<span class="p">,</span> file_path<span class="p">,</span> ignore_case<span class="p">)</span>
+        <span class="k">let</span> config <span class="p">=</span>
+            <span class="t">Config</span>\
+                query
+                file_path
+                ignore_case
+        <span class="t">Ok</span> config
 
 <span class="k">pub</span> <span class="k">fn</span> run config<span class="p">:</span> <span class="t">Config</span> <span class="op">-&gt;</span> <span class="t">Result</span><span class="p">&lt;</span><span class="p">(</span><span class="p">)</span><span class="p">,</span> <span class="t">Box</span><span class="p">&lt;</span><span class="k">dyn</span> <span class="t">Error</span><span class="p">&gt;</span><span class="p">&gt;</span><span class="p">:</span>
     <span class="k">let</span> contents <span class="p">=</span> fs<span class="p">.</span>read_to_string <span class="p">(</span>config <span class="op">&lt;-</span> file_path<span class="p">)</span><span class="p">?</span>
@@ -3481,7 +3489,12 @@ test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out</code
         <span class="k">let</span> query <span class="p">=</span> args<span class="p">[</span><span class="num">1</span><span class="p">]</span> <span class="op">&lt;-</span> clone<span class="defer">$</span>
         <span class="k">let</span> file_path <span class="p">=</span> args<span class="p">[</span><span class="num">2</span><span class="p">]</span> <span class="op">&lt;-</span> clone<span class="defer">$</span>
         <span class="k">let</span> ignore_case <span class="p">=</span> env<span class="p">.</span>var <span class="str">"IGNORE_CASE"</span> <span class="op">&lt;-</span> is_ok<span class="defer">$</span>
-        <span class="t">Ok</span> <span class="p">(</span><span class="t">Config</span>\ query<span class="p">,</span> file_path<span class="p">,</span> ignore_case<span class="p">)</span>
+        <span class="k">let</span> config <span class="p">=</span>
+            <span class="t">Config</span>\
+                query
+                file_path
+                ignore_case
+        <span class="t">Ok</span> config
 
 <span class="k">pub</span> <span class="k">fn</span> run config<span class="p">:</span> <span class="t">Config</span> <span class="op">-&gt;</span> <span class="t">Result</span><span class="p">&lt;</span><span class="p">(</span><span class="p">)</span><span class="p">,</span> <span class="t">Box</span><span class="p">&lt;</span><span class="k">dyn</span> <span class="t">Error</span><span class="p">&gt;</span><span class="p">&gt;</span><span class="p">:</span>
     <span class="k">let</span> contents <span class="p">=</span> fs<span class="p">.</span>read_to_string <span class="p">(</span>config <span class="op">&lt;-</span> file_path<span class="p">)</span><span class="p">?</span>
@@ -3583,7 +3596,12 @@ How public, like a frog</code></pre>
         <span class="k">let</span> query <span class="p">=</span> args<span class="p">[</span><span class="num">1</span><span class="p">]</span> <span class="op">&lt;-</span> clone<span class="defer">$</span>
         <span class="k">let</span> file_path <span class="p">=</span> args<span class="p">[</span><span class="num">2</span><span class="p">]</span> <span class="op">&lt;-</span> clone<span class="defer">$</span>
         <span class="k">let</span> ignore_case <span class="p">=</span> env<span class="p">.</span>var <span class="str">"IGNORE_CASE"</span> <span class="op">&lt;-</span> is_ok<span class="defer">$</span>
-        <span class="t">Ok</span> <span class="p">(</span><span class="t">Config</span>\ query<span class="p">,</span> file_path<span class="p">,</span> ignore_case<span class="p">)</span>
+        <span class="k">let</span> config <span class="p">=</span>
+            <span class="t">Config</span>\
+                query
+                file_path
+                ignore_case
+        <span class="t">Ok</span> config
 
 <span class="k">pub</span> <span class="k">fn</span> run config<span class="p">:</span> <span class="t">Config</span> <span class="op">-&gt;</span> <span class="t">Result</span><span class="p">&lt;</span><span class="p">(</span><span class="p">)</span><span class="p">,</span> <span class="t">Box</span><span class="p">&lt;</span><span class="k">dyn</span> <span class="t">Error</span><span class="p">&gt;</span><span class="p">&gt;</span><span class="p">:</span>
     <span class="k">let</span> contents <span class="p">=</span> fs<span class="p">.</span>read_to_string <span class="p">(</span>config <span class="op">&lt;-</span> file_path<span class="p">)</span><span class="p">?</span>
@@ -3687,7 +3705,12 @@ How dreary to be somebody!</code></pre>
         <span class="k">let</span> query <span class="p">=</span> args<span class="p">[</span><span class="num">1</span><span class="p">]</span> <span class="op">&lt;-</span> clone<span class="defer">$</span>
         <span class="k">let</span> file_path <span class="p">=</span> args<span class="p">[</span><span class="num">2</span><span class="p">]</span> <span class="op">&lt;-</span> clone<span class="defer">$</span>
         <span class="k">let</span> ignore_case <span class="p">=</span> env<span class="p">.</span>var <span class="str">"IGNORE_CASE"</span> <span class="op">&lt;-</span> is_ok<span class="defer">$</span>
-        <span class="t">Ok</span> <span class="p">(</span><span class="t">Config</span>\ query<span class="p">,</span> file_path<span class="p">,</span> ignore_case<span class="p">)</span>
+        <span class="k">let</span> config <span class="p">=</span>
+            <span class="t">Config</span>\
+                query
+                file_path
+                ignore_case
+        <span class="t">Ok</span> config
 
 <span class="k">pub</span> <span class="k">fn</span> run config<span class="p">:</span> <span class="t">Config</span> <span class="op">-&gt;</span> <span class="t">Result</span><span class="p">&lt;</span><span class="p">(</span><span class="p">)</span><span class="p">,</span> <span class="t">Box</span><span class="p">&lt;</span><span class="k">dyn</span> <span class="t">Error</span><span class="p">&gt;</span><span class="p">&gt;</span><span class="p">:</span>
     <span class="k">let</span> contents <span class="p">=</span> fs<span class="p">.</span>read_to_string <span class="p">(</span>config <span class="op">&lt;-</span> file_path<span class="p">)</span><span class="p">?</span>
@@ -3793,7 +3816,12 @@ To an admiring bog!</code></pre>
         <span class="k">let</span> query <span class="p">=</span> args<span class="p">[</span><span class="num">1</span><span class="p">]</span> <span class="op">&lt;-</span> clone<span class="defer">$</span>
         <span class="k">let</span> file_path <span class="p">=</span> args<span class="p">[</span><span class="num">2</span><span class="p">]</span> <span class="op">&lt;-</span> clone<span class="defer">$</span>
         <span class="k">let</span> ignore_case <span class="p">=</span> env<span class="p">.</span>var <span class="str">"IGNORE_CASE"</span> <span class="op">&lt;-</span> is_ok<span class="defer">$</span>
-        <span class="t">Ok</span> <span class="p">(</span><span class="t">Config</span>\ query<span class="p">,</span> file_path<span class="p">,</span> ignore_case<span class="p">)</span>
+        <span class="k">let</span> config <span class="p">=</span>
+            <span class="t">Config</span>\
+                query
+                file_path
+                ignore_case
+        <span class="t">Ok</span> config
 
 <span class="k">pub</span> <span class="k">fn</span> run config<span class="p">:</span> <span class="t">Config</span> <span class="op">-&gt;</span> <span class="t">Result</span><span class="p">&lt;</span><span class="p">(</span><span class="p">)</span><span class="p">,</span> <span class="t">Box</span><span class="p">&lt;</span><span class="k">dyn</span> <span class="t">Error</span><span class="p">&gt;</span><span class="p">&gt;</span><span class="p">:</span>
     <span class="k">let</span> contents <span class="p">=</span> fs<span class="p">.</span>read_to_string <span class="p">(</span>config <span class="op">&lt;-</span> file_path<span class="p">)</span><span class="p">?</span>
@@ -4303,7 +4331,12 @@ true
             <span class="k">return</span> <span class="t">Err</span> <span class="str">"Didn't get a file path"</span>
 
         <span class="k">let</span> ignore_case <span class="p">=</span> env<span class="p">.</span>var <span class="str">"IGNORE_CASE"</span> <span class="op">&lt;-</span> is_ok<span class="defer">$</span>
-        <span class="t">Ok</span> <span class="p">(</span><span class="t">Config</span>\ query<span class="p">,</span> file_path<span class="p">,</span> ignore_case<span class="p">)</span>
+        <span class="k">let</span> config <span class="p">=</span>
+            <span class="t">Config</span>\
+                query
+                file_path
+                ignore_case
+        <span class="t">Ok</span> config
 
 <span class="k">pub</span> <span class="k">fn</span> run config<span class="p">:</span> <span class="t">Config</span> <span class="op">-&gt;</span> <span class="t">Result</span><span class="p">&lt;</span><span class="p">(</span><span class="p">)</span><span class="p">,</span> <span class="t">Box</span><span class="p">&lt;</span><span class="k">dyn</span> <span class="t">Error</span><span class="p">&gt;</span><span class="p">&gt;</span><span class="p">:</span>
     <span class="k">let</span> contents <span class="p">=</span> fs<span class="p">.</span>read_to_string <span class="p">(</span>config <span class="op">&lt;-</span> file_path<span class="p">)</span><span class="p">?</span>
@@ -5073,7 +5106,7 @@ opt-level = 3</code></pre>
 running 1 test
 test target/hrs/lib.rs - add_one (line 10) ... ok
 
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.17s</code></pre>
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.18s</code></pre>
 <p><code>cargo doc --open</code> renders every <code>///</code> and <code>//!</code> in the crate as HTML, with the Markdown inside them — headings, code blocks, links — laid out. The conventional sections are <code># Examples</code>, <code># Panics</code> (when the function can), <code># Errors</code> (what <code>Err</code>s it returns) and <code># Safety</code> (for <code>unsafe</code> functions). The example in the <code>///</code> is Harsh, like everything else in the file, and <code>cargo test</code> <em>runs it</em> — every code block in a doc comment is a test, so documentation cannot drift from the code without failing the build.</p>
 <blockquote>
 <p><strong>Harsh —</strong> A fenced block in a doc comment is the one kind of comment the transpiler reads. The documentation tool lifts such a block out, compiles it and runs it — it is code, not prose — so it is written in Harsh and the transpiler writes out the Rust that tool expects, the same translation it does everywhere else. A fence tagged with another language — <code>text</code>, <code>toml</code> — is prose and is left exactly as you wrote it. A line beginning <code>#</code> inside the fence is the documentation tool's own mark for <em>compile this but do not show it</em>, and it survives the translation.</p>
@@ -6229,7 +6262,11 @@ Change color to hue 0, saturation 160, value 255
         y<span class="p">:</span> i32
         z<span class="p">:</span> i32
 
-    <span class="k">let</span> origin <span class="p">=</span> <span class="t">Point</span>\ x <span class="p">=</span> <span class="num">0</span><span class="p">,</span> y <span class="p">=</span> <span class="num">0</span><span class="p">,</span> z <span class="p">=</span> <span class="num">0</span>
+    <span class="k">let</span> origin <span class="p">=</span>
+        <span class="t">Point</span>\
+            x <span class="p">=</span> <span class="num">0</span>
+            y <span class="p">=</span> <span class="num">0</span>
+            z <span class="p">=</span> <span class="num">0</span>
 
     <span class="k">match</span> origin\
         <span class="t">Point</span>\ x<span class="p">,</span> <span class="op">..</span> <span class="op">=&gt;</span> <span class="mac">println!</span> <span class="str">"x is {x}"</span>
@@ -6703,7 +6740,7 @@ proc-macro = true</code></pre>
 <p><code>describe/src/lib.hrs</code></p>
 <pre class="code harsh"><code><span class="k">use</span> hrs_proc_macro<span class="p">.</span><span class="t">TokenStream</span>
 <span class="k">use</span> hrs_quote<span class="p">.</span>quote
-<span class="k">use</span> hrs_syn<span class="p">.</span><span class="p">{</span>parse_macro_input<span class="p">,</span> <span class="t">Data</span><span class="p">,</span> <span class="t">DeriveInput</span><span class="p">,</span> <span class="t">Error</span><span class="p">}</span>
+<span class="k">use</span> hrs_syn<span class="p">.</span><span class="p">{</span>parse_macro_input<span class="p">,</span> <span class="t">Data</span><span class="p">,</span> <span class="t">DeriveInput</span><span class="p">,</span> <span class="t">Error</span><span class="p">,</span> <span class="t">Field</span><span class="p">}</span>
 
 <span class="com">/// `describe$`: the type's name and its fields -- all but those marked</span>
 <span class="com">/// `#[describe skip]`.</span>
@@ -6716,14 +6753,26 @@ proc-macro = true</code></pre>
         _ <span class="op">=&gt;</span> <span class="k">return</span> <span class="p">(</span><span class="t">Error</span><span class="p">.</span>new <span class="p">(</span>name <span class="op">&lt;-</span> span<span class="defer">$</span><span class="p">)</span> <span class="str">"`Describe` is for a struct"</span><span class="p">)</span> <span class="op">&lt;-</span> to_compile_error<span class="defer">$</span>
     <span class="k">let</span> shown<span class="p">:</span> <span class="t">Vec</span><span class="p">&lt;</span><span class="t">String</span><span class="p">&gt;</span> <span class="p">=</span>
         fields <span class="op">&lt;-</span> iter<span class="defer">$</span>
-            <span class="op">&lt;-</span> filter <span class="p">(</span><span class="p">|</span>f<span class="p">|</span> <span class="p">!</span><span class="p">(</span>f <span class="op">&lt;-</span> attrs <span class="op">&lt;-</span> iter<span class="defer">$</span> <span class="op">&lt;-</span> any <span class="p">(</span><span class="p">|</span>a<span class="p">|</span> a <span class="op">&lt;-</span> is <span class="str">"describe"</span><span class="p">)</span><span class="p">)</span><span class="p">)</span>
-            <span class="op">&lt;-</span> map <span class="p">(</span><span class="p">|</span>f<span class="p">|</span> f <span class="op">&lt;-</span> ident <span class="op">&lt;-</span> as_ref<span class="defer">$</span> <span class="op">&lt;-</span> unwrap<span class="defer">$</span> <span class="op">&lt;-</span> to_string<span class="defer">$</span><span class="p">)</span>
-            <span class="op">&lt;-</span> collect<span class="defer">$</span>
+               <span class="op">&lt;-</span> filter <span class="p">(</span><span class="p">|</span>f<span class="p">|</span> <span class="p">!</span>skipped f<span class="p">)</span>
+               <span class="op">&lt;-</span> map name_of
+               <span class="op">&lt;-</span> collect<span class="defer">$</span>
     quote<span class="p">~</span> <span class="k">do</span><span class="p">:</span>
         <span class="k">impl</span> <span class="p">#</span>name
             <span class="k">pub</span> <span class="k">fn</span> describe<span class="defer">$</span> <span class="op">-&gt;</span> <span class="t">String</span><span class="p">:</span>
                 <span class="k">let</span> fields<span class="p">:</span> <span class="t">Vec</span><span class="p">&lt;</span><span class="p">&amp;</span>str<span class="p">&gt;</span> <span class="p">=</span> <span class="mac">vec!</span> <span class="p">#</span><span class="p">(</span><span class="p">#</span>shown<span class="p">)</span><span class="p">*</span>
-                <span class="mac">format!</span> <span class="str">"{} {{ {} }}"</span> <span class="p">(</span><span class="mac">stringify!</span> <span class="p">#</span>name<span class="p">)</span> <span class="p">(</span>fields <span class="op">&lt;-</span> join <span class="str">", "</span><span class="p">)</span></code></pre>
+                <span class="mac">format!</span> <span class="str">"{} {{ {} }}"</span> <span class="p">(</span><span class="mac">stringify!</span> <span class="p">#</span>name<span class="p">)</span> <span class="p">(</span>fields <span class="op">&lt;-</span> join <span class="str">", "</span><span class="p">)</span>
+
+<span class="com">// A field marked `#[describe]` is left out.</span>
+<span class="k">fn</span> skipped <span class="p">(</span>f<span class="p">:</span> <span class="p">&amp;</span><span class="t">Field</span><span class="p">)</span> <span class="op">-&gt;</span> bool<span class="p">:</span>
+    f <span class="op">&lt;-</span> attrs
+      <span class="op">&lt;-</span> iter<span class="defer">$</span>
+      <span class="op">&lt;-</span> any <span class="p">(</span><span class="p">|</span>a<span class="p">|</span> a <span class="op">&lt;-</span> is <span class="str">"describe"</span><span class="p">)</span>
+
+<span class="k">fn</span> name_of <span class="p">(</span>f<span class="p">:</span> <span class="p">&amp;</span><span class="t">Field</span><span class="p">)</span> <span class="op">-&gt;</span> <span class="t">String</span><span class="p">:</span>
+    f <span class="op">&lt;-</span> ident
+      <span class="op">&lt;-</span> as_ref<span class="defer">$</span>
+      <span class="op">&lt;-</span> unwrap<span class="defer">$</span>
+      <span class="op">&lt;-</span> to_string<span class="defer">$</span></code></pre>
 <p><code>app/Cargo.toml</code></p>
 <pre class="code"><code>[package.metadata.harsh]
 proc-macros = ["../describe"]</code></pre>
@@ -6737,7 +6786,11 @@ proc-macros = ["../describe"]</code></pre>
     y<span class="p">:</span> i32
 
 <span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
-    <span class="k">let</span> p <span class="p">=</span> <span class="t">Point</span>\ x <span class="p">=</span> <span class="num">1</span><span class="p">,</span> secret <span class="p">=</span> <span class="num">7</span><span class="p">,</span> y <span class="p">=</span> <span class="num">2</span>
+    <span class="k">let</span> p <span class="p">=</span>
+        <span class="t">Point</span>\
+            x <span class="p">=</span> <span class="num">1</span>
+            secret <span class="p">=</span> <span class="num">7</span>
+            y <span class="p">=</span> <span class="num">2</span>
     <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span><span class="t">Point</span><span class="p">.</span>describe<span class="defer">$</span><span class="p">)</span>
     <span class="mac">println!</span> <span class="str">"{:?}"</span> p
     <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span>p <span class="op">&lt;-</span> x <span class="p">+</span> p <span class="op">&lt;-</span> secret <span class="p">+</span> p <span class="op">&lt;-</span> y<span class="p">)</span></code></pre>

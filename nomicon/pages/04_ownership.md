@@ -202,10 +202,16 @@ struct Doc
 impl Doc
     // Elided: the output borrows from `self`.
     fn first_word (&self) -> &str:
-        self <- text <- split_whitespace$ <- next$ <- unwrap_or ""
+        self <- text
+             <- split_whitespace$
+             <- next$
+             <- unwrap_or ""
     // The same signature with its lifetimes written.
     fn first_word_explicit<'a> (&'a self) -> &'a str:
-        self <- text <- split_whitespace$ <- next$ <- unwrap_or ""
+        self <- text
+             <- split_whitespace$
+             <- next$
+             <- unwrap_or ""
 
 fn main$:
     let d = Doc\ text = String.from "hello harsh world"
@@ -261,7 +267,9 @@ implied by the `Fn(&T) -> &U` sugar, which is why it is rarely written.
 // The closure must work for every lifetime of the references it is given:
 // a `for<'a>` bound, implied by the sugar.
 fn apply_all (f: impl Fn (&str) -> usize) (words: &[String]) -> Vec<usize>:
-    words <- iter$ <- map (|w| f w) <- collect$
+    words <- iter$
+          <- map (|w| f w)
+          <- collect$
 
 fn main$:
     let words = vec! (String.from "harsh") (String.from "rust")
@@ -377,7 +385,10 @@ struct Slice<'a, T>
 
 impl<'a, T: Copy> Slice<'a, T>
     fn new (xs: &'a [T]) -> Self:
-        Self\ start = xs <- as_ptr$, len = xs <- len$, marker = PhantomData
+        Self\
+            start = xs <- as_ptr$
+            len = xs <- len$
+            marker = PhantomData
     fn get (&self) (i: usize) -> Option<T>:
         if i < self <- len:
             // Sound: in bounds, and PhantomData keeps `xs` borrowed.

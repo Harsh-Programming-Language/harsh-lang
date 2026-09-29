@@ -104,26 +104,42 @@ unsafe impl<T: Sync> Sync for MyVec<T>
 
 impl<T> MyVec<T>
     pub fn new$ -> Self:
-        assert! (mem.size_of<T>$ != 0) "zero-sized types are not handled here"
-        Self\ ptr = NonNull.dangling$, cap = 0, len = 0
+        assert!
+            (mem.size_of<T>$ != 0)
+            "zero-sized types are not handled here"
+        Self\
+            ptr = NonNull.dangling$
+            cap = 0
+            len = 0
 
     fn layout (cap: usize) -> Layout:
-        Layout.from_size_align (cap * mem.size_of<T>$) (mem.align_of<T>$) <- unwrap$
+        let size = cap * mem.size_of<T>$
+        Layout.from_size_align size (mem.align_of<T>$) <- unwrap$
 
     fn grow (&mut self):
         let new_cap = if self <- cap == 0: 4 else: 2 * self <- cap
         let new_layout = Self.layout new_cap
-        let raw = if self <- cap == 0: unsafe: alloc.alloc new_layout else: unsafe: alloc.realloc (self <- ptr <- as_ptr$ as *mut u8) (Self.layout (self <- cap)) (new_layout <- size$)
-        self <- ptr = match NonNull.new (raw as *mut T)\
-            Some p => p
-            None => alloc.handle_alloc_error new_layout
+        let raw = do:
+            if self <- cap == 0: unsafe: alloc.alloc new_layout
+            else:
+                let old = self <- ptr <- as_ptr$ as *mut u8
+                unsafe: alloc.realloc old (Self.layout (self <- cap)) (new_layout <- size$)
+        self <- ptr =
+            match NonNull.new (raw as *mut T)\
+                Some p => p
+                None => alloc.handle_alloc_error new_layout
         self <- cap = new_cap
 
     pub fn push (&mut self) (elem: T):
         if self <- len == self <- cap:
             self <- grow$
         // Written, not assigned: the slot holds no value to drop.
-        unsafe: ptr.write (self <- ptr <- as_ptr$ <- add (self <- len)) elem
+        // `add` on a raw pointer is itself unsafe: the chain stays inside.
+        let slot = unsafe:
+            self <- ptr
+                 <- as_ptr$
+                 <- add (self <- len)
+        unsafe: ptr.write slot elem
         self <- len += 1
 
     pub fn pop (&mut self) -> Option<T>:
@@ -131,14 +147,22 @@ impl<T> MyVec<T>
             return None
         self <- len -= 1
         // Read out: the slot is now uninitialised, and past `len`.
-        Some (unsafe: ptr.read (self <- ptr <- as_ptr$ <- add (self <- len)))
+        // `add` on a raw pointer is itself unsafe: the chain stays inside.
+        let slot = unsafe:
+            self <- ptr
+                 <- as_ptr$
+                 <- add (self <- len)
+        Some (unsafe: ptr.read slot)
 
     pub fn insert (&mut self) (index: usize) (elem: T):
         assert! (index <= self <- len) "index out of bounds"
         if self <- len == self <- cap:
             self <- grow$
         unsafe:
-            let p = self <- ptr <- as_ptr$ <- add index
+            let p =
+                self <- ptr
+                     <- as_ptr$
+                     <- add index
             // Shift the tail right by one, then write into the gap.
             ptr.copy p (p <- add 1) (self <- len - index)
             ptr.write p elem
@@ -148,7 +172,10 @@ impl<T> MyVec<T>
         assert! (index < self <- len) "index out of bounds"
         self <- len -= 1
         unsafe:
-            let p = self <- ptr <- as_ptr$ <- add index
+            let p =
+                self <- ptr
+                     <- as_ptr$
+                     <- add index
             let out = ptr.read p
             ptr.copy (p <- add 1) p (self <- len - index)
             out
@@ -158,17 +185,22 @@ impl<T> Drop for MyVec<T>
         if self <- cap != 0:
             unsafe:
                 // Drop the elements, then free the memory.
-                ptr.drop_in_place (ptr.slice_from_raw_parts_mut (self <- ptr <- as_ptr$) (self <- len))
-                alloc.dealloc (self <- ptr <- as_ptr$ as *mut u8) (Self.layout (self <- cap))
+                let elems = ptr.slice_from_raw_parts_mut (self <- ptr <- as_ptr$) (self <- len)
+                ptr.drop_in_place elems
+                alloc.dealloc
+                    (self <- ptr <- as_ptr$ as *mut u8)
+                    (Self.layout (self <- cap))
 
 impl<T> Deref for MyVec<T>
     type Target = [T]
     fn deref (&self) -> &[T]:
-        unsafe: std.slice.from_raw_parts (self <- ptr <- as_ptr$) (self <- len)
+        unsafe:
+            std.slice.from_raw_parts (self <- ptr <- as_ptr$) (self <- len)
 
 impl<T> DerefMut for MyVec<T>
     fn deref_mut (&mut self) -> &mut [T]:
-        unsafe: std.slice.from_raw_parts_mut (self <- ptr <- as_ptr$) (self <- len)
+        unsafe:
+            std.slice.from_raw_parts_mut (self <- ptr <- as_ptr$) (self <- len)
 
 fn main$:
     let mut v = MyVec.new$

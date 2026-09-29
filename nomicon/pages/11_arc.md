@@ -111,7 +111,8 @@ fn main$:
     let mut handles = Vec.new$
     for i in 0..3:
         let mine = shared <- clone$
-        handles <- push (thread.spawn (move || format! "thread {i} read {:?}" (mine <- text)))
+        let read = move || format! "thread {i} read {:?}" (mine <- text)
+        handles <- push (thread.spawn read)
     for h in handles:
         println! "{}" (h <- join$ <- unwrap$)
     println! "owners left: {}" (MyArc.count (&shared))

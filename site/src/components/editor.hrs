@@ -240,7 +240,10 @@ async fn keys id: &'static str:
         match eval <- recv<(String, usize)>$ <- await\
             Ok (text, line) =>
                 let c = columns (&text) line
-                let closer = c <- closer <- map (|n| n as i64) <- unwrap_or (-1)
+                let closer =
+                    c <- closer
+                      <- map (|n| n as i64)
+                      <- unwrap_or (-1)
                 if eval <- send (c <- default, c <- legal, c <- unit, closer) <- is_err$:
                     break
             Err _ => break

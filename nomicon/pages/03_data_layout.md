@@ -30,8 +30,14 @@ struct InOrder
 
 fn main$:
     // Rust may reorder the fields to pack them; C's order pads.
-    println! "Loose:   size {} align {}" (mem.size_of<Loose>$) (mem.align_of<Loose>$)
-    println! "InOrder: size {} align {}" (mem.size_of<InOrder>$) (mem.align_of<InOrder>$)
+    println!
+        "Loose:   size {} align {}"
+        (mem.size_of<Loose>$)
+        (mem.align_of<Loose>$)
+    println!
+        "InOrder: size {} align {}"
+        (mem.size_of<InOrder>$)
+        (mem.align_of<InOrder>$)
 ```
 
 ```text

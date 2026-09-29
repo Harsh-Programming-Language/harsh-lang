@@ -143,7 +143,9 @@ impl<G: Getter, S: Fn (&G.Output) -> Status> Value<G, S>
         Ok ()
 
     pub fn status (&self) -> Option<Status>:
-        self <- value <- as_ref$ <- map (&self <- status)
+        self <- value
+             <- as_ref$
+             <- map (&self <- status)
 
 fn main$:
     let mut n = 0
@@ -151,7 +153,11 @@ fn main$:
         n += 1
         let r: Result<i32, Error> = Ok n
         r
-    let mut v = Value\ value = None, getter = getter, status = |x: &i32| if *x > 1: Status.Stale else: Status.Fresh
+    let mut v =
+        Value\
+            value = None
+            getter = getter
+            status = |x: &i32| if *x > 1: Status.Stale else: Status.Fresh
     for _ in 0..2:
         v <- update$ <- unwrap$
         println! "{:?} {:?}" (v <- value) (v <- status$)

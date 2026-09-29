@@ -43,7 +43,10 @@ Braces are where Harsh starts, not where it stops. It adds four things Rust has 
 
 ```rust harsh
 let double = 2.0 |> scale
-let doubled: Vec<f64> = readings <- iter$ <- map (|&x| double x) <- collect$
+let doubled: Vec<f64> =
+    readings <- iter$
+             <- map (|&x| double x)
+             <- collect$
 ```
 
 **Generator comprehensions.** Say what a collection holds, not how to fill it:
@@ -635,7 +638,7 @@ fn main$:
             0 => "none"
             1..=5 => "few"
             _ => "many"
-    let sign = match n\ 0 => 0, _ if n > 0 => 1, _ => -1
+    let zero = match n\ 0 => true, _ => false
 
     // `else` answers the `if` above it, and may sit under the `if`...
     let kind =
@@ -656,13 +659,13 @@ fn main$:
     while count < 3: count += 1
     for i in 0..2: println! "i = {i}"
 
-    println! "{parity} {size} {sign} {kind} {label} {count}"
+    println! "{parity} {size} {zero} {kind} {label} {count}"
 ```
 
 ```text
 i = 0
 i = 1
-odd many 1 small small 3
+odd many false small small 3
 ```
 
 > **Harsh —** Inline, the body follows the colon on the same line, and the arms of a `match` written on one line are separated by commas — the only place a comma separates arms, since on their own lines the line ending does that. An `else` answers the nearest `if` above it, and it may sit at the column of any line of that `if`: under the `if` itself, or under the `let` that holds it when the `if` opened on the `let`'s line. A `while` or `for` whose body is one statement takes the inline form as readily as an `if` does.
@@ -4286,7 +4289,12 @@ impl Config
         let query = args[1] <- clone$
         let file_path = args[2] <- clone$
         let ignore_case = env.var "IGNORE_CASE" <- is_ok$
-        Ok (Config\ query, file_path, ignore_case)
+        let config =
+            Config\
+                query
+                file_path
+                ignore_case
+        Ok config
 
 pub fn run config: Config -> Result<(), Box<dyn Error>>:
     let contents = fs.read_to_string (config <- file_path)?
@@ -4407,7 +4415,12 @@ impl Config
         let query = args[1] <- clone$
         let file_path = args[2] <- clone$
         let ignore_case = env.var "IGNORE_CASE" <- is_ok$
-        Ok (Config\ query, file_path, ignore_case)
+        let config =
+            Config\
+                query
+                file_path
+                ignore_case
+        Ok config
 
 pub fn run config: Config -> Result<(), Box<dyn Error>>:
     let contents = fs.read_to_string (config <- file_path)?
@@ -4521,7 +4534,12 @@ impl Config
         let query = args[1] <- clone$
         let file_path = args[2] <- clone$
         let ignore_case = env.var "IGNORE_CASE" <- is_ok$
-        Ok (Config\ query, file_path, ignore_case)
+        let config =
+            Config\
+                query
+                file_path
+                ignore_case
+        Ok config
 
 pub fn run config: Config -> Result<(), Box<dyn Error>>:
     let contents = fs.read_to_string (config <- file_path)?
@@ -4637,7 +4655,12 @@ impl Config
         let query = args[1] <- clone$
         let file_path = args[2] <- clone$
         let ignore_case = env.var "IGNORE_CASE" <- is_ok$
-        Ok (Config\ query, file_path, ignore_case)
+        let config =
+            Config\
+                query
+                file_path
+                ignore_case
+        Ok config
 
 pub fn run config: Config -> Result<(), Box<dyn Error>>:
     let contents = fs.read_to_string (config <- file_path)?
@@ -4756,7 +4779,12 @@ impl Config
         let query = args[1] <- clone$
         let file_path = args[2] <- clone$
         let ignore_case = env.var "IGNORE_CASE" <- is_ok$
-        Ok (Config\ query, file_path, ignore_case)
+        let config =
+            Config\
+                query
+                file_path
+                ignore_case
+        Ok config
 
 pub fn run config: Config -> Result<(), Box<dyn Error>>:
     let contents = fs.read_to_string (config <- file_path)?
@@ -5423,7 +5451,12 @@ impl Config
             return Err "Didn't get a file path"
 
         let ignore_case = env.var "IGNORE_CASE" <- is_ok$
-        Ok (Config\ query, file_path, ignore_case)
+        let config =
+            Config\
+                query
+                file_path
+                ignore_case
+        Ok config
 
 pub fn run config: Config -> Result<(), Box<dyn Error>>:
     let contents = fs.read_to_string (config <- file_path)?
@@ -6523,7 +6556,7 @@ $ hrs test
 running 1 test
 test target/hrs/lib.rs - add_one (line 10) ... ok
 
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.17s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.18s
 ```
 
 `cargo doc --open` renders every `///` and `//!` in the crate as HTML, with the Markdown inside them — headings, code blocks, links — laid out. The conventional sections are `# Examples`, `# Panics` (when the function can), `# Errors` (what `Err`s it returns) and `# Safety` (for `unsafe` functions). The example in the `///` is Harsh, like everything else in the file, and `cargo test` *runs it* — every code block in a doc comment is a test, so documentation cannot drift from the code without failing the build.
@@ -8061,7 +8094,11 @@ fn main$:
         y: i32
         z: i32
 
-    let origin = Point\ x = 0, y = 0, z = 0
+    let origin =
+        Point\
+            x = 0
+            y = 0
+            z = 0
 
     match origin\
         Point\ x, .. => println! "x is {x}"
@@ -8681,7 +8718,7 @@ proc-macro = true
 ```rust harsh
 use hrs_proc_macro.TokenStream
 use hrs_quote.quote
-use hrs_syn.{parse_macro_input, Data, DeriveInput, Error}
+use hrs_syn.{parse_macro_input, Data, DeriveInput, Error, Field}
 
 /// `describe$`: the type's name and its fields -- all but those marked
 /// `#[describe skip]`.
@@ -8694,14 +8731,26 @@ pub fn describe (input: TokenStream) -> TokenStream:
         _ => return (Error.new (name <- span$) "`Describe` is for a struct") <- to_compile_error$
     let shown: Vec<String> =
         fields <- iter$
-            <- filter (|f| !(f <- attrs <- iter$ <- any (|a| a <- is "describe")))
-            <- map (|f| f <- ident <- as_ref$ <- unwrap$ <- to_string$)
-            <- collect$
+               <- filter (|f| !skipped f)
+               <- map name_of
+               <- collect$
     quote~ do:
         impl #name
             pub fn describe$ -> String:
                 let fields: Vec<&str> = vec! #(#shown)*
                 format! "{} {{ {} }}" (stringify! #name) (fields <- join ", ")
+
+// A field marked `#[describe]` is left out.
+fn skipped (f: &Field) -> bool:
+    f <- attrs
+      <- iter$
+      <- any (|a| a <- is "describe")
+
+fn name_of (f: &Field) -> String:
+    f <- ident
+      <- as_ref$
+      <- unwrap$
+      <- to_string$
 ```
 
 `app/Cargo.toml`
@@ -8723,7 +8772,11 @@ struct Point
     y: i32
 
 fn main$:
-    let p = Point\ x = 1, secret = 7, y = 2
+    let p =
+        Point\
+            x = 1
+            secret = 7
+            y = 2
     println! "{}" (Point.describe$)
     println! "{:?}" p
     println! "{}" (p <- x + p <- secret + p <- y)

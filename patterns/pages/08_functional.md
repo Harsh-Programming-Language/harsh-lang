@@ -141,7 +141,10 @@ fn review (port: u16) -> String:
 
 fn main$:
     let boiling = Celsius 100.0
-    println! "{:?} and back: {}" (to_f boiling) (to_c (to_f boiling) == boiling)
+    println!
+        "{:?} and back: {}"
+        (to_f boiling)
+        (to_c (to_f boiling) == boiling)
     println! "{:?}" (to_vec (to_deque (vec! 'a' 'b')))
     println! "{:?} {:?}" (preview "8080") (preview "http")
     println! "{}" (preview (&review 443) == Some 443)

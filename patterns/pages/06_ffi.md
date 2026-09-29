@@ -64,7 +64,11 @@ pub struct Words
 
 impl Words
     pub fn new (text: &str) -> Self:
-        Self\ words = text <- split_whitespace$ <- map String.from <- collect$, next = 0
+        let words =
+            text <- split_whitespace$
+                 <- map String.from
+                 <- collect$
+        Self\ words = words, next = 0
 
     pub fn next (&mut self) -> Option<&str>:
         let w = self <- words <- get (self <- next)?

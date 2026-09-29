@@ -372,8 +372,14 @@ order: two structs with the same fields may be laid out differently.</p>
 
 <span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
     <span class="com">// Rust may reorder the fields to pack them; C's order pads.</span>
-    <span class="mac">println!</span> <span class="str">"Loose:   size {} align {}"</span> <span class="p">(</span>mem<span class="p">.</span>size_of<span class="p">&lt;</span><span class="t">Loose</span><span class="p">&gt;</span><span class="defer">$</span><span class="p">)</span> <span class="p">(</span>mem<span class="p">.</span>align_of<span class="p">&lt;</span><span class="t">Loose</span><span class="p">&gt;</span><span class="defer">$</span><span class="p">)</span>
-    <span class="mac">println!</span> <span class="str">"InOrder: size {} align {}"</span> <span class="p">(</span>mem<span class="p">.</span>size_of<span class="p">&lt;</span><span class="t">InOrder</span><span class="p">&gt;</span><span class="defer">$</span><span class="p">)</span> <span class="p">(</span>mem<span class="p">.</span>align_of<span class="p">&lt;</span><span class="t">InOrder</span><span class="p">&gt;</span><span class="defer">$</span><span class="p">)</span></code></pre>
+    <span class="mac">println!</span>
+        <span class="str">"Loose:   size {} align {}"</span>
+        <span class="p">(</span>mem<span class="p">.</span>size_of<span class="p">&lt;</span><span class="t">Loose</span><span class="p">&gt;</span><span class="defer">$</span><span class="p">)</span>
+        <span class="p">(</span>mem<span class="p">.</span>align_of<span class="p">&lt;</span><span class="t">Loose</span><span class="p">&gt;</span><span class="defer">$</span><span class="p">)</span>
+    <span class="mac">println!</span>
+        <span class="str">"InOrder: size {} align {}"</span>
+        <span class="p">(</span>mem<span class="p">.</span>size_of<span class="p">&lt;</span><span class="t">InOrder</span><span class="p">&gt;</span><span class="defer">$</span><span class="p">)</span>
+        <span class="p">(</span>mem<span class="p">.</span>align_of<span class="p">&lt;</span><span class="t">InOrder</span><span class="p">&gt;</span><span class="defer">$</span><span class="p">)</span></code></pre>
 <pre class="code"><code>Loose:   size 8 align 4
 InOrder: size 12 align 4</code></pre>
 <p><strong>In Harsh:</strong> <code>mem.size_of&lt;Loose&gt;$</code> — the generic list follows the name, and
@@ -598,10 +604,16 @@ decide.</p>
 <span class="k">impl</span> <span class="t">Doc</span>
     <span class="com">// Elided: the output borrows from `self`.</span>
     <span class="k">fn</span> first_word <span class="p">(</span><span class="p">&amp;</span><span class="k">self</span><span class="p">)</span> <span class="op">-&gt;</span> <span class="p">&amp;</span>str<span class="p">:</span>
-        <span class="k">self</span> <span class="op">&lt;-</span> text <span class="op">&lt;-</span> split_whitespace<span class="defer">$</span> <span class="op">&lt;-</span> next<span class="defer">$</span> <span class="op">&lt;-</span> unwrap_or <span class="str">""</span>
+        <span class="k">self</span> <span class="op">&lt;-</span> text
+             <span class="op">&lt;-</span> split_whitespace<span class="defer">$</span>
+             <span class="op">&lt;-</span> next<span class="defer">$</span>
+             <span class="op">&lt;-</span> unwrap_or <span class="str">""</span>
     <span class="com">// The same signature with its lifetimes written.</span>
     <span class="k">fn</span> first_word_explicit<span class="p">&lt;</span>'a<span class="p">&gt;</span> <span class="p">(</span><span class="p">&amp;</span>'a <span class="k">self</span><span class="p">)</span> <span class="op">-&gt;</span> <span class="p">&amp;</span>'a str<span class="p">:</span>
-        <span class="k">self</span> <span class="op">&lt;-</span> text <span class="op">&lt;-</span> split_whitespace<span class="defer">$</span> <span class="op">&lt;-</span> next<span class="defer">$</span> <span class="op">&lt;-</span> unwrap_or <span class="str">""</span>
+        <span class="k">self</span> <span class="op">&lt;-</span> text
+             <span class="op">&lt;-</span> split_whitespace<span class="defer">$</span>
+             <span class="op">&lt;-</span> next<span class="defer">$</span>
+             <span class="op">&lt;-</span> unwrap_or <span class="str">""</span>
 
 <span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
     <span class="k">let</span> d <span class="p">=</span> <span class="t">Doc</span>\ text <span class="p">=</span> <span class="t">String</span><span class="p">.</span>from <span class="str">"hello harsh world"</span>
@@ -637,7 +649,9 @@ implied by the <code>Fn(&amp;T) -&gt; &amp;U</code> sugar, which is why it is ra
 <pre class="code harsh"><code><span class="com">// The closure must work for every lifetime of the references it is given:</span>
 <span class="com">// a `for&lt;'a&gt;` bound, implied by the sugar.</span>
 <span class="k">fn</span> apply_all <span class="p">(</span>f<span class="p">:</span> <span class="k">impl</span> <span class="t">Fn</span> <span class="p">(</span><span class="p">&amp;</span>str<span class="p">)</span> <span class="op">-&gt;</span> usize<span class="p">)</span> <span class="p">(</span>words<span class="p">:</span> <span class="p">&amp;</span><span class="p">[</span><span class="t">String</span><span class="p">]</span><span class="p">)</span> <span class="op">-&gt;</span> <span class="t">Vec</span><span class="p">&lt;</span>usize<span class="p">&gt;</span><span class="p">:</span>
-    words <span class="op">&lt;-</span> iter<span class="defer">$</span> <span class="op">&lt;-</span> map <span class="p">(</span><span class="p">|</span>w<span class="p">|</span> f w<span class="p">)</span> <span class="op">&lt;-</span> collect<span class="defer">$</span>
+    words <span class="op">&lt;-</span> iter<span class="defer">$</span>
+          <span class="op">&lt;-</span> map <span class="p">(</span><span class="p">|</span>w<span class="p">|</span> f w<span class="p">)</span>
+          <span class="op">&lt;-</span> collect<span class="defer">$</span>
 
 <span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
     <span class="k">let</span> words <span class="p">=</span> <span class="mac">vec!</span> <span class="p">(</span><span class="t">String</span><span class="p">.</span>from <span class="str">"harsh"</span><span class="p">)</span> <span class="p">(</span><span class="t">String</span><span class="p">.</span>from <span class="str">"rust"</span><span class="p">)</span>
@@ -723,7 +737,10 @@ traits.</p>
 
 <span class="k">impl</span><span class="p">&lt;</span>'a<span class="p">,</span> <span class="t">T</span><span class="p">:</span> <span class="t">Copy</span><span class="p">&gt;</span> <span class="t">Slice</span><span class="p">&lt;</span>'a<span class="p">,</span> <span class="t">T</span><span class="p">&gt;</span>
     <span class="k">fn</span> new <span class="p">(</span>xs<span class="p">:</span> <span class="p">&amp;</span>'a <span class="p">[</span><span class="t">T</span><span class="p">]</span><span class="p">)</span> <span class="op">-&gt;</span> <span class="k">Self</span><span class="p">:</span>
-        <span class="k">Self</span>\ start <span class="p">=</span> xs <span class="op">&lt;-</span> as_ptr<span class="defer">$</span><span class="p">,</span> len <span class="p">=</span> xs <span class="op">&lt;-</span> len<span class="defer">$</span><span class="p">,</span> marker <span class="p">=</span> <span class="t">PhantomData</span>
+        <span class="k">Self</span>\
+            start <span class="p">=</span> xs <span class="op">&lt;-</span> as_ptr<span class="defer">$</span>
+            len <span class="p">=</span> xs <span class="op">&lt;-</span> len<span class="defer">$</span>
+            marker <span class="p">=</span> <span class="t">PhantomData</span>
     <span class="k">fn</span> get <span class="p">(</span><span class="p">&amp;</span><span class="k">self</span><span class="p">)</span> <span class="p">(</span>i<span class="p">:</span> usize<span class="p">)</span> <span class="op">-&gt;</span> <span class="t">Option</span><span class="p">&lt;</span><span class="t">T</span><span class="p">&gt;</span><span class="p">:</span>
         <span class="k">if</span> i <span class="p">&lt;</span> <span class="k">self</span> <span class="op">&lt;-</span> len<span class="p">:</span>
             <span class="com">// Sound: in bounds, and PhantomData keeps `xs` borrowed.</span>
@@ -974,7 +991,10 @@ declaration. <code>mem::forget</code> and <code>ManuallyDrop</code> stop a destr
 <span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
     <span class="k">let</span> _a <span class="p">=</span> <span class="t">Loud</span>\ name <span class="p">=</span> <span class="str">"local a"</span>
     <span class="k">let</span> _b <span class="p">=</span> <span class="t">Loud</span>\ name <span class="p">=</span> <span class="str">"local b"</span>
-    <span class="k">let</span> _p <span class="p">=</span> <span class="t">Pair</span>\ first <span class="p">=</span> <span class="t">Loud</span>\ name <span class="p">=</span> <span class="str">"field first"</span><span class="p">,</span> second <span class="p">=</span> <span class="t">Loud</span>\ name <span class="p">=</span> <span class="str">"field second"</span>
+    <span class="k">let</span> _p <span class="p">=</span>
+        <span class="t">Pair</span>\
+            first <span class="p">=</span> <span class="t">Loud</span>\ name <span class="p">=</span> <span class="str">"field first"</span>
+            second <span class="p">=</span> <span class="t">Loud</span>\ name <span class="p">=</span> <span class="str">"field second"</span>
     <span class="com">// Never dropped: forgotten, and kept from dropping.</span>
     std<span class="p">.</span>mem<span class="p">.</span>forget <span class="p">(</span><span class="t">Loud</span>\ name <span class="p">=</span> <span class="str">"forgotten"</span><span class="p">)</span>
     <span class="k">let</span> _m <span class="p">=</span> <span class="t">ManuallyDrop</span><span class="p">.</span>new <span class="p">(</span><span class="t">Loud</span>\ name <span class="p">=</span> <span class="str">"manual"</span><span class="p">)</span>
@@ -1006,11 +1026,17 @@ outlive what it borrowed — which <code>thread::scope</code>, used in this book
     <span class="k">let</span> a <span class="p">=</span> <span class="t">Rc</span><span class="p">.</span>new <span class="p">(</span><span class="t">Node</span>\ next <span class="p">=</span> <span class="t">RefCell</span><span class="p">.</span>new <span class="t">None</span><span class="p">,</span> back <span class="p">=</span> <span class="t">RefCell</span><span class="p">.</span>new <span class="p">(</span><span class="t">Weak</span><span class="p">.</span>new<span class="defer">$</span><span class="p">)</span><span class="p">)</span>
     <span class="k">let</span> b <span class="p">=</span> <span class="t">Rc</span><span class="p">.</span>new <span class="p">(</span><span class="t">Node</span>\ next <span class="p">=</span> <span class="t">RefCell</span><span class="p">.</span>new <span class="p">(</span><span class="t">Some</span> <span class="p">(</span>a <span class="op">&lt;-</span> clone<span class="defer">$</span><span class="p">)</span><span class="p">)</span><span class="p">,</span> back <span class="p">=</span> <span class="t">RefCell</span><span class="p">.</span>new <span class="p">(</span><span class="t">Weak</span><span class="p">.</span>new<span class="defer">$</span><span class="p">)</span><span class="p">)</span>
     <span class="p">*</span>a <span class="op">&lt;-</span> next <span class="op">&lt;-</span> borrow_mut<span class="defer">$</span> <span class="p">=</span> <span class="t">Some</span> <span class="p">(</span>b <span class="op">&lt;-</span> clone<span class="defer">$</span><span class="p">)</span>
-    <span class="mac">println!</span> <span class="str">"strong: a {} b {} -- a leak when both go"</span> <span class="p">(</span><span class="t">Rc</span><span class="p">.</span>strong_count <span class="p">(</span><span class="p">&amp;</span>a<span class="p">)</span><span class="p">)</span> <span class="p">(</span><span class="t">Rc</span><span class="p">.</span>strong_count <span class="p">(</span><span class="p">&amp;</span>b<span class="p">)</span><span class="p">)</span>
+    <span class="mac">println!</span>
+        <span class="str">"strong: a {} b {} -- a leak when both go"</span>
+        <span class="p">(</span><span class="t">Rc</span><span class="p">.</span>strong_count <span class="p">(</span><span class="p">&amp;</span>a<span class="p">)</span><span class="p">)</span>
+        <span class="p">(</span><span class="t">Rc</span><span class="p">.</span>strong_count <span class="p">(</span><span class="p">&amp;</span>b<span class="p">)</span><span class="p">)</span>
     <span class="com">// Break it: a Weak pointer back does not keep its target alive.</span>
     <span class="p">*</span>a <span class="op">&lt;-</span> next <span class="op">&lt;-</span> borrow_mut<span class="defer">$</span> <span class="p">=</span> <span class="t">None</span>
     <span class="p">*</span>a <span class="op">&lt;-</span> back <span class="op">&lt;-</span> borrow_mut<span class="defer">$</span> <span class="p">=</span> <span class="t">Rc</span><span class="p">.</span>downgrade <span class="p">(</span><span class="p">&amp;</span>b<span class="p">)</span>
-    <span class="mac">println!</span> <span class="str">"strong: a {} b {}"</span> <span class="p">(</span><span class="t">Rc</span><span class="p">.</span>strong_count <span class="p">(</span><span class="p">&amp;</span>a<span class="p">)</span><span class="p">)</span> <span class="p">(</span><span class="t">Rc</span><span class="p">.</span>strong_count <span class="p">(</span><span class="p">&amp;</span>b<span class="p">)</span><span class="p">)</span></code></pre>
+    <span class="mac">println!</span>
+        <span class="str">"strong: a {} b {}"</span>
+        <span class="p">(</span><span class="t">Rc</span><span class="p">.</span>strong_count <span class="p">(</span><span class="p">&amp;</span>a<span class="p">)</span><span class="p">)</span>
+        <span class="p">(</span><span class="t">Rc</span><span class="p">.</span>strong_count <span class="p">(</span><span class="p">&amp;</span>b<span class="p">)</span><span class="p">)</span></code></pre>
 <pre class="code"><code>strong: a 2 b 2 -- a leak when both go
 strong: a 2 b 1</code></pre>
 <p><strong>In Harsh:</strong> <code>Weak</code> breaks the cycle; the counts show it.</p>
@@ -1046,7 +1072,10 @@ back in, even if a comparison panics.</p>
     panic<span class="p">.</span>set_hook <span class="p">(</span><span class="t">Box</span><span class="p">.</span>new <span class="p">(</span><span class="p">|</span>_<span class="p">|</span> <span class="p">(</span><span class="p">)</span><span class="p">)</span><span class="p">)</span>
     <span class="k">let</span> <span class="k">mut</span> consistent <span class="p">=</span> <span class="k">true</span>
     <span class="k">let</span> result <span class="p">=</span> panic<span class="p">.</span>catch_unwind <span class="p">(</span>panic<span class="p">.</span><span class="t">AssertUnwindSafe</span> <span class="p">(</span><span class="op">||</span> risky <span class="p">(</span><span class="p">&amp;</span><span class="k">mut</span> consistent<span class="p">)</span><span class="p">)</span><span class="p">)</span>
-    <span class="mac">println!</span> <span class="str">"panicked: {}, consistent: {}"</span> <span class="p">(</span>result <span class="op">&lt;-</span> is_err<span class="defer">$</span><span class="p">)</span> consistent</code></pre>
+    <span class="mac">println!</span>
+        <span class="str">"panicked: {}, consistent: {}"</span>
+        <span class="p">(</span>result <span class="op">&lt;-</span> is_err<span class="defer">$</span><span class="p">)</span>
+        consistent</code></pre>
 <pre class="code"><code>invariant restored
 panicked: true, consistent: true</code></pre>
 <p><strong>In Harsh:</strong> the guard is a struct with a <code>Drop</code>; the output shows it
@@ -1063,16 +1092,20 @@ that knows how to check it.</p>
     std<span class="p">.</span>panic<span class="p">.</span>set_hook <span class="p">(</span><span class="t">Box</span><span class="p">.</span>new <span class="p">(</span><span class="p">|</span>_<span class="p">|</span> <span class="p">(</span><span class="p">)</span><span class="p">)</span><span class="p">)</span>
     <span class="k">let</span> data <span class="p">=</span> <span class="t">Arc</span><span class="p">.</span>new <span class="p">(</span><span class="t">Mutex</span><span class="p">.</span>new <span class="p">(</span><span class="mac">vec!</span> <span class="num">1</span> <span class="num">2</span> <span class="num">3</span><span class="p">)</span><span class="p">)</span>
     <span class="k">let</span> d <span class="p">=</span> data <span class="op">&lt;-</span> clone<span class="defer">$</span>
-    <span class="k">let</span> _ <span class="p">=</span> thread<span class="p">.</span>spawn <span class="p">(</span><span class="k">move</span> <span class="op">||</span><span class="p">:</span>
-        <span class="k">let</span> <span class="k">mut</span> v <span class="p">=</span> d <span class="op">&lt;-</span> lock<span class="defer">$</span> <span class="op">&lt;-</span> unwrap<span class="defer">$</span>
-        v <span class="op">&lt;-</span> push <span class="num">4</span>
-        <span class="mac">panic!</span> <span class="str">"the holder panicked"</span>
-    <span class="p">)</span> <span class="op">&lt;-</span> join<span class="defer">$</span>
+    <span class="k">let</span> _ <span class="p">=</span>
+        thread<span class="p">.</span>spawn <span class="p">(</span>
+            <span class="k">move</span> <span class="op">||</span><span class="p">:</span>
+                <span class="k">let</span> <span class="k">mut</span> v <span class="p">=</span> d <span class="op">&lt;-</span> lock<span class="defer">$</span> <span class="op">&lt;-</span> unwrap<span class="defer">$</span>
+                v <span class="op">&lt;-</span> push <span class="num">4</span>
+                <span class="mac">panic!</span> <span class="str">"the holder panicked"</span>
+        <span class="p">)</span> <span class="op">&lt;-</span> join<span class="defer">$</span>
     <span class="mac">println!</span> <span class="str">"poisoned: {}"</span> <span class="p">(</span>data <span class="op">&lt;-</span> is_poisoned<span class="defer">$</span><span class="p">)</span>
     <span class="k">let</span> result <span class="p">=</span> data <span class="op">&lt;-</span> lock<span class="defer">$</span>
-    <span class="k">let</span> shown <span class="p">=</span> <span class="k">match</span> result\
-        <span class="t">Ok</span> v <span class="op">=&gt;</span> <span class="mac">format!</span> <span class="str">"ok {:?}"</span> <span class="p">(</span><span class="p">*</span>v<span class="p">)</span>
-        <span class="t">Err</span> poisoned <span class="op">=&gt;</span> <span class="mac">format!</span> <span class="str">"recovered {:?}"</span> <span class="p">(</span><span class="p">*</span>poisoned <span class="op">&lt;-</span> into_inner<span class="defer">$</span><span class="p">)</span>
+    <span class="k">let</span> shown <span class="p">=</span>
+        <span class="k">match</span> result\
+            <span class="t">Ok</span> v <span class="op">=&gt;</span> <span class="mac">format!</span> <span class="str">"ok {:?}"</span> <span class="p">(</span><span class="p">*</span>v<span class="p">)</span>
+            <span class="t">Err</span> poisoned <span class="op">=&gt;</span>
+                <span class="mac">format!</span> <span class="str">"recovered {:?}"</span> <span class="p">(</span><span class="p">*</span>poisoned <span class="op">&lt;-</span> into_inner<span class="defer">$</span><span class="p">)</span>
     <span class="mac">println!</span> <span class="str">"{shown}"</span></code></pre>
 <pre class="code"><code>poisoned: true
 recovered [1, 2, 3, 4]</code></pre>
@@ -1230,26 +1263,42 @@ the original handles it throughout. This program refuses it, with an
 
 <span class="k">impl</span><span class="p">&lt;</span><span class="t">T</span><span class="p">&gt;</span> <span class="t">MyVec</span><span class="p">&lt;</span><span class="t">T</span><span class="p">&gt;</span>
     <span class="k">pub</span> <span class="k">fn</span> new<span class="defer">$</span> <span class="op">-&gt;</span> <span class="k">Self</span><span class="p">:</span>
-        <span class="mac">assert!</span> <span class="p">(</span>mem<span class="p">.</span>size_of<span class="p">&lt;</span><span class="t">T</span><span class="p">&gt;</span><span class="defer">$</span> <span class="op">!=</span> <span class="num">0</span><span class="p">)</span> <span class="str">"zero-sized types are not handled here"</span>
-        <span class="k">Self</span>\ ptr <span class="p">=</span> <span class="t">NonNull</span><span class="p">.</span>dangling<span class="defer">$</span><span class="p">,</span> cap <span class="p">=</span> <span class="num">0</span><span class="p">,</span> len <span class="p">=</span> <span class="num">0</span>
+        <span class="mac">assert!</span>
+            <span class="p">(</span>mem<span class="p">.</span>size_of<span class="p">&lt;</span><span class="t">T</span><span class="p">&gt;</span><span class="defer">$</span> <span class="op">!=</span> <span class="num">0</span><span class="p">)</span>
+            <span class="str">"zero-sized types are not handled here"</span>
+        <span class="k">Self</span>\
+            ptr <span class="p">=</span> <span class="t">NonNull</span><span class="p">.</span>dangling<span class="defer">$</span>
+            cap <span class="p">=</span> <span class="num">0</span>
+            len <span class="p">=</span> <span class="num">0</span>
 
     <span class="k">fn</span> layout <span class="p">(</span>cap<span class="p">:</span> usize<span class="p">)</span> <span class="op">-&gt;</span> <span class="t">Layout</span><span class="p">:</span>
-        <span class="t">Layout</span><span class="p">.</span>from_size_align <span class="p">(</span>cap <span class="p">*</span> mem<span class="p">.</span>size_of<span class="p">&lt;</span><span class="t">T</span><span class="p">&gt;</span><span class="defer">$</span><span class="p">)</span> <span class="p">(</span>mem<span class="p">.</span>align_of<span class="p">&lt;</span><span class="t">T</span><span class="p">&gt;</span><span class="defer">$</span><span class="p">)</span> <span class="op">&lt;-</span> unwrap<span class="defer">$</span>
+        <span class="k">let</span> size <span class="p">=</span> cap <span class="p">*</span> mem<span class="p">.</span>size_of<span class="p">&lt;</span><span class="t">T</span><span class="p">&gt;</span><span class="defer">$</span>
+        <span class="t">Layout</span><span class="p">.</span>from_size_align size <span class="p">(</span>mem<span class="p">.</span>align_of<span class="p">&lt;</span><span class="t">T</span><span class="p">&gt;</span><span class="defer">$</span><span class="p">)</span> <span class="op">&lt;-</span> unwrap<span class="defer">$</span>
 
     <span class="k">fn</span> grow <span class="p">(</span><span class="p">&amp;</span><span class="k">mut</span> <span class="k">self</span><span class="p">)</span><span class="p">:</span>
         <span class="k">let</span> new_cap <span class="p">=</span> <span class="k">if</span> <span class="k">self</span> <span class="op">&lt;-</span> cap <span class="op">==</span> <span class="num">0</span><span class="p">:</span> <span class="num">4</span> <span class="k">else</span><span class="p">:</span> <span class="num">2</span> <span class="p">*</span> <span class="k">self</span> <span class="op">&lt;-</span> cap
         <span class="k">let</span> new_layout <span class="p">=</span> <span class="k">Self</span><span class="p">.</span>layout new_cap
-        <span class="k">let</span> raw <span class="p">=</span> <span class="k">if</span> <span class="k">self</span> <span class="op">&lt;-</span> cap <span class="op">==</span> <span class="num">0</span><span class="p">:</span> <span class="k">unsafe</span><span class="p">:</span> alloc<span class="p">.</span>alloc new_layout <span class="k">else</span><span class="p">:</span> <span class="k">unsafe</span><span class="p">:</span> alloc<span class="p">.</span>realloc <span class="p">(</span><span class="k">self</span> <span class="op">&lt;-</span> ptr <span class="op">&lt;-</span> as_ptr<span class="defer">$</span> <span class="k">as</span> <span class="p">*</span><span class="k">mut</span> u8<span class="p">)</span> <span class="p">(</span><span class="k">Self</span><span class="p">.</span>layout <span class="p">(</span><span class="k">self</span> <span class="op">&lt;-</span> cap<span class="p">)</span><span class="p">)</span> <span class="p">(</span>new_layout <span class="op">&lt;-</span> size<span class="defer">$</span><span class="p">)</span>
-        <span class="k">self</span> <span class="op">&lt;-</span> ptr <span class="p">=</span> <span class="k">match</span> <span class="t">NonNull</span><span class="p">.</span>new <span class="p">(</span>raw <span class="k">as</span> <span class="p">*</span><span class="k">mut</span> <span class="t">T</span><span class="p">)</span>\
-            <span class="t">Some</span> p <span class="op">=&gt;</span> p
-            <span class="t">None</span> <span class="op">=&gt;</span> alloc<span class="p">.</span>handle_alloc_error new_layout
+        <span class="k">let</span> raw <span class="p">=</span> <span class="k">do</span><span class="p">:</span>
+            <span class="k">if</span> <span class="k">self</span> <span class="op">&lt;-</span> cap <span class="op">==</span> <span class="num">0</span><span class="p">:</span> <span class="k">unsafe</span><span class="p">:</span> alloc<span class="p">.</span>alloc new_layout
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">let</span> old <span class="p">=</span> <span class="k">self</span> <span class="op">&lt;-</span> ptr <span class="op">&lt;-</span> as_ptr<span class="defer">$</span> <span class="k">as</span> <span class="p">*</span><span class="k">mut</span> u8
+                <span class="k">unsafe</span><span class="p">:</span> alloc<span class="p">.</span>realloc old <span class="p">(</span><span class="k">Self</span><span class="p">.</span>layout <span class="p">(</span><span class="k">self</span> <span class="op">&lt;-</span> cap<span class="p">)</span><span class="p">)</span> <span class="p">(</span>new_layout <span class="op">&lt;-</span> size<span class="defer">$</span><span class="p">)</span>
+        <span class="k">self</span> <span class="op">&lt;-</span> ptr <span class="p">=</span>
+            <span class="k">match</span> <span class="t">NonNull</span><span class="p">.</span>new <span class="p">(</span>raw <span class="k">as</span> <span class="p">*</span><span class="k">mut</span> <span class="t">T</span><span class="p">)</span>\
+                <span class="t">Some</span> p <span class="op">=&gt;</span> p
+                <span class="t">None</span> <span class="op">=&gt;</span> alloc<span class="p">.</span>handle_alloc_error new_layout
         <span class="k">self</span> <span class="op">&lt;-</span> cap <span class="p">=</span> new_cap
 
     <span class="k">pub</span> <span class="k">fn</span> push <span class="p">(</span><span class="p">&amp;</span><span class="k">mut</span> <span class="k">self</span><span class="p">)</span> <span class="p">(</span>elem<span class="p">:</span> <span class="t">T</span><span class="p">)</span><span class="p">:</span>
         <span class="k">if</span> <span class="k">self</span> <span class="op">&lt;-</span> len <span class="op">==</span> <span class="k">self</span> <span class="op">&lt;-</span> cap<span class="p">:</span>
             <span class="k">self</span> <span class="op">&lt;-</span> grow<span class="defer">$</span>
         <span class="com">// Written, not assigned: the slot holds no value to drop.</span>
-        <span class="k">unsafe</span><span class="p">:</span> ptr<span class="p">.</span>write <span class="p">(</span><span class="k">self</span> <span class="op">&lt;-</span> ptr <span class="op">&lt;-</span> as_ptr<span class="defer">$</span> <span class="op">&lt;-</span> add <span class="p">(</span><span class="k">self</span> <span class="op">&lt;-</span> len<span class="p">)</span><span class="p">)</span> elem
+        <span class="com">// `add` on a raw pointer is itself unsafe: the chain stays inside.</span>
+        <span class="k">let</span> slot <span class="p">=</span> <span class="k">unsafe</span><span class="p">:</span>
+            <span class="k">self</span> <span class="op">&lt;-</span> ptr
+                 <span class="op">&lt;-</span> as_ptr<span class="defer">$</span>
+                 <span class="op">&lt;-</span> add <span class="p">(</span><span class="k">self</span> <span class="op">&lt;-</span> len<span class="p">)</span>
+        <span class="k">unsafe</span><span class="p">:</span> ptr<span class="p">.</span>write slot elem
         <span class="k">self</span> <span class="op">&lt;-</span> len <span class="op">+=</span> <span class="num">1</span>
 
     <span class="k">pub</span> <span class="k">fn</span> pop <span class="p">(</span><span class="p">&amp;</span><span class="k">mut</span> <span class="k">self</span><span class="p">)</span> <span class="op">-&gt;</span> <span class="t">Option</span><span class="p">&lt;</span><span class="t">T</span><span class="p">&gt;</span><span class="p">:</span>
@@ -1257,14 +1306,22 @@ the original handles it throughout. This program refuses it, with an
             <span class="k">return</span> <span class="t">None</span>
         <span class="k">self</span> <span class="op">&lt;-</span> len <span class="op">-=</span> <span class="num">1</span>
         <span class="com">// Read out: the slot is now uninitialised, and past `len`.</span>
-        <span class="t">Some</span> <span class="p">(</span><span class="k">unsafe</span><span class="p">:</span> ptr<span class="p">.</span>read <span class="p">(</span><span class="k">self</span> <span class="op">&lt;-</span> ptr <span class="op">&lt;-</span> as_ptr<span class="defer">$</span> <span class="op">&lt;-</span> add <span class="p">(</span><span class="k">self</span> <span class="op">&lt;-</span> len<span class="p">)</span><span class="p">)</span><span class="p">)</span>
+        <span class="com">// `add` on a raw pointer is itself unsafe: the chain stays inside.</span>
+        <span class="k">let</span> slot <span class="p">=</span> <span class="k">unsafe</span><span class="p">:</span>
+            <span class="k">self</span> <span class="op">&lt;-</span> ptr
+                 <span class="op">&lt;-</span> as_ptr<span class="defer">$</span>
+                 <span class="op">&lt;-</span> add <span class="p">(</span><span class="k">self</span> <span class="op">&lt;-</span> len<span class="p">)</span>
+        <span class="t">Some</span> <span class="p">(</span><span class="k">unsafe</span><span class="p">:</span> ptr<span class="p">.</span>read slot<span class="p">)</span>
 
     <span class="k">pub</span> <span class="k">fn</span> insert <span class="p">(</span><span class="p">&amp;</span><span class="k">mut</span> <span class="k">self</span><span class="p">)</span> <span class="p">(</span>index<span class="p">:</span> usize<span class="p">)</span> <span class="p">(</span>elem<span class="p">:</span> <span class="t">T</span><span class="p">)</span><span class="p">:</span>
         <span class="mac">assert!</span> <span class="p">(</span>index <span class="op">&lt;=</span> <span class="k">self</span> <span class="op">&lt;-</span> len<span class="p">)</span> <span class="str">"index out of bounds"</span>
         <span class="k">if</span> <span class="k">self</span> <span class="op">&lt;-</span> len <span class="op">==</span> <span class="k">self</span> <span class="op">&lt;-</span> cap<span class="p">:</span>
             <span class="k">self</span> <span class="op">&lt;-</span> grow<span class="defer">$</span>
         <span class="k">unsafe</span><span class="p">:</span>
-            <span class="k">let</span> p <span class="p">=</span> <span class="k">self</span> <span class="op">&lt;-</span> ptr <span class="op">&lt;-</span> as_ptr<span class="defer">$</span> <span class="op">&lt;-</span> add index
+            <span class="k">let</span> p <span class="p">=</span>
+                <span class="k">self</span> <span class="op">&lt;-</span> ptr
+                     <span class="op">&lt;-</span> as_ptr<span class="defer">$</span>
+                     <span class="op">&lt;-</span> add index
             <span class="com">// Shift the tail right by one, then write into the gap.</span>
             ptr<span class="p">.</span>copy p <span class="p">(</span>p <span class="op">&lt;-</span> add <span class="num">1</span><span class="p">)</span> <span class="p">(</span><span class="k">self</span> <span class="op">&lt;-</span> len <span class="p">-</span> index<span class="p">)</span>
             ptr<span class="p">.</span>write p elem
@@ -1274,7 +1331,10 @@ the original handles it throughout. This program refuses it, with an
         <span class="mac">assert!</span> <span class="p">(</span>index <span class="p">&lt;</span> <span class="k">self</span> <span class="op">&lt;-</span> len<span class="p">)</span> <span class="str">"index out of bounds"</span>
         <span class="k">self</span> <span class="op">&lt;-</span> len <span class="op">-=</span> <span class="num">1</span>
         <span class="k">unsafe</span><span class="p">:</span>
-            <span class="k">let</span> p <span class="p">=</span> <span class="k">self</span> <span class="op">&lt;-</span> ptr <span class="op">&lt;-</span> as_ptr<span class="defer">$</span> <span class="op">&lt;-</span> add index
+            <span class="k">let</span> p <span class="p">=</span>
+                <span class="k">self</span> <span class="op">&lt;-</span> ptr
+                     <span class="op">&lt;-</span> as_ptr<span class="defer">$</span>
+                     <span class="op">&lt;-</span> add index
             <span class="k">let</span> out <span class="p">=</span> ptr<span class="p">.</span>read p
             ptr<span class="p">.</span>copy <span class="p">(</span>p <span class="op">&lt;-</span> add <span class="num">1</span><span class="p">)</span> p <span class="p">(</span><span class="k">self</span> <span class="op">&lt;-</span> len <span class="p">-</span> index<span class="p">)</span>
             out
@@ -1284,17 +1344,22 @@ the original handles it throughout. This program refuses it, with an
         <span class="k">if</span> <span class="k">self</span> <span class="op">&lt;-</span> cap <span class="op">!=</span> <span class="num">0</span><span class="p">:</span>
             <span class="k">unsafe</span><span class="p">:</span>
                 <span class="com">// Drop the elements, then free the memory.</span>
-                ptr<span class="p">.</span>drop_in_place <span class="p">(</span>ptr<span class="p">.</span>slice_from_raw_parts_mut <span class="p">(</span><span class="k">self</span> <span class="op">&lt;-</span> ptr <span class="op">&lt;-</span> as_ptr<span class="defer">$</span><span class="p">)</span> <span class="p">(</span><span class="k">self</span> <span class="op">&lt;-</span> len<span class="p">)</span><span class="p">)</span>
-                alloc<span class="p">.</span>dealloc <span class="p">(</span><span class="k">self</span> <span class="op">&lt;-</span> ptr <span class="op">&lt;-</span> as_ptr<span class="defer">$</span> <span class="k">as</span> <span class="p">*</span><span class="k">mut</span> u8<span class="p">)</span> <span class="p">(</span><span class="k">Self</span><span class="p">.</span>layout <span class="p">(</span><span class="k">self</span> <span class="op">&lt;-</span> cap<span class="p">)</span><span class="p">)</span>
+                <span class="k">let</span> elems <span class="p">=</span> ptr<span class="p">.</span>slice_from_raw_parts_mut <span class="p">(</span><span class="k">self</span> <span class="op">&lt;-</span> ptr <span class="op">&lt;-</span> as_ptr<span class="defer">$</span><span class="p">)</span> <span class="p">(</span><span class="k">self</span> <span class="op">&lt;-</span> len<span class="p">)</span>
+                ptr<span class="p">.</span>drop_in_place elems
+                alloc<span class="p">.</span>dealloc
+                    <span class="p">(</span><span class="k">self</span> <span class="op">&lt;-</span> ptr <span class="op">&lt;-</span> as_ptr<span class="defer">$</span> <span class="k">as</span> <span class="p">*</span><span class="k">mut</span> u8<span class="p">)</span>
+                    <span class="p">(</span><span class="k">Self</span><span class="p">.</span>layout <span class="p">(</span><span class="k">self</span> <span class="op">&lt;-</span> cap<span class="p">)</span><span class="p">)</span>
 
 <span class="k">impl</span><span class="p">&lt;</span><span class="t">T</span><span class="p">&gt;</span> <span class="t">Deref</span> <span class="k">for</span> <span class="t">MyVec</span><span class="p">&lt;</span><span class="t">T</span><span class="p">&gt;</span>
     <span class="k">type</span> <span class="t">Target</span> <span class="p">=</span> <span class="p">[</span><span class="t">T</span><span class="p">]</span>
     <span class="k">fn</span> deref <span class="p">(</span><span class="p">&amp;</span><span class="k">self</span><span class="p">)</span> <span class="op">-&gt;</span> <span class="p">&amp;</span><span class="p">[</span><span class="t">T</span><span class="p">]</span><span class="p">:</span>
-        <span class="k">unsafe</span><span class="p">:</span> std<span class="p">.</span>slice<span class="p">.</span>from_raw_parts <span class="p">(</span><span class="k">self</span> <span class="op">&lt;-</span> ptr <span class="op">&lt;-</span> as_ptr<span class="defer">$</span><span class="p">)</span> <span class="p">(</span><span class="k">self</span> <span class="op">&lt;-</span> len<span class="p">)</span>
+        <span class="k">unsafe</span><span class="p">:</span>
+            std<span class="p">.</span>slice<span class="p">.</span>from_raw_parts <span class="p">(</span><span class="k">self</span> <span class="op">&lt;-</span> ptr <span class="op">&lt;-</span> as_ptr<span class="defer">$</span><span class="p">)</span> <span class="p">(</span><span class="k">self</span> <span class="op">&lt;-</span> len<span class="p">)</span>
 
 <span class="k">impl</span><span class="p">&lt;</span><span class="t">T</span><span class="p">&gt;</span> <span class="t">DerefMut</span> <span class="k">for</span> <span class="t">MyVec</span><span class="p">&lt;</span><span class="t">T</span><span class="p">&gt;</span>
     <span class="k">fn</span> deref_mut <span class="p">(</span><span class="p">&amp;</span><span class="k">mut</span> <span class="k">self</span><span class="p">)</span> <span class="op">-&gt;</span> <span class="p">&amp;</span><span class="k">mut</span> <span class="p">[</span><span class="t">T</span><span class="p">]</span><span class="p">:</span>
-        <span class="k">unsafe</span><span class="p">:</span> std<span class="p">.</span>slice<span class="p">.</span>from_raw_parts_mut <span class="p">(</span><span class="k">self</span> <span class="op">&lt;-</span> ptr <span class="op">&lt;-</span> as_ptr<span class="defer">$</span><span class="p">)</span> <span class="p">(</span><span class="k">self</span> <span class="op">&lt;-</span> len<span class="p">)</span>
+        <span class="k">unsafe</span><span class="p">:</span>
+            std<span class="p">.</span>slice<span class="p">.</span>from_raw_parts_mut <span class="p">(</span><span class="k">self</span> <span class="op">&lt;-</span> ptr <span class="op">&lt;-</span> as_ptr<span class="defer">$</span><span class="p">)</span> <span class="p">(</span><span class="k">self</span> <span class="op">&lt;-</span> len<span class="p">)</span>
 
 <span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
     <span class="k">let</span> <span class="k">mut</span> v <span class="p">=</span> <span class="t">MyVec</span><span class="p">.</span>new<span class="defer">$</span>
@@ -1407,7 +1472,8 @@ the allocation.</p>
     <span class="k">let</span> <span class="k">mut</span> handles <span class="p">=</span> <span class="t">Vec</span><span class="p">.</span>new<span class="defer">$</span>
     <span class="k">for</span> i <span class="k">in</span> <span class="num">0..3</span><span class="p">:</span>
         <span class="k">let</span> mine <span class="p">=</span> shared <span class="op">&lt;-</span> clone<span class="defer">$</span>
-        handles <span class="op">&lt;-</span> push <span class="p">(</span>thread<span class="p">.</span>spawn <span class="p">(</span><span class="k">move</span> <span class="op">||</span> <span class="mac">format!</span> <span class="str">"thread {i} read {:?}"</span> <span class="p">(</span>mine <span class="op">&lt;-</span> text<span class="p">)</span><span class="p">)</span><span class="p">)</span>
+        <span class="k">let</span> read <span class="p">=</span> <span class="k">move</span> <span class="op">||</span> <span class="mac">format!</span> <span class="str">"thread {i} read {:?}"</span> <span class="p">(</span>mine <span class="op">&lt;-</span> text<span class="p">)</span>
+        handles <span class="op">&lt;-</span> push <span class="p">(</span>thread<span class="p">.</span>spawn read<span class="p">)</span>
     <span class="k">for</span> h <span class="k">in</span> handles<span class="p">:</span>
         <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span>h <span class="op">&lt;-</span> join<span class="defer">$</span> <span class="op">&lt;-</span> unwrap<span class="defer">$</span><span class="p">)</span>
     <span class="mac">println!</span> <span class="str">"owners left: {}"</span> <span class="p">(</span><span class="t">MyArc</span><span class="p">.</span>count <span class="p">(</span><span class="p">&amp;</span>shared<span class="p">)</span><span class="p">)</span></code></pre>
@@ -1463,7 +1529,12 @@ terminated.</p>
 
 <span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
     <span class="k">let</span> <span class="k">mut</span> xs <span class="p">=</span> <span class="p">[</span><span class="num">5</span><span class="p">,</span> <span class="num">3</span><span class="p">,</span> <span class="num">9</span><span class="p">,</span> <span class="num">1</span><span class="p">,</span> <span class="num">7</span><span class="p">]</span>
-    <span class="k">unsafe</span><span class="p">:</span> qsort <span class="p">(</span>xs <span class="op">&lt;-</span> as_mut_ptr<span class="defer">$</span> <span class="k">as</span> <span class="p">*</span><span class="k">mut</span> c_void<span class="p">)</span> <span class="p">(</span>xs <span class="op">&lt;-</span> len<span class="defer">$</span><span class="p">)</span> <span class="p">(</span>std<span class="p">.</span>mem<span class="p">.</span>size_of<span class="p">&lt;</span>i32<span class="p">&gt;</span><span class="defer">$</span><span class="p">)</span> by_value
+    <span class="k">unsafe</span><span class="p">:</span>
+        qsort
+            <span class="p">(</span>xs <span class="op">&lt;-</span> as_mut_ptr<span class="defer">$</span> <span class="k">as</span> <span class="p">*</span><span class="k">mut</span> c_void<span class="p">)</span>
+            <span class="p">(</span>xs <span class="op">&lt;-</span> len<span class="defer">$</span><span class="p">)</span>
+            <span class="p">(</span>std<span class="p">.</span>mem<span class="p">.</span>size_of<span class="p">&lt;</span>i32<span class="p">&gt;</span><span class="defer">$</span><span class="p">)</span>
+            by_value
     <span class="mac">println!</span> <span class="str">"{:?}"</span> xs</code></pre>
 <pre class="code"><code>[1, 3, 5, 7, 9]</code></pre>
 <p><strong>In Harsh:</strong> the <code>extern "C"</code> block holds its declarations beneath its

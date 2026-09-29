@@ -39,10 +39,18 @@ fn create (table: &str) -> String:
     format! "create {table}"
 
 fn main$:
-    let steps: Vec<Box<dyn Migration>> = vec! (Box.new CreateTable) (Box.new AddField)
-    let done: Vec<String> = steps <- iter$ <- map (|m| m <- execute$) <- collect$
+    let steps: Vec<Box<dyn Migration>> =
+        vec! (Box.new CreateTable) (Box.new AddField)
+    let done: Vec<String> =
+        steps <- iter$
+              <- map (|m| m <- execute$)
+              <- collect$
     println! "{:?}" done
-    let undone: Vec<String> = steps <- iter$ <- rev$ <- map (|m| m <- rollback$) <- collect$
+    let undone: Vec<String> =
+        steps <- iter$
+              <- rev$
+              <- map (|m| m <- rollback$)
+              <- collect$
     println! "{:?}" undone
     // A command as a function given its arguments, waiting to run.
     let later = || create "users"
@@ -257,10 +265,12 @@ impl Visitor<String> for Show
     fn visit (&mut self) (e: &Expr) -> String:
         match e\
             Expr.Num n => n <- to_string$
-            Expr.Add a b => format! "({} + {})" (self <- visit a) (self <- visit b)
+            Expr.Add a b =>
+                format! "({} + {})" (self <- visit a) (self <- visit b)
 
 fn main$:
-    let e = Expr.Add (Box.new (Expr.Num 1)) (Box.new (Expr.Add (Box.new (Expr.Num 2)) (Box.new (Expr.Num 3))))
+    let inner = Expr.Add (Box.new (Expr.Num 2)) (Box.new (Expr.Num 3))
+    let e = Expr.Add (Box.new (Expr.Num 1)) (Box.new inner)
     println! "{} = {}" (Show <- visit (&e)) (Eval <- visit (&e))
 ```
 

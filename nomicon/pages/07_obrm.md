@@ -41,7 +41,10 @@ struct Pair
 fn main$:
     let _a = Loud\ name = "local a"
     let _b = Loud\ name = "local b"
-    let _p = Pair\ first = Loud\ name = "field first", second = Loud\ name = "field second"
+    let _p =
+        Pair\
+            first = Loud\ name = "field first"
+            second = Loud\ name = "field second"
     // Never dropped: forgotten, and kept from dropping.
     std.mem.forget (Loud\ name = "forgotten")
     let _m = ManuallyDrop.new (Loud\ name = "manual")
@@ -83,11 +86,17 @@ fn main$:
     let a = Rc.new (Node\ next = RefCell.new None, back = RefCell.new (Weak.new$))
     let b = Rc.new (Node\ next = RefCell.new (Some (a <- clone$)), back = RefCell.new (Weak.new$))
     *a <- next <- borrow_mut$ = Some (b <- clone$)
-    println! "strong: a {} b {} -- a leak when both go" (Rc.strong_count (&a)) (Rc.strong_count (&b))
+    println!
+        "strong: a {} b {} -- a leak when both go"
+        (Rc.strong_count (&a))
+        (Rc.strong_count (&b))
     // Break it: a Weak pointer back does not keep its target alive.
     *a <- next <- borrow_mut$ = None
     *a <- back <- borrow_mut$ = Rc.downgrade (&b)
-    println! "strong: a {} b {}" (Rc.strong_count (&a)) (Rc.strong_count (&b))
+    println!
+        "strong: a {} b {}"
+        (Rc.strong_count (&a))
+        (Rc.strong_count (&b))
 ```
 
 ```text

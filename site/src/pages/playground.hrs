@@ -74,7 +74,10 @@ fn run (src: Signal<String>) (mut console: Signal<String>) (mut running: Signal<
     let _ = spawn async move:
         let eval = document.eval EVALUATE
         let out = match eval <- send rust\
-            Ok _ => eval <- join<String>$ <- await <- unwrap_or_else (|e| format! "{e}")
+            Ok _ =>
+                eval <- join<String>$
+                     <- await
+                     <- unwrap_or_else (|e| format! "{e}")
             Err e => format! "{e}"
         console <- set out
         running <- set false

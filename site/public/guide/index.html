@@ -172,6 +172,7 @@ pre.code:hover .copy,.copy:focus-visible{opacity:1}
 <li class="d2"><a href="#continuation-lines">Continuation lines</a></li>
 <li class="d2"><a href="#bracketed-regions">Bracketed regions</a></li>
 <li class="d2"><a href="#layout-style">Layout style</a></li>
+<li class="d3"><a href="#breaking-long-lines">Breaking long lines</a></li>
 <li class="d2"><a href="#blank-lines-and-comments">Blank lines and comments</a></li>
 <li class="d2"><a href="#exercises">Exercises</a></li>
 <li class="d2"><a href="#doc-examples">Doc examples</a></li>
@@ -281,7 +282,10 @@ pre.code:hover .copy,.copy:focus-visible{opacity:1}
 <p>Braces are where Harsh starts, not where it stops. It adds four things Rust has no syntax for — and they are the reason to use it. Each below is Harsh, then the Rust it replaces.</p>
 <p><strong>Pipes and partial application.</strong> Give a function fewer arguments than it takes, and you get a function waiting for the rest:</p>
 <pre class="code harsh"><code><span class="k">let</span> double <span class="p">=</span> <span class="num">2.0</span> <span class="op">|&gt;</span> scale
-<span class="k">let</span> doubled<span class="p">:</span> <span class="t">Vec</span><span class="p">&lt;</span>f64<span class="p">&gt;</span> <span class="p">=</span> readings <span class="op">&lt;-</span> iter<span class="defer">$</span> <span class="op">&lt;-</span> map <span class="p">(</span><span class="p">|</span><span class="p">&amp;</span>x<span class="p">|</span> double x<span class="p">)</span> <span class="op">&lt;-</span> collect<span class="defer">$</span></code></pre>
+<span class="k">let</span> doubled<span class="p">:</span> <span class="t">Vec</span><span class="p">&lt;</span>f64<span class="p">&gt;</span> <span class="p">=</span>
+    readings <span class="op">&lt;-</span> iter<span class="defer">$</span>
+             <span class="op">&lt;-</span> map <span class="p">(</span><span class="p">|</span><span class="p">&amp;</span>x<span class="p">|</span> double x<span class="p">)</span>
+             <span class="op">&lt;-</span> collect<span class="defer">$</span></code></pre>
 <pre class="code rust"><code><span class="k">let</span> double <span class="p">=</span> <span class="p">|</span>x<span class="p">|</span> scale<span class="p">(</span><span class="num">2.0</span><span class="p">,</span> x<span class="p">)</span><span class="p">;</span>
 <span class="k">let</span> doubled<span class="p">:</span> <span class="t">Vec</span><span class="p">&lt;</span>f64<span class="p">&gt;</span> <span class="p">=</span> readings<span class="p">.</span>iter<span class="p">(</span><span class="p">)</span><span class="p">.</span>map<span class="p">(</span><span class="p">|</span><span class="p">&amp;</span>x<span class="p">|</span> double<span class="p">(</span>x<span class="p">)</span><span class="p">)</span><span class="p">.</span>collect<span class="p">(</span><span class="p">)</span><span class="p">;</span></code></pre>
 <p><strong>Generator comprehensions.</strong> Say what a collection holds, not how to fill it:</p>
@@ -416,7 +420,9 @@ hrs &lt;input.hrs&gt; [-o out.rs] [--map out.map.json]
 <h3 id="a-first-function">A first function</h3>
 <p>Harsh has no braces. A colon at the end of a line opens a block, and the block is whatever is indented beneath it.</p>
 <pre class="code harsh"><code><span class="k">fn</span> tokenize text<span class="p">:</span> <span class="p">&amp;</span>str <span class="op">-&gt;</span> <span class="t">Vec</span><span class="p">&lt;</span><span class="t">String</span><span class="p">&gt;</span><span class="p">:</span>
-    text <span class="op">&lt;-</span> split_whitespace<span class="defer">$</span> <span class="op">&lt;-</span> map <span class="p">(</span><span class="p">|</span>w<span class="p">|</span> w <span class="op">&lt;-</span> to_lowercase<span class="defer">$</span><span class="p">)</span> <span class="op">&lt;-</span> collect<span class="defer">$</span></code></pre>
+    text <span class="op">&lt;-</span> split_whitespace<span class="defer">$</span>
+         <span class="op">&lt;-</span> map <span class="p">(</span><span class="p">|</span>w<span class="p">|</span> w <span class="op">&lt;-</span> to_lowercase<span class="defer">$</span><span class="p">)</span>
+         <span class="op">&lt;-</span> collect<span class="defer">$</span></code></pre>
 <p>Three things are visible already.</p>
 <ul>
 <li><code>fn tokenize text: &amp;str</code> declares one parameter without parentheses. Parameters are one group each, <code>fn f (a: T) (b: U)</code>; a single parameter may drop its parentheses.</li>
@@ -506,7 +512,10 @@ g <span class="num">2.0</span> <span class="num">0.5</span>                     
         <span class="k">match</span> <span class="p">&amp;</span><span class="k">self</span> <span class="op">&lt;-</span> format\
             <span class="t">Format</span><span class="p">.</span><span class="t">Plain</span> <span class="op">=&gt;</span> <span class="mac">format!</span> <span class="str">"{word} {n}"</span>
             <span class="t">Format</span><span class="p">.</span><span class="t">Ranked</span> <span class="op">=&gt;</span> <span class="mac">format!</span> <span class="str">"{}. {word} {n}"</span> <span class="p">(</span>idx <span class="p">+</span> <span class="num">1</span><span class="p">)</span>
-            <span class="t">Format</span><span class="p">.</span><span class="t">Boxed</span>\ width <span class="op">=&gt;</span> <span class="mac">format!</span> <span class="str">"|{:&lt;w$}|{n:&gt;3}|"</span> word <span class="p">(</span>w <span class="p">=</span> <span class="p">*</span>width<span class="p">)</span></code></pre>
+            <span class="t">Format</span><span class="p">.</span><span class="t">Boxed</span>\ width <span class="op">=&gt;</span> <span class="mac">format!</span>
+                                       <span class="str">"|{:&lt;w$}|{n:&gt;3}|"</span>
+                                       word
+                                       <span class="p">(</span>w <span class="p">=</span> <span class="p">*</span>width<span class="p">)</span></code></pre>
 <ul>
 <li><code>match</code> opens a block; each arm is one line, pattern <code>=&gt;</code> body, and the commas Rust needs are inserted.</li>
 <li><code>Format.Plain</code> in a pattern uses the same <code>.</code> path separator as everywhere else.</li>
@@ -733,6 +742,73 @@ v <span class="op">&lt;-</span> iter<span class="defer">$</span>                
         <span class="op">&lt;-</span> <span class="k">await</span>
         <span class="op">&lt;-</span> unwrap<span class="defer">$</span></code></pre>
 <p>None of this is enforced by the transpiler; all of it is what the formatter will produce. Every form on this page, on both sides, is valid Harsh.</p>
+<h5 id="breaking-long-lines">Breaking long lines</h5>
+<p>The rules the Harsh in this guide and the books is written by (2026-09-29).
+They are for people writing Harsh, and they ask for judgment: the
+transpiler accepts every form, and no tool enforces them.</p>
+<ul>
+<li><strong>A chain of more than two steps</strong> — three or more <code>&lt;-</code> in one chain — is
+  broken: the value goes on the line after the <code>=</code>, and each step beneath the
+  first, its <code>&lt;-</code> under the first <code>&lt;-</code>.</li>
+</ul>
+<pre class="code harsh"><code><span class="k">let</span> args <span class="p">=</span>
+    args <span class="op">&lt;-</span> into_iter<span class="defer">$</span>
+         <span class="op">&lt;-</span> map <span class="p">(</span><span class="p">|</span>a<span class="p">|</span> fold a<span class="p">)</span>
+         <span class="op">&lt;-</span> collect<span class="defer">$</span></code></pre>
+<ul>
+<li><strong>A struct literal of more than two fields</strong> takes one field per line,
+  beneath its <code>\</code>, with no commas — the newline separates them.</li>
+</ul>
+<pre class="code harsh"><code><span class="k">let</span> v <span class="p">=</span>
+    <span class="t">Value</span>\
+        value <span class="p">=</span> <span class="t">None</span>
+        getter <span class="p">=</span> getter
+        status <span class="p">=</span> <span class="p">|</span>x<span class="p">:</span> <span class="p">&amp;</span>i32<span class="p">|</span> <span class="k">if</span> <span class="p">*</span>x <span class="p">&gt;</span> <span class="num">1</span><span class="p">:</span> <span class="t">Status</span><span class="p">.</span><span class="t">Stale</span> <span class="k">else</span><span class="p">:</span> <span class="t">Status</span><span class="p">.</span><span class="t">Fresh</span></code></pre>
+<ul>
+<li><strong>More than two clauses of <code>if</code> and <code>else</code></strong> go on several lines, each
+  <code>else</code> under its <code>if</code>. As the value of a <code>let</code>, the chain is the last line of
+  a <code>do:</code> block.</li>
+</ul>
+<pre class="code harsh"><code><span class="k">let</span> x <span class="p">=</span> <span class="k">do</span><span class="p">:</span>
+    <span class="k">if</span> n <span class="op">==</span> <span class="num">1</span><span class="p">:</span> <span class="num">10</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">if</span> n <span class="op">==</span> <span class="num">2</span><span class="p">:</span> <span class="num">20</span>
+        <span class="k">else</span><span class="p">:</span> <span class="num">30</span></code></pre>
+<ul>
+<li><strong>A <code>match</code> on a chain of more than two steps</strong> matches a name: bind the
+  chain first. An inline <code>match</code> has at most two arms; more go beneath, one per
+  line.</li>
+</ul>
+<pre class="code harsh"><code><span class="k">let</span> count <span class="p">=</span>
+    items <span class="op">&lt;-</span> iter<span class="defer">$</span>
+          <span class="op">&lt;-</span> filter <span class="p">(</span><span class="p">|</span>x<span class="p">|</span> <span class="p">*</span><span class="p">*</span>x <span class="p">&gt;</span> <span class="num">1</span><span class="p">)</span>
+          <span class="op">&lt;-</span> count<span class="defer">$</span>
+<span class="k">let</span> n <span class="p">=</span> <span class="k">match</span> count\
+    <span class="num">0</span> <span class="op">=&gt;</span> <span class="str">"none"</span>
+    _ <span class="op">=&gt;</span> <span class="str">"some"</span></code></pre>
+<ul>
+<li><strong>Long function and macro calls caused by long arguments, not the number of
+  arguments,</strong> go vertical: the name on its own line, each argument beneath
+  it, one per line. It is the length of the arguments that decides — a long list of short
+  arguments stays on its line (<code>v~ 2 3 5 6 7 8 8 89 9 …</code>), and a short call
+  with one long argument breaks. Some calls sit on the fence; the writer
+  decides. Where an argument's position is awkward — deep inside another
+  call, after a <code>=&gt;</code> — naming it first often reads better than breaking.</li>
+</ul>
+<pre class="code harsh"><code><span class="k">fn</span> describe <span class="p">(</span>good<span class="p">:</span> bool<span class="p">)</span> <span class="p">(</span>name<span class="p">:</span> <span class="p">&amp;</span>str<span class="p">)</span> <span class="op">-&gt;</span> <span class="t">String</span><span class="p">:</span>
+    <span class="mac">format!</span>
+        <span class="str">"{} ({})"</span>
+        name                                    <span class="com">// on the fence: short</span>
+        <span class="p">(</span><span class="k">if</span> good<span class="p">:</span> <span class="str">"good dog"</span> <span class="k">else</span><span class="p">:</span> <span class="str">"dog"</span><span class="p">)</span>       <span class="com">// a long argument</span></code></pre>
+<ul>
+<li><strong>A literal holding another literal</strong> is broken, the outer one field per
+  line — an inner literal written inline ends with its line, so it cannot take
+  the outer one's fields.</li>
+</ul>
+<pre class="code harsh"><code><span class="k">let</span> d <span class="p">=</span>
+    <span class="t">Dog</span>\
+        inner <span class="p">=</span> <span class="t">Animal</span>\ name <span class="p">=</span> <span class="t">String</span><span class="p">.</span>from <span class="str">"Rex"</span>
+        good <span class="p">=</span> <span class="k">true</span></code></pre>
 <h4 id="blank-lines-and-comments">Blank lines and comments</h4>
 <ul>
 <li>Blank lines are insignificant. Up to two consecutive blank lines are preserved in the output.</li>
@@ -842,9 +918,16 @@ v <span class="op">&lt;-</span> iter<span class="defer">$</span>                
 <p>An inline block holds <strong>one expression</strong> — one rule, no separator. Several statements on one line are Rust's braces, <code>if c { f$; g$ } else { h$ }</code> or <code>{ let a = 1; a * 2 }</code> on its own, and a <code>;</code> inside an inline colon-block is an error. The reason is that an inline statement block nested in a comma-block has no end the layout can find: <code>A =&gt; do: f(); g(), B =&gt; 2</code> would put <code>g()</code> outside the arm. Braces say where a block ends; the colon form does not, on one line. The two are not combined: <code>if c: { .. }</code> is an error, since the braces open the block by themselves and the colon would open a second one inside it. Braces are for short blocks — Rust's line and Rust's judgement; anything longer takes the indented form. (A <code>;</code> that ends the whole line still discards the tail value, as everywhere.)</p>
 <pre class="code harsh"><code><span class="k">if</span> t<span class="p">:</span> <span class="num">1</span> <span class="k">else</span><span class="p">:</span> <span class="num">2</span>              →  <span class="k">if</span> t <span class="p">{</span> <span class="num">1</span> <span class="p">}</span> <span class="k">else</span> <span class="p">{</span> <span class="num">2</span> <span class="p">}</span>
 <span class="k">for</span> i <span class="k">in</span> <span class="num">0..3</span><span class="p">:</span> f i           →  <span class="k">for</span> i <span class="k">in</span> <span class="num">0..3</span> <span class="p">{</span> f<span class="p">(</span>i<span class="p">)</span> <span class="p">}</span></code></pre>
-<p>Each <code>else</code> binds to the nearest open <code>if</code>. Braces select the other reading:</p>
-<pre class="code harsh"><code><span class="k">if</span> a<span class="p">:</span> <span class="k">if</span> b<span class="p">:</span> <span class="num">1</span> <span class="k">else</span><span class="p">:</span> <span class="num">2</span> <span class="k">else</span><span class="p">:</span> <span class="num">3</span>        →  <span class="k">if</span> a <span class="p">{</span> <span class="k">if</span> b <span class="p">{</span> <span class="num">1</span> <span class="p">}</span> <span class="k">else</span> <span class="p">{</span> <span class="num">2</span> <span class="p">}</span> <span class="p">}</span> <span class="k">else</span> <span class="p">{</span> <span class="num">3</span> <span class="p">}</span>
-<span class="k">if</span> a<span class="p">:</span> <span class="k">if</span> b <span class="p">{</span> <span class="num">1</span> <span class="p">}</span> <span class="k">else</span> <span class="p">{</span> <span class="num">0</span> <span class="p">}</span> <span class="k">else</span><span class="p">:</span> <span class="num">2</span>  →  <span class="k">if</span> a <span class="p">{</span> <span class="k">if</span> b <span class="p">{</span> <span class="num">1</span> <span class="p">}</span> <span class="k">else</span> <span class="p">{</span> <span class="num">0</span> <span class="p">}</span> <span class="p">}</span> <span class="k">else</span> <span class="p">{</span> <span class="num">2</span> <span class="p">}</span></code></pre>
+<p>Each <code>else</code> binds to the nearest open <code>if</code>; written on several lines — the
+style this guide keeps for more than two clauses — the indentation shows
+which. Braces select the other reading:</p>
+<pre class="code harsh"><code><span class="k">if</span> a<span class="p">:</span>                                <span class="k">if</span> a <span class="p">{</span> <span class="k">if</span> b <span class="p">{</span> <span class="num">1</span> <span class="p">}</span> <span class="k">else</span> <span class="p">{</span> <span class="num">2</span> <span class="p">}</span> <span class="p">}</span> <span class="k">else</span> <span class="p">{</span> <span class="num">3</span> <span class="p">}</span>
+    <span class="k">if</span> b<span class="p">:</span> <span class="num">1</span>
+    <span class="k">else</span><span class="p">:</span> <span class="num">2</span>
+<span class="k">else</span><span class="p">:</span> <span class="num">3</span></code></pre>
+<pre class="code harsh"><code><span class="k">if</span> a<span class="p">:</span>                                <span class="k">if</span> a <span class="p">{</span> <span class="k">if</span> b <span class="p">{</span> <span class="num">1</span> <span class="p">}</span> <span class="k">else</span> <span class="p">{</span> <span class="num">0</span> <span class="p">}</span> <span class="p">}</span> <span class="k">else</span> <span class="p">{</span> <span class="num">2</span> <span class="p">}</span>
+    <span class="k">if</span> b <span class="p">{</span> <span class="num">1</span> <span class="p">}</span> <span class="k">else</span> <span class="p">{</span> <span class="num">0</span> <span class="p">}</span>
+<span class="k">else</span><span class="p">:</span> <span class="num">2</span></code></pre>
 <p>The inline and indented forms of the same program emit identical Rust; this is enforced by a test.</p>
 <h4 id="inline-forms-of-each-construct">Inline forms of each construct</h4>
 <ul>
@@ -852,7 +935,7 @@ v <span class="op">&lt;-</span> iter<span class="defer">$</span>                
 </ul>
 <pre class="code harsh"><code><span class="k">if</span> t<span class="p">:</span> <span class="num">1</span> <span class="k">else</span><span class="p">:</span> <span class="num">2</span>
 <span class="k">if</span> <span class="k">let</span> <span class="t">Some</span> n <span class="p">=</span> v<span class="p">:</span> n <span class="k">else</span><span class="p">:</span> <span class="p">-</span><span class="num">1</span>
-<span class="k">match</span> n\ <span class="num">0</span> <span class="op">=&gt;</span> <span class="str">"zero"</span><span class="p">,</span> <span class="num">1</span> <span class="p">|</span> <span class="num">2</span> <span class="op">=&gt;</span> <span class="str">"small"</span><span class="p">,</span> _ <span class="op">=&gt;</span> <span class="str">"big"</span>
+<span class="k">match</span> n\ <span class="num">0</span> <span class="op">=&gt;</span> <span class="str">"zero"</span><span class="p">,</span> _ <span class="op">=&gt;</span> <span class="str">"some"</span>
 <span class="k">for</span> i <span class="k">in</span> <span class="num">0..3</span><span class="p">:</span> s <span class="op">+=</span> i
 <span class="k">while</span> <span class="k">let</span> <span class="t">Some</span> top <span class="p">=</span> st <span class="op">&lt;-</span> pop<span class="defer">$</span><span class="p">:</span> popped <span class="op">+=</span> top
 <span class="p">{</span> <span class="k">let</span> a <span class="p">=</span> <span class="num">1</span><span class="p">;</span> a <span class="p">*</span> <span class="num">2</span> <span class="p">}</span>
@@ -861,7 +944,10 @@ v <span class="op">&lt;-</span> iter<span class="defer">$</span>                
 <li>A <code>let</code> binding may take an inline block as its value: <code>let r = if let Some n = v: n * 2 else: 0</code>.</li>
 <li>An inline block ends at the end of its logical line. Writing <code>else: if …</code> on one line and <code>else:</code> on the next therefore orphans the second <code>else</code>, and it is rejected; both the fully inline and the fully indented chain work.</li>
 </ul>
-<pre class="code harsh"><code><span class="k">if</span> n <span class="op">==</span> <span class="num">1</span><span class="p">:</span> <span class="num">10</span> <span class="k">else</span><span class="p">:</span> <span class="k">if</span> n <span class="op">==</span> <span class="num">2</span><span class="p">:</span> <span class="num">20</span> <span class="k">else</span><span class="p">:</span> <span class="num">30</span>      ✓ one line
+<pre class="code harsh"><code><span class="k">if</span> n <span class="op">==</span> <span class="num">1</span><span class="p">:</span> <span class="num">10</span>                                    ✓ several lines
+<span class="k">else</span><span class="p">:</span>
+    <span class="k">if</span> n <span class="op">==</span> <span class="num">2</span><span class="p">:</span> <span class="num">20</span>
+    <span class="k">else</span><span class="p">:</span> <span class="num">30</span>
 
 <span class="k">if</span> n <span class="op">==</span> <span class="num">1</span><span class="p">:</span>                                       ✓ indented
     <span class="num">10</span>
@@ -887,7 +973,10 @@ it becomes.</p>
 <span class="k">let</span> a <span class="p">=</span> x <span class="op">&lt;-</span> f a <span class="op">&lt;-</span> g b                 <span class="k">let</span> a <span class="p">=</span> x<span class="p">.</span>f<span class="p">(</span>a<span class="p">)</span><span class="p">.</span>g<span class="p">(</span>b<span class="p">)</span><span class="p">;</span>
 <span class="k">let</span> a <span class="p">=</span> f a b <span class="op">&lt;-</span> m<span class="defer">$</span>                     <span class="k">let</span> a <span class="p">=</span> f<span class="p">(</span>a<span class="p">,</span> b<span class="p">)</span><span class="p">.</span>m<span class="p">(</span><span class="p">)</span><span class="p">;</span>
 <span class="k">let</span> a <span class="p">=</span> x <span class="op">&lt;-</span> field                      <span class="k">let</span> a <span class="p">=</span> x<span class="p">.</span>field<span class="p">;</span>
-<span class="k">let</span> a <span class="p">=</span> x <span class="op">&lt;-</span> f<span class="defer">$</span> <span class="op">&lt;-</span> g <span class="op">&lt;-</span> h<span class="defer">$</span>              <span class="k">let</span> a <span class="p">=</span> x<span class="p">.</span>f<span class="p">(</span><span class="p">)</span><span class="p">.</span>g<span class="p">.</span>h<span class="p">(</span><span class="p">)</span><span class="p">;</span>
+<span class="k">let</span> a <span class="p">=</span>                                 <span class="k">let</span> a <span class="p">=</span> x<span class="p">.</span>f<span class="p">(</span><span class="p">)</span><span class="p">.</span>g<span class="p">.</span>h<span class="p">(</span><span class="p">)</span><span class="p">;</span>
+    x <span class="op">&lt;-</span> f<span class="defer">$</span>
+      <span class="op">&lt;-</span> g
+      <span class="op">&lt;-</span> h<span class="defer">$</span>
 <span class="k">let</span> a <span class="p">=</span> x <span class="op">&lt;-</span> get i<span class="p">?</span>                     <span class="k">let</span> a <span class="p">=</span> x<span class="p">.</span>get<span class="p">(</span>i<span class="p">)</span><span class="p">?</span><span class="p">;</span>
 <span class="k">let</span> a <span class="p">=</span> <span class="p">!</span>x <span class="op">&lt;-</span> is_empty<span class="defer">$</span>                 <span class="k">let</span> a <span class="p">=</span> <span class="p">!</span>x<span class="p">.</span>is_empty<span class="p">(</span><span class="p">)</span><span class="p">;</span>
 <span class="k">let</span> a <span class="p">=</span> x <span class="op">&lt;-</span> ptr<span class="defer">$</span> <span class="k">as</span> usize <span class="p">+</span> <span class="num">1</span>          <span class="k">let</span> a <span class="p">=</span> x<span class="p">.</span>ptr<span class="p">(</span><span class="p">)</span> <span class="k">as</span> usize <span class="p">+</span> <span class="num">1</span><span class="p">;</span>
@@ -987,8 +1076,12 @@ transpiles to something that is not a call:</p>
 <li>Parens are transparent to layout: the <code>:</code> opens a block inside them exactly as it would outside, and the body is governed by the same rules — several statements, nested blocks, its own closures. Parens isolate, or raise precedence; they neither open nor close anything. A block written inside a group simply owns no token outside it, so it ends where the group ends.</li>
 <li>The same holds on one line. A closure's prototype <code>|p|</code> followed by <code>:</code> opens an inline block, and the block ends at the <code>)</code> of its group; whatever follows the <code>)</code> carries on the statement, and may open another such block:</li>
 </ul>
-<pre class="code harsh"><code>xs <span class="op">&lt;-</span> iter<span class="defer">$</span> <span class="op">&lt;-</span> map <span class="p">(</span><span class="p">|</span>p<span class="p">|</span><span class="p">:</span> <span class="k">if</span> <span class="p">*</span>p <span class="p">&gt;</span> <span class="num">1</span><span class="p">:</span> <span class="p">*</span>p <span class="k">else</span><span class="p">:</span> <span class="num">0</span><span class="p">)</span> <span class="op">&lt;-</span> collect<span class="defer">$</span>      xs<span class="p">.</span>iter<span class="p">(</span><span class="p">)</span><span class="p">.</span>map<span class="p">(</span><span class="p">|</span>p<span class="p">|</span> <span class="p">{</span> <span class="k">if</span> <span class="p">*</span>p <span class="p">&gt;</span> <span class="num">1</span> <span class="p">{</span> <span class="p">*</span>p <span class="p">}</span> <span class="k">else</span> <span class="p">{</span> <span class="num">0</span> <span class="p">}</span> <span class="p">}</span><span class="p">)</span><span class="p">.</span>collect<span class="p">(</span><span class="p">)</span>
-xs <span class="op">&lt;-</span> iter<span class="defer">$</span> <span class="op">&lt;-</span> map <span class="p">(</span><span class="p">|</span>p<span class="p">:</span> <span class="p">&amp;</span>i32<span class="p">|</span><span class="p">:</span> <span class="p">*</span>p <span class="p">+</span> <span class="num">1</span><span class="p">)</span> <span class="op">&lt;-</span> sum<span class="defer">$</span>                     xs<span class="p">.</span>iter<span class="p">(</span><span class="p">)</span><span class="p">.</span>map<span class="p">(</span><span class="p">|</span>p<span class="p">:</span> <span class="p">&amp;</span>i32<span class="p">|</span> <span class="p">{</span> <span class="p">*</span>p <span class="p">+</span> <span class="num">1</span> <span class="p">}</span><span class="p">)</span><span class="p">.</span>sum<span class="p">(</span><span class="p">)</span>
+<pre class="code harsh"><code>xs <span class="op">&lt;-</span> iter<span class="defer">$</span>                                                       xs<span class="p">.</span>iter<span class="p">(</span><span class="p">)</span><span class="p">.</span>map<span class="p">(</span><span class="p">|</span>p<span class="p">|</span> <span class="p">{</span> <span class="k">if</span> <span class="p">*</span>p <span class="p">&gt;</span> <span class="num">1</span> <span class="p">{</span> <span class="p">*</span>p <span class="p">}</span> <span class="k">else</span> <span class="p">{</span> <span class="num">0</span> <span class="p">}</span> <span class="p">}</span><span class="p">)</span><span class="p">.</span>collect<span class="p">(</span><span class="p">)</span>
+   <span class="op">&lt;-</span> map <span class="p">(</span><span class="p">|</span>p<span class="p">|</span><span class="p">:</span> <span class="k">if</span> <span class="p">*</span>p <span class="p">&gt;</span> <span class="num">1</span><span class="p">:</span> <span class="p">*</span>p <span class="k">else</span><span class="p">:</span> <span class="num">0</span><span class="p">)</span>
+   <span class="op">&lt;-</span> collect<span class="defer">$</span>
+xs <span class="op">&lt;-</span> iter<span class="defer">$</span>                                                       xs<span class="p">.</span>iter<span class="p">(</span><span class="p">)</span><span class="p">.</span>map<span class="p">(</span><span class="p">|</span>p<span class="p">:</span> <span class="p">&amp;</span>i32<span class="p">|</span> <span class="p">{</span> <span class="p">*</span>p <span class="p">+</span> <span class="num">1</span> <span class="p">}</span><span class="p">)</span><span class="p">.</span>sum<span class="p">(</span><span class="p">)</span>
+   <span class="op">&lt;-</span> map <span class="p">(</span><span class="p">|</span>p<span class="p">:</span> <span class="p">&amp;</span>i32<span class="p">|</span><span class="p">:</span> <span class="p">*</span>p <span class="p">+</span> <span class="num">1</span><span class="p">)</span>
+   <span class="op">&lt;-</span> sum<span class="defer">$</span>
 xs <span class="op">&lt;-</span> iter<span class="defer">$</span> <span class="op">&lt;-</span> fold <span class="num">0</span> <span class="p">(</span><span class="p">|</span>acc<span class="p">,</span> x<span class="p">|</span><span class="p">:</span> acc <span class="p">+</span> x<span class="p">)</span>                          xs<span class="p">.</span>iter<span class="p">(</span><span class="p">)</span><span class="p">.</span>fold<span class="p">(</span><span class="num">0</span><span class="p">,</span> <span class="p">|</span>acc<span class="p">,</span> x<span class="p">|</span> <span class="p">{</span> acc <span class="p">+</span> x <span class="p">}</span><span class="p">)</span>
 <span class="k">let</span> f <span class="p">=</span> <span class="p">|</span>x<span class="p">|</span><span class="p">:</span> x <span class="p">+</span> <span class="num">1</span>                                                <span class="k">let</span> f <span class="p">=</span> <span class="p">|</span>x<span class="p">|</span> <span class="p">{</span> x <span class="p">+</span> <span class="num">1</span> <span class="p">}</span><span class="p">;</span></code></pre>
 <ul>
@@ -1078,7 +1171,10 @@ last_parent_statement<span class="p">;</span>
 <h4 id="member-access">Member access</h4>
 <p>A left arrow is field access and method call, replacing Rust's dot.</p>
 <pre class="code harsh"><code><span class="k">self</span> <span class="op">&lt;-</span> x <span class="p">*</span> <span class="k">self</span> <span class="op">&lt;-</span> x <span class="p">+</span> <span class="k">self</span> <span class="op">&lt;-</span> y <span class="p">*</span> <span class="k">self</span> <span class="op">&lt;-</span> y
-<span class="k">let</span> name <span class="p">=</span> params <span class="op">&lt;-</span> name <span class="op">&lt;-</span> as_deref<span class="defer">$</span> <span class="op">&lt;-</span> unwrap_or <span class="str">"World"</span></code></pre>
+<span class="k">let</span> name <span class="p">=</span>
+    params <span class="op">&lt;-</span> name
+           <span class="op">&lt;-</span> as_deref<span class="defer">$</span>
+           <span class="op">&lt;-</span> unwrap_or <span class="str">"World"</span></code></pre>
 <ul>
 <li>The arrow binds tightly, so whitespace around it is dropped in the output while line breaks are kept. This is what allows the vertical chain style.</li>
 <li><code>&lt;-</code> is already a reserved token in rustc, so it never collides with a comparison against a negative value — Rust itself requires a space in <code>x &lt; -1</code>.</li>
@@ -1117,7 +1213,11 @@ params <span class="op">&lt;-</span> name
 <ul>
 <li>A horizontal chain and a vertical one are the same expression; the vertical form is the continuation rule with <code>&lt;-</code> leading each line.</li>
 </ul>
-<pre class="code harsh"><code><span class="k">let</span> e <span class="p">=</span> v <span class="op">&lt;-</span> iter<span class="defer">$</span> <span class="op">&lt;-</span> max<span class="defer">$</span> <span class="op">&lt;-</span> copied<span class="defer">$</span> <span class="op">&lt;-</span> unwrap_or <span class="num">0</span>
+<pre class="code harsh"><code><span class="k">let</span> e <span class="p">=</span>
+    v <span class="op">&lt;-</span> iter<span class="defer">$</span>
+      <span class="op">&lt;-</span> max<span class="defer">$</span>
+      <span class="op">&lt;-</span> copied<span class="defer">$</span>
+      <span class="op">&lt;-</span> unwrap_or <span class="num">0</span>
 
 <span class="k">let</span> d <span class="p">=</span>
     v <span class="op">&lt;-</span> iter<span class="defer">$</span>
@@ -1141,7 +1241,9 @@ params <span class="op">&lt;-</span> name
 <p>Generic argument lists pass through unchanged in type position and are automatically turbofished when followed by a path separator.</p>
 <pre class="code harsh"><code><span class="k">let</span> v <span class="p">=</span> <span class="t">Vec</span><span class="p">&lt;</span>i32<span class="p">&gt;</span><span class="p">.</span>new<span class="defer">$</span>
 <span class="k">let</span> m <span class="p">=</span> <span class="t">HashMap</span><span class="p">&lt;</span><span class="t">String</span><span class="p">,</span> usize<span class="p">&gt;</span><span class="p">.</span>new<span class="defer">$</span>
-<span class="k">let</span> counts<span class="p">:</span> <span class="t">Vec</span><span class="p">&lt;</span><span class="p">(</span><span class="t">String</span><span class="p">,</span> usize<span class="p">)</span><span class="p">&gt;</span> <span class="p">=</span> tally <span class="p">(</span><span class="p">&amp;</span>words<span class="p">)</span> <span class="op">&lt;-</span> into_iter<span class="defer">$</span> <span class="op">&lt;-</span> collect<span class="defer">$</span></code></pre>
+<span class="k">let</span> counts<span class="p">:</span> <span class="t">Vec</span><span class="p">&lt;</span><span class="p">(</span><span class="t">String</span><span class="p">,</span> usize<span class="p">)</span><span class="p">&gt;</span> <span class="p">=</span>
+    tally <span class="p">(</span><span class="p">&amp;</span>words<span class="p">)</span> <span class="op">&lt;-</span> into_iter<span class="defer">$</span>
+                   <span class="op">&lt;-</span> collect<span class="defer">$</span></code></pre>
 <pre class="code rust"><code><span class="k">let</span> v <span class="p">=</span> <span class="t">Vec</span><span class="op">::</span><span class="p">&lt;</span>i32<span class="p">&gt;</span><span class="op">::</span>new<span class="p">(</span><span class="p">)</span><span class="p">;</span>
 <span class="k">let</span> m <span class="p">=</span> <span class="t">HashMap</span><span class="op">::</span><span class="p">&lt;</span><span class="t">String</span><span class="p">,</span> usize<span class="p">&gt;</span><span class="op">::</span>new<span class="p">(</span><span class="p">)</span><span class="p">;</span>
 <span class="k">let</span> counts<span class="p">:</span> <span class="t">Vec</span><span class="p">&lt;</span><span class="p">(</span><span class="t">String</span><span class="p">,</span> usize<span class="p">)</span><span class="p">&gt;</span> <span class="p">=</span> tally<span class="p">(</span><span class="p">&amp;</span>words<span class="p">)</span><span class="p">.</span>into_iter<span class="p">(</span><span class="p">)</span><span class="p">.</span>collect<span class="p">(</span><span class="p">)</span><span class="p">;</span></code></pre>
@@ -1214,7 +1316,7 @@ params <span class="op">&lt;-</span> name
 <p>There are three forms of struct — <strong>record</strong> (named fields; Rust's docs call this one simply a struct), <strong>tuple</strong> (fields by position), <strong>unit-like</strong> (no fields) — and an enum is a union of variants each of which is one of the three, spelled as that struct is spelled with the <code>struct</code> and the name's line taken away. A tuple variant's payload is an application — the variant applied to its types, one atom each, a generic type isolated: <code>Boxed (Box&lt;List&gt;)</code>. A record variant is its bare name with the fields beneath, or <code>Named\ name: String, sides: u8</code> on its own line inside the block: the block and inline forms mix freely, and which reads better depends on the names and their lengths.</p>
 <p><strong>Inline</strong>, the field list is marked with <code>\</code> and its items comma-separated. The <code>\</code> says where the header ends and the parts begin, as the newline does in the block form:</p>
 <pre class="code harsh"><code><span class="k">struct</span> <span class="t">Point</span>\ x<span class="p">:</span> f64<span class="p">,</span> y<span class="p">:</span> f64
-<span class="k">enum</span> <span class="t">Shape</span>\ <span class="t">Empty</span><span class="p">,</span> <span class="t">Circle</span> f64<span class="p">,</span> <span class="t">Rect</span> <span class="t">Point</span> <span class="t">Point</span><span class="p">,</span> <span class="p">(</span><span class="t">Named</span>\ name<span class="p">:</span> <span class="t">String</span><span class="p">,</span> sides<span class="p">:</span> u8<span class="p">)</span>
+<span class="k">enum</span> <span class="t">Shape</span>\ <span class="t">Circle</span> f64<span class="p">,</span> <span class="p">(</span><span class="t">Named</span>\ name<span class="p">:</span> <span class="t">String</span><span class="p">,</span> sides<span class="p">:</span> u8<span class="p">)</span>
 <span class="k">struct</span> <span class="t">Wrapper</span><span class="p">&lt;</span><span class="t">T</span><span class="p">&gt;</span> <span class="p">[</span><span class="k">where</span> <span class="t">T</span><span class="p">:</span> <span class="t">Display</span><span class="p">]</span>\ field<span class="p">:</span> <span class="t">T</span><span class="p">,</span> other<span class="p">:</span> u32</code></pre>
 <p><strong>Every struct form:</strong></p>
 <pre class="code harsh"><code><span class="k">struct</span> <span class="t">Unit</span>                             <span class="k">struct</span> <span class="t">Unit</span><span class="p">;</span>                       <span class="com">// unit-like struct</span>
@@ -1538,7 +1640,7 @@ f <span class="defer">$</span>                     `<span class="defer">$</span>
         <span class="mac">format!</span> <span class="str">"rect {area}"</span>
     <span class="t">Shape</span><span class="p">.</span><span class="t">Named</span> <span class="p">{</span> name<span class="p">,</span> sides <span class="p">}</span> <span class="op">=&gt;</span> <span class="mac">format!</span> <span class="str">"{name}/{sides}"</span>
 
-<span class="k">match</span> n\ <span class="num">0</span> <span class="op">=&gt;</span> <span class="str">"zero"</span><span class="p">,</span> <span class="num">1</span> <span class="p">|</span> <span class="num">2</span> <span class="op">=&gt;</span> <span class="str">"small"</span><span class="p">,</span> _ <span class="op">=&gt;</span> <span class="str">"big"</span>    <span class="com">// inline arms</span>
+<span class="k">match</span> n\ <span class="num">0</span> <span class="op">=&gt;</span> <span class="str">"zero"</span><span class="p">,</span> _ <span class="op">=&gt;</span> <span class="str">"other"</span>    <span class="com">// inline arms</span>
 
 <span class="k">match</span> n <span class="p">{</span> <span class="num">0</span> <span class="op">=&gt;</span> <span class="str">"zero"</span><span class="p">,</span> _ <span class="op">=&gt;</span> <span class="str">"other"</span> <span class="p">}</span>    <span class="com">// braced</span></code></pre>
 <h4 id="patterns-1">Patterns</h4>
@@ -1566,7 +1668,7 @@ f <span class="defer">$</span>                     `<span class="defer">$</span>
     v <span class="p">@</span> <span class="num">1</span><span class="op">..=</span><span class="num">5</span> <span class="op">=&gt;</span> <span class="mac">format!</span> <span class="str">"low {v}"</span>
     v <span class="op">=&gt;</span> <span class="mac">format!</span> <span class="str">"hi {v}"</span>
 
-<span class="k">match</span> n\ <span class="num">0</span> <span class="op">=&gt;</span> <span class="str">"zero"</span><span class="p">,</span> <span class="num">1</span> <span class="p">|</span> <span class="num">2</span> <span class="op">=&gt;</span> <span class="str">"small"</span><span class="p">,</span> _ <span class="op">=&gt;</span> <span class="str">"big"</span>    <span class="com">// or-patterns</span></code></pre>
+<span class="k">match</span> n\ <span class="num">1</span> <span class="p">|</span> <span class="num">2</span> <span class="op">=&gt;</span> <span class="str">"small"</span><span class="p">,</span> _ <span class="op">=&gt;</span> <span class="str">"other"</span>    <span class="com">// or-patterns</span></code></pre>
 <h4 id="match-as-a-value-and-nested-matches">Match as a value and nested matches</h4>
 <pre class="code harsh"><code><span class="k">let</span> r <span class="p">=</span> <span class="k">match</span> n\
     <span class="num">1</span> <span class="op">=&gt;</span> <span class="num">10</span>
@@ -1591,11 +1693,17 @@ f <span class="defer">$</span>                     `<span class="defer">$</span>
 <span class="k">else</span><span class="p">:</span>
     <span class="str">"pos"</span>
 
-<span class="k">if</span> n <span class="p">&lt;</span> <span class="num">0</span><span class="p">:</span> <span class="str">"neg"</span> <span class="k">else</span><span class="p">:</span> <span class="k">if</span> n <span class="op">==</span> <span class="num">0</span><span class="p">:</span> <span class="str">"zero"</span> <span class="k">else</span><span class="p">:</span> <span class="str">"pos"</span>      inline
+<span class="k">if</span> n <span class="p">&lt;</span> <span class="num">0</span><span class="p">:</span> <span class="str">"neg"</span>                                          inline arms<span class="p">,</span> several lines
+<span class="k">else</span><span class="p">:</span>
+    <span class="k">if</span> n <span class="op">==</span> <span class="num">0</span><span class="p">:</span> <span class="str">"zero"</span>
+    <span class="k">else</span><span class="p">:</span> <span class="str">"pos"</span>
 
 <span class="k">if</span> n <span class="p">&lt;</span> <span class="num">0</span> <span class="p">{</span> <span class="str">"neg"</span> <span class="p">}</span> <span class="k">else</span> <span class="k">if</span> n <span class="op">==</span> <span class="num">0</span> <span class="p">{</span> <span class="str">"zero"</span> <span class="p">}</span> <span class="k">else</span> <span class="p">{</span> <span class="str">"pos"</span> <span class="p">}</span>   braced
 
-<span class="k">if</span> a<span class="p">:</span> <span class="k">if</span> b<span class="p">:</span> <span class="num">1</span> <span class="k">else</span><span class="p">:</span> <span class="num">2</span> <span class="k">else</span><span class="p">:</span> <span class="num">3</span>                   <span class="k">else</span> binds to the nearest <span class="k">if</span>   → <span class="num">2</span> when a <span class="op">&amp;&amp;</span> <span class="p">!</span>b
+<span class="k">if</span> a<span class="p">:</span>                                            <span class="k">else</span> binds to the nearest <span class="k">if</span>   → <span class="num">2</span> when a <span class="op">&amp;&amp;</span> <span class="p">!</span>b
+    <span class="k">if</span> b<span class="p">:</span> <span class="num">1</span>
+    <span class="k">else</span><span class="p">:</span> <span class="num">2</span>
+<span class="k">else</span><span class="p">:</span> <span class="num">3</span>
 <span class="k">if</span> a<span class="p">:</span> <span class="k">if</span> b <span class="p">{</span> <span class="num">1</span> <span class="p">}</span> <span class="k">else</span> <span class="p">{</span> <span class="num">0</span> <span class="p">}</span> <span class="k">else</span><span class="p">:</span> <span class="num">2</span>             braces select the outer binding → <span class="num">0</span> when a <span class="op">&amp;&amp;</span> <span class="p">!</span>b</code></pre>
 <h4 id="if-let">If let</h4>
 <pre class="code harsh"><code><span class="k">if</span> <span class="k">let</span> <span class="t">Some</span> n <span class="p">=</span> v<span class="p">:</span>    <span class="com">// indented</span>
@@ -1769,7 +1877,10 @@ and its helper attributes leave the item once it has run.</p>
     <span class="k">let</span> body <span class="p">=</span> <span class="p">&amp;</span>f <span class="op">&lt;-</span> block
     quote<span class="p">~</span> <span class="k">do</span><span class="p">:</span>
         <span class="p">#</span>vis <span class="p">#</span>sig<span class="p">:</span>
-            <span class="mac">println!</span> <span class="str">"[ROUTE LOG] Dispatched handler '{}' for {}"</span> <span class="p">#</span>name <span class="p">#</span>route
+            <span class="mac">println!</span>
+                <span class="str">"[ROUTE LOG] Dispatched handler '{}' for {}"</span>
+                <span class="p">#</span>name
+                <span class="p">#</span>route
             <span class="p">#</span>body</code></pre>
 <h6 id="function-like-macros">Function-Like Macros</h6>
 <p>A proc macro is an ordinary Harsh function marked <code>#[proc_macro~]</code>, taking
@@ -1894,7 +2005,9 @@ g<span class="p">~</span> <span class="p">(</span>x<span class="p">,</span> y<sp
 <pre class="code harsh"><code><span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
     <span class="k">let</span> evens <span class="p">=</span> list<span class="p">~</span> x <span class="k">for</span> x <span class="k">in</span> <span class="num">0..10</span> <span class="k">if</span> x <span class="p">%</span> <span class="num">2</span> <span class="op">==</span> <span class="num">0</span>
     <span class="k">let</span> pairs <span class="p">=</span> list<span class="p">~</span> <span class="p">(</span>x<span class="p">,</span> y<span class="p">)</span> <span class="k">for</span> x <span class="k">in</span> <span class="num">1..4</span> <span class="k">for</span> y <span class="k">in</span> <span class="num">1..4</span> <span class="k">if</span> y <span class="p">&gt;</span> x
-    <span class="k">let</span> squares<span class="p">:</span> <span class="t">Vec</span><span class="p">&lt;</span>u64<span class="p">&gt;</span> <span class="p">=</span> <span class="p">(</span>g<span class="p">~</span> n <span class="p">*</span> n <span class="k">for</span> n <span class="k">in</span> <span class="num">1</span><span class="op">..</span><span class="p">)</span> <span class="op">&lt;-</span> take <span class="num">5</span> <span class="op">&lt;-</span> collect<span class="defer">$</span>
+    <span class="k">let</span> squares<span class="p">:</span> <span class="t">Vec</span><span class="p">&lt;</span>u64<span class="p">&gt;</span> <span class="p">=</span>
+        <span class="p">(</span>g<span class="p">~</span> n <span class="p">*</span> n <span class="k">for</span> n <span class="k">in</span> <span class="num">1</span><span class="op">..</span><span class="p">)</span> <span class="op">&lt;-</span> take <span class="num">5</span>
+                                <span class="op">&lt;-</span> collect<span class="defer">$</span>
     <span class="mac">println!</span> <span class="str">"{evens:?} {pairs:?} {squares:?}"</span></code></pre>
 <ul>
 <li><strong>Shadowing.</strong> A file's own <code>macro_rules~ g</code> (or <code>list</code>, <code>set</code>, <code>dict</code>) replaces the prelude's in that file; <code>hrs_std.g~</code> always reaches the prelude's, and the shorthands call it by that name, so they keep working.</li>

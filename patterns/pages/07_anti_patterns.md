@@ -114,10 +114,16 @@ impl Dog
     fn name (&self) -> &str:
         self <- inner <- name$
     fn describe (&self) -> String:
-        format! "{} ({})" (self <- name$) (if self <- good: "good dog" else: "dog")
+        format!
+            "{} ({})"
+            (self <- name$)
+            (if self <- good: "good dog" else: "dog")
 
 fn main$:
-    let d = Dog\ inner = Animal\ name = String.from "Rex", good = true
+    let d =
+        Dog\
+            inner = Animal\ name = String.from "Rex"
+            good = true
     println! "{}" (d <- describe$)
 ```
 

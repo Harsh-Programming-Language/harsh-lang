@@ -537,7 +537,7 @@ proc-macro = true
 ```rust harsh
 use hrs_proc_macro.TokenStream
 use hrs_quote.quote
-use hrs_syn.{parse_macro_input, Data, DeriveInput, Error}
+use hrs_syn.{parse_macro_input, Data, DeriveInput, Error, Field}
 
 /// `describe$`: the type's name and its fields -- all but those marked
 /// `#[describe skip]`.
@@ -550,14 +550,26 @@ pub fn describe (input: TokenStream) -> TokenStream:
         _ => return (Error.new (name <- span$) "`Describe` is for a struct") <- to_compile_error$
     let shown: Vec<String> =
         fields <- iter$
-            <- filter (|f| !(f <- attrs <- iter$ <- any (|a| a <- is "describe")))
-            <- map (|f| f <- ident <- as_ref$ <- unwrap$ <- to_string$)
-            <- collect$
+               <- filter (|f| !skipped f)
+               <- map name_of
+               <- collect$
     quote~ do:
         impl #name
             pub fn describe$ -> String:
                 let fields: Vec<&str> = vec! #(#shown)*
                 format! "{} {{ {} }}" (stringify! #name) (fields <- join ", ")
+
+// A field marked `#[describe]` is left out.
+fn skipped (f: &Field) -> bool:
+    f <- attrs
+      <- iter$
+      <- any (|a| a <- is "describe")
+
+fn name_of (f: &Field) -> String:
+    f <- ident
+      <- as_ref$
+      <- unwrap$
+      <- to_string$
 ```
 
 `app/Cargo.toml`
@@ -579,7 +591,11 @@ struct Point
     y: i32
 
 fn main$:
-    let p = Point\ x = 1, secret = 7, y = 2
+    let p =
+        Point\
+            x = 1
+            secret = 7
+            y = 2
     println! "{}" (Point.describe$)
     println! "{:?}" p
     println! "{}" (p <- x + p <- secret + p <- y)

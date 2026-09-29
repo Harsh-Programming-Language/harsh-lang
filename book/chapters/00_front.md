@@ -43,7 +43,10 @@ Braces are where Harsh starts, not where it stops. It adds four things Rust has 
 
 ```rust harsh
 let double = 2.0 |> scale
-let doubled: Vec<f64> = readings <- iter$ <- map (|&x| double x) <- collect$
+let doubled: Vec<f64> =
+    readings <- iter$
+             <- map (|&x| double x)
+             <- collect$
 ```
 
 **Generator comprehensions.** Say what a collection holds, not how to fill it:

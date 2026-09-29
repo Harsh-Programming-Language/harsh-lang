@@ -55,7 +55,12 @@ extern "C" fn by_value (a: *const c_void) (b: *const c_void) -> c_int:
 
 fn main$:
     let mut xs = [5, 3, 9, 1, 7]
-    unsafe: qsort (xs <- as_mut_ptr$ as *mut c_void) (xs <- len$) (std.mem.size_of<i32>$) by_value
+    unsafe:
+        qsort
+            (xs <- as_mut_ptr$ as *mut c_void)
+            (xs <- len$)
+            (std.mem.size_of<i32>$)
+            by_value
     println! "{:?}" xs
 ```
 

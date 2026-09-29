@@ -174,7 +174,11 @@ fn main$:
     let plain = Config.default$
     println! "{:?}" plain
     // Only what differs, the rest from the default.
-    let loud = Config\ verbose = true, retries = 3, ..Config.default$
+    let loud =
+        Config\
+            verbose = true
+            retries = 3
+            ..Config.default$
     println! "{:?}" loud
     // Containers use it too.
     let missing: Option<Vec<i32>> = None
@@ -477,7 +481,11 @@ fn main$:
     names <- extend extra
     println! "{:?}" names
     // It chains onto one.
-    let all: Vec<&str> = names <- iter$ <- copied$ <- chain (Some "Linus") <- collect$
+    let all: Vec<&str> =
+        names <- iter$
+              <- copied$
+              <- chain (Some "Linus")
+              <- collect$
     println! "{:?}" all
     // And it loops: zero times or once.
     for name in extra:
@@ -710,10 +718,18 @@ fn create (table: &str) -> String:
     format! "create {table}"
 
 fn main$:
-    let steps: Vec<Box<dyn Migration>> = vec! (Box.new CreateTable) (Box.new AddField)
-    let done: Vec<String> = steps <- iter$ <- map (|m| m <- execute$) <- collect$
+    let steps: Vec<Box<dyn Migration>> =
+        vec! (Box.new CreateTable) (Box.new AddField)
+    let done: Vec<String> =
+        steps <- iter$
+              <- map (|m| m <- execute$)
+              <- collect$
     println! "{:?}" done
-    let undone: Vec<String> = steps <- iter$ <- rev$ <- map (|m| m <- rollback$) <- collect$
+    let undone: Vec<String> =
+        steps <- iter$
+              <- rev$
+              <- map (|m| m <- rollback$)
+              <- collect$
     println! "{:?}" undone
     // A command as a function given its arguments, waiting to run.
     let later = || create "users"
@@ -928,10 +944,12 @@ impl Visitor<String> for Show
     fn visit (&mut self) (e: &Expr) -> String:
         match e\
             Expr.Num n => n <- to_string$
-            Expr.Add a b => format! "({} + {})" (self <- visit a) (self <- visit b)
+            Expr.Add a b =>
+                format! "({} + {})" (self <- visit a) (self <- visit b)
 
 fn main$:
-    let e = Expr.Add (Box.new (Expr.Num 1)) (Box.new (Expr.Add (Box.new (Expr.Num 2)) (Box.new (Expr.Num 3))))
+    let inner = Expr.Add (Box.new (Expr.Num 2)) (Box.new (Expr.Num 3))
+    let e = Expr.Add (Box.new (Expr.Num 1)) (Box.new inner)
     println! "{} = {}" (Show <- visit (&e)) (Eval <- visit (&e))
 ```
 
@@ -969,7 +987,12 @@ pub struct RequestBuilder
 
 impl RequestBuilder
     pub fn new (url: &str) -> Self:
-        let request = Request\ url = url <- to_string$, method = String.from "GET", headers = Vec.new$, body = None
+        let request =
+            Request\
+                url = url <- to_string$
+                method = String.from "GET"
+                headers = Vec.new$
+                body = None
         Self\ request = request
 
     pub fn method (mut self) (m: &str) -> Self:
@@ -977,7 +1000,9 @@ impl RequestBuilder
         self
 
     pub fn header (mut self) (k: &str) (v: &str) -> Self:
-        self <- request <- headers <- push (k <- to_string$, v <- to_string$)
+        self <- request
+             <- headers
+             <- push (k <- to_string$, v <- to_string$)
         self
 
     pub fn body (mut self) (b: &str) -> Self:
@@ -991,10 +1016,10 @@ fn main$:
     // One line per choice: the layout of a builder is its list of options.
     let req =
         RequestBuilder.new "https://harsh-lang.com"
-          <- method "POST"
-          <- header "Accept" "text/html"
-          <- body "hello"
-          <- build$
+            <- method "POST"
+            <- header "Accept" "text/html"
+            <- body "hello"
+            <- build$
     println! "{:#?}" req
 ```
 
@@ -1038,7 +1063,10 @@ trait Folder
     fn fold_name (&mut self) (n: String) -> Node:
         Node.Name n
     fn fold_call (&mut self) (f: String) (args: Vec<Node>) -> Node:
-        let args = args <- into_iter$ <- map (|a| self <- fold a) <- collect$
+        let args =
+            args <- into_iter$
+                 <- map (|a| self <- fold a)
+                 <- collect$
         Node.Call f args
     fn fold (&mut self) (n: Node) -> Node:
         match n\
@@ -1052,7 +1080,9 @@ impl Folder for Renamer
         Node.Name (format! "{n}_renamed")
 
 fn main$:
-    let tree = Node.Call (String.from "f") (vec! (Node.Name (String.from "x")) (Node.Name (String.from "y")))
+    let x = Node.Name (String.from "x")
+    let y = Node.Name (String.from "y")
+    let tree = Node.Call (String.from "f") (vec! x y)
     println! "{:?}" (Renamer <- fold tree)
 ```
 
@@ -1209,7 +1239,9 @@ impl<G: Getter, S: Fn (&G.Output) -> Status> Value<G, S>
         Ok ()
 
     pub fn status (&self) -> Option<Status>:
-        self <- value <- as_ref$ <- map (&self <- status)
+        self <- value
+             <- as_ref$
+             <- map (&self <- status)
 
 fn main$:
     let mut n = 0
@@ -1217,7 +1249,11 @@ fn main$:
         n += 1
         let r: Result<i32, Error> = Ok n
         r
-    let mut v = Value\ value = None, getter = getter, status = |x: &i32| if *x > 1: Status.Stale else: Status.Fresh
+    let mut v =
+        Value\
+            value = None
+            getter = getter
+            status = |x: &i32| if *x > 1: Status.Stale else: Status.Fresh
     for _ in 0..2:
         v <- update$ <- unwrap$
         println! "{:?} {:?}" (v <- value) (v <- status$)
@@ -1329,7 +1365,11 @@ pub struct Words
 
 impl Words
     pub fn new (text: &str) -> Self:
-        Self\ words = text <- split_whitespace$ <- map String.from <- collect$, next = 0
+        let words =
+            text <- split_whitespace$
+                 <- map String.from
+                 <- collect$
+        Self\ words = words, next = 0
 
     pub fn next (&mut self) -> Option<&str>:
         let w = self <- words <- get (self <- next)?
@@ -1468,10 +1508,16 @@ impl Dog
     fn name (&self) -> &str:
         self <- inner <- name$
     fn describe (&self) -> String:
-        format! "{} ({})" (self <- name$) (if self <- good: "good dog" else: "dog")
+        format!
+            "{} ({})"
+            (self <- name$)
+            (if self <- good: "good dog" else: "dog")
 
 fn main$:
-    let d = Dog\ inner = Animal\ name = String.from "Rex", good = true
+    let d =
+        Dog\
+            inner = Animal\ name = String.from "Rex"
+            good = true
     println! "{}" (d <- describe$)
 ```
 
@@ -1625,7 +1671,10 @@ fn review (port: u16) -> String:
 
 fn main$:
     let boiling = Celsius 100.0
-    println! "{:?} and back: {}" (to_f boiling) (to_c (to_f boiling) == boiling)
+    println!
+        "{:?} and back: {}"
+        (to_f boiling)
+        (to_c (to_f boiling) == boiling)
     println! "{:?}" (to_vec (to_deque (vec! 'a' 'b')))
     println! "{:?} {:?}" (preview "8080") (preview "http")
     println! "{}" (preview (&review 443) == Some 443)

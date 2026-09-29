@@ -24,7 +24,12 @@ pub struct RequestBuilder
 
 impl RequestBuilder
     pub fn new (url: &str) -> Self:
-        let request = Request\ url = url <- to_string$, method = String.from "GET", headers = Vec.new$, body = None
+        let request =
+            Request\
+                url = url <- to_string$
+                method = String.from "GET"
+                headers = Vec.new$
+                body = None
         Self\ request = request
 
     pub fn method (mut self) (m: &str) -> Self:
@@ -32,7 +37,9 @@ impl RequestBuilder
         self
 
     pub fn header (mut self) (k: &str) (v: &str) -> Self:
-        self <- request <- headers <- push (k <- to_string$, v <- to_string$)
+        self <- request
+             <- headers
+             <- push (k <- to_string$, v <- to_string$)
         self
 
     pub fn body (mut self) (b: &str) -> Self:
@@ -46,10 +53,10 @@ fn main$:
     // One line per choice: the layout of a builder is its list of options.
     let req =
         RequestBuilder.new "https://harsh-lang.com"
-          <- method "POST"
-          <- header "Accept" "text/html"
-          <- body "hello"
-          <- build$
+            <- method "POST"
+            <- header "Accept" "text/html"
+            <- body "hello"
+            <- build$
     println! "{:#?}" req
 ```
 
@@ -93,7 +100,10 @@ trait Folder
     fn fold_name (&mut self) (n: String) -> Node:
         Node.Name n
     fn fold_call (&mut self) (f: String) (args: Vec<Node>) -> Node:
-        let args = args <- into_iter$ <- map (|a| self <- fold a) <- collect$
+        let args =
+            args <- into_iter$
+                 <- map (|a| self <- fold a)
+                 <- collect$
         Node.Call f args
     fn fold (&mut self) (n: Node) -> Node:
         match n\
@@ -107,7 +117,9 @@ impl Folder for Renamer
         Node.Name (format! "{n}_renamed")
 
 fn main$:
-    let tree = Node.Call (String.from "f") (vec! (Node.Name (String.from "x")) (Node.Name (String.from "y")))
+    let x = Node.Name (String.from "x")
+    let y = Node.Name (String.from "y")
+    let tree = Node.Call (String.from "f") (vec! x y)
     println! "{:?}" (Renamer <- fold tree)
 ```
 

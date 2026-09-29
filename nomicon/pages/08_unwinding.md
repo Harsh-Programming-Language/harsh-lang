@@ -36,7 +36,10 @@ fn main$:
     panic.set_hook (Box.new (|_| ()))
     let mut consistent = true
     let result = panic.catch_unwind (panic.AssertUnwindSafe (|| risky (&mut consistent)))
-    println! "panicked: {}, consistent: {}" (result <- is_err$) consistent
+    println!
+        "panicked: {}, consistent: {}"
+        (result <- is_err$)
+        consistent
 ```
 
 ```text
@@ -63,16 +66,20 @@ fn main$:
     std.panic.set_hook (Box.new (|_| ()))
     let data = Arc.new (Mutex.new (vec! 1 2 3))
     let d = data <- clone$
-    let _ = thread.spawn (move ||:
-        let mut v = d <- lock$ <- unwrap$
-        v <- push 4
-        panic! "the holder panicked"
-    ) <- join$
+    let _ =
+        thread.spawn (
+            move ||:
+                let mut v = d <- lock$ <- unwrap$
+                v <- push 4
+                panic! "the holder panicked"
+        ) <- join$
     println! "poisoned: {}" (data <- is_poisoned$)
     let result = data <- lock$
-    let shown = match result\
-        Ok v => format! "ok {:?}" (*v)
-        Err poisoned => format! "recovered {:?}" (*poisoned <- into_inner$)
+    let shown =
+        match result\
+            Ok v => format! "ok {:?}" (*v)
+            Err poisoned =>
+                format! "recovered {:?}" (*poisoned <- into_inner$)
     println! "{shown}"
 ```
 

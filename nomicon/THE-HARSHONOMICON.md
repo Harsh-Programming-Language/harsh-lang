@@ -213,8 +213,14 @@ struct InOrder
 
 fn main$:
     // Rust may reorder the fields to pack them; C's order pads.
-    println! "Loose:   size {} align {}" (mem.size_of<Loose>$) (mem.align_of<Loose>$)
-    println! "InOrder: size {} align {}" (mem.size_of<InOrder>$) (mem.align_of<InOrder>$)
+    println!
+        "Loose:   size {} align {}"
+        (mem.size_of<Loose>$)
+        (mem.align_of<Loose>$)
+    println!
+        "InOrder: size {} align {}"
+        (mem.size_of<InOrder>$)
+        (mem.align_of<InOrder>$)
 ```
 
 ```text
@@ -518,10 +524,16 @@ struct Doc
 impl Doc
     // Elided: the output borrows from `self`.
     fn first_word (&self) -> &str:
-        self <- text <- split_whitespace$ <- next$ <- unwrap_or ""
+        self <- text
+             <- split_whitespace$
+             <- next$
+             <- unwrap_or ""
     // The same signature with its lifetimes written.
     fn first_word_explicit<'a> (&'a self) -> &'a str:
-        self <- text <- split_whitespace$ <- next$ <- unwrap_or ""
+        self <- text
+             <- split_whitespace$
+             <- next$
+             <- unwrap_or ""
 
 fn main$:
     let d = Doc\ text = String.from "hello harsh world"
@@ -577,7 +589,9 @@ implied by the `Fn(&T) -> &U` sugar, which is why it is rarely written.
 // The closure must work for every lifetime of the references it is given:
 // a `for<'a>` bound, implied by the sugar.
 fn apply_all (f: impl Fn (&str) -> usize) (words: &[String]) -> Vec<usize>:
-    words <- iter$ <- map (|w| f w) <- collect$
+    words <- iter$
+          <- map (|w| f w)
+          <- collect$
 
 fn main$:
     let words = vec! (String.from "harsh") (String.from "rust")
@@ -693,7 +707,10 @@ struct Slice<'a, T>
 
 impl<'a, T: Copy> Slice<'a, T>
     fn new (xs: &'a [T]) -> Self:
-        Self\ start = xs <- as_ptr$, len = xs <- len$, marker = PhantomData
+        Self\
+            start = xs <- as_ptr$
+            len = xs <- len$
+            marker = PhantomData
     fn get (&self) (i: usize) -> Option<T>:
         if i < self <- len:
             // Sound: in bounds, and PhantomData keeps `xs` borrowed.
@@ -1047,7 +1064,10 @@ struct Pair
 fn main$:
     let _a = Loud\ name = "local a"
     let _b = Loud\ name = "local b"
-    let _p = Pair\ first = Loud\ name = "field first", second = Loud\ name = "field second"
+    let _p =
+        Pair\
+            first = Loud\ name = "field first"
+            second = Loud\ name = "field second"
     // Never dropped: forgotten, and kept from dropping.
     std.mem.forget (Loud\ name = "forgotten")
     let _m = ManuallyDrop.new (Loud\ name = "manual")
@@ -1089,11 +1109,17 @@ fn main$:
     let a = Rc.new (Node\ next = RefCell.new None, back = RefCell.new (Weak.new$))
     let b = Rc.new (Node\ next = RefCell.new (Some (a <- clone$)), back = RefCell.new (Weak.new$))
     *a <- next <- borrow_mut$ = Some (b <- clone$)
-    println! "strong: a {} b {} -- a leak when both go" (Rc.strong_count (&a)) (Rc.strong_count (&b))
+    println!
+        "strong: a {} b {} -- a leak when both go"
+        (Rc.strong_count (&a))
+        (Rc.strong_count (&b))
     // Break it: a Weak pointer back does not keep its target alive.
     *a <- next <- borrow_mut$ = None
     *a <- back <- borrow_mut$ = Rc.downgrade (&b)
-    println! "strong: a {} b {}" (Rc.strong_count (&a)) (Rc.strong_count (&b))
+    println!
+        "strong: a {} b {}"
+        (Rc.strong_count (&a))
+        (Rc.strong_count (&b))
 ```
 
 ```text
@@ -1142,7 +1168,10 @@ fn main$:
     panic.set_hook (Box.new (|_| ()))
     let mut consistent = true
     let result = panic.catch_unwind (panic.AssertUnwindSafe (|| risky (&mut consistent)))
-    println! "panicked: {}, consistent: {}" (result <- is_err$) consistent
+    println!
+        "panicked: {}, consistent: {}"
+        (result <- is_err$)
+        consistent
 ```
 
 ```text
@@ -1169,16 +1198,20 @@ fn main$:
     std.panic.set_hook (Box.new (|_| ()))
     let data = Arc.new (Mutex.new (vec! 1 2 3))
     let d = data <- clone$
-    let _ = thread.spawn (move ||:
-        let mut v = d <- lock$ <- unwrap$
-        v <- push 4
-        panic! "the holder panicked"
-    ) <- join$
+    let _ =
+        thread.spawn (
+            move ||:
+                let mut v = d <- lock$ <- unwrap$
+                v <- push 4
+                panic! "the holder panicked"
+        ) <- join$
     println! "poisoned: {}" (data <- is_poisoned$)
     let result = data <- lock$
-    let shown = match result\
-        Ok v => format! "ok {:?}" (*v)
-        Err poisoned => format! "recovered {:?}" (*poisoned <- into_inner$)
+    let shown =
+        match result\
+            Ok v => format! "ok {:?}" (*v)
+            Err poisoned =>
+                format! "recovered {:?}" (*poisoned <- into_inner$)
     println! "{shown}"
 ```
 
@@ -1412,26 +1445,42 @@ unsafe impl<T: Sync> Sync for MyVec<T>
 
 impl<T> MyVec<T>
     pub fn new$ -> Self:
-        assert! (mem.size_of<T>$ != 0) "zero-sized types are not handled here"
-        Self\ ptr = NonNull.dangling$, cap = 0, len = 0
+        assert!
+            (mem.size_of<T>$ != 0)
+            "zero-sized types are not handled here"
+        Self\
+            ptr = NonNull.dangling$
+            cap = 0
+            len = 0
 
     fn layout (cap: usize) -> Layout:
-        Layout.from_size_align (cap * mem.size_of<T>$) (mem.align_of<T>$) <- unwrap$
+        let size = cap * mem.size_of<T>$
+        Layout.from_size_align size (mem.align_of<T>$) <- unwrap$
 
     fn grow (&mut self):
         let new_cap = if self <- cap == 0: 4 else: 2 * self <- cap
         let new_layout = Self.layout new_cap
-        let raw = if self <- cap == 0: unsafe: alloc.alloc new_layout else: unsafe: alloc.realloc (self <- ptr <- as_ptr$ as *mut u8) (Self.layout (self <- cap)) (new_layout <- size$)
-        self <- ptr = match NonNull.new (raw as *mut T)\
-            Some p => p
-            None => alloc.handle_alloc_error new_layout
+        let raw = do:
+            if self <- cap == 0: unsafe: alloc.alloc new_layout
+            else:
+                let old = self <- ptr <- as_ptr$ as *mut u8
+                unsafe: alloc.realloc old (Self.layout (self <- cap)) (new_layout <- size$)
+        self <- ptr =
+            match NonNull.new (raw as *mut T)\
+                Some p => p
+                None => alloc.handle_alloc_error new_layout
         self <- cap = new_cap
 
     pub fn push (&mut self) (elem: T):
         if self <- len == self <- cap:
             self <- grow$
         // Written, not assigned: the slot holds no value to drop.
-        unsafe: ptr.write (self <- ptr <- as_ptr$ <- add (self <- len)) elem
+        // `add` on a raw pointer is itself unsafe: the chain stays inside.
+        let slot = unsafe:
+            self <- ptr
+                 <- as_ptr$
+                 <- add (self <- len)
+        unsafe: ptr.write slot elem
         self <- len += 1
 
     pub fn pop (&mut self) -> Option<T>:
@@ -1439,14 +1488,22 @@ impl<T> MyVec<T>
             return None
         self <- len -= 1
         // Read out: the slot is now uninitialised, and past `len`.
-        Some (unsafe: ptr.read (self <- ptr <- as_ptr$ <- add (self <- len)))
+        // `add` on a raw pointer is itself unsafe: the chain stays inside.
+        let slot = unsafe:
+            self <- ptr
+                 <- as_ptr$
+                 <- add (self <- len)
+        Some (unsafe: ptr.read slot)
 
     pub fn insert (&mut self) (index: usize) (elem: T):
         assert! (index <= self <- len) "index out of bounds"
         if self <- len == self <- cap:
             self <- grow$
         unsafe:
-            let p = self <- ptr <- as_ptr$ <- add index
+            let p =
+                self <- ptr
+                     <- as_ptr$
+                     <- add index
             // Shift the tail right by one, then write into the gap.
             ptr.copy p (p <- add 1) (self <- len - index)
             ptr.write p elem
@@ -1456,7 +1513,10 @@ impl<T> MyVec<T>
         assert! (index < self <- len) "index out of bounds"
         self <- len -= 1
         unsafe:
-            let p = self <- ptr <- as_ptr$ <- add index
+            let p =
+                self <- ptr
+                     <- as_ptr$
+                     <- add index
             let out = ptr.read p
             ptr.copy (p <- add 1) p (self <- len - index)
             out
@@ -1466,17 +1526,22 @@ impl<T> Drop for MyVec<T>
         if self <- cap != 0:
             unsafe:
                 // Drop the elements, then free the memory.
-                ptr.drop_in_place (ptr.slice_from_raw_parts_mut (self <- ptr <- as_ptr$) (self <- len))
-                alloc.dealloc (self <- ptr <- as_ptr$ as *mut u8) (Self.layout (self <- cap))
+                let elems = ptr.slice_from_raw_parts_mut (self <- ptr <- as_ptr$) (self <- len)
+                ptr.drop_in_place elems
+                alloc.dealloc
+                    (self <- ptr <- as_ptr$ as *mut u8)
+                    (Self.layout (self <- cap))
 
 impl<T> Deref for MyVec<T>
     type Target = [T]
     fn deref (&self) -> &[T]:
-        unsafe: std.slice.from_raw_parts (self <- ptr <- as_ptr$) (self <- len)
+        unsafe:
+            std.slice.from_raw_parts (self <- ptr <- as_ptr$) (self <- len)
 
 impl<T> DerefMut for MyVec<T>
     fn deref_mut (&mut self) -> &mut [T]:
-        unsafe: std.slice.from_raw_parts_mut (self <- ptr <- as_ptr$) (self <- len)
+        unsafe:
+            std.slice.from_raw_parts_mut (self <- ptr <- as_ptr$) (self <- len)
 
 fn main$:
     let mut v = MyVec.new$
@@ -1617,7 +1682,8 @@ fn main$:
     let mut handles = Vec.new$
     for i in 0..3:
         let mine = shared <- clone$
-        handles <- push (thread.spawn (move || format! "thread {i} read {:?}" (mine <- text)))
+        let read = move || format! "thread {i} read {:?}" (mine <- text)
+        handles <- push (thread.spawn read)
     for h in handles:
         println! "{}" (h <- join$ <- unwrap$)
     println! "owners left: {}" (MyArc.count (&shared))
@@ -1692,7 +1758,12 @@ extern "C" fn by_value (a: *const c_void) (b: *const c_void) -> c_int:
 
 fn main$:
     let mut xs = [5, 3, 9, 1, 7]
-    unsafe: qsort (xs <- as_mut_ptr$ as *mut c_void) (xs <- len$) (std.mem.size_of<i32>$) by_value
+    unsafe:
+        qsort
+            (xs <- as_mut_ptr$ as *mut c_void)
+            (xs <- len$)
+            (std.mem.size_of<i32>$)
+            by_value
     println! "{:?}" xs
 ```
 

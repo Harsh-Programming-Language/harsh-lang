@@ -135,7 +135,11 @@ fn main$:
     let plain = Config.default$
     println! "{:?}" plain
     // Only what differs, the rest from the default.
-    let loud = Config\ verbose = true, retries = 3, ..Config.default$
+    let loud =
+        Config\
+            verbose = true
+            retries = 3
+            ..Config.default$
     println! "{:?}" loud
     // Containers use it too.
     let missing: Option<Vec<i32>> = None
@@ -438,7 +442,11 @@ fn main$:
     names <- extend extra
     println! "{:?}" names
     // It chains onto one.
-    let all: Vec<&str> = names <- iter$ <- copied$ <- chain (Some "Linus") <- collect$
+    let all: Vec<&str> =
+        names <- iter$
+              <- copied$
+              <- chain (Some "Linus")
+              <- collect$
     println! "{:?}" all
     // And it loops: zero times or once.
     for name in extra:

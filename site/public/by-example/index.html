@@ -179,6 +179,7 @@ pre.code:hover .copy,.copy:focus-visible{opacity:1}
 <li class="d3"><a href="#procedural-macros-1">Procedural macros</a></li>
 <li class="d2"><a href="#harsh-dsls">Harsh DSLs (~)</a></li>
 <li class="d2"><a href="#rust-dsls">Rust DSLs (!)</a></li>
+<li class="d1"><a href="#precedence">Precedence</a></li>
 <li class="d0"><a href="#8-ownership-and-borrowing">8. Ownership and borrowing</a></li>
 <li class="d1"><a href="#8-1-moving">8.1 Moving</a></li>
 <li class="d1"><a href="#8-2-borrowing">8.2 Borrowing</a></li>
@@ -1051,6 +1052,64 @@ reference. The prelude's <code>g~</code> and <code>m~</code> are the first (page
 <p>Imported from Rust libraries, called by Harsh's rules: <code>vec! 1 2 3</code>,
 <code>#[derive Debug Serialize]</code>, <code>#[tokio.main]</code>; a stream that is a language of
 its own goes in braces, with Harsh in holes, <code>@: … :@</code> (23.8).</p>
+<h3 id="precedence">Precedence</h3>
+<p>Application binds tighter than anything but an atom: <code>add 1 2 * 10</code> adds,
+then multiplies. The chain <code>&lt;-</code> comes next, then <code>?</code> and the prefix operators
+— so <code>!v &lt;- is_empty$</code> is "not empty", and <code>(*r) &lt;- len$</code> dereferences <code>r</code>
+before calling. Rust's operators follow in Rust's order, then the pipes. A
+negative or dereferenced argument is parenthesised: <code>f (-1)</code>, <code>f (*x)</code>. The
+full table is the Book's appendix <em>Precedence</em>.</p>
+<pre class="code harsh"><code><span class="k">struct</span> <span class="t">Switch</span><span class="p">&lt;</span>'a<span class="p">&gt;</span>
+    flag<span class="p">:</span> <span class="p">&amp;</span>'a <span class="k">mut</span> bool
+
+<span class="k">fn</span> add <span class="p">(</span>a<span class="p">:</span> i32<span class="p">)</span> <span class="p">(</span>b<span class="p">:</span> i32<span class="p">)</span> <span class="op">-&gt;</span> i32<span class="p">:</span>
+    a <span class="p">+</span> b
+
+<span class="k">fn</span> double <span class="p">(</span>x<span class="p">:</span> i32<span class="p">)</span> <span class="op">-&gt;</span> i32<span class="p">:</span>
+    x <span class="p">*</span> <span class="num">2</span>
+
+<span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="k">let</span> v <span class="p">=</span> <span class="mac">vec!</span> <span class="num">3</span> <span class="num">1</span> <span class="num">2</span>
+    <span class="com">// Application first: `add 1 2`, then `* 10`.</span>
+    <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span>add <span class="num">1</span> <span class="num">2</span> <span class="p">*</span> <span class="num">10</span><span class="p">)</span>
+    <span class="com">// A negative argument is parenthesised.</span>
+    <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span>double <span class="p">(</span><span class="p">-</span><span class="num">4</span><span class="p">)</span><span class="p">)</span>
+    <span class="com">// A chain before an operator: the length, plus one.</span>
+    <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span>v <span class="op">&lt;-</span> len<span class="defer">$</span> <span class="p">+</span> <span class="num">1</span><span class="p">)</span>
+    <span class="com">// A prefix operator takes the whole chain: not (v is empty).</span>
+    <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span><span class="p">!</span>v <span class="op">&lt;-</span> is_empty<span class="defer">$</span><span class="p">)</span>
+    <span class="com">// An application before a chain: `add 1 2`, then its method.</span>
+    <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span>add <span class="num">1</span> <span class="num">2</span> <span class="op">&lt;-</span> pow <span class="num">2</span><span class="p">)</span>
+    <span class="com">// Dereference first, then the method: parenthesised.</span>
+    <span class="k">let</span> r <span class="p">=</span> <span class="p">&amp;</span>v
+    <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span><span class="p">(</span><span class="p">*</span>r<span class="p">)</span> <span class="op">&lt;-</span> len<span class="defer">$</span><span class="p">)</span>
+    <span class="com">// Through a field: `*s &lt;- flag` is the bool the field points to.</span>
+    <span class="k">let</span> <span class="k">mut</span> on <span class="p">=</span> <span class="k">false</span>
+    <span class="k">let</span> <span class="k">mut</span> s <span class="p">=</span> <span class="t">Switch</span>\ flag <span class="p">=</span> <span class="p">&amp;</span><span class="k">mut</span> on
+    <span class="p">*</span>s <span class="op">&lt;-</span> flag <span class="p">=</span> <span class="k">true</span>
+    <span class="mac">println!</span> <span class="str">"{on}"</span>
+    <span class="com">// Pipes, left to right; several values fill several parameters.</span>
+    <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span><span class="num">3</span> <span class="op">|&gt;</span> double <span class="op">|&gt;</span> double<span class="p">)</span>
+    <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span><span class="num">1</span> <span class="num">2</span> <span class="op">|&gt;</span> add<span class="p">)</span>
+    <span class="com">// To pipe a call's result, parenthesise the call.</span>
+    <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span><span class="p">(</span>add <span class="num">1</span> <span class="num">2</span><span class="p">)</span> <span class="op">|&gt;</span> double<span class="p">)</span>
+    <span class="com">// Fewer values than parameters: a partial application.</span>
+    <span class="k">let</span> add10 <span class="p">=</span> <span class="num">10</span> <span class="op">|&gt;</span> add
+    <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span>add10 <span class="num">5</span><span class="p">)</span>
+    <span class="com">// The backward pipe, right to left.</span>
+    <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span>double <span class="op">&lt;|</span> double <span class="op">&lt;|</span> <span class="num">5</span><span class="p">)</span></code></pre>
+<pre class="code"><code>30
+-8
+4
+true
+9
+3
+true
+12
+3
+6
+15
+20</code></pre>
 <h2 id="8-ownership-and-borrowing">8. Ownership and borrowing</h2>
 <p>This is the part of Rust that Harsh keeps entirely. Nothing here is a Harsh
 idea; the only thing to learn is how the spellings look.</p>

@@ -133,3 +133,9 @@ Point { x: 1.0, y: 2.0 } Size { w: 3.0, h: 4.0 } 1.5 9.14 5 12 8 big counts: 2 4
 
 - `hrs new`, `hrs run`, `hrs build`, `hrs test`, `hrs check`, `hrs lint`, `hrs watch`; `hrs fmt` lays a file out by these rules and is a no-op on one already laid out; `hrs export` writes the project as a plain Rust crate; `hrs-from` brings Rust in. (§1.2, §14.1)
 - Errors point at your `.hrs` line, whether Harsh raised them or the compiler did. (§1.2, §3.4)
+
+## Precedence — appendix
+
+- Tightest first: atoms (`f$`, `v[i]`, `( … )`), then application `f a b`, then the chain `<-`, then `?`, then the prefix operators, then Rust's operators in Rust's order, then the pipes, then assignment.
+- `*p <- field` dereferences the field; `(*p) <- field` dereferences `p`.
+- `f -1` and `f *x` are arithmetic, not calls: `f (-1)`, `f (*x)`.

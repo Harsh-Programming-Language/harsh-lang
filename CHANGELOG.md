@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.49 — 2026-09-28  (`hrs_std` 0.1.3 and the Jupyter kernel 0.1.3, unchanged)
+
+- **Precedence, documented** (the user's request). *The Harsh Programming Language* gains an appendix, *Precedence*: the eighteen levels from atoms to assignment, dereference case by case, the pipes' rules, the traps (`f -1` and `f *x` are arithmetic, `f x |> g` pipes two values, `f a.b` is a path, `*p <- field` dereferences the field), and a program showing each rule with its output -- in words, as the Book shows no Rust. *The Harsh Language Guide* gains a *Precedence* section with the same rules beside the Rust they become, every line matched against the transpiler by `check.sh`. *Harsh by Example* gains a *Precedence* page in chapter 7; *The Harshonomicon* states the dereference rule where raw pointers are dereferenced; chapter 2 and *Harsh at a glance* point to the appendix.
+- **Fixed, a regression of 0.1.44:** a `trait`, `impl` or `enum` written with Rust's braces already, `impl Error for E {}`, gained a second pair, `{} {}`. Found rebuilding *Harsh by Example* (its custom-error program); pinned by a test. All four books rebuilt: 386 programs, every one built and run.
+
 ## 0.1.48 — 2026-09-28  (no change to the transpiler)
 
 - **Fixed: the Learn page's links to the books.** Its cards linked relatively (`book/`), which resolved to `/book/` while the site was one page at `/learn`; with static generation each page is a folder, `/learn/`, and the links became `/learn/book/` -- "Not found", on every book (the user's screenshots). They are now absolute, `/book/`. Two guards: `check.sh` refuses a relative link in the site's source, and the deploy follows every internal link on every pre-rendered page and fails, before publishing, if one leads nowhere.

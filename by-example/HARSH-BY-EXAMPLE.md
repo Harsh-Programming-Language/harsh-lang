@@ -1104,6 +1104,72 @@ Imported from Rust libraries, called by Harsh's rules: `vec! 1 2 3`,
 `#[derive Debug Serialize]`, `#[tokio.main]`; a stream that is a language of
 its own goes in braces, with Harsh in holes, `@: … :@` (23.8).
 
+## Precedence
+
+Application binds tighter than anything but an atom: `add 1 2 * 10` adds,
+then multiplies. The chain `<-` comes next, then `?` and the prefix operators
+— so `!v <- is_empty$` is "not empty", and `(*r) <- len$` dereferences `r`
+before calling. Rust's operators follow in Rust's order, then the pipes. A
+negative or dereferenced argument is parenthesised: `f (-1)`, `f (*x)`. The
+full table is the Book's appendix *Precedence*.
+
+```
+struct Switch<'a>
+    flag: &'a mut bool
+
+fn add (a: i32) (b: i32) -> i32:
+    a + b
+
+fn double (x: i32) -> i32:
+    x * 2
+
+fn main$:
+    let v = vec! 3 1 2
+    // Application first: `add 1 2`, then `* 10`.
+    println! "{}" (add 1 2 * 10)
+    // A negative argument is parenthesised.
+    println! "{}" (double (-4))
+    // A chain before an operator: the length, plus one.
+    println! "{}" (v <- len$ + 1)
+    // A prefix operator takes the whole chain: not (v is empty).
+    println! "{}" (!v <- is_empty$)
+    // An application before a chain: `add 1 2`, then its method.
+    println! "{}" (add 1 2 <- pow 2)
+    // Dereference first, then the method: parenthesised.
+    let r = &v
+    println! "{}" ((*r) <- len$)
+    // Through a field: `*s <- flag` is the bool the field points to.
+    let mut on = false
+    let mut s = Switch\ flag = &mut on
+    *s <- flag = true
+    println! "{on}"
+    // Pipes, left to right; several values fill several parameters.
+    println! "{}" (3 |> double |> double)
+    println! "{}" (1 2 |> add)
+    // To pipe a call's result, parenthesise the call.
+    println! "{}" ((add 1 2) |> double)
+    // Fewer values than parameters: a partial application.
+    let add10 = 10 |> add
+    println! "{}" (add10 5)
+    // The backward pipe, right to left.
+    println! "{}" (double <| double <| 5)
+```
+
+```text
+30
+-8
+4
+true
+9
+3
+true
+12
+3
+6
+15
+20
+```
+
 
 # 8. Ownership and borrowing
 

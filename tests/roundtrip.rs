@@ -2499,6 +2499,10 @@ fn a_marker_trait_and_its_blanket_impl() {
     // An empty enum -- a type with no values -- too; a unit struct keeps `;`.
     let rust = harsh_lang::driver::transpile_str("enum Void\nstruct Unit\n").unwrap();
     assert!(rust.contains("enum Void {}") && rust.contains("struct Unit;"), "{rust}");
+    // Written with Rust's braces already, it keeps one pair (the 0.1.44 rule
+    // added a second, found 2026-09-28 by *By Example*'s custom error).
+    let rust = harsh_lang::driver::transpile_str("impl std.error.Error for E {}\n").unwrap();
+    assert!(rust.contains("impl std::error::Error for E {}") && !rust.contains("{} {}"), "{rust}");
 }
 
 /// A declaration with no body, several parameters and no return type -- a

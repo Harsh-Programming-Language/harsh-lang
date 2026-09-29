@@ -820,6 +820,66 @@ else: if n == 2: 20
 else: 30
 ```
 
+## Precedence
+
+Rust's operators keep Rust's precedence. Harsh's own forms sit above them:
+application binds tighter than anything but an atom, the chain `<-` next,
+then `?` and the prefix operators, as in Rust. The Book's appendix
+*Precedence* gives the whole table in words; here, each rule beside the Rust
+it becomes.
+
+Application, chains, and operators:
+
+```
+let a = f$                              let a = f();
+let a = f a b                           let a = f(a, b);
+let a = f (-1) (&x) (*y) (a + b)        let a = f(-1, &x, *y, a + b);
+let a = T.new "s" <- run (&mut p)       let a = T::new("s").run(&mut p);
+let a = x <- f a <- g b                 let a = x.f(a).g(b);
+let a = f a b <- m$                     let a = f(a, b).m();
+let a = x <- field                      let a = x.field;
+let a = x <- f$ <- g <- h$              let a = x.f().g.h();
+let a = x <- get i?                     let a = x.get(i)?;
+let a = !x <- is_empty$                 let a = !x.is_empty();
+let a = x <- ptr$ as usize + 1          let a = x.ptr() as usize + 1;
+let a = f a * 2 == g b                  let a = f(a) * 2 == g(b);
+let a = (1..=10) <- map f               let a = (1..=10).map(f);
+```
+
+Dereference is a prefix operator on the whole chain after it:
+
+```
+let a = *p <- field                     let a = *p.field;
+let a = (*p) <- field                   let a = (*p).field;
+let a = *p <- m$                        let a = *p.m();
+let a = (*p) <- m$                      let a = (*p).m();
+let a = *x <- get i?                    let a = *x.get(i)?;
+let a = **x                             let a = **x;
+*s <- flag = true                       *s.flag = true;
+```
+
+Pipes: atoms on the left, one function on the right, `|>` left to right and
+`<|` right to left:
+
+```
+let a = 2 3 |> add                      let a = add(2, 3);
+let a = a |> f |> g                     let a = g(f(a));
+let a = (f x) |> g                      let a = g(f(x));
+let a = f <| g <| x                     let a = f(g(x));
+let a = (a |> f) + 1                    let a = (f(a)) + 1;
+```
+
+`a |> f + 1` is refused — after a pipe's function only `<|` may follow — and
+`x + 1 |> f` too: a pipe's left side is atoms. And the traps, each of which
+transpiles to something that is not a call:
+
+```
+let a = f -1                            let a = f -1;         subtraction: write f (-1)
+let a = f *x                            let a = f *x;         multiplication: write f (*x)
+let a = f x |> g                        let a = g(f, x);      two values piped: write (f x) |> g
+let a = f a.b                           let a = f(a::b);      a path: the field is a <- b
+```
+
 ## Closures
 
 A closure body may be indented, using either `|x|:` or `|x| do:` — the two are identical, because `do:` is the existing bare-block marker and a closure body is a brace block.

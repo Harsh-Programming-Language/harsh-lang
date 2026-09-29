@@ -356,7 +356,7 @@ hello, harsh 5 52 42 () 3 abc HELLO, HARSH 6 hello, ABC
 
 > **Harsh —** A function is applied by writing its arguments after it, separated by spaces: `add 2 3`. Parentheses around an argument mean *this is one argument* — `add (n * 2) (nothing$)` — and never *these are the arguments*; an argument that is a single token needs none. Applying a function to nothing is `nothing$`, because `()` is a value, the unit, and only ever that. The same rule declares a function: `fn add (a: i32) (b: i32)` is one group per parameter, and a lone parameter may drop its parentheses, `fn greet name: &str`. A block's opener says how its entries end, and there are only three kinds. A header that ends itself — `struct Point`, `impl Point`, `mod geometry`, `extern "C"` — needs no mark at all, since nothing but a name can follow it and what comes deeper can only be the body. A `\` opens a comma-separated list — a literal's fields, or a `match`'s arms. A `:` or `do:` opens statements. A grouping whose grammar belongs to someone else — a macro's own language — is not a block at all: it goes in the macro's braces, as Rust, and the Harsh inside is marked `@: … :@` (chapter 23).
 
-An index written tight, `arr[1]`, is part of its atom, so `f arr[1]` passes the element — the same way `t.0` is part of `t`; brackets never apply, and an array passed as an argument is isolated, `f ([1, 2, 3])`. Two arrows share the work of reaching into things: `<-` reaches into a *value* — a field, a method, `v <- len$` — and `.` walks a *path* — a module, a type, an item, `String.from`. A macro applies like a function, with its `!` glued to its name: `vec! [1, 2, 3]`, `println! "{s}"`. And when an application and an arrow meet, **the application binds tighter**: in `greet "harsh" <- to_uppercase$` the function is applied first and the arrow takes its result, and the next arrow, or an operator, ends the arguments. The parentheses you will be tempted to write, `(greet "harsh") <- to_uppercase$`, are not wrong; they are not needed. Parentheses are needed the other way round — when the arrow belongs *inside* an argument, `greet (&(text <- to_uppercase$))`.
+When an application meets operators, chains and pipes, it binds before any of them: `add 1 2 * 10` adds, then multiplies. The appendix *Precedence* sets out every level. An index written tight, `arr[1]`, is part of its atom, so `f arr[1]` passes the element — the same way `t.0` is part of `t`; brackets never apply, and an array passed as an argument is isolated, `f ([1, 2, 3])`. Two arrows share the work of reaching into things: `<-` reaches into a *value* — a field, a method, `v <- len$` — and `.` walks a *path* — a module, a type, an item, `String.from`. A macro applies like a function, with its `!` glued to its name: `vec! [1, 2, 3]`, `println! "{s}"`. And when an application and an arrow meet, **the application binds tighter**: in `greet "harsh" <- to_uppercase$` the function is applied first and the arrow takes its result, and the next arrow, or an operator, ends the arguments. The parentheses you will be tempted to write, `(greet "harsh") <- to_uppercase$`, are not wrong; they are not needed. Parentheses are needed the other way round — when the arrow belongs *inside* an argument, `greet (&(text <- to_uppercase$))`.
 
 ## 2.7 What you have met
 
@@ -6523,7 +6523,7 @@ $ hrs test
 running 1 test
 test target/hrs/lib.rs - add_one (line 10) ... ok
 
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.19s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.30s
 ```
 
 `cargo doc --open` renders every `///` and `//!` in the crate as HTML, with the Markdown inside them — headings, code blocks, links — laid out. The conventional sections are `# Examples`, `# Panics` (when the function can), `# Errors` (what `Err`s it returns) and `# Safety` (for `unsafe` functions). The example in the `///` is Harsh, like everything else in the file, and `cargo test` *runs it* — every code block in a doc comment is a test, so documentation cannot drift from the code without failing the build.
@@ -9484,3 +9484,155 @@ Point { x: 1.0, y: 2.0 } Size { w: 3.0, h: 4.0 } 1.5 9.14 5 12 8 big counts: 2 4
 
 - `hrs new`, `hrs run`, `hrs build`, `hrs test`, `hrs check`, `hrs lint`, `hrs watch`; `hrs fmt` lays a file out by these rules and is a no-op on one already laid out; `hrs export` writes the project as a plain Rust crate; `hrs-from` brings Rust in. (§1.2, §14.1)
 - Errors point at your `.hrs` line, whether Harsh raised them or the compiler did. (§1.2, §3.4)
+
+## Precedence — appendix
+
+- Tightest first: atoms (`f$`, `v[i]`, `( … )`), then application `f a b`, then the chain `<-`, then `?`, then the prefix operators, then Rust's operators in Rust's order, then the pipes, then assignment.
+- `*p <- field` dereferences the field; `(*p) <- field` dereferences `p`.
+- `f -1` and `f *x` are arithmetic, not calls: `f (-1)`, `f (*x)`.
+
+# Appendix: Precedence
+
+When an expression mixes several forms, which one binds first? In most of
+Harsh the answer is Rust's, operator for operator. Harsh adds three forms of
+its own — applying a function by juxtaposition, `f a b`; reaching into a
+value with `<-`; and the pipes — and this appendix places them among the
+rest. The program at the end shows each rule at work, with its output.
+
+## The levels
+
+From the tightest-binding to the loosest:
+
+| # | Level | Forms | Example, and what it means |
+|---|---|---|---|
+| 1 | **Atoms** | a literal, a name, a path `a.b`, anything in parentheses, a call with no arguments `f$`, an index `v[i]` | `f$` calls `f` with nothing |
+| 2 | **Application** | `f a b` — each argument an atom; anything else in parentheses | `f (-1) (&y) (a + b)`: three arguments |
+| 3 | **Member chain `<-`** | a field `x <- field`, a method `x <- m$` or `x <- m a b`, read left to right; each step takes its own arguments | `T.new "s" <- run (&mut p)`: build, then call `run` on the result |
+| 4 | **`?`** | applies to the whole call or chain before it | `x <- get i?`: the `?` is on what `get` returns |
+| 5 | **Prefix operators** | dereference `*`, borrow `&` and `&mut`, negation `-` and `!` — each on the whole chain after it | `!x <- is_empty$`: not (`x` is empty) |
+| 6 | `as` | | `x <- ptr$ as usize + 1`: the cast, then the addition |
+| 7 | `*` `/` `%` | | |
+| 8 | `+` `-` | | `f a * 2 == g b`: two calls, a product, a comparison |
+| 9 | `<<` `>>` | | |
+| 10 | `&` | | |
+| 11 | `^` | | |
+| 12 | `\|` | | |
+| 13 | **Comparisons** | `==` `!=` `<` `>` `<=` `>=` — never chained | `x <- len$ >= y <- len$`: two lengths compared |
+| 14 | `&&`, then `\|\|` | | |
+| 15 | **Ranges** | `..` `..=` | `(1..=10) <- map f`: the range needs parentheses before a chain |
+| 16 | **Pipes** | `\|>` and `<\|`, a form of their own (below) | `3 \|> double \|> double` |
+| 17 | **Assignment** | `=` `+=` `-=` … | |
+| 18 | **To the end of the line** | a closure `\|x\| …`, an inline `if c: a else: b`, `do:`, a struct literal `P\\ a = 1, b = 2` | |
+
+Levels 6 to 17 are Rust's order unchanged. What is Harsh's own is at the top
+— application binds tighter than anything but an atom, and `<-` next — and
+the pipes.
+
+## Dereference
+
+A prefix operator takes the whole chain after it, and since fields and
+methods are both written with `<-`, dereference needs care:
+
+| Harsh | What it means |
+|---|---|
+| `*p <- field` | the **field**, dereferenced |
+| `(*p) <- field` | **`p`** dereferenced, then its field |
+| `*p <- m$` | what `m` **returns**, dereferenced |
+| `(*p) <- m$` | `m` called on what `p` points to |
+| `*x <- get i?` | the `?` first, then the dereference |
+| `**x` | twice |
+| `*x + 1` | the dereference, then the addition |
+| `*s <- flag = true` | assigns through the **field** — a `&mut bool` held by `s` |
+| `f (*x)` | a dereferenced argument, parenthesised |
+| `f *x` | **not a call**: `f` multiplied by `x` |
+
+To reach through a raw pointer to a field, the parentheses are required:
+`(*c) <- count`, as *The Harshonomicon* writes it.
+
+## Pipes
+
+A pipe is a form of its own, with strict edges, so that it can never be read
+two ways:
+
+- On its **left**, only atoms — the values it carries. Several values fill
+  several parameters: `1 2 |> add` is `add` given 1 and 2. Fewer than the
+  function takes make a **partial application**: `10 |> add` is a function
+  waiting for the second number (chapter 14).
+- On its **right**, one function; after it only another pipe may follow.
+  `a |> f + 1` is refused: write `(a |> f) + 1`.
+- `|>` reads left to right, `a |> f |> g`: `f` first, then `g`. `<|` reads
+  right to left, `f <| g <| x`: `g` first, then `f`.
+
+## Traps
+
+Each of these compiles, or is refused with a message, and each has been
+written by mistake while this book's companions were written:
+
+- **`f -1` is not a call:** it is `f` minus 1. Write `f (-1)`.
+- **`f *x` is not a call:** it is `f` times `x`. Write `f (*x)`.
+- **`f x |> g` pipes two values,** `f` and `x`, into `g`. To pipe the result
+  of `f x`, write `(f x) |> g`.
+- **`f a.b` passes the path `a.b`,** not a field: fields are `a <- b`.
+- **`x <- g` is a field, `x <- g$` a call.**
+- **`*p <- field` dereferences the field,** not `p`: write `(*p) <- field`.
+- **A struct literal written inline inside another** takes the outer one's
+  remaining fields: bind the inner one first, or parenthesise it.
+
+## The rules at work
+
+```
+struct Switch<'a>
+    flag: &'a mut bool
+
+fn add (a: i32) (b: i32) -> i32:
+    a + b
+
+fn double (x: i32) -> i32:
+    x * 2
+
+fn main$:
+    let v = vec! 3 1 2
+    // Application first: `add 1 2`, then `* 10`.
+    println! "{}" (add 1 2 * 10)
+    // A negative argument is parenthesised.
+    println! "{}" (double (-4))
+    // A chain before an operator: the length, plus one.
+    println! "{}" (v <- len$ + 1)
+    // A prefix operator takes the whole chain: not (v is empty).
+    println! "{}" (!v <- is_empty$)
+    // An application before a chain: `add 1 2`, then its method.
+    println! "{}" (add 1 2 <- pow 2)
+    // Dereference first, then the method: parenthesised.
+    let r = &v
+    println! "{}" ((*r) <- len$)
+    // Through a field: `*s <- flag` is the bool the field points to.
+    let mut on = false
+    let mut s = Switch\ flag = &mut on
+    *s <- flag = true
+    println! "{on}"
+    // Pipes, left to right; several values fill several parameters.
+    println! "{}" (3 |> double |> double)
+    println! "{}" (1 2 |> add)
+    // To pipe a call's result, parenthesise the call.
+    println! "{}" ((add 1 2) |> double)
+    // Fewer values than parameters: a partial application.
+    let add10 = 10 |> add
+    println! "{}" (add10 5)
+    // The backward pipe, right to left.
+    println! "{}" (double <| double <| 5)
+```
+
+```text
+30
+-8
+4
+true
+9
+3
+true
+12
+3
+6
+15
+20
+```

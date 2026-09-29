@@ -1612,7 +1612,7 @@ impl<'a> Emitter<'a> {
                 // blanket impl -- has braces in Rust, never `;` (2026-09-27);
                 // so has an empty `enum`, a type with no values, `enum Void`
                 // (2026-09-28). A unit `struct` keeps its `;`.
-                if !is_block && !already_semi && matches!(kw, Some("trait") | Some("impl") | Some("enum")) {
+                if !is_block && !already_semi && !ends_brace && matches!(kw, Some("trait") | Some("impl") | Some("enum")) {
                     self.out.push_str(" {}");
                     return;
                 }

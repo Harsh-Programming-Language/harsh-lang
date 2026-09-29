@@ -124,7 +124,10 @@ fn main$:
 ```
 
 **In Harsh:** each power reads as in Rust; the raw-pointer dereference is
-`*p`, isolated in parentheses where it is an argument, `(*p)`.
+`*p`, isolated in parentheses where it is an argument, `(*p)`. Mind its
+precedence: a prefix operator takes the whole chain after it, so `*p <- field`
+dereferences the *field*; to reach through the pointer, write `(*p) <-
+field`. The Book's appendix *Precedence* has the full table.
 
 ## 1.3 Working with Unsafe
 

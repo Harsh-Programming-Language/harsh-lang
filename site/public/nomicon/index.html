@@ -301,7 +301,10 @@ such variant), among others.</p>
 1
 0x3f800000</code></pre>
 <p><strong>In Harsh:</strong> each power reads as in Rust; the raw-pointer dereference is
-<code>*p</code>, isolated in parentheses where it is an argument, <code>(*p)</code>.</p>
+<code>*p</code>, isolated in parentheses where it is an argument, <code>(*p)</code>. Mind its
+precedence: a prefix operator takes the whole chain after it, so <code>*p &lt;- field</code>
+dereferences the <em>field</em>; to reach through the pointer, write <code>(*p) &lt;-
+field</code>. The Book's appendix <em>Precedence</em> has the full table.</p>
 <h3 id="1-3-working-with-unsafe">1.3 Working with Unsafe</h3>
 <p><em>Original: <a href="https://doc.rust-lang.org/nomicon/working-with-unsafe.html">Working with Unsafe</a></em></p>
 <p>Unsafe code depends on invariants that <em>safe</em> code around it can break: a

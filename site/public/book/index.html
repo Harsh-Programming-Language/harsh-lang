@@ -403,6 +403,13 @@ pre.code:hover .copy,.copy:focus-visible{opacity:1}
 <li class="d1"><a href="#closures-chains-and-pipes-chapter-13">Closures, chains and pipes — chapter 13</a></li>
 <li class="d1"><a href="#macros-and-markup-chapter-23">Macros and markup — chapter 23</a></li>
 <li class="d1"><a href="#the-tools-chapters-1-14">The tools — chapters 1, 14</a></li>
+<li class="d1"><a href="#precedence-appendix">Precedence — appendix</a></li>
+<li class="d0"><a href="#appendix-precedence">Appendix: Precedence</a></li>
+<li class="d1"><a href="#the-levels">The levels</a></li>
+<li class="d1"><a href="#dereference">Dereference</a></li>
+<li class="d1"><a href="#pipes">Pipes</a></li>
+<li class="d1"><a href="#traps">Traps</a></li>
+<li class="d1"><a href="#the-rules-at-work">The rules at work</a></li>
 </ul></nav>
       <main>
   <h3 id="why-no-braces">Why no braces</h3>
@@ -640,7 +647,7 @@ you have it: 37</code></pre>
 <blockquote>
 <p><strong>Harsh —</strong> A function is applied by writing its arguments after it, separated by spaces: <code>add 2 3</code>. Parentheses around an argument mean <em>this is one argument</em> — <code>add (n * 2) (nothing$)</code> — and never <em>these are the arguments</em>; an argument that is a single token needs none. Applying a function to nothing is <code>nothing$</code>, because <code>()</code> is a value, the unit, and only ever that. The same rule declares a function: <code>fn add (a: i32) (b: i32)</code> is one group per parameter, and a lone parameter may drop its parentheses, <code>fn greet name: &amp;str</code>. A block's opener says how its entries end, and there are only three kinds. A header that ends itself — <code>struct Point</code>, <code>impl Point</code>, <code>mod geometry</code>, <code>extern "C"</code> — needs no mark at all, since nothing but a name can follow it and what comes deeper can only be the body. A <code>\</code> opens a comma-separated list — a literal's fields, or a <code>match</code>'s arms. A <code>:</code> or <code>do:</code> opens statements. A grouping whose grammar belongs to someone else — a macro's own language — is not a block at all: it goes in the macro's braces, as Rust, and the Harsh inside is marked <code>@: … :@</code> (chapter 23).</p>
 </blockquote>
-<p>An index written tight, <code>arr[1]</code>, is part of its atom, so <code>f arr[1]</code> passes the element — the same way <code>t.0</code> is part of <code>t</code>; brackets never apply, and an array passed as an argument is isolated, <code>f ([1, 2, 3])</code>. Two arrows share the work of reaching into things: <code>&lt;-</code> reaches into a <em>value</em> — a field, a method, <code>v &lt;- len$</code> — and <code>.</code> walks a <em>path</em> — a module, a type, an item, <code>String.from</code>. A macro applies like a function, with its <code>!</code> glued to its name: <code>vec! [1, 2, 3]</code>, <code>println! "{s}"</code>. And when an application and an arrow meet, <strong>the application binds tighter</strong>: in <code>greet "harsh" &lt;- to_uppercase$</code> the function is applied first and the arrow takes its result, and the next arrow, or an operator, ends the arguments. The parentheses you will be tempted to write, <code>(greet "harsh") &lt;- to_uppercase$</code>, are not wrong; they are not needed. Parentheses are needed the other way round — when the arrow belongs <em>inside</em> an argument, <code>greet (&amp;(text &lt;- to_uppercase$))</code>.</p>
+<p>When an application meets operators, chains and pipes, it binds before any of them: <code>add 1 2 * 10</code> adds, then multiplies. The appendix <em>Precedence</em> sets out every level. An index written tight, <code>arr[1]</code>, is part of its atom, so <code>f arr[1]</code> passes the element — the same way <code>t.0</code> is part of <code>t</code>; brackets never apply, and an array passed as an argument is isolated, <code>f ([1, 2, 3])</code>. Two arrows share the work of reaching into things: <code>&lt;-</code> reaches into a <em>value</em> — a field, a method, <code>v &lt;- len$</code> — and <code>.</code> walks a <em>path</em> — a module, a type, an item, <code>String.from</code>. A macro applies like a function, with its <code>!</code> glued to its name: <code>vec! [1, 2, 3]</code>, <code>println! "{s}"</code>. And when an application and an arrow meet, <strong>the application binds tighter</strong>: in <code>greet "harsh" &lt;- to_uppercase$</code> the function is applied first and the arrow takes its result, and the next arrow, or an operator, ends the arguments. The parentheses you will be tempted to write, <code>(greet "harsh") &lt;- to_uppercase$</code>, are not wrong; they are not needed. Parentheses are needed the other way round — when the arrow belongs <em>inside</em> an argument, <code>greet (&amp;(text &lt;- to_uppercase$))</code>.</p>
 <h3 id="2-7-what-you-have-met">2.7 What you have met</h3>
 <p>Immutability by default and <code>mut</code> to opt out; <code>&amp;</code> and <code>&amp;mut</code> on arguments; <code>Result</code> for operations that can fail and <code>match</code> to take it apart; <code>loop</code>, <code>break</code>, <code>continue</code>; enums; type annotations that tell <code>parse</code> what to produce. Each has a chapter. The next one starts with the smallest pieces: variables, types, functions, and control flow.</p>
 <h2 id="3-common-concepts">3. Common concepts</h2>
@@ -5066,7 +5073,7 @@ opt-level = 3</code></pre>
 running 1 test
 test target/hrs/lib.rs - add_one (line 10) ... ok
 
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.19s</code></pre>
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.30s</code></pre>
 <p><code>cargo doc --open</code> renders every <code>///</code> and <code>//!</code> in the crate as HTML, with the Markdown inside them — headings, code blocks, links — laid out. The conventional sections are <code># Examples</code>, <code># Panics</code> (when the function can), <code># Errors</code> (what <code>Err</code>s it returns) and <code># Safety</code> (for <code>unsafe</code> functions). The example in the <code>///</code> is Harsh, like everything else in the file, and <code>cargo test</code> <em>runs it</em> — every code block in a doc comment is a test, so documentation cannot drift from the code without failing the build.</p>
 <blockquote>
 <p><strong>Harsh —</strong> A fenced block in a doc comment is the one kind of comment the transpiler reads. The documentation tool lifts such a block out, compiles it and runs it — it is code, not prose — so it is written in Harsh and the transpiler writes out the Rust that tool expects, the same translation it does everywhere else. A fence tagged with another language — <code>text</code>, <code>toml</code> — is prose and is left exactly as you wrote it. A line beginning <code>#</code> inside the fence is the documentation tool's own mark for <em>compile this but do not show it</em>, and it survives the translation.</p>
@@ -7323,6 +7330,277 @@ worker 3 shut down
 <li><code>hrs new</code>, <code>hrs run</code>, <code>hrs build</code>, <code>hrs test</code>, <code>hrs check</code>, <code>hrs lint</code>, <code>hrs watch</code>; <code>hrs fmt</code> lays a file out by these rules and is a no-op on one already laid out; <code>hrs export</code> writes the project as a plain Rust crate; <code>hrs-from</code> brings Rust in. (§1.2, §14.1)</li>
 <li>Errors point at your <code>.hrs</code> line, whether Harsh raised them or the compiler did. (§1.2, §3.4)</li>
 </ul>
+<h3 id="precedence-appendix">Precedence — appendix</h3>
+<ul>
+<li>Tightest first: atoms (<code>f$</code>, <code>v[i]</code>, <code>( … )</code>), then application <code>f a b</code>, then the chain <code>&lt;-</code>, then <code>?</code>, then the prefix operators, then Rust's operators in Rust's order, then the pipes, then assignment.</li>
+<li><code>*p &lt;- field</code> dereferences the field; <code>(*p) &lt;- field</code> dereferences <code>p</code>.</li>
+<li><code>f -1</code> and <code>f *x</code> are arithmetic, not calls: <code>f (-1)</code>, <code>f (*x)</code>.</li>
+</ul>
+<h2 id="appendix-precedence">Appendix: Precedence</h2>
+<p>When an expression mixes several forms, which one binds first? In most of
+Harsh the answer is Rust's, operator for operator. Harsh adds three forms of
+its own — applying a function by juxtaposition, <code>f a b</code>; reaching into a
+value with <code>&lt;-</code>; and the pipes — and this appendix places them among the
+rest. The program at the end shows each rule at work, with its output.</p>
+<h3 id="the-levels">The levels</h3>
+<p>From the tightest-binding to the loosest:</p>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Level</th>
+<th>Forms</th>
+<th>Example, and what it means</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><strong>Atoms</strong></td>
+<td>a literal, a name, a path <code>a.b</code>, anything in parentheses, a call with no arguments <code>f$</code>, an index <code>v[i]</code></td>
+<td><code>f$</code> calls <code>f</code> with nothing</td>
+</tr>
+<tr>
+<td>2</td>
+<td><strong>Application</strong></td>
+<td><code>f a b</code> — each argument an atom; anything else in parentheses</td>
+<td><code>f (-1) (&amp;y) (a + b)</code>: three arguments</td>
+</tr>
+<tr>
+<td>3</td>
+<td><strong>Member chain <code>&lt;-</code></strong></td>
+<td>a field <code>x &lt;- field</code>, a method <code>x &lt;- m$</code> or <code>x &lt;- m a b</code>, read left to right; each step takes its own arguments</td>
+<td><code>T.new "s" &lt;- run (&amp;mut p)</code>: build, then call <code>run</code> on the result</td>
+</tr>
+<tr>
+<td>4</td>
+<td><strong><code>?</code></strong></td>
+<td>applies to the whole call or chain before it</td>
+<td><code>x &lt;- get i?</code>: the <code>?</code> is on what <code>get</code> returns</td>
+</tr>
+<tr>
+<td>5</td>
+<td><strong>Prefix operators</strong></td>
+<td>dereference <code>*</code>, borrow <code>&amp;</code> and <code>&amp;mut</code>, negation <code>-</code> and <code>!</code> — each on the whole chain after it</td>
+<td><code>!x &lt;- is_empty$</code>: not (<code>x</code> is empty)</td>
+</tr>
+<tr>
+<td>6</td>
+<td><code>as</code></td>
+<td></td>
+<td><code>x &lt;- ptr$ as usize + 1</code>: the cast, then the addition</td>
+</tr>
+<tr>
+<td>7</td>
+<td><code>*</code> <code>/</code> <code>%</code></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>8</td>
+<td><code>+</code> <code>-</code></td>
+<td></td>
+<td><code>f a * 2 == g b</code>: two calls, a product, a comparison</td>
+</tr>
+<tr>
+<td>9</td>
+<td><code>&lt;&lt;</code> <code>&gt;&gt;</code></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>10</td>
+<td><code>&amp;</code></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>11</td>
+<td><code>^</code></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>12</td>
+<td><code>\|</code></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>13</td>
+<td><strong>Comparisons</strong></td>
+<td><code>==</code> <code>!=</code> <code>&lt;</code> <code>&gt;</code> <code>&lt;=</code> <code>&gt;=</code> — never chained</td>
+<td><code>x &lt;- len$ &gt;= y &lt;- len$</code>: two lengths compared</td>
+</tr>
+<tr>
+<td>14</td>
+<td><code>&amp;&amp;</code>, then <code>\|\|</code></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>15</td>
+<td><strong>Ranges</strong></td>
+<td><code>..</code> <code>..=</code></td>
+<td><code>(1..=10) &lt;- map f</code>: the range needs parentheses before a chain</td>
+</tr>
+<tr>
+<td>16</td>
+<td><strong>Pipes</strong></td>
+<td><code>\|&gt;</code> and <code>&lt;\|</code>, a form of their own (below)</td>
+<td><code>3 \|&gt; double \|&gt; double</code></td>
+</tr>
+<tr>
+<td>17</td>
+<td><strong>Assignment</strong></td>
+<td><code>=</code> <code>+=</code> <code>-=</code> …</td>
+<td></td>
+</tr>
+<tr>
+<td>18</td>
+<td><strong>To the end of the line</strong></td>
+<td>a closure <code>\|x\| …</code>, an inline <code>if c: a else: b</code>, <code>do:</code>, a struct literal <code>P\\ a = 1, b = 2</code></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>Levels 6 to 17 are Rust's order unchanged. What is Harsh's own is at the top
+— application binds tighter than anything but an atom, and <code>&lt;-</code> next — and
+the pipes.</p>
+<h3 id="dereference">Dereference</h3>
+<p>A prefix operator takes the whole chain after it, and since fields and
+methods are both written with <code>&lt;-</code>, dereference needs care:</p>
+<table>
+<thead>
+<tr>
+<th>Harsh</th>
+<th>What it means</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>*p &lt;- field</code></td>
+<td>the <strong>field</strong>, dereferenced</td>
+</tr>
+<tr>
+<td><code>(*p) &lt;- field</code></td>
+<td><strong><code>p</code></strong> dereferenced, then its field</td>
+</tr>
+<tr>
+<td><code>*p &lt;- m$</code></td>
+<td>what <code>m</code> <strong>returns</strong>, dereferenced</td>
+</tr>
+<tr>
+<td><code>(*p) &lt;- m$</code></td>
+<td><code>m</code> called on what <code>p</code> points to</td>
+</tr>
+<tr>
+<td><code>*x &lt;- get i?</code></td>
+<td>the <code>?</code> first, then the dereference</td>
+</tr>
+<tr>
+<td><code>**x</code></td>
+<td>twice</td>
+</tr>
+<tr>
+<td><code>*x + 1</code></td>
+<td>the dereference, then the addition</td>
+</tr>
+<tr>
+<td><code>*s &lt;- flag = true</code></td>
+<td>assigns through the <strong>field</strong> — a <code>&amp;mut bool</code> held by <code>s</code></td>
+</tr>
+<tr>
+<td><code>f (*x)</code></td>
+<td>a dereferenced argument, parenthesised</td>
+</tr>
+<tr>
+<td><code>f *x</code></td>
+<td><strong>not a call</strong>: <code>f</code> multiplied by <code>x</code></td>
+</tr>
+</tbody>
+</table>
+<p>To reach through a raw pointer to a field, the parentheses are required:
+<code>(*c) &lt;- count</code>, as <em>The Harshonomicon</em> writes it.</p>
+<h3 id="pipes">Pipes</h3>
+<p>A pipe is a form of its own, with strict edges, so that it can never be read
+two ways:</p>
+<ul>
+<li>On its <strong>left</strong>, only atoms — the values it carries. Several values fill
+  several parameters: <code>1 2 |&gt; add</code> is <code>add</code> given 1 and 2. Fewer than the
+  function takes make a <strong>partial application</strong>: <code>10 |&gt; add</code> is a function
+  waiting for the second number (chapter 14).</li>
+<li>On its <strong>right</strong>, one function; after it only another pipe may follow.
+  <code>a |&gt; f + 1</code> is refused: write <code>(a |&gt; f) + 1</code>.</li>
+<li><code>|&gt;</code> reads left to right, <code>a |&gt; f |&gt; g</code>: <code>f</code> first, then <code>g</code>. <code>&lt;|</code> reads
+  right to left, <code>f &lt;| g &lt;| x</code>: <code>g</code> first, then <code>f</code>.</li>
+</ul>
+<h3 id="traps">Traps</h3>
+<p>Each of these compiles, or is refused with a message, and each has been
+written by mistake while this book's companions were written:</p>
+<ul>
+<li><strong><code>f -1</code> is not a call:</strong> it is <code>f</code> minus 1. Write <code>f (-1)</code>.</li>
+<li><strong><code>f *x</code> is not a call:</strong> it is <code>f</code> times <code>x</code>. Write <code>f (*x)</code>.</li>
+<li><strong><code>f x |&gt; g</code> pipes two values,</strong> <code>f</code> and <code>x</code>, into <code>g</code>. To pipe the result
+  of <code>f x</code>, write <code>(f x) |&gt; g</code>.</li>
+<li><strong><code>f a.b</code> passes the path <code>a.b</code>,</strong> not a field: fields are <code>a &lt;- b</code>.</li>
+<li><strong><code>x &lt;- g</code> is a field, <code>x &lt;- g$</code> a call.</strong></li>
+<li><strong><code>*p &lt;- field</code> dereferences the field,</strong> not <code>p</code>: write <code>(*p) &lt;- field</code>.</li>
+<li><strong>A struct literal written inline inside another</strong> takes the outer one's
+  remaining fields: bind the inner one first, or parenthesise it.</li>
+</ul>
+<h3 id="the-rules-at-work">The rules at work</h3>
+<pre class="code harsh"><code><span class="k">struct</span> <span class="t">Switch</span><span class="p">&lt;</span>'a<span class="p">&gt;</span>
+    flag<span class="p">:</span> <span class="p">&amp;</span>'a <span class="k">mut</span> bool
+
+<span class="k">fn</span> add <span class="p">(</span>a<span class="p">:</span> i32<span class="p">)</span> <span class="p">(</span>b<span class="p">:</span> i32<span class="p">)</span> <span class="op">-&gt;</span> i32<span class="p">:</span>
+    a <span class="p">+</span> b
+
+<span class="k">fn</span> double <span class="p">(</span>x<span class="p">:</span> i32<span class="p">)</span> <span class="op">-&gt;</span> i32<span class="p">:</span>
+    x <span class="p">*</span> <span class="num">2</span>
+
+<span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="k">let</span> v <span class="p">=</span> <span class="mac">vec!</span> <span class="num">3</span> <span class="num">1</span> <span class="num">2</span>
+    <span class="com">// Application first: `add 1 2`, then `* 10`.</span>
+    <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span>add <span class="num">1</span> <span class="num">2</span> <span class="p">*</span> <span class="num">10</span><span class="p">)</span>
+    <span class="com">// A negative argument is parenthesised.</span>
+    <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span>double <span class="p">(</span><span class="p">-</span><span class="num">4</span><span class="p">)</span><span class="p">)</span>
+    <span class="com">// A chain before an operator: the length, plus one.</span>
+    <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span>v <span class="op">&lt;-</span> len<span class="defer">$</span> <span class="p">+</span> <span class="num">1</span><span class="p">)</span>
+    <span class="com">// A prefix operator takes the whole chain: not (v is empty).</span>
+    <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span><span class="p">!</span>v <span class="op">&lt;-</span> is_empty<span class="defer">$</span><span class="p">)</span>
+    <span class="com">// An application before a chain: `add 1 2`, then its method.</span>
+    <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span>add <span class="num">1</span> <span class="num">2</span> <span class="op">&lt;-</span> pow <span class="num">2</span><span class="p">)</span>
+    <span class="com">// Dereference first, then the method: parenthesised.</span>
+    <span class="k">let</span> r <span class="p">=</span> <span class="p">&amp;</span>v
+    <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span><span class="p">(</span><span class="p">*</span>r<span class="p">)</span> <span class="op">&lt;-</span> len<span class="defer">$</span><span class="p">)</span>
+    <span class="com">// Through a field: `*s &lt;- flag` is the bool the field points to.</span>
+    <span class="k">let</span> <span class="k">mut</span> on <span class="p">=</span> <span class="k">false</span>
+    <span class="k">let</span> <span class="k">mut</span> s <span class="p">=</span> <span class="t">Switch</span>\ flag <span class="p">=</span> <span class="p">&amp;</span><span class="k">mut</span> on
+    <span class="p">*</span>s <span class="op">&lt;-</span> flag <span class="p">=</span> <span class="k">true</span>
+    <span class="mac">println!</span> <span class="str">"{on}"</span>
+    <span class="com">// Pipes, left to right; several values fill several parameters.</span>
+    <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span><span class="num">3</span> <span class="op">|&gt;</span> double <span class="op">|&gt;</span> double<span class="p">)</span>
+    <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span><span class="num">1</span> <span class="num">2</span> <span class="op">|&gt;</span> add<span class="p">)</span>
+    <span class="com">// To pipe a call's result, parenthesise the call.</span>
+    <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span><span class="p">(</span>add <span class="num">1</span> <span class="num">2</span><span class="p">)</span> <span class="op">|&gt;</span> double<span class="p">)</span>
+    <span class="com">// Fewer values than parameters: a partial application.</span>
+    <span class="k">let</span> add10 <span class="p">=</span> <span class="num">10</span> <span class="op">|&gt;</span> add
+    <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span>add10 <span class="num">5</span><span class="p">)</span>
+    <span class="com">// The backward pipe, right to left.</span>
+    <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span>double <span class="op">&lt;|</span> double <span class="op">&lt;|</span> <span class="num">5</span><span class="p">)</span></code></pre>
+<pre class="code"><code>30
+-8
+4
+true
+9
+3
+true
+12
+3
+6
+15
+20</code></pre>
     </main>
   </div>
 </div>

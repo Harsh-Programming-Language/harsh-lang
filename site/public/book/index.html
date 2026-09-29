@@ -4914,6 +4914,34 @@ det 1
  -1 2
 length 5, dot 25</code></pre>
 <p><code>a &lt;- solve (&amp;b)</code> is Julia's <code>a \ b</code>: the <code>x</code> for which <code>a * x</code> equals <code>b</code>. Harsh cannot use <code>\</code> for it — <code>\</code> opens a specification block — so the method is named for what it does. <code>det$</code> and <code>inv$</code> are the determinant and the inverse, with Julia's names. Asking for the inverse of a matrix that has none stops the program with Julia's <code>SingularException</code>.</p>
+<p>That is right when a singular matrix would be a bug — you built the matrix and know it is sound. When the matrix comes from data you have not checked, a singular one is a fact about the data, and the program should decide what to do, not stop. <code>try_solve</code> and <code>try_inv</code> do the same work and return a <code>Result</code>: <code>Ok</code> with the answer, or <code>Err</code> with a <code>LinAlgError</code> saying which failure it was — <code>Singular</code>, or <code>DimensionMismatch</code> with Julia's message. Rust's standard library pairs methods the same way: <code>RefCell</code>'s <code>borrow</code> stops the program where <code>try_borrow</code> returns a <code>Result</code>, and <code>Vec</code>'s <code>reserve</code> where <code>try_reserve</code> does. Use <code>solve</code> when you know the matrix is sound; <code>try_solve</code> when you do not — and <code>?</code> to hand the error to your caller.</p>
+<p><code>Cargo.toml</code></p>
+<pre class="code"><code>[dependencies]
+hrs_std = "0.1"</code></pre>
+<p><code>src/main.hrs</code></p>
+<pre class="code harsh"><code><span class="k">use</span> hrs_std<span class="p">.</span><span class="t">LinAlgError</span>
+
+<span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="k">let</span> a <span class="p">=</span> m<span class="p">~</span> <span class="p">[</span><span class="num">2.0</span> <span class="num">1.0</span><span class="p">;</span> <span class="num">1.0</span> <span class="num">3.0</span><span class="p">]</span>
+    <span class="k">let</span> flat <span class="p">=</span> m<span class="p">~</span> <span class="p">[</span><span class="num">1.0</span> <span class="num">2.0</span><span class="p">;</span> <span class="num">2.0</span> <span class="num">4.0</span><span class="p">]</span>
+    <span class="k">let</span> b <span class="p">=</span> v<span class="p">~</span> <span class="p">[</span><span class="num">5.0</span><span class="p">,</span> <span class="num">10.0</span><span class="p">]</span>
+    <span class="com">// Sure of the matrix: Julia's way -- the answer, or a panic.</span>
+    <span class="k">let</span> x <span class="p">=</span> a <span class="op">&lt;-</span> solve <span class="p">(</span><span class="p">&amp;</span>b<span class="p">)</span>
+    <span class="mac">println!</span> <span class="str">"x = {:.1} {:.1}"</span> x<span class="p">[</span><span class="num">0</span><span class="p">]</span> x<span class="p">[</span><span class="num">1</span><span class="p">]</span>
+    <span class="com">// Not sure: the caller decides what a failure means.</span>
+    <span class="k">for</span> m <span class="k">in</span> <span class="p">[</span><span class="p">&amp;</span>a<span class="p">,</span> <span class="p">&amp;</span>flat<span class="p">]</span><span class="p">:</span>
+        <span class="k">match</span> m <span class="op">&lt;-</span> try_solve <span class="p">(</span><span class="p">&amp;</span>b<span class="p">)</span>\
+            <span class="t">Ok</span> x <span class="op">=&gt;</span> <span class="mac">println!</span> <span class="str">"solved: {:.1} {:.1}"</span> x<span class="p">[</span><span class="num">0</span><span class="p">]</span> x<span class="p">[</span><span class="num">1</span><span class="p">]</span>
+            <span class="t">Err</span> <span class="t">LinAlgError</span><span class="p">.</span><span class="t">Singular</span> <span class="op">=&gt;</span> <span class="mac">println!</span> <span class="str">"no single solution: the matrix is singular"</span>
+            <span class="t">Err</span> e <span class="op">=&gt;</span> <span class="mac">println!</span> <span class="str">"{e}"</span>
+    <span class="k">let</span> short <span class="p">=</span> v<span class="p">~</span> <span class="p">[</span><span class="num">1.0</span><span class="p">,</span> <span class="num">2.0</span><span class="p">,</span> <span class="num">3.0</span><span class="p">]</span>
+    <span class="k">if</span> <span class="k">let</span> <span class="t">Err</span> e <span class="p">=</span> a <span class="op">&lt;-</span> try_solve <span class="p">(</span><span class="p">&amp;</span>short<span class="p">)</span><span class="p">:</span>
+        <span class="mac">println!</span> <span class="str">"{e}"</span></code></pre>
+<pre class="code"><code>$ hrs run
+x = 1.0 3.0
+solved: 1.0 3.0
+no single solution: the matrix is singular
+DimensionMismatch: matrix has 2 rows, right-hand side has length 3</code></pre>
 <p>A vector has a length, <code>norm$</code>, and a dot product, <code>dot</code>. Entries are read by index: <code>v[0]</code> for a vector and <code>a[(0, 1)]</code> for a matrix. Indexes start at 0, as they do for every collection in Harsh — this is the one place Harsh departs from Julia, which counts from 1.</p>
 <h3 id="16-6-fitting-a-line">16.6 Fitting a line</h3>
 <p><code>Cargo.toml</code></p>
@@ -5092,7 +5120,7 @@ opt-level = 3</code></pre>
 running 1 test
 test target/hrs/lib.rs - add_one (line 10) ... ok
 
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.18s</code></pre>
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.20s</code></pre>
 <p><code>cargo doc --open</code> renders every <code>///</code> and <code>//!</code> in the crate as HTML, with the Markdown inside them — headings, code blocks, links — laid out. The conventional sections are <code># Examples</code>, <code># Panics</code> (when the function can), <code># Errors</code> (what <code>Err</code>s it returns) and <code># Safety</code> (for <code>unsafe</code> functions). The example in the <code>///</code> is Harsh, like everything else in the file, and <code>cargo test</code> <em>runs it</em> — every code block in a doc comment is a test, so documentation cannot drift from the code without failing the build.</p>
 <blockquote>
 <p><strong>Harsh —</strong> A fenced block in a doc comment is the one kind of comment the transpiler reads. The documentation tool lifts such a block out, compiles it and runs it — it is code, not prose — so it is written in Harsh and the transpiler writes out the Rust that tool expects, the same translation it does everywhere else. A fence tagged with another language — <code>text</code>, <code>toml</code> — is prose and is left exactly as you wrote it. A line beginning <code>#</code> inside the fence is the documentation tool's own mark for <em>compile this but do not show it</em>, and it survives the translation.</p>

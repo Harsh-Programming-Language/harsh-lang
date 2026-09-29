@@ -7,7 +7,7 @@
 pub const FILES: &[(&str, &str)] = &[
     ("hrs_std/Cargo.toml", r########"[package]
 name = "hrs_std"
-version = "0.1.3"
+version = "0.1.4"
 edition = "2021"
 authors = ["Bahiminin Benoit Dah"]
 license = "MPL-2.0"
@@ -40,7 +40,9 @@ let beta = x <- solve (&y)          // Julia's X \ y: the least-squares fit
 operand types; `solve` is Julia's `\` (exact for a square matrix, least squares
 for a tall one); `inv`, `det`, `transpose`, `dot`, `norm`, `UniformScaling`,
 `I`, `hcat`, `vcat`. Sizes are values, and a mismatch is a `DimensionMismatch`
-in Julia's words, reported at the caller's line.
+in Julia's words, reported at the caller's line. `try_solve` and `try_inv`
+(0.1.4) do the same work and return a `Result<_, LinAlgError>` instead of
+panicking, for a matrix from data the caller has not checked.
 
 **Slicing** keeps Harsh's 0-based ranges, `..` alone being Julia's `:`.
 `a <- slice (0..2) (..)` copies; `a <- view (0..2) (..)` borrows -- a *view*,
@@ -1155,42 +1157,79 @@ mod concat_tests {
 
 use nalgebra::RealField;
 
-/// Julia's error when a matrix cannot be inverted.
-#[track_caller]
-fn singular() -> ! {
-    panic!("SingularException: the matrix is singular")
+
+/// Why `try_solve` or `try_inv` gave no answer: the failures `solve` and
+/// `inv` panic on, as a value the caller can match (0.1.4). Displayed as
+/// Julia's messages, which are also the panics' messages.
+#[derive(Debug, Clone, PartialEq)]
+pub enum LinAlgError {
+    /// The shapes do not fit -- Julia's `DimensionMismatch`.
+    DimensionMismatch(String),
+    /// The matrix has no inverse -- Julia's `SingularException`.
+    Singular,
 }
 
+impl std::fmt::Display for LinAlgError {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self {
+            LinAlgError::DimensionMismatch(m) => write!(f, "DimensionMismatch: {m}"),
+            LinAlgError::Singular => write!(f, "SingularException: the matrix is singular"),
+        }
+    }
+}
+
+impl std::error::Error for LinAlgError {}
+
 impl<T: RealField + Copy> Matrix<T> {
-    /// Julia's `A \ b`. Square: the exact solution (LU). Taller than wide:
-    /// the least-squares solution (SVD), as Julia's `\` gives for a tall `A`.
-    #[track_caller]
-    pub fn solve(&self, b: &Vector<T>) -> Vector<T> {
+    /// `A \ b`, the caller deciding what a failure means: square, the exact
+    /// solution (LU), `Err(Singular)` when `A` has no inverse; taller or
+    /// wider, the least-squares solution (SVD); `Err(DimensionMismatch)`
+    /// when `b`'s length is not `A`'s row count. Rust's way, as `RefCell`'s
+    /// `try_borrow` is to `borrow` (the user's choice, 2026-09-29).
+    pub fn try_solve(&self, b: &Vector<T>) -> Result<Vector<T>, LinAlgError> {
         let (r, c) = self.0.shape();
         if r != b.0.len() {
-            mismatch(format!("matrix has {r} rows, right-hand side has length {}", b.0.len()));
+            return Err(LinAlgError::DimensionMismatch(format!(
+                "matrix has {r} rows, right-hand side has length {}",
+                b.0.len()
+            )));
         }
         if r == c {
-            match self.0.clone().lu().solve(&b.0) {
-                Some(x) => Vector(x),
-                None => singular(),
-            }
+            self.0.clone().lu().solve(&b.0).map(Vector).ok_or(LinAlgError::Singular)
         } else {
             let svd = self.0.clone().svd(true, true);
-            match svd.solve(&b.0, T::default_epsilon()) {
-                Ok(x) => Vector(x),
-                Err(_) => singular(),
-            }
+            svd.solve(&b.0, T::default_epsilon()).map(Vector).map_err(|_| LinAlgError::Singular)
         }
     }
 
-    /// Julia's `inv(A)`.
+    /// Julia's `A \ b`: `try_solve`'s answer, or a panic with Julia's
+    /// message. Square: the exact solution (LU). Taller than wide: the
+    /// least-squares solution (SVD), as Julia's `\` gives for a tall `A`.
+    #[track_caller]
+    pub fn solve(&self, b: &Vector<T>) -> Vector<T> {
+        match self.try_solve(b) {
+            Ok(x) => x,
+            Err(e) => panic!("{e}"),
+        }
+    }
+
+    /// The inverse, the caller deciding what a failure means:
+    /// `Err(DimensionMismatch)` when `A` is not square, `Err(Singular)` when
+    /// it has no inverse.
+    pub fn try_inv(&self) -> Result<Matrix<T>, LinAlgError> {
+        let shape = self.0.shape();
+        if shape.0 != shape.1 {
+            return Err(LinAlgError::DimensionMismatch(format!("matrix is not square: dimensions are {shape:?}")));
+        }
+        self.0.clone().try_inverse().map(Matrix).ok_or(LinAlgError::Singular)
+    }
+
+    /// Julia's `inv(A)`: `try_inv`'s answer, or a panic with Julia's message.
     #[track_caller]
     pub fn inv(&self) -> Matrix<T> {
-        check_square(self.0.shape());
-        match self.0.clone().try_inverse() {
-            Some(m) => Matrix(m),
-            None => singular(),
+        match self.try_inv() {
+            Ok(m) => m,
+            Err(e) => panic!("{e}"),
         }
     }
 
@@ -1265,6 +1304,29 @@ mod algebra_tests {
         assert!(close(id[(0, 0)], 1.0) && close(id[(0, 1)], 0.0) && close(id[(1, 1)], 1.0));
         let v = Vector::from_vec(vec![3.0, 4.0]);
         assert!(close(v.norm(), 5.0) && close(v.dot(&v), 25.0));
+    }
+
+    #[test]
+    fn try_solve_and_try_inv_give_the_failure_as_a_value() {
+        let a = Matrix::from_rows(vec![vec![2.0, 1.0], vec![1.0, 3.0]]);
+        let x = a.try_solve(&Vector::from_vec(vec![5.0, 10.0])).unwrap();
+        assert!(close(x[0], 1.0) && close(x[1], 3.0), "{x}");
+        let singular = Matrix::from_rows(vec![vec![1.0, 2.0], vec![2.0, 4.0]]);
+        assert_eq!(singular.try_solve(&Vector::from_vec(vec![1.0, 2.0])), Err(LinAlgError::Singular));
+        assert_eq!(singular.try_inv(), Err(LinAlgError::Singular));
+        let e = a.try_solve(&Vector::from_vec(vec![1.0, 2.0, 3.0])).unwrap_err();
+        assert_eq!(e.to_string(), "DimensionMismatch: matrix has 2 rows, right-hand side has length 3");
+        let wide = Matrix::from_rows(vec![vec![1.0, 2.0, 3.0], vec![4.0, 5.0, 6.0]]);
+        assert_eq!(wide.try_inv().unwrap_err().to_string(), "DimensionMismatch: matrix is not square: dimensions are (2, 3)");
+        // A tall matrix, even a degenerate one, has a least-squares answer.
+        let tall = Matrix::from_rows(vec![vec![1.0, 1.0], vec![1.0, 1.0], vec![1.0, 1.0]]);
+        assert!(tall.try_solve(&Vector::from_vec(vec![1.0, 2.0, 3.0])).is_ok());
+    }
+
+    #[test]
+    #[should_panic(expected = "DimensionMismatch: matrix has 2 rows, right-hand side has length 3")]
+    fn solve_still_panics_with_julias_message() {
+        Matrix::from_rows(vec![vec![2.0, 1.0], vec![1.0, 3.0]]).solve(&Vector::from_vec(vec![1.0, 2.0, 3.0]));
     }
 
     #[test]

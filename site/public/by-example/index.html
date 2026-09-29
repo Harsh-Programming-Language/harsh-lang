@@ -2043,6 +2043,35 @@ length 5, dot 25</code></pre>
 <p><code>a &lt;- solve (&amp;b)</code> is Julia's <code>a \ b</code>: the <code>x</code> with <code>a * x == b</code>. <code>det$</code>,
 <code>inv$</code>, <code>norm$</code> and <code>dot</code> carry Julia's names. Indexes start at 0, as for
 every collection in Harsh.</p>
+<p><code>solve</code> and <code>inv</code> stop the program on a singular matrix, as Julia does.
+When the matrix comes from data you have not checked, <code>try_solve</code> and
+<code>try_inv</code> return a <code>Result</code> instead — <code>Err (LinAlgError.Singular)</code>, or
+<code>Err (LinAlgError.DimensionMismatch msg)</code> — as <code>RefCell</code>'s <code>try_borrow</code>
+pairs with <code>borrow</code>:</p>
+<pre class="code"><code>[dependencies]
+hrs_std = "0.1"</code></pre>
+<pre class="code harsh"><code><span class="k">use</span> hrs_std<span class="p">.</span><span class="t">LinAlgError</span>
+
+<span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="k">let</span> a <span class="p">=</span> m<span class="p">~</span> <span class="p">[</span><span class="num">2.0</span> <span class="num">1.0</span><span class="p">;</span> <span class="num">1.0</span> <span class="num">3.0</span><span class="p">]</span>
+    <span class="k">let</span> flat <span class="p">=</span> m<span class="p">~</span> <span class="p">[</span><span class="num">1.0</span> <span class="num">2.0</span><span class="p">;</span> <span class="num">2.0</span> <span class="num">4.0</span><span class="p">]</span>
+    <span class="k">let</span> b <span class="p">=</span> v<span class="p">~</span> <span class="p">[</span><span class="num">5.0</span><span class="p">,</span> <span class="num">10.0</span><span class="p">]</span>
+    <span class="com">// Sure of the matrix: Julia's way -- the answer, or a panic.</span>
+    <span class="k">let</span> x <span class="p">=</span> a <span class="op">&lt;-</span> solve <span class="p">(</span><span class="p">&amp;</span>b<span class="p">)</span>
+    <span class="mac">println!</span> <span class="str">"x = {:.1} {:.1}"</span> x<span class="p">[</span><span class="num">0</span><span class="p">]</span> x<span class="p">[</span><span class="num">1</span><span class="p">]</span>
+    <span class="com">// Not sure: the caller decides what a failure means.</span>
+    <span class="k">for</span> m <span class="k">in</span> <span class="p">[</span><span class="p">&amp;</span>a<span class="p">,</span> <span class="p">&amp;</span>flat<span class="p">]</span><span class="p">:</span>
+        <span class="k">match</span> m <span class="op">&lt;-</span> try_solve <span class="p">(</span><span class="p">&amp;</span>b<span class="p">)</span>\
+            <span class="t">Ok</span> x <span class="op">=&gt;</span> <span class="mac">println!</span> <span class="str">"solved: {:.1} {:.1}"</span> x<span class="p">[</span><span class="num">0</span><span class="p">]</span> x<span class="p">[</span><span class="num">1</span><span class="p">]</span>
+            <span class="t">Err</span> <span class="t">LinAlgError</span><span class="p">.</span><span class="t">Singular</span> <span class="op">=&gt;</span> <span class="mac">println!</span> <span class="str">"no single solution: the matrix is singular"</span>
+            <span class="t">Err</span> e <span class="op">=&gt;</span> <span class="mac">println!</span> <span class="str">"{e}"</span>
+    <span class="k">let</span> short <span class="p">=</span> v<span class="p">~</span> <span class="p">[</span><span class="num">1.0</span><span class="p">,</span> <span class="num">2.0</span><span class="p">,</span> <span class="num">3.0</span><span class="p">]</span>
+    <span class="k">if</span> <span class="k">let</span> <span class="t">Err</span> e <span class="p">=</span> a <span class="op">&lt;-</span> try_solve <span class="p">(</span><span class="p">&amp;</span>short<span class="p">)</span><span class="p">:</span>
+        <span class="mac">println!</span> <span class="str">"{e}"</span></code></pre>
+<pre class="code"><code>x = 1.0 3.0
+solved: 1.0 3.0
+no single solution: the matrix is singular
+DimensionMismatch: matrix has 2 rows, right-hand side has length 3</code></pre>
 <h3 id="17-6-fitting-a-line">17.6 Fitting a line</h3>
 <pre class="code"><code>[dependencies]
 hrs_std = "0.1"</code></pre>

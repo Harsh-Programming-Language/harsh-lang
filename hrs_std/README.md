@@ -16,7 +16,9 @@ let beta = x <- solve (&y)          // Julia's X \ y: the least-squares fit
 operand types; `solve` is Julia's `\` (exact for a square matrix, least squares
 for a tall one); `inv`, `det`, `transpose`, `dot`, `norm`, `UniformScaling`,
 `I`, `hcat`, `vcat`. Sizes are values, and a mismatch is a `DimensionMismatch`
-in Julia's words, reported at the caller's line.
+in Julia's words, reported at the caller's line. `try_solve` and `try_inv`
+(0.1.4) do the same work and return a `Result<_, LinAlgError>` instead of
+panicking, for a matrix from data the caller has not checked.
 
 **Slicing** keeps Harsh's 0-based ranges, `..` alone being Julia's `:`.
 `a <- slice (0..2) (..)` copies; `a <- view (0..2) (..)` borrows -- a *view*,

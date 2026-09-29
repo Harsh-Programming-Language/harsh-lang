@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.54 — 2026-09-29  (**`hrs_std` 0.1.4**; the Jupyter kernel 0.1.3, unchanged)
+
+- **`try_solve` and `try_inv`** (the user's request): `solve` and `inv` stay Julia's -- an answer, or a panic with Julia's `DimensionMismatch` or `SingularException` -- and their `try_` twins return a `Result<_, LinAlgError>`, the error saying which failure it was, for a matrix from data the caller has not checked. Rust's own pairs are the precedent: `RefCell`'s `borrow` and `try_borrow`, `Vec`'s `reserve` and `try_reserve`. `solve` and `inv` are now built on their twins, their messages unchanged word for word. Taught in the Book (16.5) and *By Example* (17.5), with a program using both forms; `hrs_std`'s README. Tests: the failures as values, the panics as before.
+
 ## 0.1.53 — 2026-09-29  (`hrs_std` 0.1.3 and the Jupyter kernel 0.1.3, unchanged)
 
 - **A literal inside a literal on one line is refused unparenthesised** (the user's proposal): in `Dog\ inner = Animal\ name = x, good = true` the reader cannot see where `Animal` ends -- `good` went to `Dog`, and our own docs had said the opposite. The error offers both readings: `inner = (Animal\ name = x), good = true`, or `inner = (Animal\ name = x, good = true)`. The vertical form, the inner literal alone on its field line, needs nothing. **A trailing comma** at the end of a field list is refused too (`inner = Animal\ name = x,` on a field line was accepted); a comma ending a line inside brackets remains the group's separator.

@@ -218,6 +218,46 @@ length 5, dot 25
 
 `a <- solve (&b)` is Julia's `a \ b`: the `x` for which `a * x` equals `b`. Harsh cannot use `\` for it — `\` opens a specification block — so the method is named for what it does. `det$` and `inv$` are the determinant and the inverse, with Julia's names. Asking for the inverse of a matrix that has none stops the program with Julia's `SingularException`.
 
+That is right when a singular matrix would be a bug — you built the matrix and know it is sound. When the matrix comes from data you have not checked, a singular one is a fact about the data, and the program should decide what to do, not stop. `try_solve` and `try_inv` do the same work and return a `Result`: `Ok` with the answer, or `Err` with a `LinAlgError` saying which failure it was — `Singular`, or `DimensionMismatch` with Julia's message. Rust's standard library pairs methods the same way: `RefCell`'s `borrow` stops the program where `try_borrow` returns a `Result`, and `Vec`'s `reserve` where `try_reserve` does. Use `solve` when you know the matrix is sound; `try_solve` when you do not — and `?` to hand the error to your caller.
+
+`Cargo.toml`
+
+```text
+[dependencies]
+hrs_std = "0.1"
+```
+
+`src/main.hrs`
+
+```rust harsh
+use hrs_std.LinAlgError
+
+fn main$:
+    let a = m~ [2.0 1.0; 1.0 3.0]
+    let flat = m~ [1.0 2.0; 2.0 4.0]
+    let b = v~ [5.0, 10.0]
+    // Sure of the matrix: Julia's way -- the answer, or a panic.
+    let x = a <- solve (&b)
+    println! "x = {:.1} {:.1}" x[0] x[1]
+    // Not sure: the caller decides what a failure means.
+    for m in [&a, &flat]:
+        match m <- try_solve (&b)\
+            Ok x => println! "solved: {:.1} {:.1}" x[0] x[1]
+            Err LinAlgError.Singular => println! "no single solution: the matrix is singular"
+            Err e => println! "{e}"
+    let short = v~ [1.0, 2.0, 3.0]
+    if let Err e = a <- try_solve (&short):
+        println! "{e}"
+```
+
+```text
+$ hrs run
+x = 1.0 3.0
+solved: 1.0 3.0
+no single solution: the matrix is singular
+DimensionMismatch: matrix has 2 rows, right-hand side has length 3
+```
+
 A vector has a length, `norm$`, and a dot product, `dot`. Entries are read by index: `v[0]` for a vector and `a[(0, 1)]` for a matrix. Indexes start at 0, as they do for every collection in Harsh — this is the one place Harsh departs from Julia, which counts from 1.
 
 ## 16.6 Fitting a line

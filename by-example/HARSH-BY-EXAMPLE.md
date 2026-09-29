@@ -2418,6 +2418,45 @@ length 5, dot 25
 `inv$`, `norm$` and `dot` carry Julia's names. Indexes start at 0, as for
 every collection in Harsh.
 
+`solve` and `inv` stop the program on a singular matrix, as Julia does.
+When the matrix comes from data you have not checked, `try_solve` and
+`try_inv` return a `Result` instead — `Err (LinAlgError.Singular)`, or
+`Err (LinAlgError.DimensionMismatch msg)` — as `RefCell`'s `try_borrow`
+pairs with `borrow`:
+
+```toml
+[dependencies]
+hrs_std = "0.1"
+```
+
+```rust harsh
+use hrs_std.LinAlgError
+
+fn main$:
+    let a = m~ [2.0 1.0; 1.0 3.0]
+    let flat = m~ [1.0 2.0; 2.0 4.0]
+    let b = v~ [5.0, 10.0]
+    // Sure of the matrix: Julia's way -- the answer, or a panic.
+    let x = a <- solve (&b)
+    println! "x = {:.1} {:.1}" x[0] x[1]
+    // Not sure: the caller decides what a failure means.
+    for m in [&a, &flat]:
+        match m <- try_solve (&b)\
+            Ok x => println! "solved: {:.1} {:.1}" x[0] x[1]
+            Err LinAlgError.Singular => println! "no single solution: the matrix is singular"
+            Err e => println! "{e}"
+    let short = v~ [1.0, 2.0, 3.0]
+    if let Err e = a <- try_solve (&short):
+        println! "{e}"
+```
+
+```text
+x = 1.0 3.0
+solved: 1.0 3.0
+no single solution: the matrix is singular
+DimensionMismatch: matrix has 2 rows, right-hand side has length 3
+```
+
 ## 17.6 Fitting a line
 
 ```toml

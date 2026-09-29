@@ -65,6 +65,37 @@ Validation: for every file, `transpile(fmt(src))` must be token-identical to `tr
 5. `hrs fmt` and `--check` in the driver. **Done.** `hrs-from` pipes through `fmt`. **Done.**
 6. Format on save: `textDocument/formatting` in `hrs-lsp`, one whole-document edit. **Done**, pinned in `tests/lsp.rs`; VSCode and Zed use it with their own format-on-save setting.
 
+## Breaking long lines -- built (2026-09-29)
+
+The user's handwriting rules (the guide, *Layout style*, *Breaking long
+lines*), as far as a tool can apply them. What is counted, the formatter does;
+what asks for judgment, it does cautiously or leaves to the author.
+
+- **Chains of three links or more** go vertical, whatever their width (this
+  was already so; the old note that chains are never split by length is
+  superseded).
+- **Inline lists of three items or more** -- a literal, an inline `struct` or
+  `enum`, an inline `match` -- go one item per line, one unit past their head,
+  the commas dropped. A declaration also drops its `\` (a declaration takes no
+  mark with its body beneath); a literal and a `match` keep theirs. Only a
+  list at its line's start or right after a binding's `=`, and only a line
+  with a single `\`: a literal inside a literal is the author's.
+- **`if` chains of three clauses or more** (`if a: x else: if b: y else: z`)
+  go on several lines, each `else` under its `if`. Only an `if` that starts
+  its line: as a `let`'s value it takes `do:`, which changes the Rust, so it
+  is the author's.
+- **Calls** go vertical when the line passes `CHAIN_WIDTH` *and* an argument
+  is `LONG_ARG` (20) columns or wider -- long arguments, not many; a string
+  does not count (it is a template). A call after `=>`, `=` or a block's `:`
+  first moves to a fresh line one unit in, and its arguments go beneath only
+  if it is still too long; a call anywhere else not at its line's start
+  (inside another group, after an operator) is left as written -- the
+  formatter never aligns arguments far to the right.
+- Rule 0 compares the Rust modulo one equivalence: an arm whose body is a
+  block holding a single expression equals the arm written bare (`p => { e }`
+  and `p => e,`), since an arm body moved beneath its `=>` is written as a
+  block.
+
 ## Arguments beneath the callee -- built (2026-09-10)
 
 **The rule (the author's, parallel to the chain rule):** (1) a call's arguments stay on the callee's line when the whole line fits within `CHAIN_WIDTH` and no argument is a block; (2) otherwise every argument takes its own line, one unit past the callee's start -- all or none, never a staircase; (3) recursive -- a call or a chain inside an argument is judged by the same rules from where it now stands (an inner application is measured from its new column, not its old); (4) a block argument is `(do:` with the body one unit past the `(` and the `)` under it, and the converter writes that form for a multi-statement block argument. One argument stays with its callee (nothing to list); a lone `(|x|:` keeps the paren block's own shape; a `=` ends its line when its value goes vertical. Built in `fmt::rebreak` (`argument_heads` from the juxtaposition fixups, `extent_end`, `moved`) and `plan` (an argument first on its line: one unit past its callee). 37 corpus files moved, mostly long `println!` lines. Pinned in `arguments_beneath_the_callee`. Also: **a chain of one link is never broken nor moved, whatever its length** (rule 1 of the chain algorithm, now literal), and the re-break's shifts no longer compound when several breaks land on one line.

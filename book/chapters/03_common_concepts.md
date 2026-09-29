@@ -221,14 +221,10 @@ fn main$:
     println! "{}" kind
 
     let sign =
-        if n > 0:
-            1
-
-        else if n < 0:
-            -1
-
-        else:
-            0
+        if n > 0: 1
+        else
+            if n < 0: -1
+            else: 0
 
     println! "{}" sign
 ```
@@ -258,7 +254,7 @@ error[E0308]: `if` and `else` have incompatible types
    |                                      ^ expected `&str`, found integer
 ```
 
-Notice the shape of the multi-line `if` in the previous example: the `if` begins its own line after `let sign =`, so its arms indent from *it*. That is the rule everywhere a construct opens in the middle of a line: a block's lines are indented past the column of the construct that opened it, not merely past the statement, and when that would push the block too far right, `=` ends its line instead and the opener starts its own. Every control-flow construct also has the inline shape chapter 2 showed for blocks:
+Notice the shape of the multi-line `if` in the previous example: the `if` begins its own line after `let sign =`, its `else` stands under *it*, and the `if` inside the `else` indents past the `else`. That is the rule everywhere a construct opens in the middle of a line: a block's lines are indented past the column of the construct that opened it, not merely past the statement, and when that would push the block too far right, `=` ends its line instead and the opener starts its own. Every control-flow construct also has the inline shape chapter 2 showed for blocks:
 
 ```rust harsh
 fn main$:

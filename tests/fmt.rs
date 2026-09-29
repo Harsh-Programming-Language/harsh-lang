@@ -485,3 +485,60 @@ fn fmt_puts_one_space_inside_a_holes_marks() {
     assert_eq!(rust(&out), rust(src));
     assert_eq!(harsh_lang::fmt::format(&out), out, "idempotent");
 }
+
+// The user's rules for breaking lines (2026-09-29), as `hrs fmt` applies
+// them: counts for lists and `if` chains, long arguments for calls.
+fn fmt(src: &str) -> String {
+    harsh_lang::fmt::format(src)
+}
+
+#[test]
+fn inline_lists_of_three_or_more_go_one_per_line() {
+    let src = "struct Config\n    a: i32\n    b: i32\n    c: i32\n\nenum Level\\ Low, Mid, High\n\nfn main$:\n    let c = Config\\ a = 1, b = 2, c = 3\n    let w = match c <- a\\ 0 => \"zero\", 1 => \"one\", _ => \"many\"\n    println! \"{w}\"\n";
+    let out = fmt(src);
+    assert!(out.contains("enum Level\n    Low\n    Mid\n    High\n"), "{out}");
+    assert!(out.contains("    let c =\n        Config\\\n            a = 1\n            b = 2\n            c = 3\n"), "{out}");
+    assert!(out.contains("    let w =\n        match c <- a\\\n            0 => \"zero\"\n            1 => \"one\"\n            _ => \"many\"\n"), "{out}");
+}
+
+#[test]
+fn a_literal_at_a_lines_start_keeps_its_mark() {
+    let src = "struct P\n    a: i32\n    b: i32\n    c: i32\n\nimpl P\n    fn new$ -> Self:\n        Self\\ a = 1, b = 2, c = 3\n";
+    let out = fmt(src);
+    assert!(out.contains("        Self\\\n            a = 1\n            b = 2\n            c = 3\n"), "{out}");
+}
+
+#[test]
+fn two_items_and_nested_literals_are_the_authors() {
+    let src = "struct A\n    n: i32\nstruct D\n    inner: A\n    good: bool\n\nfn main$:\n    let p = (1, 2)\n    let d = D\\ inner = A\\ n = 1, good = true\n    let q = A\\ n = 2\n    println! \"{} {} {}\" (p <- 0) (d <- good) (q <- n)\n";
+    assert_eq!(fmt(src), src);
+}
+
+#[test]
+fn an_if_of_three_clauses_goes_on_several_lines() {
+    let src = "fn kind (n: i32) -> &'static str:\n    if n < 0: \"neg\" else: if n == 0: \"zero\" else: \"pos\"\n";
+    assert_eq!(fmt(src), "fn kind (n: i32) -> &'static str:\n    if n < 0: \"neg\"\n    else:\n        if n == 0: \"zero\"\n        else: \"pos\"\n");
+    // Two clauses stay inline.
+    let two = "fn sign (n: i32) -> i32:\n    if n < 0: -1 else: 1\n";
+    assert_eq!(fmt(two), two);
+}
+
+#[test]
+fn a_call_goes_vertical_for_long_arguments_not_many() {
+    // Many short arguments: one line, however long.
+    let short = "fn f (n: i32) -> i32:\n    n\n\nfn main$:\n    println! \"{} {} {} {} {} {} {} {}\" (f 1) (f 2) (f 3) (f 4) (f 5) (f 6) (f 7) (f 8)\n";
+    assert_eq!(fmt(short), short);
+    // A long argument: beneath the call.
+    let long = "fn main$:\n    let good = true\n    println! \"{} and {}\" (if good: \"a good dog, as always\" else: \"a dog\") good\n";
+    assert!(fmt(long).contains("    println!\n        \"{} and {}\"\n        (if good: \"a good dog, as always\" else: \"a dog\")\n        good\n"), "{}", fmt(long));
+}
+
+#[test]
+fn a_long_arm_body_goes_beneath_its_arrow() {
+    let src = "fn main$:\n    let good = true\n    let s = match good\\\n        true => format! \"{} ({})\" (String.from \"some fairly long text\") (good <- to_string$)\n        false => String.from \"no\"\n    println! \"{s}\"\n";
+    let out = fmt(src);
+    // Beneath its arrow first; still long there, its arguments beneath it --
+    // one unit in, never aligned far to the right.
+    assert!(out.contains("            true =>\n                format!\n                    \"{} ({})\"\n                    (String.from \"some fairly long text\")\n                    (good <- to_string$)\n"), "{out}");
+}
+

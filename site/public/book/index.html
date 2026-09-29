@@ -802,14 +802,10 @@ mon 3 4</code></pre>
     <span class="mac">println!</span> <span class="str">"{}"</span> kind
 
     <span class="k">let</span> sign <span class="p">=</span>
-        <span class="k">if</span> n <span class="p">&gt;</span> <span class="num">0</span><span class="p">:</span>
-            <span class="num">1</span>
-
-        <span class="k">else</span> <span class="k">if</span> n <span class="p">&lt;</span> <span class="num">0</span><span class="p">:</span>
-            <span class="p">-</span><span class="num">1</span>
-
-        <span class="k">else</span><span class="p">:</span>
-            <span class="num">0</span>
+        <span class="k">if</span> n <span class="p">&gt;</span> <span class="num">0</span><span class="p">:</span> <span class="num">1</span>
+        <span class="k">else</span>
+            <span class="k">if</span> n <span class="p">&lt;</span> <span class="num">0</span><span class="p">:</span> <span class="p">-</span><span class="num">1</span>
+            <span class="k">else</span><span class="p">:</span> <span class="num">0</span>
 
     <span class="mac">println!</span> <span class="str">"{}"</span> sign</code></pre>
 <pre class="code"><code>odd
@@ -827,7 +823,7 @@ big
    |                ----------------------- `if` and `else` have incompatible types
    |                          ----- expected because of this
    |                                      ^ expected `&amp;str`, found integer</code></pre>
-<p>Notice the shape of the multi-line <code>if</code> in the previous example: the <code>if</code> begins its own line after <code>let sign =</code>, so its arms indent from <em>it</em>. That is the rule everywhere a construct opens in the middle of a line: a block's lines are indented past the column of the construct that opened it, not merely past the statement, and when that would push the block too far right, <code>=</code> ends its line instead and the opener starts its own. Every control-flow construct also has the inline shape chapter 2 showed for blocks:</p>
+<p>Notice the shape of the multi-line <code>if</code> in the previous example: the <code>if</code> begins its own line after <code>let sign =</code>, its <code>else</code> stands under <em>it</em>, and the <code>if</code> inside the <code>else</code> indents past the <code>else</code>. That is the rule everywhere a construct opens in the middle of a line: a block's lines are indented past the column of the construct that opened it, not merely past the statement, and when that would push the block too far right, <code>=</code> ends its line instead and the opener starts its own. Every control-flow construct also has the inline shape chapter 2 showed for blocks:</p>
 <pre class="code harsh"><code><span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
     <span class="k">let</span> n <span class="p">=</span> <span class="num">7</span>
 
@@ -1832,7 +1828,6 @@ The maximum is configured to be 3</code></pre>
     <span class="k">for</span> coin <span class="k">in</span> coins<span class="p">:</span>
         <span class="k">if</span> <span class="k">let</span> <span class="t">Coin</span><span class="p">.</span><span class="t">Quarter</span> state <span class="p">=</span> coin<span class="p">:</span>
             <span class="mac">println!</span> <span class="str">"State quarter from {:?}!"</span> state
-
         <span class="k">else</span><span class="p">:</span>
             count <span class="op">+=</span> <span class="num">1</span>
 
@@ -2862,7 +2857,6 @@ tweet by horse_ebooks — @horse_ebooks</code></pre>
     <span class="k">fn</span> cmp_display <span class="p">(</span><span class="p">&amp;</span><span class="k">self</span><span class="p">)</span><span class="p">:</span>
         <span class="k">if</span> <span class="k">self</span> <span class="op">&lt;-</span> x <span class="op">&gt;=</span> <span class="k">self</span> <span class="op">&lt;-</span> y<span class="p">:</span>
             <span class="mac">println!</span> <span class="str">"The largest member is x = {}"</span> <span class="p">(</span><span class="k">self</span> <span class="op">&lt;-</span> x<span class="p">)</span>
-
         <span class="k">else</span><span class="p">:</span>
             <span class="mac">println!</span> <span class="str">"The largest member is y = {}"</span> <span class="p">(</span><span class="k">self</span> <span class="op">&lt;-</span> y<span class="p">)</span>
 
@@ -3132,7 +3126,6 @@ test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out</
     <span class="k">pub</span> <span class="k">fn</span> new value<span class="p">:</span> i32 <span class="op">-&gt;</span> <span class="t">Guess</span><span class="p">:</span>
         <span class="k">if</span> value <span class="p">&lt;</span> <span class="num">1</span><span class="p">:</span>
             <span class="mac">panic!</span> <span class="str">"Guess value must be greater than or equal to 1, got {value}."</span>
-
         <span class="k">else</span> <span class="k">if</span> value <span class="p">&gt;</span> <span class="num">100</span><span class="p">:</span>
             <span class="mac">panic!</span> <span class="str">"Guess value must be less than or equal to 100, got {value}."</span>
 
@@ -3161,7 +3154,6 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out</code
 
         <span class="k">if</span> result <span class="op">==</span> <span class="num">4</span><span class="p">:</span>
             <span class="t">Ok</span> <span class="p">(</span><span class="p">)</span>
-
         <span class="k">else</span><span class="p">:</span>
             <span class="t">Err</span> <span class="p">(</span><span class="t">String</span><span class="p">.</span>from <span class="str">"two plus two does not equal four"</span><span class="p">)</span></code></pre>
 <pre class="code"><code>$ cargo test
@@ -3390,7 +3382,6 @@ Problem parsing arguments: not enough arguments</code></pre>
     <span class="k">let</span> results <span class="p">=</span>
         <span class="k">if</span> config <span class="op">&lt;-</span> ignore_case<span class="p">:</span>
             search_case_insensitive <span class="p">(</span><span class="p">&amp;</span>config <span class="op">&lt;-</span> query<span class="p">)</span> <span class="p">(</span><span class="p">&amp;</span>contents<span class="p">)</span>
-
         <span class="k">else</span><span class="p">:</span>
             search <span class="p">(</span><span class="p">&amp;</span>config <span class="op">&lt;-</span> query<span class="p">)</span> <span class="p">(</span><span class="p">&amp;</span>contents<span class="p">)</span>
 
@@ -3502,7 +3493,6 @@ test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out</code
     <span class="k">let</span> results <span class="p">=</span>
         <span class="k">if</span> config <span class="op">&lt;-</span> ignore_case<span class="p">:</span>
             search_case_insensitive <span class="p">(</span><span class="p">&amp;</span>config <span class="op">&lt;-</span> query<span class="p">)</span> <span class="p">(</span><span class="p">&amp;</span>contents<span class="p">)</span>
-
         <span class="k">else</span><span class="p">:</span>
             search <span class="p">(</span><span class="p">&amp;</span>config <span class="op">&lt;-</span> query<span class="p">)</span> <span class="p">(</span><span class="p">&amp;</span>contents<span class="p">)</span>
 
@@ -3609,7 +3599,6 @@ How public, like a frog</code></pre>
     <span class="k">let</span> results <span class="p">=</span>
         <span class="k">if</span> config <span class="op">&lt;-</span> ignore_case<span class="p">:</span>
             search_case_insensitive <span class="p">(</span><span class="p">&amp;</span>config <span class="op">&lt;-</span> query<span class="p">)</span> <span class="p">(</span><span class="p">&amp;</span>contents<span class="p">)</span>
-
         <span class="k">else</span><span class="p">:</span>
             search <span class="p">(</span><span class="p">&amp;</span>config <span class="op">&lt;-</span> query<span class="p">)</span> <span class="p">(</span><span class="p">&amp;</span>contents<span class="p">)</span>
 
@@ -3718,7 +3707,6 @@ How dreary to be somebody!</code></pre>
     <span class="k">let</span> results <span class="p">=</span>
         <span class="k">if</span> config <span class="op">&lt;-</span> ignore_case<span class="p">:</span>
             search_case_insensitive <span class="p">(</span><span class="p">&amp;</span>config <span class="op">&lt;-</span> query<span class="p">)</span> <span class="p">(</span><span class="p">&amp;</span>contents<span class="p">)</span>
-
         <span class="k">else</span><span class="p">:</span>
             search <span class="p">(</span><span class="p">&amp;</span>config <span class="op">&lt;-</span> query<span class="p">)</span> <span class="p">(</span><span class="p">&amp;</span>contents<span class="p">)</span>
 
@@ -3829,7 +3817,6 @@ To an admiring bog!</code></pre>
     <span class="k">let</span> results <span class="p">=</span>
         <span class="k">if</span> config <span class="op">&lt;-</span> ignore_case<span class="p">:</span>
             search_case_insensitive <span class="p">(</span><span class="p">&amp;</span>config <span class="op">&lt;-</span> query<span class="p">)</span> <span class="p">(</span><span class="p">&amp;</span>contents<span class="p">)</span>
-
         <span class="k">else</span><span class="p">:</span>
             search <span class="p">(</span><span class="p">&amp;</span>config <span class="op">&lt;-</span> query<span class="p">)</span> <span class="p">(</span><span class="p">&amp;</span>contents<span class="p">)</span>
 
@@ -4344,7 +4331,6 @@ true
     <span class="k">let</span> results <span class="p">=</span>
         <span class="k">if</span> config <span class="op">&lt;-</span> ignore_case<span class="p">:</span>
             search_case_insensitive <span class="p">(</span><span class="p">&amp;</span>config <span class="op">&lt;-</span> query<span class="p">)</span> <span class="p">(</span><span class="p">&amp;</span>contents<span class="p">)</span>
-
         <span class="k">else</span><span class="p">:</span>
             search <span class="p">(</span><span class="p">&amp;</span>config <span class="op">&lt;-</span> query<span class="p">)</span> <span class="p">(</span><span class="p">&amp;</span>contents<span class="p">)</span>
 
@@ -5106,7 +5092,7 @@ opt-level = 3</code></pre>
 running 1 test
 test target/hrs/lib.rs - add_one (line 10) ... ok
 
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.18s</code></pre>
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.19s</code></pre>
 <p><code>cargo doc --open</code> renders every <code>///</code> and <code>//!</code> in the crate as HTML, with the Markdown inside them — headings, code blocks, links — laid out. The conventional sections are <code># Examples</code>, <code># Panics</code> (when the function can), <code># Errors</code> (what <code>Err</code>s it returns) and <code># Safety</code> (for <code>unsafe</code> functions). The example in the <code>///</code> is Harsh, like everything else in the file, and <code>cargo test</code> <em>runs it</em> — every code block in a doc comment is a test, so documentation cannot drift from the code without failing the build.</p>
 <blockquote>
 <p><strong>Harsh —</strong> A fenced block in a doc comment is the one kind of comment the transpiler reads. The documentation tool lifts such a block out, compiles it and runs it — it is code, not prose — so it is written in Harsh and the transpiler writes out the Rust that tool expects, the same translation it does everywhere else. A fence tagged with another language — <code>text</code>, <code>toml</code> — is prose and is left exactly as you wrote it. A line beginning <code>#</code> inside the fence is the documentation tool's own mark for <em>compile this but do not show it</em>, and it survives the translation.</p>
@@ -6407,7 +6393,6 @@ COUNTER: 3</code></pre>
         <span class="k">if</span> <span class="k">self</span> <span class="op">&lt;-</span> count <span class="p">&lt;</span> <span class="num">5</span><span class="p">:</span>
             <span class="k">self</span> <span class="op">&lt;-</span> count <span class="op">+=</span> <span class="num">1</span>
             <span class="t">Some</span> <span class="p">(</span><span class="k">self</span> <span class="op">&lt;-</span> count<span class="p">)</span>
-
         <span class="k">else</span><span class="p">:</span>
             <span class="t">None</span>
 

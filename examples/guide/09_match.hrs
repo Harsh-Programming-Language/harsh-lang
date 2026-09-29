@@ -17,7 +17,10 @@ fn indented (s: &Shape) -> String:
         Shape.Named\ name, sides => format! "{name}/{sides}"
 
 fn inline (n: i32) -> &'static str:
-    match n\ 0 => "zero", 1 | 2 => "small", _ => "big"
+    match n\
+        0 => "zero"
+        1 | 2 => "small"
+        _ => "big"
 
 fn braced (n: i32) -> &'static str:
     match n { 0 => "zero", _ => "other" }

@@ -673,8 +673,11 @@ None of this is enforced by the transpiler; all of it is what the formatter will
 #### Breaking long lines
 
 The rules the Harsh in this guide and the books is written by (2026-09-29).
-They are for people writing Harsh, and they ask for judgment: the
-transpiler accepts every form, and no tool enforces them.
+They are for people writing Harsh. The transpiler accepts every form;
+`hrs fmt` applies what can be counted -- chains, lists and `if` chains of
+three or more, and calls made long by long arguments -- and leaves the rest
+to the writer: a literal inside a literal, an `if` of three clauses as a
+`let`'s value (it takes `do:`), and a call deep inside another.
 
 - **A chain of more than two steps** — three or more `<-` in one chain — is
   broken: the value goes on the line after the `=`, and each step beneath the

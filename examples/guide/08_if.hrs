@@ -9,7 +9,10 @@ fn a (n: i32) -> &'static str:
 
 fn b (n: i32) -> &'static str:
     // inline, one line
-    if n < 0: "neg" else: if n == 0: "zero" else: "pos"
+    if n < 0: "neg"
+    else:
+        if n == 0: "zero"
+        else: "pos"
 
 fn c (n: i32) -> &'static str:
     // braced

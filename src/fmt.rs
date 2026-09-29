@@ -123,7 +123,53 @@ fn rust_tokens(src: &str) -> Option<Vec<String>> {
     let mut em = crate::emit::Emitter::new(src);
     em.program(&nodes);
     let rust = lex::lex_rust(&em.out).ok()?;
-    Some(rust.into_iter().filter(|t| !t.is_comment()).map(|t| t.text).collect())
+    let toks: Vec<String> = rust.into_iter().filter(|t| !t.is_comment()).map(|t| t.text).collect();
+    Some(bare_arms(toks))
+}
+
+/// A match arm whose body is a block holding one expression -- no `;`, no
+/// `let` inside -- compares as the same arm written bare: `p => { e }` and
+/// `p => e,` are one arm. The formatter puts a long arm's body on the line
+/// after its `=>` (the user's rule, 2026-09-29), which the transpiler writes
+/// as a block; Rule 0 must not see a difference there.
+fn bare_arms(toks: Vec<String>) -> Vec<String> {
+    let mut out: Vec<String> = Vec::with_capacity(toks.len());
+    let mut i = 0;
+    while i < toks.len() {
+        if toks[i] == "=>" && i + 1 < toks.len() && toks[i + 1] == "{" {
+            // The matching `}`, and whether the block holds statements.
+            let mut d = 0i32;
+            let mut close = None;
+            let mut stmt = false;
+            for (k, t) in toks.iter().enumerate().skip(i + 1) {
+                match t.as_str() {
+                    "{" | "(" | "[" => d += 1,
+                    "}" | ")" | "]" => {
+                        d -= 1;
+                        if d == 0 {
+                            close = Some(k);
+                            break;
+                        }
+                    }
+                    ";" | "let" if d == 1 => stmt = true,
+                    _ => {}
+                }
+            }
+            if let (Some(c), false) = (close, stmt) {
+                out.push("=>".into());
+                out.extend(toks[i + 2..c].iter().cloned());
+                // A bare arm is followed by `,` unless the match ends.
+                if !matches!(toks.get(c + 1).map(String::as_str), Some(",") | Some("}")) {
+                    out.push(",".into());
+                }
+                i = c + 1;
+                continue;
+            }
+        }
+        out.push(toks[i].clone());
+        i += 1;
+    }
+    out
 }
 
 /// Step 4 of `docs/FMT.md`: the line breaks the style asks for, added where
@@ -144,8 +190,10 @@ fn rust_tokens(src: &str) -> Option<Vec<String>> {
 /// - **Never mixed**: in a vertical chain, a line carrying two links is
 ///   split so every link after the first stands on its own line.
 ///
-/// The Book keeps chains of three and more links horizontal when they fit,
-/// so the formatter does not split or join chains by their length.
+/// Chains of three links or more go vertical whatever their width; so do
+/// inline lists of three items or more and `if` chains of three clauses or
+/// more (the user's rules, 2026-09-29). A call goes vertical when long
+/// arguments make it long, after first moving to a fresh line.
 fn rebreak(src: &str) -> String {
     let Ok(toks) = lex::lex(src) else { return src.to_string() };
     let all = toks.clone();
@@ -161,12 +209,20 @@ fn rebreak(src: &str) -> String {
     // Offsets of tokens whose preceding line break is removed: a short
     // vertical chain of one or two links joined onto its receiver's line.
     let mut joins: std::collections::HashSet<u32> = std::collections::HashSet::new();
+    // Offsets of tokens dropped: the commas of an inline list made vertical,
+    // where the newline separates the items (the Rust is the same; Rule 0
+    // checks it).
+    let mut drops: std::collections::HashSet<u32> = std::collections::HashSet::new();
     for (li, l) in lines.iter().enumerate() {
         if l.toks.is_empty() {
             continue;
         }
         let t = &l.toks;
         let cont = l.indent + UNIT;
+        // Where an earlier break moved this line's block, the columns the
+        // rules below set are counted from the line's new place.
+        let sh: isize = t.first().map_or(0, |f| shifts.iter().filter(|&&(from, to, _)| f.span.lo > from && f.span.lo <= to).map(|&(_, _, d)| d).sum());
+        let cont_s = (cont as isize + sh).max(0) as usize;
         // A moved part of a header moves its whole block: every following
         // line deeper than the header (body, `else`, the `)` tail).
         let last_hi = {
@@ -370,8 +426,37 @@ fn rebreak(src: &str) -> String {
                     None => orig_col_of(src, t, h),
                 };
                 let width = head_col + span_width(src, t, h, last_end);
-                if !(has_block || width > CHAIN_WIDTH) {
+                // The user's rule (2026-09-29): a call goes vertical when it is
+                // long because of long arguments, not because of their number
+                // -- a row of short ones stays on its line.
+                // A string is a template, not what makes a call hard to
+                // read: `println! "{} {} {} {}" a b c d` is a row of short
+                // arguments.
+                let longest = args.iter().filter(|&&a| t[a].kind != Tk::Str).map(|&a| span_width(src, t, a, extent_end(t, a))).max().unwrap_or(0);
+                if !(has_block || (width > CHAIN_WIDTH && longest >= LONG_ARG)) {
                     continue;
+                }
+                let mut head_col = head_col;
+                if !has_block {
+                    // Never deep: a callee after `=>`, `=` or a block's `:`
+                    // moves to a fresh line one unit in first, and its
+                    // arguments go beneath only if it is still too long; a
+                    // callee anywhere else not at a line's start (inside
+                    // another group, after an operator) is the author's.
+                    let at_start = t[h].line_start.is_some() || breaks.contains_key(&t[h].span.lo) || moved.iter().any(|&(a, _, _)| a == h);
+                    if !at_start {
+                        let p = (0..h).rev().find(|&k| !t[k].is_comment());
+                        let fresh = p.map_or(false, |p| depth_at(t, p) == 0 && matches!(t[p].kind, Tk::FatArrow | Tk::Eq | Tk::Colon));
+                        if !fresh {
+                            continue;
+                        }
+                        note(&t[h], cont_s, &mut breaks);
+                        head_col = cont_s;
+                        moved.push((h, last_end, cont_s));
+                        if cont_s + span_width(src, t, h, last_end) <= CHAIN_WIDTH {
+                            continue;
+                        }
+                    }
                 }
                 let arg_col = head_col + UNIT;
                 for &a in &args {
@@ -382,8 +467,80 @@ fn rebreak(src: &str) -> String {
                 }
             }
         }
-        // Break after `=`.
-        if let Some(eq) = top_level_eq(t) {
+        // Inline lists of more than two items (the user's rule, 2026-09-29):
+        // a literal, an inline declaration or an inline `match` of three
+        // items or more goes one item per line, one unit past its head, the
+        // commas dropped. Only a line with a single `\` at depth zero -- a
+        // literal inside a literal is the author's -- and a list at the
+        // line's start or right after `=`.
+        {
+            let bs: Vec<usize> = (0..t.len()).filter(|&k| t[k].kind == Tk::Backslash && depth_at(t, k) == 0).collect();
+            if bs.len() == 1 && !in_stream(&streams, &t[bs[0]]) {
+                let b = bs[0];
+                let commas: Vec<usize> = (b + 1..t.len()).filter(|&k| t[k].kind == Tk::Comma && depth_at(t, k) == 0).collect();
+                let one_line = (b + 1..t.len()).all(|k| t[k].line_start.is_none());
+                if commas.len() >= 2 && one_line && commas.iter().all(|&c| c + 1 < t.len()) {
+                    let head = if let Some(m) = (0..b).rev().find(|&k| t[k].is_kw("match") && depth_at(t, k) == 0) {
+                        m
+                    } else if t[0].is_kw("struct") || t[0].is_kw("enum") || t[0].is_kw("union") || (t[0].is_kw("pub") && t.len() > 1) {
+                        0
+                    } else {
+                        let mut k = b;
+                        // `Self` is a keyword and a literal's head: `Self\ a = 1, ..`.
+                        while k > 0 && matches!(t[k - 1].kind, Tk::Ident | Tk::Dot | Tk::PathSep) && (!is_kw_text(&t[k - 1].text) || t[k - 1].text == "Self") {
+                            k -= 1;
+                        }
+                        k
+                    };
+                    let at_start = t[head].line_start.is_some();
+                    let after_eq = head > 0 && t[head - 1].kind == Tk::Eq && depth_at(t, head - 1) == 0;
+                    if head < b && (at_start || after_eq) {
+                        let head_col = if at_start { (orig_col_of(src, t, head) as isize + sh).max(0) as usize } else { cont_s };
+                        if after_eq {
+                            note(&t[head], cont_s, &mut breaks);
+                        }
+                        let item_col = head_col + UNIT;
+                        // A declaration takes no mark with its body beneath:
+                        // `enum Level` and the variants under it. A literal
+                        // and a `match` keep their `\`.
+                        let declaration = ["struct", "enum", "union", "pub"].iter().any(|k| t[0].is_kw(k));
+                        if head == 0 && declaration {
+                            drops.insert(t[b].span.lo);
+                        }
+                        note(&t[b + 1], item_col, &mut breaks);
+                        for &c in &commas {
+                            drops.insert(t[c].span.lo);
+                            note(&t[c + 1], item_col, &mut breaks);
+                        }
+                    }
+                }
+            }
+        }
+        // An `if` of more than two clauses (the user's rule, 2026-09-29):
+        // `if c1: a else: if c2: b else: c` on one line goes on several,
+        // each `else` under its `if` and each nested `if` one unit in. Only
+        // an `if` that starts its line; the value of a `let` is the author's
+        // (it takes `do:`, which changes the Rust).
+        if t[0].is_kw("if") && layout::opens(t).is_none() {
+            let elses: Vec<usize> = (0..t.len()).filter(|&k| t[k].is_kw("else") && depth_at(t, k) == 0).collect();
+            let chained = elses.len() >= 2
+                && elses[..elses.len() - 1].iter().all(|&e| e + 2 < t.len() && t[e + 1].kind == Tk::Colon && t[e + 2].is_kw("if"))
+                && elses.iter().all(|&e| t[e].line_start.is_none());
+            if chained {
+                let mut col = (orig_col_of(src, t, 0) as isize + sh).max(0) as usize;
+                for (n, &e) in elses.iter().enumerate() {
+                    note(&t[e], col, &mut breaks);
+                    if n + 1 < elses.len() {
+                        note(&t[e + 2], col + UNIT, &mut breaks);
+                        col += UNIT;
+                    }
+                }
+            }
+        }
+        // Break after `=` -- a binding's, never a field's: after a literal's
+        // `\`, every `=` belongs to a field (`Self\ a = 1, b = 2`).
+        let field_eq = |eq: usize| (0..eq).any(|k| t[k].kind == Tk::Backslash && depth_at(t, k) == 0);
+        if let Some(eq) = top_level_eq(t).filter(|&eq| !field_eq(eq)) {
             if let Some(first) = (eq + 1..t.len()).find(|&i| !t[i].is_comment()) {
                 if t[first].line_start.is_none() {
                     let line_end = (first..t.len()).find(|&i| t[i].line_start.is_some()).unwrap_or(t.len());
@@ -434,13 +591,17 @@ fn rebreak(src: &str) -> String {
             }
         }
     }
-    if breaks.is_empty() && joins.is_empty() {
+    if breaks.is_empty() && joins.is_empty() && drops.is_empty() {
         return src.to_string();
     }
     let mut out = String::with_capacity(src.len() + 64);
     let mut prev_hi = 0usize;
     for t in &all {
         let lo = t.span.lo as usize;
+        if drops.contains(&t.span.lo) {
+            prev_hi = t.span.hi as usize;
+            continue;
+        }
         match breaks.get(&t.span.lo) {
             Some(&ind) => {
                 // Drop the horizontal gap, keep a trailing comment's place.
@@ -525,6 +686,9 @@ pub const CHAIN_WIDTH: usize = 72;
 /// within this many columns of the line's start; the following links then
 /// align under it. A longer receiver stands alone, its links one unit in.
 pub const LINK_ALIGN: usize = 12;
+/// An argument this wide or wider is long: a call past `CHAIN_WIDTH` goes
+/// vertical only when one of its arguments is (the user's rule, 2026-09-29).
+pub const LONG_ARG: usize = 20;
 
 /// Whether a token may sit between two arrows of one chain: a method or
 /// field name, its arguments (atoms and groups), `$`, `?`, `!`, a turbofish.

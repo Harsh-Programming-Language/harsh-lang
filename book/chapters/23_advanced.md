@@ -105,7 +105,6 @@ impl Iterator for Counter
         if self <- count < 5:
             self <- count += 1
             Some (self <- count)
-
         else:
             None
 

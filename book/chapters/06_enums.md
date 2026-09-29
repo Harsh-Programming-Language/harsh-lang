@@ -356,7 +356,6 @@ fn main$:
     for coin in coins:
         if let Coin.Quarter state = coin:
             println! "State quarter from {:?}!" state
-
         else:
             count += 1
 

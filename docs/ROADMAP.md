@@ -18,7 +18,7 @@ Sizing is relative: XS, S, M, L. "Blocked by" matters more than the estimate.
 
 ## Open, in order (2026-09-25)
 
-**Where things stand.** 0.1.51 is delivered (2026-09-29); 0.1.32 is on
+**Where things stand.** 0.1.52 is delivered (2026-09-29); 0.1.32 is on
 GitLab, and the website is live at https://harsh-lang.com/. `RELEASE.md` has
 publishing and installing every product, in order; publishing is the
 user's. 0.1.30 and 0.1.31 were handed over and are spent. The design questions
@@ -27,6 +27,7 @@ after a few days with it. What needs no decision is done, or listed last below.
 
 ### Waiting on the user, after his testing
 
+- **`hrs fmt` applies the countable rules -- built 2026-09-29 (0.1.52).** Remaining from the list below: (1) and (3).
 - **Three layout bugs found applying the handwriting rule (2026-09-29).**
   (1) `let x =` then, on the next line, `if c: a` with its `else:` beneath:
   the inline block is not transpiled (a `:` reaches the Rust). The books use

@@ -588,14 +588,10 @@ fn main$:
     println! "{}" kind
 
     let sign =
-        if n > 0:
-            1
-
-        else if n < 0:
-            -1
-
-        else:
-            0
+        if n > 0: 1
+        else
+            if n < 0: -1
+            else: 0
 
     println! "{}" sign
 ```
@@ -625,7 +621,7 @@ error[E0308]: `if` and `else` have incompatible types
    |                                      ^ expected `&str`, found integer
 ```
 
-Notice the shape of the multi-line `if` in the previous example: the `if` begins its own line after `let sign =`, so its arms indent from *it*. That is the rule everywhere a construct opens in the middle of a line: a block's lines are indented past the column of the construct that opened it, not merely past the statement, and when that would push the block too far right, `=` ends its line instead and the opener starts its own. Every control-flow construct also has the inline shape chapter 2 showed for blocks:
+Notice the shape of the multi-line `if` in the previous example: the `if` begins its own line after `let sign =`, its `else` stands under *it*, and the `if` inside the `else` indents past the `else`. That is the rule everywhere a construct opens in the middle of a line: a block's lines are indented past the column of the construct that opened it, not merely past the statement, and when that would push the block too far right, `=` ends its line instead and the opener starts its own. Every control-flow construct also has the inline shape chapter 2 showed for blocks:
 
 ```rust harsh
 fn main$:
@@ -2088,7 +2084,6 @@ fn main$:
     for coin in coins:
         if let Coin.Quarter state = coin:
             println! "State quarter from {:?}!" state
-
         else:
             count += 1
 
@@ -3583,7 +3578,6 @@ impl<T: Display + PartialOrd> Pair<T>
     fn cmp_display (&self):
         if self <- x >= self <- y:
             println! "The largest member is x = {}" (self <- x)
-
         else:
             println! "The largest member is y = {}" (self <- y)
 
@@ -3959,7 +3953,6 @@ impl Guess
     pub fn new value: i32 -> Guess:
         if value < 1:
             panic! "Guess value must be greater than or equal to 1, got {value}."
-
         else if value > 100:
             panic! "Guess value must be less than or equal to 100, got {value}."
 
@@ -3997,7 +3990,6 @@ mod tests
 
         if result == 4:
             Ok ()
-
         else:
             Err (String.from "two plus two does not equal four")
 ```
@@ -4302,7 +4294,6 @@ pub fn run config: Config -> Result<(), Box<dyn Error>>:
     let results =
         if config <- ignore_case:
             search_case_insensitive (&config <- query) (&contents)
-
         else:
             search (&config <- query) (&contents)
 
@@ -4428,7 +4419,6 @@ pub fn run config: Config -> Result<(), Box<dyn Error>>:
     let results =
         if config <- ignore_case:
             search_case_insensitive (&config <- query) (&contents)
-
         else:
             search (&config <- query) (&contents)
 
@@ -4547,7 +4537,6 @@ pub fn run config: Config -> Result<(), Box<dyn Error>>:
     let results =
         if config <- ignore_case:
             search_case_insensitive (&config <- query) (&contents)
-
         else:
             search (&config <- query) (&contents)
 
@@ -4668,7 +4657,6 @@ pub fn run config: Config -> Result<(), Box<dyn Error>>:
     let results =
         if config <- ignore_case:
             search_case_insensitive (&config <- query) (&contents)
-
         else:
             search (&config <- query) (&contents)
 
@@ -4792,7 +4780,6 @@ pub fn run config: Config -> Result<(), Box<dyn Error>>:
     let results =
         if config <- ignore_case:
             search_case_insensitive (&config <- query) (&contents)
-
         else:
             search (&config <- query) (&contents)
 
@@ -5464,7 +5451,6 @@ pub fn run config: Config -> Result<(), Box<dyn Error>>:
     let results =
         if config <- ignore_case:
             search_case_insensitive (&config <- query) (&contents)
-
         else:
             search (&config <- query) (&contents)
 
@@ -6556,7 +6542,7 @@ $ hrs test
 running 1 test
 test target/hrs/lib.rs - add_one (line 10) ... ok
 
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.18s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.19s
 ```
 
 `cargo doc --open` renders every `///` and `//!` in the crate as HTML, with the Markdown inside them — headings, code blocks, links — laid out. The conventional sections are `# Examples`, `# Panics` (when the function can), `# Errors` (what `Err`s it returns) and `# Safety` (for `unsafe` functions). The example in the `///` is Harsh, like everything else in the file, and `cargo test` *runs it* — every code block in a doc comment is a test, so documentation cannot drift from the code without failing the build.
@@ -8286,7 +8272,6 @@ impl Iterator for Counter
         if self <- count < 5:
             self <- count += 1
             Some (self <- count)
-
         else:
             None
 

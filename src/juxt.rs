@@ -1473,7 +1473,19 @@ fn type_app_fixups(toks: &[Token], regs: &[(usize, usize)], out: &mut Vec<(usize
         let t = &toks[i];
         let is_trait = t.kind == Tk::Ident && matches!(t.text.as_str(), "Fn" | "FnMut" | "FnOnce");
         let is_fn_type = t.is_kw("fn") && i > 0 && {
-            let p = (0..i).rev().find(|&k| !toks[k].is_comment()).map(|k| &toks[k]);
+            // Before `fn`, step over its qualifiers -- `unsafe`, `extern`,
+            // an ABI string: `extern "C" fn (A) (B) -> C` is a function type
+            // as `fn (A) (B) -> C` is (found 2026-09-28, a `qsort` callback).
+            let mut k = i;
+            loop {
+                let Some(q) = (0..k).rev().find(|&j| !toks[j].is_comment()) else { break };
+                if toks[q].is_kw("unsafe") || toks[q].is_kw("extern") || (toks[q].kind == Tk::Str && q > 0 && toks[q - 1].is_kw("extern")) {
+                    k = q;
+                } else {
+                    break;
+                }
+            }
+            let p = (0..k).rev().find(|&k| !toks[k].is_comment()).map(|k| &toks[k]);
             p.map_or(false, |p| {
                 matches!(p.kind, Tk::Colon | Tk::Lt | Tk::Comma | Tk::Open('('))
                     || (p.kind == Tk::Punct && p.text == "->")

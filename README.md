@@ -154,6 +154,8 @@ This also serves as the project's test oracle. Converting the transpiler's own s
 ## Learning it
 
 - **[The Harsh Programming Language](book/HARSH-BOOK.md)** — Rust taught in Harsh, from the first program to async, for readers who do not know Rust. One file per chapter in [`book/chapters/`](book/chapters).
+- **[The Harshonomicon](nomicon/THE-HARSHONOMICON.md)** — a companion to *The Rustonomicon*: unsafe Harsh, from memory layout to a `Vec` and an `Arc` built from scratch. One file per chapter in [`nomicon/pages/`](nomicon/pages).
+- **[Harsh Design Patterns](patterns/HARSH-DESIGN-PATTERNS.md)** — a companion to *Rust Design Patterns*: the idioms, patterns and anti-patterns, every program in Harsh. One file per chapter in [`patterns/pages/`](patterns/pages).
 - **[Harsh by Example](by-example/HARSH-BY-EXAMPLE.md)** — short programs, one idea each, for looking up how something is written. One file per page in [`by-example/pages/`](by-example/pages).
 - **[The Harsh Language Guide](docs/LANGUAGE.md)** — every construct beside its Rust spelling, for Rust programmers: the fastest way in.
 - **[Harshlings](https://gitlab.com/bahiminin.benoit.dah.opensource/harshlings)** — fifty small exercises, each a short program with one thing wrong; the compiler points at the line of the `.hrs` file you are editing, you fix it, and the runner moves on. `cargo install harsh-lang`, clone, `hrs run`. ([mirror](https://github.com/Harsh-Programming-Language/harshlings))

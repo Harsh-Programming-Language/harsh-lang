@@ -1,7 +1,7 @@
 use dioxus.prelude.*
 
 /// The books and the guide are shipped with the site, as the HTML the
-/// project already renders, under `/book/`, `/by-example/` and `/guide/`.
+/// project already renders, under `/book/`, `/by-example/`, `/patterns/`, `/nomicon/` and `/guide/`.
 /// The workflow copies them from `static/` beside the built app.
 #[component]
 pub fn Learn$ -> Element:
@@ -26,6 +26,22 @@ pub fn Learn$ -> Element:
                     p {
                         "A Rust by Example equivalent: short runnable pages, one concept each, "
                         "with Harsh's own -- pipes, comprehensions, matrices -- beside Rust's."
+                    }
+                }
+                a { class: "card", href: "patterns/",
+                    h3 { "Harsh Design Patterns" }
+                    p {
+                        "A Harsh companion to Rust Design Patterns: the idioms, patterns and "
+                        "anti-patterns, each with its program in Harsh -- and where pipes and "
+                        "partial application change the picture."
+                    }
+                }
+                a { class: "card", href: "nomicon/",
+                    h3 { "The Harshonomicon" }
+                    p {
+                        "A Harsh companion to The Rustonomicon: unsafe code, layout, lifetimes, "
+                        "atomics and FFI -- a Vec and an Arc built from scratch -- every "
+                        "program in Harsh."
                     }
                 }
                 a { class: "card", href: "guide/",

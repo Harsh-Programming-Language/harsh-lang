@@ -226,3 +226,11 @@ if __name__ == "__main__":
   if os.path.exists(e("HARSH-BY-EXAMPLE.md")):
     render(e("HARSH-BY-EXAMPLE.md"), e("harsh-by-example.ipynb"), e("harsh-by-example.html"),
            "Harsh by Example", "Harsh by Example")
+  dp = lambda f: os.path.join(ROOT, "patterns", f)
+  if os.path.exists(dp("HARSH-DESIGN-PATTERNS.md")):
+    render(dp("HARSH-DESIGN-PATTERNS.md"), dp("harsh-design-patterns.ipynb"), dp("harsh-design-patterns.html"),
+           "Harsh Design Patterns", "Harsh Design Patterns")
+  dn = lambda f: os.path.join(ROOT, "nomicon", f)
+  if os.path.exists(dn("THE-HARSHONOMICON.md")):
+    render(dn("THE-HARSHONOMICON.md"), dn("the-harshonomicon.ipynb"), dn("the-harshonomicon.html"),
+           "The Harshonomicon", "The Harshonomicon")

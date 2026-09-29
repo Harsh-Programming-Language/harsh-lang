@@ -498,7 +498,7 @@ fn braced (t: bool) -> i32:
 
 ### The two block openers
 
-- `:` and `do:` open a block interchangeably, on any construct that takes one. (A declaration takes none — `struct`, `enum`, `union`, `impl`, `trait`, `mod`, `extern`: the body follows the header, and `struct P do` is refused like `struct P:`; a literal is marked `\`.)
+- `:` and `do:` open a block interchangeably, on any construct that takes one. (A declaration takes none — `struct`, `enum`, `union`, `impl`, `trait`, `mod`, `extern`: the body follows the header, and `struct P do` is refused like `struct P:`; a literal is marked `\`.) A `:` inside a declaration's header is the header's own, as in Rust: supertraits, `trait Loggable: Debug + Display`, and bounds, `impl<T: Debug> Loggable for T`. A `trait`, `impl` or `enum` with no body is its header alone, one line, and becomes Rust's `{}` -- a marker trait and its blanket implementation (0.1.44), a type with no values, `enum Void` (0.1.45); a unit `struct` keeps Rust's `;`.
 
 ```
 fn f (x: i32) -> i32 do:

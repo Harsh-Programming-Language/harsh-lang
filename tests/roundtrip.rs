@@ -2487,3 +2487,27 @@ fn converter_reads_a_tuple_field_after_an_index_and_an_if_as_an_argument() {
     assert!(back.contains("println!(\"{}\", if n") && back.contains("\"small\""), "{back}");
 }
 
+/// A declaration's header keeps its `:` -- supertraits, a bound in `impl<T:
+/// ..>` -- even with no body beneath: the marker trait and its blanket impl,
+/// a Rust idiom, were misread as inline blocks until 2026-09-27.
+#[test]
+fn a_marker_trait_and_its_blanket_impl() {
+    let rust = harsh_lang::driver::transpile_str("use std.fmt.( Debug, Display)\n\ntrait Loggable: Debug + Display + Clone\nimpl<T: Debug + Display + Clone> Loggable for T\n\ntrait Named: Debug\n    fn name (&self) -> String\n").unwrap();
+    assert!(rust.contains("trait Loggable: Debug + Display + Clone {}"), "{rust}");
+    assert!(rust.contains("impl<T: Debug + Display + Clone> Loggable for T {}"), "{rust}");
+    assert!(rust.contains("trait Named: Debug {\n    fn name(&self) -> String;"), "{rust}");
+    // An empty enum -- a type with no values -- too; a unit struct keeps `;`.
+    let rust = harsh_lang::driver::transpile_str("enum Void\nstruct Unit\n").unwrap();
+    assert!(rust.contains("enum Void {}") && rust.contains("struct Unit;"), "{rust}");
+}
+
+/// A declaration with no body, several parameters and no return type -- a
+/// trait method, a function in an `extern "C"` block -- takes Rust's comma
+/// list, even when a parameter's type holds a `:` of its own (2026-09-28).
+#[test]
+fn a_bodiless_declaration_with_several_parameters() {
+    let rust = harsh_lang::driver::transpile_str("use std.ffi.c_void\n\nextern \"C\"\n    fn qsort (base: *mut c_void) (n: usize) (compare: extern \"C\" fn (*const c_void) (*const c_void) -> i32)\n\ntrait Canvas\n    fn plot (&mut self) (x: i32) (y: i32)\n").unwrap();
+    assert!(rust.contains("fn qsort(base: *mut c_void, n: usize, compare: extern \"C\" fn(*const c_void, *const c_void) -> i32);"), "{rust}");
+    assert!(rust.contains("fn plot(&mut self, x: i32, y: i32);"), "{rust}");
+}
+

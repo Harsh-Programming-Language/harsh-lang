@@ -18,7 +18,7 @@ Sizing is relative: XS, S, M, L. "Blocked by" matters more than the estimate.
 
 ## Open, in order (2026-09-25)
 
-**Where things stand.** 0.1.43 is delivered (2026-09-27); 0.1.32 is on
+**Where things stand.** 0.1.47 is delivered (2026-09-28); 0.1.32 is on
 GitLab, and the website is live at https://harsh-lang.com/. `RELEASE.md` has
 publishing and installing every product, in order; publishing is the
 user's. 0.1.30 and 0.1.31 were handed over and are spent. The design questions
@@ -26,6 +26,21 @@ are gathered in the development notes and wait on his use of what exists -- he d
 after a few days with it. What needs no decision is done, or listed last below.
 
 ### Waiting on the user, after his testing
+
+- ~~**The Harshonomicon**~~ -- delivered in 0.1.45 (13 chapters, 35
+  programs), after *Harsh Design Patterns* in 0.1.44.
+- **A generic function applied to arguments gets no turbofish.**
+  `Layout.array<u32> 4` stays `Layout::array<u32> 4` -- a Rust parse error --
+  while `mem.size_of<u32>$` and `sum<u32>$` are turbofished. The books work
+  around it (`Layout.from_size_align`, a typed binding for `transmute`); the
+  transpiler should turbofish a generic list followed by an argument too.
+  Found 2026-09-28.
+- **Books quote the generated Rust in error excerpts.** The books' builders
+  remap an error's positions with `hrs-remap`, but its excerpt still quotes
+  the generated Rust (`names.push(String::from(..))`) -- in *Harsh by
+  Example* and *Harsh Design Patterns* alike -- while `hrs run` quotes the
+  Harsh. The builders should render errors as `hrs run` does. Found
+  2026-09-28.
 
 - ~~**Hover, go-to-definition through rust-analyzer**~~ -- **built 2026-09-27
   (0.1.38)** with his three rulings. To try on the Mac with the real

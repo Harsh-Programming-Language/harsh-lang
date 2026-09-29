@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.1.47 — 2026-09-28  (no change to the transpiler: `hrs_std` 0.1.3 and the Jupyter kernel 0.1.3, as before)
+
+- ***The Harshonomicon*, checked against the original.** The user supplied the current *Rustonomicon*, and the companion now follows its table of contents one for one: its numbering (chapters 1 to 12, the introduction unnumbered), its titles, *References* and *Aliasing* as two sections (with a new program: the compiler refusing a second `&mut`), *Implementing Vec*'s eleven sections and *Implementing Arc and Mutex*'s *Arc* with its five, each pointing into the program given under *Final Code*, and *Beneath std*'s *#[panic_handler]*. Details the original adds, now stated: its list of undefined behaviours, `repr(align(n))`, drop check's `#[may_dangle]`, leaking's `Drain` and `thread::scoped`, `BinaryHeap::sift_up`'s guard, and FFI's safe interface (the program gains one). 36 programs, every one built and run.
+- Both companions are on the website's Learn page (since 0.1.44 and 0.1.45), each with its card, published by the next push.
+
+## 0.1.46 — 2026-09-28  (no change to the transpiler: `hrs_std` 0.1.3 and the Jupyter kernel 0.1.3, as in 0.1.45)
+
+- ***Harsh Design Patterns*, checked against the original.** The user supplied the current *Rust Design Patterns* site, and the companion now follows it exactly: its order (anti-patterns before functional programming; *Additional Resources* last), its page names (*Constructor*, *RAII Guards*, *Compose Structs*, *Object-Based APIs*, …), and its FFI idioms as three pages with a program each (errors -- flat enums, structured enums; accepting strings; passing strings). Four pages corrected in substance: *Avoid complex type bounds with custom traits* shows the original's technique, an associated type implemented for closures (the supertrait bundle kept as a variant); *Functional Optics* shows the iso, the poly iso and the prism; *On-Stack Dynamic Dispatch* uses deferred conditional initialisation; *Design principles* lists all fourteen. 38 programs, every one built and run.
+- The books' retired-spelling guard no longer mistakes a bound inside a struct's generics (`struct Value<G: Getter>`) for the retired `struct P:`.
+
+## 0.1.45 — 2026-09-28  (`hrs_std` 0.1.3 and the Jupyter kernel 0.1.3, unchanged)
+
+- **A new book: *The Harshonomicon***, a companion to *The Rustonomicon* (Apache-2.0): 13 chapters in its order -- safe and unsafe, data layout, ownership and lifetimes, conversions, uninitialised memory, resource management, unwinding, concurrency, a `Vec` and an `Arc` built from scratch, FFI (C's `qsort` with a Harsh callback), beneath std -- 35 programs, every one well-defined, built and run; prose of its own, shorter than the original on purpose, each section linked. On the website's Learn page, at `/nomicon/`.
+- **Fixed, found writing it:** an empty `enum` (`enum Void`, a type with no values) came out `enum Void;` -- now `{}`; a declaration with no body, several parameters and no return type (a function in an `extern "C"` block, a trait method) kept its parameter groups apart when a parameter's type held a `:`; and a function-pointer type with qualifiers, `extern "C" fn (A) (B) -> C` or `unsafe fn …`, was not joined into Rust's `fn(A, B) -> C`. Each pinned by a test.
+
+## 0.1.44 — 2026-09-28  (`hrs_std` 0.1.3 and the Jupyter kernel 0.1.3, unchanged)
+
+- **A new book: *Harsh Design Patterns***, a companion to *Rust Design Patterns* (MPL-2.0): its idioms, design patterns and anti-patterns in the same order -- 9 chapters, 35 programs in Harsh, every one built and run -- with prose of its own, what Harsh changes on each page (pipes and partial application in *Strategy* and *Command*, comprehensions in *Programming paradigms*), and a link to each original page. On the website's Learn page, at `/patterns/`.
+- **Fixed: a declaration with no body whose header holds a `:`.** `trait Loggable: Debug + Display` and `impl<T: Debug> Loggable for T` -- a marker trait and its blanket implementation -- were misread, the `:` taken for an inline block that swallowed the rest of the line. A declaration's `:` is now its header's own, and an empty `trait` or `impl` becomes Rust's `{}`. The guide states it. Found writing the book.
+
 ## 0.1.43 — 2026-09-27  (`hrs_std` 0.1.3 and the Jupyter kernel 0.1.3, unchanged)
 
 - **Hover in Harsh.** rust-analyzer's answer is Rust; `hrs-lsp` now converts its signatures and paths with Harsh's own converter (the one behind `hrs-from` and the website's Converter) and shows them as Harsh, coloured as Harsh: `fn adding (x: i32) (y: i32) -> i32`, `std.slice.Iter`. A line the converter cannot take, and a long documentation example, stay Rust -- never half translated.

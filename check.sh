@@ -147,4 +147,17 @@ say "The guide: every code block transpiles"
 PATH="$ROOT/target/release:$PATH" python3 "$ROOT/docs/check-guide.py" > "$WORK/guide.log" 2>&1 || { cat "$WORK/guide.log"; exit 1; }
 echo "  $(tail -1 "$WORK/guide.log" | sed 's|^docs/LANGUAGE.md: ||')"
 
+say "Harsh Design Patterns and The Harshonomicon: every program transpiles"
+# Its full build (`patterns/sources/build.py`) compiles and runs them; this
+# gate keeps each program valid Harsh as the language moves. Development
+# tree only: the public tree carries the rendered book, not its sources.
+if [ -d "$ROOT/patterns/sources/src" ]; then
+    n=0
+    for f in "$ROOT"/patterns/sources/src/*/*.hrs "$ROOT"/nomicon/sources/src/*/*.hrs; do
+        ./target/release/hrs "$f" -o "$WORK/pattern.rs" > /dev/null 2>&1 || { echo "  $f does not transpile"; ./target/release/hrs "$f" -o "$WORK/pattern.rs"; exit 1; }
+        n=$((n+1))
+    done
+    echo "  $n programs transpile"
+fi
+
 say "All checks complete. Artifacts in $WORK"

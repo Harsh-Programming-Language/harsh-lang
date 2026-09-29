@@ -618,7 +618,7 @@ all: it is written in the macro's braces, as Rust, with Harsh in its holes
 </ul>
 <h4 id="the-two-block-openers">The two block openers</h4>
 <ul>
-<li><code>:</code> and <code>do:</code> open a block interchangeably, on any construct that takes one. (A declaration takes none — <code>struct</code>, <code>enum</code>, <code>union</code>, <code>impl</code>, <code>trait</code>, <code>mod</code>, <code>extern</code>: the body follows the header, and <code>struct P do</code> is refused like <code>struct P:</code>; a literal is marked <code>\</code>.)</li>
+<li><code>:</code> and <code>do:</code> open a block interchangeably, on any construct that takes one. (A declaration takes none — <code>struct</code>, <code>enum</code>, <code>union</code>, <code>impl</code>, <code>trait</code>, <code>mod</code>, <code>extern</code>: the body follows the header, and <code>struct P do</code> is refused like <code>struct P:</code>; a literal is marked <code>\</code>.) A <code>:</code> inside a declaration's header is the header's own, as in Rust: supertraits, <code>trait Loggable: Debug + Display</code>, and bounds, <code>impl&lt;T: Debug&gt; Loggable for T</code>. A <code>trait</code>, <code>impl</code> or <code>enum</code> with no body is its header alone, one line, and becomes Rust's <code>{}</code> -- a marker trait and its blanket implementation (0.1.44), a type with no values, <code>enum Void</code> (0.1.45); a unit <code>struct</code> keeps Rust's <code>;</code>.</li>
 </ul>
 <pre class="code harsh"><code><span class="k">fn</span> f <span class="p">(</span>x<span class="p">:</span> i32<span class="p">)</span> <span class="op">-&gt;</span> i32 <span class="k">do</span><span class="p">:</span>
     x <span class="p">+</span> <span class="num">1</span>

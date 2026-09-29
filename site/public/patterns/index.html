@@ -1,0 +1,1512 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Harsh Design Patterns</title>
+<!-- The Harsh logo as the tab's icon, embedded so it shows wherever the page is opened: on harsh-lang.com, from the repository, offline. -->
+<link rel="icon" type="image/png" href="data:image/png;base64,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">
+<style>
+:root{
+  --bg:#0e1418; --panel:#141c21; --line:#233039;
+  --fg:#d7e1e8; --dim:#7d919e; --faint:#5b6d79;
+  --rust:#e08b5a; --acc:#6fb3d2; --kw:#c99bdd; --str:#8fbf7f; --num:#e0c07a;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0; background:var(--bg); color:var(--fg);
+  font:16px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,
+       "Helvetica Neue",Arial,sans-serif;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1180px;margin:0 auto;padding:0 28px}
+header{padding:64px 0 40px;border-bottom:1px solid var(--line);margin-bottom:40px}
+/* The way back to the website, above every page's header. */
+.home{display:inline-block;margin:24px 0 0;font-size:14px;color:var(--dim);text-decoration:none}
+.home:hover{color:var(--acc)}
+header{padding-top:28px}
+.logo{
+  font-family:"SF Mono",SFMono-Regular,ui-monospace,"JetBrains Mono",
+              "Cascadia Code",Menlo,Consolas,monospace;
+  font-size:clamp(38px,7vw,68px); font-weight:600; letter-spacing:-.02em;
+  line-height:1; margin:0; user-select:all;
+}
+.lg-b{color:var(--faint)}
+.lg-n{color:var(--fg)}
+.lg-a{color:var(--acc)}
+.lg-r{color:var(--rust)}
+.lg-i{display:inline-block;transform:skewX(-11deg);transform-origin:50% 70%}
+.title{margin:22px 0 6px;font-size:26px;font-weight:600;letter-spacing:-.01em}
+.tag{margin:0;color:var(--dim);font-size:16px}
+.tag em{color:var(--rust);font-style:normal}
+.cols{display:grid;grid-template-columns:250px minmax(0,1fr);gap:56px;
+      align-items:start;padding-bottom:120px}
+body.nav-hidden .cols{grid-template-columns:minmax(0,1fr)}
+body.nav-hidden .toc{display:none}
+.toggle{
+  position:fixed;left:10px;top:10px;z-index:10;
+  background:transparent;color:var(--faint);border:0;
+  padding:4px 6px;font:12px/1 inherit;cursor:pointer;opacity:.5;
+}
+.toggle:hover{opacity:1;color:var(--dim)}
+.toc{position:sticky;top:24px;max-height:calc(100vh - 48px);overflow:auto;
+     font-size:14px;border-left:1px solid var(--line);padding-left:18px}
+.toc-h{margin:0 0 10px;color:var(--dim);text-transform:uppercase;
+       letter-spacing:.09em;font-size:11px}
+.toc ul{list-style:none;margin:0;padding:0}
+.toc li{margin:.22em 0}
+.toc a{color:var(--fg);text-decoration:none;display:block;padding:1px 0}
+.toc a:hover{color:var(--acc)}
+/* depth from the document's top level: a book's chapters, then sections,
+   subsections, and theirs */
+.toc .d0{font-weight:600;margin-top:.7em}
+.toc .d0:first-child{margin-top:0}
+.toc .d1{padding-left:14px;font-size:13.5px}
+.toc .d1 a{color:#c5d2db}
+.toc .d2{padding-left:28px;font-size:13px}
+.toc .d2 a{color:var(--dim)}
+.toc .d3{padding-left:42px;font-size:12.5px}
+.toc .d3 a{color:var(--dim)}
+main{min-width:0}
+h2{font-size:25px;margin:52px 0 14px;padding-top:8px;letter-spacing:-.01em;
+   border-top:1px solid var(--line)}
+h2:first-child{border-top:0;margin-top:0}
+h3{font-size:18.5px;margin:32px 0 10px;color:#eaf1f6}
+h4{font-size:15.5px;margin:24px 0 8px;color:var(--dim);
+   text-transform:uppercase;letter-spacing:.06em}
+p{margin:.75em 0}
+ul,ol{padding-left:22px}
+li{margin:.3em 0}
+li>ul,li>ol{margin:.3em 0}
+strong{color:#fff;font-weight:600}
+a{color:var(--acc)}
+code{
+  font-family:"SF Mono",SFMono-Regular,ui-monospace,"JetBrains Mono",
+              "Cascadia Code",Menlo,Consolas,monospace;
+  font-size:.9em; background:#1b252b; border:1px solid var(--line);
+  padding:.08em .34em; border-radius:4px; color:#cfe0ea;
+}
+pre.code{
+  background:var(--panel); border:1px solid var(--line); border-radius:8px;
+  padding:14px 16px; overflow:auto; margin:14px 0; line-height:1.55;
+}
+pre.code code{background:none;border:0;padding:0;font-size:13.5px;color:var(--fg)}
+pre.code.rust{border-left:3px solid var(--rust)}
+pre.code.harsh{border-left:3px solid var(--acc)}
+pre.code.diagram{border-left:3px solid var(--faint);color:var(--dim)}
+.k{color:var(--kw)} .t{color:var(--acc)} .str{color:var(--str)}
+.num{color:var(--num)} .com{color:var(--faint);font-style:italic}
+.op{color:var(--rust);font-weight:600} .mac{color:var(--num)}
+.defer{color:var(--rust);font-weight:600} .attr{color:var(--faint)}
+.p{color:var(--dim)} .blk{color:var(--rust)}
+table{border-collapse:collapse;margin:16px 0;font-size:14.5px;width:100%}
+th,td{border:1px solid var(--line);padding:7px 11px;text-align:left;
+      vertical-align:top}
+th{background:#18222a;color:#eaf1f6;font-weight:600}
+td code{font-size:.88em}
+blockquote{border-left:3px solid var(--line);margin:1em 0;padding:.1em 1em;
+           color:var(--dim)}
+footer{border-top:1px solid var(--line);padding:26px 0 60px;color:var(--faint);
+       font-size:13.5px}
+@media(max-width:900px){
+  .cols,body.nav-hidden .cols{grid-template-columns:1fr;gap:0}
+  .toc{position:static;max-height:none;border-left:0;border-bottom:1px solid
+       var(--line);padding:0 0 20px;margin-bottom:28px}
+}
+/* The back-to-top arrow (added by page-tail.html): discreet, in the corner, only after some scrolling. */
+.to-top{position:fixed;right:20px;bottom:20px;z-index:40;width:40px;height:40px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;background:var(--panel);color:var(--dim);
+  border:1px solid var(--line);font:18px/1 sans-serif;cursor:pointer;opacity:0;pointer-events:none;
+  transition:opacity .2s,color .2s,border-color .2s}
+.to-top.shown{opacity:.75;pointer-events:auto}
+.to-top:hover,.to-top:focus-visible{opacity:1;color:var(--acc);border-color:var(--acc);outline:none}
+/* The copy button on code blocks (added by page-tail.html). */
+pre.code{position:relative}
+.copy{position:absolute;top:8px;right:8px;padding:3px 9px;font:12px sans-serif;color:var(--dim);cursor:pointer;
+  background:var(--panel);border:1px solid var(--line);border-radius:6px;opacity:0;transition:opacity .15s,color .15s,border-color .15s}
+pre.code:hover .copy,.copy:focus-visible{opacity:1}
+.copy:hover{color:var(--acc);border-color:var(--acc)}
+@media (hover:none){.copy{opacity:.8}}
+</style>
+</head>
+<body>
+  <button class="toggle" id="nav-toggle" title="Show or hide the contents">☰</button>
+  <div class="wrap">
+    <a class="home" href="https://harsh-lang.com/learn">&larr; Learn &middot; harsh-lang.com</a>
+    <header>
+      <p class="logo"><span class="lg-b">#[</span><span class="lg-n">Ha</span><span class="lg-a">&lt;</span><span class="lg-r">rs</span><span class="lg-a">&gt;</span><span class="lg-a">.</span><span class="lg-n lg-i">h</span><span class="lg-b">]</span></p>
+      <h1 class="title">Harsh</h1>
+      <p class="tag">Harsh Design Patterns</p>
+    </header>
+    <div class="cols">
+      <nav class="toc"><p class="toc-h">Contents</p><ul>
+<li class="d1"><a href="#how-to-read-it">How to read it</a></li>
+<li class="d0"><a href="#idioms">Idioms</a></li>
+<li class="d1"><a href="#2-1-use-borrowed-types-for-arguments">2.1 Use borrowed types for arguments</a></li>
+<li class="d1"><a href="#2-2-concatenating-strings-with-format">2.2 Concatenating Strings with format!</a></li>
+<li class="d1"><a href="#2-3-constructor">2.3 Constructor</a></li>
+<li class="d1"><a href="#2-4-the-default-trait">2.4 The Default Trait</a></li>
+<li class="d1"><a href="#2-5-collections-are-smart-pointers">2.5 Collections Are Smart Pointers</a></li>
+<li class="d1"><a href="#2-6-finalisation-in-destructors">2.6 Finalisation in Destructors</a></li>
+<li class="d1"><a href="#2-7-mem-take-replace">2.7 mem::{take(_), replace(_)}</a></li>
+<li class="d1"><a href="#2-8-on-stack-dynamic-dispatch">2.8 On-Stack Dynamic Dispatch</a></li>
+<li class="d1"><a href="#2-9-foreign-function-interface-ffi">2.9 Foreign function interface (FFI)</a></li>
+<li class="d2"><a href="#2-9-1-idiomatic-errors">2.9.1 Idiomatic Errors</a></li>
+<li class="d2"><a href="#2-9-2-accepting-strings">2.9.2 Accepting Strings</a></li>
+<li class="d2"><a href="#2-9-3-passing-strings">2.9.3 Passing Strings</a></li>
+<li class="d1"><a href="#2-10-iterating-over-an-option">2.10 Iterating over an Option</a></li>
+<li class="d1"><a href="#2-11-pass-variables-to-closure">2.11 Pass Variables to Closure</a></li>
+<li class="d1"><a href="#2-12-privacy-for-extensibility">2.12 Privacy For Extensibility</a></li>
+<li class="d1"><a href="#2-13-easy-doc-initialization">2.13 Easy doc initialization</a></li>
+<li class="d1"><a href="#2-14-temporary-mutability">2.14 Temporary mutability</a></li>
+<li class="d1"><a href="#2-15-return-consumed-arg-on-error">2.15 Return consumed arg on error</a></li>
+<li class="d0"><a href="#behavioural-patterns">Behavioural patterns</a></li>
+<li class="d1"><a href="#3-1-command">3.1 Command</a></li>
+<li class="d1"><a href="#3-2-interpreter">3.2 Interpreter</a></li>
+<li class="d1"><a href="#3-3-newtype">3.3 Newtype</a></li>
+<li class="d1"><a href="#3-4-raii-guards">3.4 RAII Guards</a></li>
+<li class="d1"><a href="#3-5-strategy">3.5 Strategy</a></li>
+<li class="d1"><a href="#3-6-visitor">3.6 Visitor</a></li>
+<li class="d0"><a href="#creational-patterns">Creational patterns</a></li>
+<li class="d1"><a href="#4-1-builder">4.1 Builder</a></li>
+<li class="d1"><a href="#4-2-fold">4.2 Fold</a></li>
+<li class="d0"><a href="#structural-patterns">Structural patterns</a></li>
+<li class="d1"><a href="#5-1-compose-structs">5.1 Compose Structs</a></li>
+<li class="d1"><a href="#5-2-prefer-small-crates">5.2 Prefer Small Crates</a></li>
+<li class="d1"><a href="#5-3-contain-unsafety-in-small-modules">5.3 Contain unsafety in small modules</a></li>
+<li class="d1"><a href="#5-4-avoid-complex-type-bounds-with-custom-traits">5.4 Avoid complex type bounds with custom traits</a></li>
+<li class="d0"><a href="#foreign-function-interface">Foreign function interface</a></li>
+<li class="d1"><a href="#6-1-object-based-apis">6.1 Object-Based APIs</a></li>
+<li class="d1"><a href="#6-2-type-consolidation-into-wrappers">6.2 Type Consolidation into Wrappers</a></li>
+<li class="d0"><a href="#anti-patterns">Anti-patterns</a></li>
+<li class="d1"><a href="#7-1-clone-to-satisfy-the-borrow-checker">7.1 Clone to satisfy the borrow checker</a></li>
+<li class="d1"><a href="#7-2-deny-warnings">7.2 #[deny(warnings)]</a></li>
+<li class="d1"><a href="#7-3-deref-polymorphism">7.3 Deref Polymorphism</a></li>
+<li class="d0"><a href="#functional-programming">Functional Programming</a></li>
+<li class="d1"><a href="#8-1-programming-paradigms">8.1 Programming paradigms</a></li>
+<li class="d1"><a href="#8-2-generics-as-type-classes">8.2 Generics as Type Classes</a></li>
+<li class="d1"><a href="#8-3-functional-optics">8.3 Functional Optics</a></li>
+<li class="d0"><a href="#additional-resources">Additional Resources</a></li>
+<li class="d1"><a href="#9-1-design-principles">9.1 Design principles</a></li>
+</ul></nav>
+      <main>
+  <p><em>A Harsh companion to <a href="https://rust-unofficial.github.io/patterns/">Rust Design Patterns</a> — its idioms, patterns and
+anti-patterns, in the same order, with every program written in Harsh and
+built and run to produce the output you see.</em></p>
+<p>A design pattern is a solution that has worked before, to a problem that keeps
+coming back: a way to arrange code that other programmers will recognise. Rust
+has its own, because it is not an object-oriented language: ownership, the
+borrow checker, traits and closures make some classic patterns unnecessary and
+call for others. <em>Rust Design Patterns</em>, a community book, collects them in
+three families — <strong>idioms</strong>, the habits of the community; <strong>design patterns</strong>,
+arrangements that solve a recurring problem; and <strong>anti-patterns</strong>, arrangements
+that look like solutions and create problems.</p>
+<p>Harsh is Rust with another layout, so every one of them holds in Harsh as it
+is. What this companion adds is how each one is written in Harsh, and where
+Harsh changes the picture: pipes and partial application make several patterns
+a line long, comprehensions replace some loops outright, and the layout rules
+make a builder or a command list read top to bottom. Where Harsh changes
+nothing, the page says so and keeps short.</p>
+<h3 id="how-to-read-it">How to read it</h3>
+<p>Each page gives the idea in a few sentences, a program in Harsh with its real
+output, what Harsh changes, and a link to the original page — the place for
+the full discussion, the trade-offs and the history, which this companion does
+not repeat. If you have not read <em>The Harsh Programming Language</em> yet, read it
+first: this book assumes you can read Harsh.</p>
+<p>The book follows the original's order: the idioms; the design patterns —
+behavioural, creational, structural, and for foreign functions; the
+anti-patterns; functional programming; and, to close, the design principles
+behind them all.</p>
+<p><em>Rust Design Patterns</em> is by its contributors, under the Mozilla Public
+License 2.0, as is this companion; see ATTRIBUTION.md.</p>
+<h2 id="idioms">Idioms</h2>
+<p>Idioms are the community's habits: small, local choices that make Rust code
+read as Rust. They are not rules — break one when there is a reason — but code
+that follows them is easier for everyone else to read. The original chapter:
+<a href="https://rust-unofficial.github.io/patterns/idioms/index.html">Idioms</a>.</p>
+<h3 id="2-1-use-borrowed-types-for-arguments">2.1 Use borrowed types for arguments</h3>
+<p><em>Original: <a href="https://rust-unofficial.github.io/patterns/idioms/coercion-arguments.html">Use borrowed types for arguments</a></em></p>
+<p>Take the most general borrowed form a function can work with: <code>&amp;str</code> rather
+than <code>&amp;String</code>, <code>&amp;[T]</code> rather than <code>&amp;Vec&lt;T&gt;</code>, <code>&amp;T</code> rather than <code>&amp;Box&lt;T&gt;</code>. The
+caller's <code>&amp;String</code> coerces to <code>&amp;str</code> on its own, so the function accepts more
+— a string literal, a slice of another string — at no cost.</p>
+<pre class="code harsh"><code><span class="com">// `&amp;str`, not `&amp;String`: every string the caller has will do.</span>
+<span class="k">fn</span> three_vowels <span class="p">(</span>word<span class="p">:</span> <span class="p">&amp;</span>str<span class="p">)</span> <span class="op">-&gt;</span> bool<span class="p">:</span>
+    <span class="k">let</span> <span class="k">mut</span> count <span class="p">=</span> <span class="num">0</span>
+    <span class="k">for</span> c <span class="k">in</span> word <span class="op">&lt;-</span> chars<span class="defer">$</span><span class="p">:</span>
+        <span class="k">match</span> c\
+            <span class="str">'a'</span> <span class="p">|</span> <span class="str">'e'</span> <span class="p">|</span> <span class="str">'i'</span> <span class="p">|</span> <span class="str">'o'</span> <span class="p">|</span> <span class="str">'u'</span> <span class="op">=&gt;</span> count <span class="op">+=</span> <span class="num">1</span>
+            _ <span class="op">=&gt;</span> count <span class="p">=</span> <span class="num">0</span>
+        <span class="k">if</span> count <span class="op">&gt;=</span> <span class="num">3</span><span class="p">:</span>
+            <span class="k">return</span> <span class="k">true</span>
+    <span class="k">false</span>
+
+<span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="k">let</span> owned <span class="p">=</span> <span class="t">String</span><span class="p">.</span>from <span class="str">"Ferris"</span>
+    <span class="k">let</span> sentence <span class="p">=</span> <span class="str">"Once upon a time, there was a friendly curious crab named Ferris"</span>
+    <span class="mac">println!</span> <span class="str">"{}: {}"</span> owned <span class="p">(</span>three_vowels <span class="p">(</span><span class="p">&amp;</span>owned<span class="p">)</span><span class="p">)</span>
+    <span class="k">for</span> word <span class="k">in</span> sentence <span class="op">&lt;-</span> split <span class="str">' '</span><span class="p">:</span>
+        <span class="k">if</span> three_vowels word<span class="p">:</span>
+            <span class="mac">println!</span> <span class="str">"{word} has three consecutive vowels!"</span></code></pre>
+<pre class="code"><code>Ferris: false
+curious has three consecutive vowels!</code></pre>
+<p><strong>In Harsh:</strong> nothing changes; the coercion is Rust's. An argument that is not a single atom takes
+parentheses: <code>three_vowels (&amp;owned)</code>.</p>
+<h3 id="2-2-concatenating-strings-with-format">2.2 Concatenating Strings with format!</h3>
+<p><em>Original: <a href="https://rust-unofficial.github.io/patterns/idioms/concat-format.html">Concatenating Strings with format!</a></em></p>
+<p>To build a string from pieces, <code>format!</code> is usually clearer than a series of
+<code>push_str</code> calls: the shape of the result is visible at once. For a string
+built in a loop, or where every allocation counts, pushing into one <code>String</code>
+remains the faster choice.</p>
+<pre class="code harsh"><code><span class="k">fn</span> greet <span class="p">(</span>name<span class="p">:</span> <span class="p">&amp;</span>str<span class="p">)</span> <span class="op">-&gt;</span> <span class="t">String</span><span class="p">:</span>
+    <span class="com">// The shape of the result, at a glance.</span>
+    <span class="mac">format!</span> <span class="str">"Hello {name}!"</span>
+
+<span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span>greet <span class="str">"Harsh"</span><span class="p">)</span>
+    <span class="com">// Built piece by piece, where the pieces come from a loop.</span>
+    <span class="k">let</span> <span class="k">mut</span> line <span class="p">=</span> <span class="t">String</span><span class="p">.</span>new<span class="defer">$</span>
+    <span class="k">for</span> part <span class="k">in</span> <span class="p">[</span><span class="str">"a"</span><span class="p">,</span> <span class="str">"b"</span><span class="p">,</span> <span class="str">"c"</span><span class="p">]</span><span class="p">:</span>
+        line <span class="op">&lt;-</span> push_str part
+    <span class="mac">println!</span> <span class="str">"{line}"</span></code></pre>
+<pre class="code"><code>Hello Harsh!
+abc</code></pre>
+<p><strong>In Harsh:</strong> <code>format!</code> takes its arguments by juxtaposition, and names can
+sit inside the braces, so most calls need no arguments after the string.</p>
+<h3 id="2-3-constructor">2.3 Constructor</h3>
+<p><em>Original: <a href="https://rust-unofficial.github.io/patterns/idioms/ctor.html">Constructor</a></em></p>
+<p>Rust has no constructors in the language: by convention, an associated
+function <code>new</code> builds a value. When a type has an obvious default, implement
+<code>Default</code> too, and let <code>new</code> call it or be it.</p>
+<pre class="code harsh"><code><span class="attr">#[derive Debug]</span>
+<span class="k">pub</span> <span class="k">struct</span> <span class="t">Second</span>
+    value<span class="p">:</span> u64
+
+<span class="k">impl</span> <span class="t">Second</span>
+    <span class="com">// By convention, `new` builds the value.</span>
+    <span class="k">pub</span> <span class="k">fn</span> new <span class="p">(</span>value<span class="p">:</span> u64<span class="p">)</span> <span class="op">-&gt;</span> <span class="k">Self</span><span class="p">:</span>
+        <span class="k">Self</span>\ value <span class="p">=</span> value
+
+    <span class="k">pub</span> <span class="k">fn</span> value <span class="p">(</span><span class="p">&amp;</span><span class="k">self</span><span class="p">)</span> <span class="op">-&gt;</span> u64<span class="p">:</span>
+        <span class="k">self</span> <span class="op">&lt;-</span> value
+
+<span class="k">impl</span> <span class="t">Default</span> <span class="k">for</span> <span class="t">Second</span>
+    <span class="k">fn</span> default<span class="defer">$</span> <span class="op">-&gt;</span> <span class="k">Self</span><span class="p">:</span>
+        <span class="k">Self</span>\ value <span class="p">=</span> <span class="num">0</span>
+
+<span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="k">let</span> s <span class="p">=</span> <span class="t">Second</span><span class="p">.</span>new <span class="num">42</span>
+    <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span>s <span class="op">&lt;-</span> value<span class="defer">$</span><span class="p">)</span>
+    <span class="mac">println!</span> <span class="str">"{:?}"</span> <span class="p">(</span><span class="t">Second</span><span class="p">.</span>default<span class="defer">$</span><span class="p">)</span></code></pre>
+<pre class="code"><code>42
+Second { value: 0 }</code></pre>
+<p><strong>In Harsh:</strong> <code>Second.new 5</code> calls the associated function — the path uses a
+dot, and the argument follows the name.</p>
+<h3 id="2-4-the-default-trait">2.4 The Default Trait</h3>
+<p><em>Original: <a href="https://rust-unofficial.github.io/patterns/idioms/default.html">The Default Trait</a></em></p>
+<p><code>Default</code> gives a type a value "when nothing else was said". Derived, it fills
+every field with its own default; with struct-update syntax, a caller names
+only the fields that differ. Containers and generic code rely on it
+(<code>unwrap_or_default</code>, <code>mem::take</code>).</p>
+<pre class="code harsh"><code><span class="attr">#[derive Debug Default]</span>
+<span class="k">struct</span> <span class="t">Config</span>
+    name<span class="p">:</span> <span class="t">String</span>
+    verbose<span class="p">:</span> bool
+    retries<span class="p">:</span> u8
+    tags<span class="p">:</span> <span class="t">Vec</span><span class="p">&lt;</span><span class="t">String</span><span class="p">&gt;</span>
+
+<span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="com">// Every field its own default.</span>
+    <span class="k">let</span> plain <span class="p">=</span> <span class="t">Config</span><span class="p">.</span>default<span class="defer">$</span>
+    <span class="mac">println!</span> <span class="str">"{:?}"</span> plain
+    <span class="com">// Only what differs, the rest from the default.</span>
+    <span class="k">let</span> loud <span class="p">=</span> <span class="t">Config</span>\ verbose <span class="p">=</span> <span class="k">true</span><span class="p">,</span> retries <span class="p">=</span> <span class="num">3</span><span class="p">,</span> <span class="op">..</span><span class="t">Config</span><span class="p">.</span>default<span class="defer">$</span>
+    <span class="mac">println!</span> <span class="str">"{:?}"</span> loud
+    <span class="com">// Containers use it too.</span>
+    <span class="k">let</span> missing<span class="p">:</span> <span class="t">Option</span><span class="p">&lt;</span><span class="t">Vec</span><span class="p">&lt;</span>i32<span class="p">&gt;</span><span class="p">&gt;</span> <span class="p">=</span> <span class="t">None</span>
+    <span class="mac">println!</span> <span class="str">"{:?}"</span> <span class="p">(</span>missing <span class="op">&lt;-</span> unwrap_or_default<span class="defer">$</span><span class="p">)</span></code></pre>
+<pre class="code"><code>Config { name: "", verbose: false, retries: 0, tags: [] }
+Config { name: "", verbose: true, retries: 3, tags: [] }
+[]</code></pre>
+<p><strong>In Harsh:</strong> struct update is written inside the literal, <code>Config\ verbose =
+true, ..Config.default$</code> — <code>$</code> calls a function that takes nothing.</p>
+<h3 id="2-5-collections-are-smart-pointers">2.5 Collections Are Smart Pointers</h3>
+<p><em>Original: <a href="https://rust-unofficial.github.io/patterns/idioms/deref.html">Collections Are Smart Pointers</a></em></p>
+<p>A collection that owns its data should implement <code>Deref</code> to the borrowed view
+of it — <code>Vec&lt;T&gt;</code> to <code>[T]</code>, <code>String</code> to <code>str</code>. Every method of the borrowed view
+is then available on the owner, and a function written for the view accepts
+the owner too.</p>
+<pre class="code harsh"><code><span class="com">// Written for the borrowed view: a slice.</span>
+<span class="k">fn</span> total <span class="p">(</span>xs<span class="p">:</span> <span class="p">&amp;</span><span class="p">[</span>i32<span class="p">]</span><span class="p">)</span> <span class="op">-&gt;</span> i32<span class="p">:</span>
+    xs <span class="op">&lt;-</span> iter<span class="defer">$</span> <span class="op">&lt;-</span> sum<span class="defer">$</span>
+
+<span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="k">let</span> scores <span class="p">=</span> <span class="mac">vec!</span> <span class="num">3</span> <span class="num">1</span> <span class="num">4</span> <span class="num">1</span> <span class="num">5</span>
+    <span class="com">// A `&amp;Vec&lt;i32&gt;` is accepted where `&amp;[i32]` is asked for.</span>
+    <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span>total <span class="p">(</span><span class="p">&amp;</span>scores<span class="p">)</span><span class="p">)</span>
+    <span class="com">// The slice's methods, reached through the Vec.</span>
+    <span class="mac">println!</span> <span class="str">"{:?} {}"</span> <span class="p">(</span>scores <span class="op">&lt;-</span> first<span class="defer">$</span><span class="p">)</span> <span class="p">(</span>scores <span class="op">&lt;-</span> contains <span class="p">(</span><span class="p">&amp;</span><span class="num">4</span><span class="p">)</span><span class="p">)</span></code></pre>
+<pre class="code"><code>14
+Some(3) true</code></pre>
+<p><strong>In Harsh:</strong> the same. Method calls reach through <code>Deref</code> exactly as in Rust:
+<code>scores &lt;- first$</code> is the slice's <code>first</code>, found through the <code>Vec</code>.</p>
+<h3 id="2-6-finalisation-in-destructors">2.6 Finalisation in Destructors</h3>
+<p><em>Original: <a href="https://rust-unofficial.github.io/patterns/idioms/dtor-finally.html">Finalisation in Destructors</a></em></p>
+<p>Rust has no <code>finally</code>. Code that must run however a function ends — returning
+early, with <code>?</code>, or panicking — goes into the <code>Drop</code> of a value created at the
+start: when the function ends, the value goes out of scope, and its destructor
+runs.</p>
+<pre class="code harsh"><code><span class="k">struct</span> <span class="t">Cleanup</span>
+    what<span class="p">:</span> <span class="p">&amp;</span>'static str
+
+<span class="k">impl</span> <span class="t">Drop</span> <span class="k">for</span> <span class="t">Cleanup</span>
+    <span class="k">fn</span> drop <span class="p">(</span><span class="p">&amp;</span><span class="k">mut</span> <span class="k">self</span><span class="p">)</span><span class="p">:</span>
+        <span class="mac">println!</span> <span class="str">"cleaning up after {}"</span> <span class="p">(</span><span class="k">self</span> <span class="op">&lt;-</span> what<span class="p">)</span>
+
+<span class="k">fn</span> work <span class="p">(</span>fail<span class="p">:</span> bool<span class="p">)</span> <span class="op">-&gt;</span> <span class="t">Result</span><span class="p">&lt;</span><span class="p">(</span><span class="p">)</span><span class="p">,</span> <span class="t">String</span><span class="p">&gt;</span><span class="p">:</span>
+    <span class="k">let</span> _guard <span class="p">=</span> <span class="t">Cleanup</span>\ what <span class="p">=</span> <span class="str">"work"</span>
+    <span class="k">if</span> fail<span class="p">:</span>
+        <span class="com">// Returning early: the guard still runs.</span>
+        <span class="k">return</span> <span class="t">Err</span> <span class="p">(</span><span class="t">String</span><span class="p">.</span>from <span class="str">"failed"</span><span class="p">)</span>
+    <span class="mac">println!</span> <span class="str">"working"</span>
+    <span class="t">Ok</span> <span class="p">(</span><span class="p">)</span>
+
+<span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="mac">println!</span> <span class="str">"{:?}"</span> <span class="p">(</span>work <span class="k">false</span><span class="p">)</span>
+    <span class="mac">println!</span> <span class="str">"{:?}"</span> <span class="p">(</span>work <span class="k">true</span><span class="p">)</span></code></pre>
+<pre class="code"><code>working
+cleaning up after work
+Ok(())
+cleaning up after work
+Err("failed")</code></pre>
+<p><strong>In Harsh:</strong> <code>impl Drop for Cleanup</code> with <code>fn drop (&amp;mut self):</code> beneath —
+a declaration takes no <code>:</code>, its method does.</p>
+<h3 id="2-7-mem-take-replace">2.7 mem::{take(<em>), replace(</em>)}</h3>
+<p><em>Original: <a href="https://rust-unofficial.github.io/patterns/idioms/mem-replace.html">mem::{take(<em>), replace(</em>)}</a></em></p>
+<p>To change an enum from one variant to another while keeping an owned field —
+without cloning it — take the field out with <code>std.mem.take</code> (which leaves the
+type's default in its place) or <code>std.mem.replace</code> (which leaves what you give
+it), then build the new variant from it.</p>
+<pre class="code harsh"><code><span class="attr">#[derive Debug]</span>
+<span class="k">enum</span> <span class="t">State</span>
+    <span class="t">Draft</span>
+        text<span class="p">:</span> <span class="t">String</span>
+    <span class="t">Published</span>
+        text<span class="p">:</span> <span class="t">String</span>
+        views<span class="p">:</span> u32
+
+<span class="com">// From one variant to the other, keeping the text: moved out, not cloned.</span>
+<span class="k">fn</span> publish <span class="p">(</span>s<span class="p">:</span> <span class="p">&amp;</span><span class="k">mut</span> <span class="t">State</span><span class="p">)</span><span class="p">:</span>
+    <span class="k">if</span> <span class="k">let</span> <span class="t">State</span><span class="p">.</span><span class="t">Draft</span>\ text <span class="p">=</span> s<span class="p">:</span>
+        <span class="k">let</span> text <span class="p">=</span> std<span class="p">.</span>mem<span class="p">.</span>take text
+        <span class="p">*</span>s <span class="p">=</span> <span class="t">State</span><span class="p">.</span><span class="t">Published</span>\ text <span class="p">=</span> text<span class="p">,</span> views <span class="p">=</span> <span class="num">0</span>
+
+<span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="k">let</span> <span class="k">mut</span> post <span class="p">=</span> <span class="t">State</span><span class="p">.</span><span class="t">Draft</span>\ text <span class="p">=</span> <span class="t">String</span><span class="p">.</span>from <span class="str">"Hello"</span>
+    publish <span class="p">(</span><span class="p">&amp;</span><span class="k">mut</span> post<span class="p">)</span>
+    <span class="mac">println!</span> <span class="str">"{:?}"</span> post</code></pre>
+<pre class="code"><code>Published { text: "Hello", views: 0 }</code></pre>
+<p><strong>In Harsh:</strong> the <code>match</code> opens with <code>\</code> and its arms bind fields by name,
+<code>State.Draft\ text =&gt; …</code>, the same mark as the literal.</p>
+<h3 id="2-8-on-stack-dynamic-dispatch">2.8 On-Stack Dynamic Dispatch</h3>
+<p><em>Original: <a href="https://rust-unofficial.github.io/patterns/idioms/on-stack-dyn-dispatch.html">On-Stack Dynamic Dispatch</a></em></p>
+<p>To choose at run time between values of different types behind one trait,
+there is no need to <code>Box</code> them: declare a variable for each type, initialise
+only the one the condition picks — <em>deferred conditional initialisation</em> —
+and take a <code>&amp;dyn Trait</code> to it. The value lives on the stack; only the reference
+is dynamic.</p>
+<pre class="code harsh"><code><span class="k">use</span> std<span class="p">.</span>fmt<span class="p">.</span><span class="t">Display</span>
+
+<span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="k">for</span> big <span class="k">in</span> <span class="p">[</span><span class="k">true</span><span class="p">,</span> <span class="k">false</span><span class="p">]</span><span class="p">:</span>
+        <span class="com">// Declared, not initialised: only the branch taken gives one a value.</span>
+        <span class="k">let</span> number<span class="p">:</span> i32
+        <span class="k">let</span> text<span class="p">:</span> <span class="t">String</span>
+        <span class="k">let</span> shown<span class="p">:</span> <span class="p">&amp;</span><span class="k">dyn</span> <span class="t">Display</span> <span class="p">=</span> <span class="k">if</span> big<span class="p">:</span>
+            number <span class="p">=</span> <span class="num">42</span>
+            <span class="p">&amp;</span>number
+        <span class="k">else</span><span class="p">:</span>
+            text <span class="p">=</span> <span class="t">String</span><span class="p">.</span>from <span class="str">"forty-two"</span>
+            <span class="p">&amp;</span>text
+        <span class="mac">println!</span> <span class="str">"{shown}"</span></code></pre>
+<pre class="code"><code>42
+forty-two</code></pre>
+<p><strong>In Harsh:</strong> each branch of the <code>if</code> initialises its own variable and ends
+with the reference to it; the variables are declared, without a value, before
+the <code>if</code>.</p>
+<h3 id="2-9-foreign-function-interface-ffi">2.9 Foreign function interface (FFI)</h3>
+<p><em>Original: <a href="https://rust-unofficial.github.io/patterns/idioms/ffi/intro.html">Foreign function interface (FFI)</a></em></p>
+<p>Three idioms for code on either side of a C boundary.</p>
+<h4 id="2-9-1-idiomatic-errors">2.9.1 Idiomatic Errors</h4>
+<p><em>Original: <a href="https://rust-unofficial.github.io/patterns/idioms/ffi/errors.html">Idiomatic Errors</a></em></p>
+<p>C has no <code>Result</code>: errors cross the boundary as integers. A <strong>flat enum</strong>
+becomes its <code>#[repr(C)]</code> discriminant; a <strong>structured enum</strong>, whose variants
+carry data, is mapped to one code per variant; a <strong>custom error type</strong> can give
+C a code and, separately, a message as a C string the caller frees. Never let
+a panic cross the boundary.</p>
+<pre class="code harsh"><code><span class="com">// A flat enum: its discriminant is the code.</span>
+<span class="attr">#[repr C]</span>
+<span class="attr">#[derive Clone Copy Debug]</span>
+<span class="k">pub</span> <span class="k">enum</span> <span class="t">DatabaseError</span>
+    <span class="t">IsReadOnly</span> <span class="p">=</span> <span class="num">1</span>
+    <span class="t">IoError</span> <span class="p">=</span> <span class="num">2</span>
+    <span class="t">FileCorrupted</span> <span class="p">=</span> <span class="num">3</span>
+
+<span class="com">// A structured enum: one code per variant, the data left behind.</span>
+<span class="k">pub</span> <span class="k">enum</span> <span class="t">ParseError</span>
+    <span class="t">Empty</span>
+    <span class="t">BadChar</span> char
+    <span class="t">TooLong</span> usize
+
+<span class="k">impl</span> <span class="t">ParseError</span>
+    <span class="k">pub</span> <span class="k">fn</span> code <span class="p">(</span><span class="p">&amp;</span><span class="k">self</span><span class="p">)</span> <span class="op">-&gt;</span> i32<span class="p">:</span>
+        <span class="k">match</span> <span class="k">self</span>\
+            <span class="t">ParseError</span><span class="p">.</span><span class="t">Empty</span> <span class="op">=&gt;</span> <span class="num">1</span>
+            <span class="t">ParseError</span><span class="p">.</span><span class="t">BadChar</span> _ <span class="op">=&gt;</span> <span class="num">2</span>
+            <span class="t">ParseError</span><span class="p">.</span><span class="t">TooLong</span> _ <span class="op">=&gt;</span> <span class="num">3</span>
+
+<span class="com">// For C, only the codes cross.</span>
+<span class="k">pub</span> <span class="k">extern</span> <span class="str">"C"</span> <span class="k">fn</span> parse_status <span class="p">(</span>input<span class="p">:</span> i32<span class="p">)</span> <span class="op">-&gt;</span> i32<span class="p">:</span>
+    <span class="k">let</span> err <span class="p">=</span> <span class="k">match</span> input\
+        <span class="num">0</span> <span class="op">=&gt;</span> <span class="t">ParseError</span><span class="p">.</span><span class="t">Empty</span>
+        <span class="num">1</span> <span class="op">=&gt;</span> <span class="t">ParseError</span><span class="p">.</span><span class="t">BadChar</span> <span class="str">'?'</span>
+        _ <span class="op">=&gt;</span> <span class="t">ParseError</span><span class="p">.</span><span class="t">TooLong</span> <span class="num">99</span>
+    err <span class="op">&lt;-</span> code<span class="defer">$</span>
+
+<span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span><span class="t">DatabaseError</span><span class="p">.</span><span class="t">FileCorrupted</span> <span class="k">as</span> i32<span class="p">)</span>
+    <span class="mac">println!</span> <span class="str">"{} {} {}"</span> <span class="p">(</span>parse_status <span class="num">0</span><span class="p">)</span> <span class="p">(</span>parse_status <span class="num">1</span><span class="p">)</span> <span class="p">(</span>parse_status <span class="num">2</span><span class="p">)</span></code></pre>
+<pre class="code"><code>3
+1 2 3</code></pre>
+<p><strong>In Harsh:</strong> <code>#[repr C]</code> takes its argument by juxtaposition; the mapping from
+a structured enum to codes is a <code>match</code> opening with <code>\</code>.</p>
+<h4 id="2-9-2-accepting-strings">2.9.2 Accepting Strings</h4>
+<p><em>Original: <a href="https://rust-unofficial.github.io/patterns/idioms/ffi/accepting-strings.html">Accepting Strings</a></em></p>
+<p>A string that comes from C stays C's: borrow it as <code>&amp;CStr</code> with
+<code>CStr::from_ptr</code>, for no longer than the call, and keep the <code>unsafe</code> to that one
+line — check the pointer, borrow, then work in safe code.</p>
+<pre class="code harsh"><code><span class="k">use</span> std<span class="p">.</span>ffi<span class="p">.</span><span class="t">CStr</span>
+<span class="k">use</span> std<span class="p">.</span>os<span class="p">.</span>raw<span class="p">.</span>c_char
+
+<span class="com">// A string from C, borrowed for the call: the unsafe is one line.</span>
+<span class="k">pub</span> <span class="k">extern</span> <span class="str">"C"</span> <span class="k">fn</span> log_message <span class="p">(</span>text<span class="p">:</span> <span class="p">*</span><span class="k">const</span> c_char<span class="p">)</span> <span class="op">-&gt;</span> i32<span class="p">:</span>
+    <span class="k">if</span> text <span class="op">&lt;-</span> is_null<span class="defer">$</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">-</span><span class="num">1</span>
+    <span class="k">let</span> message <span class="p">=</span> <span class="k">unsafe</span><span class="p">:</span> <span class="t">CStr</span><span class="p">.</span>from_ptr text
+    <span class="com">// From here on, safe code: a lossy conversion copes with bad UTF-8.</span>
+    <span class="mac">println!</span> <span class="str">"log: {}"</span> <span class="p">(</span>message <span class="op">&lt;-</span> to_string_lossy<span class="defer">$</span><span class="p">)</span>
+    <span class="num">0</span>
+
+<span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="com">// As C would call it.</span>
+    <span class="k">let</span> owned <span class="p">=</span> std<span class="p">.</span>ffi<span class="p">.</span><span class="t">CString</span><span class="p">.</span>new <span class="str">"hello from C"</span> <span class="op">&lt;-</span> unwrap<span class="defer">$</span>
+    <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span>log_message <span class="p">(</span>owned <span class="op">&lt;-</span> as_ptr<span class="defer">$</span><span class="p">)</span><span class="p">)</span>
+    <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span>log_message <span class="p">(</span>std<span class="p">.</span>ptr<span class="p">.</span>null<span class="defer">$</span><span class="p">)</span><span class="p">)</span></code></pre>
+<pre class="code"><code>log: hello from C
+0
+-1</code></pre>
+<p><strong>In Harsh:</strong> the one unsafe line is <code>unsafe: CStr.from_ptr text</code>; everything
+after it is ordinary Harsh.</p>
+<h4 id="2-9-3-passing-strings">2.9.3 Passing Strings</h4>
+<p><em>Original: <a href="https://rust-unofficial.github.io/patterns/idioms/ffi/passing-strings.html">Passing Strings</a></em></p>
+<p>To hand a string to C: make the owned <code>CString</code> live as long as C may use the
+pointer — bind it, never pass <code>CString::new(..).as_ptr()</code> from a temporary;
+keep the unsafe code to the call; if C writes into the buffer, pass a
+<code>Vec&lt;u8&gt;</code> instead; and, unless the API says otherwise, keep ownership on the
+Rust side.</p>
+<pre class="code harsh"><code><span class="k">use</span> std<span class="p">.</span>ffi<span class="p">.</span><span class="t">CString</span>
+<span class="k">use</span> std<span class="p">.</span>os<span class="p">.</span>raw<span class="p">.</span>c_char
+
+<span class="k">extern</span> <span class="str">"C"</span>
+    <span class="k">fn</span> strlen <span class="p">(</span>s<span class="p">:</span> <span class="p">*</span><span class="k">const</span> c_char<span class="p">)</span> <span class="op">-&gt;</span> usize
+
+<span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="com">// Bound: it lives to the end of the block, as long as C may read it.</span>
+    <span class="k">let</span> owned <span class="p">=</span> <span class="t">CString</span><span class="p">.</span>new <span class="str">"passed to C"</span> <span class="op">&lt;-</span> unwrap<span class="defer">$</span>
+    <span class="k">let</span> n <span class="p">=</span> <span class="k">unsafe</span><span class="p">:</span> strlen <span class="p">(</span>owned <span class="op">&lt;-</span> as_ptr<span class="defer">$</span><span class="p">)</span>
+    <span class="mac">println!</span> <span class="str">"C counted {n} bytes"</span></code></pre>
+<pre class="code"><code>C counted 11 bytes</code></pre>
+<p><strong>In Harsh:</strong> the <code>CString</code> is bound by a <code>let</code>, so its lifetime is the
+block's, visible in the indentation.</p>
+<h3 id="2-10-iterating-over-an-option">2.10 Iterating over an Option</h3>
+<p><em>Original: <a href="https://rust-unofficial.github.io/patterns/idioms/option-iter.html">Iterating over an Option</a></em></p>
+<p><code>Option</code> is a collection of zero or one element: it implements
+<code>IntoIterator</code>. It can extend a collection, be chained onto an iterator, or be
+looped over — no <code>if let</code> needed.</p>
+<pre class="code harsh"><code><span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="k">let</span> <span class="k">mut</span> names <span class="p">=</span> <span class="mac">vec!</span> <span class="str">"Ada"</span> <span class="str">"Grace"</span>
+    <span class="k">let</span> extra<span class="p">:</span> <span class="t">Option</span><span class="p">&lt;</span><span class="p">&amp;</span>str<span class="p">&gt;</span> <span class="p">=</span> <span class="t">Some</span> <span class="str">"Barbara"</span>
+    <span class="com">// An Option extends a collection like any iterator.</span>
+    names <span class="op">&lt;-</span> extend extra
+    <span class="mac">println!</span> <span class="str">"{:?}"</span> names
+    <span class="com">// It chains onto one.</span>
+    <span class="k">let</span> all<span class="p">:</span> <span class="t">Vec</span><span class="p">&lt;</span><span class="p">&amp;</span>str<span class="p">&gt;</span> <span class="p">=</span> names <span class="op">&lt;-</span> iter<span class="defer">$</span> <span class="op">&lt;-</span> copied<span class="defer">$</span> <span class="op">&lt;-</span> chain <span class="p">(</span><span class="t">Some</span> <span class="str">"Linus"</span><span class="p">)</span> <span class="op">&lt;-</span> collect<span class="defer">$</span>
+    <span class="mac">println!</span> <span class="str">"{:?}"</span> all
+    <span class="com">// And it loops: zero times or once.</span>
+    <span class="k">for</span> name <span class="k">in</span> extra<span class="p">:</span>
+        <span class="mac">println!</span> <span class="str">"hello {name}"</span></code></pre>
+<pre class="code"><code>["Ada", "Grace", "Barbara"]
+["Ada", "Grace", "Barbara", "Linus"]
+hello Barbara</code></pre>
+<p><strong>In Harsh:</strong> <code>for name in extra:</code> loops over an <code>Option</code> as over anything;
+chains read top to bottom with <code>&lt;-</code>.</p>
+<h3 id="2-11-pass-variables-to-closure">2.11 Pass Variables to Closure</h3>
+<p><em>Original: <a href="https://rust-unofficial.github.io/patterns/idioms/pass-var-to-closure.html">Pass Variables to Closure</a></em></p>
+<p>A <code>move</code> closure takes ownership of everything it uses. To decide variable by
+variable — clone this one, borrow that one — prepare them in a block just
+before the closure, and let the closure be the block's value.</p>
+<pre class="code harsh"><code><span class="k">use</span> std<span class="p">.</span>rc<span class="p">.</span><span class="t">Rc</span>
+
+<span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="k">let</span> num1 <span class="p">=</span> <span class="t">Rc</span><span class="p">.</span>new <span class="num">1</span>
+    <span class="k">let</span> num2 <span class="p">=</span> <span class="t">Rc</span><span class="p">.</span>new <span class="num">2</span>
+    <span class="k">let</span> num3 <span class="p">=</span> <span class="t">Rc</span><span class="p">.</span>new <span class="num">3</span>
+    <span class="com">// Prepared next to the closure: num2 cloned, num3 borrowed.</span>
+    <span class="k">let</span> closure <span class="p">=</span> <span class="k">do</span><span class="p">:</span>
+        <span class="k">let</span> num2 <span class="p">=</span> num2 <span class="op">&lt;-</span> clone<span class="defer">$</span>
+        <span class="k">let</span> num3 <span class="p">=</span> num3 <span class="op">&lt;-</span> as_ref<span class="defer">$</span>
+        <span class="k">move</span> <span class="op">||</span><span class="p">:</span> <span class="p">*</span>num1 <span class="p">+</span> <span class="p">*</span>num2 <span class="p">+</span> <span class="p">*</span>num3
+    <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span>closure<span class="defer">$</span><span class="p">)</span>
+    <span class="com">// num2 is still ours.</span>
+    <span class="mac">println!</span> <span class="str">"{num2}"</span></code></pre>
+<pre class="code"><code>6
+2</code></pre>
+<p><strong>In Harsh:</strong> the block is <code>do:</code> with its lines beneath, and its last line is
+its value: the preparation and the closure read as one unit.</p>
+<h3 id="2-12-privacy-for-extensibility">2.12 Privacy For Extensibility</h3>
+<p><em>Original: <a href="https://rust-unofficial.github.io/patterns/idioms/priv-extend.html">Privacy For Extensibility</a></em></p>
+<p>A public struct with all-public fields can never gain a field without
+breaking everyone who builds it with a literal. Mark it <code>#[non_exhaustive]</code>
+(or give it one private field) and provide a constructor: fields can then be
+added in a later version.</p>
+<pre class="code harsh"><code><span class="k">mod</span> shapes
+    <span class="com">// Fields may be added later without breaking anyone: no literal outside.</span>
+    <span class="attr">#[non_exhaustive]</span>
+    <span class="attr">#[derive Debug]</span>
+    <span class="k">pub</span> <span class="k">struct</span> <span class="t">Circle</span>
+        <span class="k">pub</span> radius<span class="p">:</span> f64
+
+    <span class="k">impl</span> <span class="t">Circle</span>
+        <span class="k">pub</span> <span class="k">fn</span> new <span class="p">(</span>radius<span class="p">:</span> f64<span class="p">)</span> <span class="op">-&gt;</span> <span class="k">Self</span><span class="p">:</span>
+            <span class="k">Self</span>\ radius <span class="p">=</span> radius
+
+<span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="k">let</span> c <span class="p">=</span> shapes<span class="p">.</span><span class="t">Circle</span><span class="p">.</span>new <span class="num">2.0</span>
+    <span class="mac">println!</span> <span class="str">"{:?} r = {}"</span> c <span class="p">(</span>c <span class="op">&lt;-</span> radius<span class="p">)</span></code></pre>
+<pre class="code"><code>Circle { radius: 2.0 } r = 2</code></pre>
+<p><strong>In Harsh:</strong> <code>mod shapes</code> holds its items beneath, as every declaration does;
+the attribute is <code>#[non_exhaustive]</code> above the struct.</p>
+<h3 id="2-13-easy-doc-initialization">2.13 Easy doc initialization</h3>
+<p><em>Original: <a href="https://rust-unofficial.github.io/patterns/idioms/rustdoc-init.html">Easy doc initialization</a></em></p>
+<p>When every documentation example would need the same setup, wrap the example
+in a function that takes the prepared value as a parameter: the documentation
+test compiles the function but never calls it, so the setup is never written,
+and the example shows only what it documents. A helper that builds the value
+is the alternative when the example must run.</p>
+<pre class="code harsh"><code><span class="k">pub</span> <span class="k">struct</span> <span class="t">Connection</span>
+    <span class="k">pub</span> name<span class="p">:</span> <span class="t">String</span>
+
+<span class="k">impl</span> <span class="t">Connection</span>
+    <span class="com">/// Sends a message.</span>
+    <span class="com">///</span>
+    <span class="com">/// The example is a function taking the connection: compiled, never</span>
+    <span class="com">/// called, so no connection has to be set up to show `send`.</span>
+    <span class="com">///</span>
+    <span class="com">/// ```</span>
+    <span class="com">/// fn call_send (c: Connection):</span>
+    <span class="com">///     c &lt;- send "hi"</span>
+    <span class="com">/// ```</span>
+    <span class="k">pub</span> <span class="k">fn</span> send <span class="p">(</span><span class="p">&amp;</span><span class="k">self</span><span class="p">)</span> <span class="p">(</span>msg<span class="p">:</span> <span class="p">&amp;</span>str<span class="p">)</span><span class="p">:</span>
+        <span class="mac">println!</span> <span class="str">"{} &lt;- {msg}"</span> <span class="p">(</span><span class="k">self</span> <span class="op">&lt;-</span> name<span class="p">)</span>
+
+<span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="k">let</span> c <span class="p">=</span> <span class="t">Connection</span>\ name <span class="p">=</span> <span class="t">String</span><span class="p">.</span>from <span class="str">"test"</span>
+    c <span class="op">&lt;-</span> send <span class="str">"hi"</span></code></pre>
+<pre class="code"><code>test &lt;- hi</code></pre>
+<p><strong>In Harsh:</strong> documentation examples in <code>///</code> comments are written in Harsh,
+and <code>hrs test</code> transpiles and runs them — with the same fences as Rust's.</p>
+<h3 id="2-14-temporary-mutability">2.14 Temporary mutability</h3>
+<p><em>Original: <a href="https://rust-unofficial.github.io/patterns/idioms/temporary-mutability.html">Temporary mutability</a></em></p>
+<p>When data must be prepared mutably and then only read, shadow it: build it
+in a nested block (or a mutable binding) and rebind it immutable. The
+compiler then refuses any later change.</p>
+<pre class="code harsh"><code><span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="com">// Prepared mutably in a block, then bound immutable.</span>
+    <span class="k">let</span> data <span class="p">=</span> <span class="k">do</span><span class="p">:</span>
+        <span class="k">let</span> <span class="k">mut</span> d <span class="p">=</span> <span class="mac">vec!</span> <span class="num">5</span> <span class="num">3</span> <span class="num">9</span> <span class="num">1</span>
+        d <span class="op">&lt;-</span> sort<span class="defer">$</span>
+        d
+    <span class="mac">println!</span> <span class="str">"{:?}"</span> data
+    <span class="com">// Or shadowed: the same name, no longer `mut`.</span>
+    <span class="k">let</span> <span class="k">mut</span> total <span class="p">=</span> <span class="num">0</span>
+    <span class="k">for</span> x <span class="k">in</span> <span class="p">&amp;</span>data<span class="p">:</span>
+        total <span class="op">+=</span> x
+    <span class="k">let</span> total <span class="p">=</span> total
+    <span class="mac">println!</span> <span class="str">"{total}"</span></code></pre>
+<pre class="code"><code>[1, 3, 5, 9]
+18</code></pre>
+<p><strong>In Harsh:</strong> the nested block is <code>do:</code>; its value is its last line, and the
+<code>let</code> that receives it is immutable.</p>
+<h3 id="2-15-return-consumed-arg-on-error">2.15 Return consumed arg on error</h3>
+<p><em>Original: <a href="https://rust-unofficial.github.io/patterns/idioms/return-consumed-arg-on-error.html">Return consumed arg on error</a></em></p>
+<p>A function that takes ownership of an argument and may fail should hand the
+argument back in its error, so the caller can try again without having cloned
+it first — as <code>String::from_utf8</code> returns the bytes in its <code>FromUtf8Error</code>.</p>
+<pre class="code harsh"><code><span class="com">// The argument, handed back in the error.</span>
+<span class="attr">#[derive Debug]</span>
+<span class="k">pub</span> <span class="k">struct</span> <span class="t">SendError</span> <span class="t">String</span>
+
+<span class="k">pub</span> <span class="k">fn</span> send <span class="p">(</span>value<span class="p">:</span> <span class="t">String</span><span class="p">)</span> <span class="p">(</span>attempt<span class="p">:</span> u32<span class="p">)</span> <span class="op">-&gt;</span> <span class="t">Result</span><span class="p">&lt;</span><span class="p">(</span><span class="p">)</span><span class="p">,</span> <span class="t">SendError</span><span class="p">&gt;</span><span class="p">:</span>
+    <span class="k">if</span> attempt <span class="p">&lt;</span> <span class="num">2</span><span class="p">:</span>
+        <span class="k">return</span> <span class="t">Err</span> <span class="p">(</span><span class="t">SendError</span> value<span class="p">)</span>
+    <span class="mac">println!</span> <span class="str">"sent {value:?} on attempt {attempt}"</span>
+    <span class="t">Ok</span> <span class="p">(</span><span class="p">)</span>
+
+<span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="k">let</span> <span class="k">mut</span> value <span class="p">=</span> <span class="t">String</span><span class="p">.</span>from <span class="str">"important"</span>
+    <span class="k">for</span> attempt <span class="k">in</span> <span class="num">0..3</span><span class="p">:</span>
+        <span class="k">match</span> send value attempt\
+            <span class="t">Ok</span> <span class="p">(</span><span class="p">)</span> <span class="op">=&gt;</span> <span class="k">break</span>
+            <span class="t">Err</span> <span class="p">(</span><span class="t">SendError</span> v<span class="p">)</span> <span class="op">=&gt;</span>
+                <span class="mac">println!</span> <span class="str">"attempt {attempt} failed; retrying"</span>
+                value <span class="p">=</span> v</code></pre>
+<pre class="code"><code>attempt 0 failed; retrying
+attempt 1 failed; retrying
+sent "important" on attempt 2</code></pre>
+<p><strong>In Harsh:</strong> the error is a tuple struct, <code>SendError String</code>, taken apart by
+juxtaposition: <code>Err (SendError v) =&gt; …</code>.</p>
+<h2 id="behavioural-patterns">Behavioural patterns</h2>
+<p>Patterns about how values cooperate: who decides what happens, and when. In
+Rust several of them shrink, because closures and traits already carry
+behaviour; in Harsh they shrink further, since a closure is often a partial
+application and a list of steps reads as one. The original chapter:
+<a href="https://rust-unofficial.github.io/patterns/patterns/behavioural/intro.html">Behavioural patterns</a>.</p>
+<h3 id="3-1-command">3.1 Command</h3>
+<p><em>Original: <a href="https://rust-unofficial.github.io/patterns/patterns/behavioural/command.html">Command</a></em></p>
+<p>Turn actions into values, so they can be stored, queued, logged, or undone.
+In Rust there are three ways: trait objects (one type per command), function
+pointers, or closures — the last the most flexible when commands carry data.</p>
+<pre class="code harsh"><code><span class="com">// Commands as values: a trait object each.</span>
+<span class="k">trait</span> <span class="t">Migration</span>
+    <span class="k">fn</span> execute <span class="p">(</span><span class="p">&amp;</span><span class="k">self</span><span class="p">)</span> <span class="op">-&gt;</span> <span class="t">String</span>
+    <span class="k">fn</span> rollback <span class="p">(</span><span class="p">&amp;</span><span class="k">self</span><span class="p">)</span> <span class="op">-&gt;</span> <span class="t">String</span>
+
+<span class="k">struct</span> <span class="t">CreateTable</span>
+<span class="k">struct</span> <span class="t">AddField</span>
+
+<span class="k">impl</span> <span class="t">Migration</span> <span class="k">for</span> <span class="t">CreateTable</span>
+    <span class="k">fn</span> execute <span class="p">(</span><span class="p">&amp;</span><span class="k">self</span><span class="p">)</span> <span class="op">-&gt;</span> <span class="t">String</span><span class="p">:</span>
+        <span class="t">String</span><span class="p">.</span>from <span class="str">"create table"</span>
+    <span class="k">fn</span> rollback <span class="p">(</span><span class="p">&amp;</span><span class="k">self</span><span class="p">)</span> <span class="op">-&gt;</span> <span class="t">String</span><span class="p">:</span>
+        <span class="t">String</span><span class="p">.</span>from <span class="str">"drop table"</span>
+
+<span class="k">impl</span> <span class="t">Migration</span> <span class="k">for</span> <span class="t">AddField</span>
+    <span class="k">fn</span> execute <span class="p">(</span><span class="p">&amp;</span><span class="k">self</span><span class="p">)</span> <span class="op">-&gt;</span> <span class="t">String</span><span class="p">:</span>
+        <span class="t">String</span><span class="p">.</span>from <span class="str">"add field"</span>
+    <span class="k">fn</span> rollback <span class="p">(</span><span class="p">&amp;</span><span class="k">self</span><span class="p">)</span> <span class="op">-&gt;</span> <span class="t">String</span><span class="p">:</span>
+        <span class="t">String</span><span class="p">.</span>from <span class="str">"remove field"</span>
+
+<span class="k">fn</span> create <span class="p">(</span>table<span class="p">:</span> <span class="p">&amp;</span>str<span class="p">)</span> <span class="op">-&gt;</span> <span class="t">String</span><span class="p">:</span>
+    <span class="mac">format!</span> <span class="str">"create {table}"</span>
+
+<span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="k">let</span> steps<span class="p">:</span> <span class="t">Vec</span><span class="p">&lt;</span><span class="t">Box</span><span class="p">&lt;</span><span class="k">dyn</span> <span class="t">Migration</span><span class="p">&gt;</span><span class="p">&gt;</span> <span class="p">=</span> <span class="mac">vec!</span> <span class="p">(</span><span class="t">Box</span><span class="p">.</span>new <span class="t">CreateTable</span><span class="p">)</span> <span class="p">(</span><span class="t">Box</span><span class="p">.</span>new <span class="t">AddField</span><span class="p">)</span>
+    <span class="k">let</span> done<span class="p">:</span> <span class="t">Vec</span><span class="p">&lt;</span><span class="t">String</span><span class="p">&gt;</span> <span class="p">=</span> steps <span class="op">&lt;-</span> iter<span class="defer">$</span> <span class="op">&lt;-</span> map <span class="p">(</span><span class="p">|</span>m<span class="p">|</span> m <span class="op">&lt;-</span> execute<span class="defer">$</span><span class="p">)</span> <span class="op">&lt;-</span> collect<span class="defer">$</span>
+    <span class="mac">println!</span> <span class="str">"{:?}"</span> done
+    <span class="k">let</span> undone<span class="p">:</span> <span class="t">Vec</span><span class="p">&lt;</span><span class="t">String</span><span class="p">&gt;</span> <span class="p">=</span> steps <span class="op">&lt;-</span> iter<span class="defer">$</span> <span class="op">&lt;-</span> rev<span class="defer">$</span> <span class="op">&lt;-</span> map <span class="p">(</span><span class="p">|</span>m<span class="p">|</span> m <span class="op">&lt;-</span> rollback<span class="defer">$</span><span class="p">)</span> <span class="op">&lt;-</span> collect<span class="defer">$</span>
+    <span class="mac">println!</span> <span class="str">"{:?}"</span> undone
+    <span class="com">// A command as a function given its arguments, waiting to run.</span>
+    <span class="k">let</span> later <span class="p">=</span> <span class="op">||</span> create <span class="str">"users"</span>
+    <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span>later<span class="defer">$</span><span class="p">)</span></code></pre>
+<pre class="code"><code>["create table", "add field"]
+["remove field", "drop table"]
+create users</code></pre>
+<p><strong>In Harsh:</strong> with partial application a command is often just a function
+given some of its arguments: <code>"users" |&gt; create</code> is <code>create</code> waiting for
+nothing more than the moment to run.</p>
+<h3 id="3-2-interpreter">3.2 Interpreter</h3>
+<p><em>Original: <a href="https://rust-unofficial.github.io/patterns/patterns/behavioural/interpreter.html">Interpreter</a></em></p>
+<p>For a problem that recurs in many forms, define a small language for it and
+interpret sentences of that language — here, arithmetic expressions turned
+from infix into postfix by a recursive-descent parser.</p>
+<pre class="code harsh"><code><span class="com">// Infix to postfix: `2+3-4` becomes `23+4-`.</span>
+<span class="k">struct</span> <span class="t">Interpreter</span><span class="p">&lt;</span>'a<span class="p">&gt;</span>
+    it<span class="p">:</span> std<span class="p">.</span>str<span class="p">.</span><span class="t">Chars</span><span class="p">&lt;</span>'a<span class="p">&gt;</span>
+
+<span class="k">impl</span><span class="p">&lt;</span>'a<span class="p">&gt;</span> <span class="t">Interpreter</span><span class="p">&lt;</span>'a<span class="p">&gt;</span>
+    <span class="k">fn</span> new <span class="p">(</span>infix<span class="p">:</span> <span class="p">&amp;</span>'a str<span class="p">)</span> <span class="op">-&gt;</span> <span class="k">Self</span><span class="p">:</span>
+        <span class="k">Self</span>\ it <span class="p">=</span> infix <span class="op">&lt;-</span> chars<span class="defer">$</span>
+
+    <span class="k">fn</span> next_char <span class="p">(</span><span class="p">&amp;</span><span class="k">mut</span> <span class="k">self</span><span class="p">)</span> <span class="op">-&gt;</span> <span class="t">Option</span><span class="p">&lt;</span>char<span class="p">&gt;</span><span class="p">:</span>
+        <span class="k">self</span> <span class="op">&lt;-</span> it <span class="op">&lt;-</span> next<span class="defer">$</span>
+
+    <span class="com">// exp -&gt; term ( ('+' | '-') term )*</span>
+    <span class="k">fn</span> interpret <span class="p">(</span><span class="p">&amp;</span><span class="k">mut</span> <span class="k">self</span><span class="p">)</span> <span class="p">(</span>out<span class="p">:</span> <span class="p">&amp;</span><span class="k">mut</span> <span class="t">String</span><span class="p">)</span><span class="p">:</span>
+        <span class="k">self</span> <span class="op">&lt;-</span> term out
+        <span class="k">while</span> <span class="k">let</span> <span class="t">Some</span> op <span class="p">=</span> <span class="k">self</span> <span class="op">&lt;-</span> next_char<span class="defer">$</span><span class="p">:</span>
+            <span class="k">if</span> op <span class="op">==</span> <span class="str">'+'</span> <span class="op">||</span> op <span class="op">==</span> <span class="str">'-'</span><span class="p">:</span>
+                <span class="k">self</span> <span class="op">&lt;-</span> term out
+                out <span class="op">&lt;-</span> push op
+            <span class="k">else</span><span class="p">:</span>
+                <span class="mac">panic!</span> <span class="str">"unexpected symbol '{op}'"</span>
+
+    <span class="com">// term -&gt; a single digit</span>
+    <span class="k">fn</span> term <span class="p">(</span><span class="p">&amp;</span><span class="k">mut</span> <span class="k">self</span><span class="p">)</span> <span class="p">(</span>out<span class="p">:</span> <span class="p">&amp;</span><span class="k">mut</span> <span class="t">String</span><span class="p">)</span><span class="p">:</span>
+        <span class="k">match</span> <span class="k">self</span> <span class="op">&lt;-</span> next_char<span class="defer">$</span>\
+            <span class="t">Some</span> d <span class="k">if</span> d <span class="op">&lt;-</span> is_ascii_digit<span class="defer">$</span> <span class="op">=&gt;</span> out <span class="op">&lt;-</span> push d
+            <span class="t">Some</span> c <span class="op">=&gt;</span> <span class="mac">panic!</span> <span class="str">"unexpected symbol '{c}'"</span>
+            <span class="t">None</span> <span class="op">=&gt;</span> <span class="mac">panic!</span> <span class="str">"unexpected end of input"</span>
+
+<span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="k">let</span> <span class="k">mut</span> postfix <span class="p">=</span> <span class="t">String</span><span class="p">.</span>new<span class="defer">$</span>
+    <span class="t">Interpreter</span><span class="p">.</span>new <span class="str">"2+3"</span> <span class="op">&lt;-</span> interpret <span class="p">(</span><span class="p">&amp;</span><span class="k">mut</span> postfix<span class="p">)</span>
+    <span class="mac">println!</span> <span class="str">"{postfix}"</span>
+    postfix <span class="op">&lt;-</span> clear<span class="defer">$</span>
+    <span class="t">Interpreter</span><span class="p">.</span>new <span class="str">"1-2+3-4"</span> <span class="op">&lt;-</span> interpret <span class="p">(</span><span class="p">&amp;</span><span class="k">mut</span> postfix<span class="p">)</span>
+    <span class="mac">println!</span> <span class="str">"{postfix}"</span></code></pre>
+<pre class="code"><code>23+
+12-3+4-</code></pre>
+<p><strong>In Harsh:</strong> the parser's recursion reads as its grammar: each rule a short
+function, each alternative a <code>match</code> arm.</p>
+<h3 id="3-3-newtype">3.3 Newtype</h3>
+<p><em>Original: <a href="https://rust-unofficial.github.io/patterns/patterns/behavioural/newtype.html">Newtype</a></em></p>
+<p>Wrap a type in a tuple struct of one field to give it a new identity: its own
+traits, its own rules, and no mixing with the type it wraps. It costs nothing
+at run time.</p>
+<pre class="code harsh"><code><span class="k">use</span> std<span class="p">.</span>fmt
+
+<span class="com">// A String with its own identity: never printed in clear.</span>
+<span class="k">struct</span> <span class="t">Password</span> <span class="t">String</span>
+
+<span class="k">impl</span> fmt<span class="p">.</span><span class="t">Display</span> <span class="k">for</span> <span class="t">Password</span>
+    <span class="k">fn</span> fmt <span class="p">(</span><span class="p">&amp;</span><span class="k">self</span><span class="p">)</span> <span class="p">(</span>f<span class="p">:</span> <span class="p">&amp;</span><span class="k">mut</span> fmt<span class="p">.</span><span class="t">Formatter</span><span class="p">)</span> <span class="op">-&gt;</span> fmt<span class="p">.</span><span class="t">Result</span><span class="p">:</span>
+        <span class="mac">write!</span> f <span class="str">"{}"</span> <span class="p">(</span><span class="str">"*"</span> <span class="op">&lt;-</span> repeat <span class="p">(</span><span class="k">self</span> <span class="op">&lt;-</span> <span class="num">0</span> <span class="op">&lt;-</span> len<span class="defer">$</span><span class="p">)</span><span class="p">)</span>
+
+<span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="k">let</span> unsecured <span class="p">=</span> <span class="t">String</span><span class="p">.</span>from <span class="str">"ThisIsMyPassword"</span>
+    <span class="k">let</span> secured <span class="p">=</span> <span class="t">Password</span> <span class="p">(</span>unsecured <span class="op">&lt;-</span> clone<span class="defer">$</span><span class="p">)</span>
+    <span class="mac">println!</span> <span class="str">"unsecured: {unsecured}"</span>
+    <span class="mac">println!</span> <span class="str">"secured:   {secured}"</span></code></pre>
+<pre class="code"><code>unsecured: ThisIsMyPassword
+secured:   ****************</code></pre>
+<p><strong>In Harsh:</strong> a tuple struct's field juxtaposes, <code>struct Password String</code>, and
+is read with <code>&lt;- 0</code>.</p>
+<h3 id="3-4-raii-guards">3.4 RAII Guards</h3>
+<p><em>Original: <a href="https://rust-unofficial.github.io/patterns/patterns/behavioural/RAII.html">RAII Guards</a></em></p>
+<p>Tie a resource to a value's lifetime: acquiring it returns a <em>guard</em>, and
+dropping the guard releases it. The borrow checker then guarantees nothing
+uses the resource after release — <code>MutexGuard</code> is the standard example.</p>
+<pre class="code harsh"><code><span class="k">use</span> std<span class="p">.</span>sync<span class="p">.</span><span class="t">Mutex</span>
+
+<span class="k">struct</span> <span class="t">Noisy</span>
+    name<span class="p">:</span> <span class="p">&amp;</span>'static str
+
+<span class="k">impl</span> <span class="t">Drop</span> <span class="k">for</span> <span class="t">Noisy</span>
+    <span class="k">fn</span> drop <span class="p">(</span><span class="p">&amp;</span><span class="k">mut</span> <span class="k">self</span><span class="p">)</span><span class="p">:</span>
+        <span class="mac">println!</span> <span class="str">"released {}"</span> <span class="p">(</span><span class="k">self</span> <span class="op">&lt;-</span> name<span class="p">)</span>
+
+<span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="k">let</span> counter <span class="p">=</span> <span class="t">Mutex</span><span class="p">.</span>new <span class="num">0</span>
+    <span class="com">// The guard's scope is the block: the lock is held just this long.</span>
+    <span class="k">if</span> <span class="k">true</span><span class="p">:</span>
+        <span class="k">let</span> <span class="k">mut</span> guard <span class="p">=</span> counter <span class="op">&lt;-</span> lock<span class="defer">$</span> <span class="op">&lt;-</span> unwrap<span class="defer">$</span>
+        <span class="p">*</span>guard <span class="op">+=</span> <span class="num">1</span>
+        <span class="k">let</span> _n <span class="p">=</span> <span class="t">Noisy</span>\ name <span class="p">=</span> <span class="str">"a guard of our own"</span>
+        <span class="mac">println!</span> <span class="str">"inside: {}"</span> <span class="p">(</span><span class="p">*</span>guard<span class="p">)</span>
+    <span class="mac">println!</span> <span class="str">"after: {}"</span> <span class="p">(</span>counter <span class="op">&lt;-</span> lock<span class="defer">$</span> <span class="op">&lt;-</span> unwrap<span class="defer">$</span><span class="p">)</span></code></pre>
+<pre class="code"><code>inside: 1
+released a guard of our own
+after: 1</code></pre>
+<p><strong>In Harsh:</strong> a guard's scope is its block; the indentation shows exactly how
+long the lock is held.</p>
+<h3 id="3-5-strategy">3.5 Strategy</h3>
+<p><em>Original: <a href="https://rust-unofficial.github.io/patterns/patterns/behavioural/strategy.html">Strategy</a></em></p>
+<p>Separate an algorithm's skeleton from its details, so the details can vary:
+the skeleton takes a strategy, as a trait object, a generic, or a closure.</p>
+<pre class="code harsh"><code><span class="com">// The skeleton: a report, with the joining left to a strategy.</span>
+<span class="com">// The lifetime is named: a closure made by partial application works for</span>
+<span class="com">// these items, not for every lifetime at once.</span>
+<span class="k">fn</span> report<span class="p">&lt;</span>'a<span class="p">&gt;</span> <span class="p">(</span>items<span class="p">:</span> <span class="p">&amp;</span>'a <span class="p">[</span><span class="p">&amp;</span>'a str<span class="p">]</span><span class="p">)</span> <span class="p">(</span>join<span class="p">:</span> <span class="k">impl</span> <span class="t">Fn</span> <span class="p">(</span><span class="p">&amp;</span>'a <span class="p">[</span><span class="p">&amp;</span>'a str<span class="p">]</span><span class="p">)</span> <span class="op">-&gt;</span> <span class="t">String</span><span class="p">)</span> <span class="op">-&gt;</span> <span class="t">String</span><span class="p">:</span>
+    <span class="mac">format!</span> <span class="str">"report: {}"</span> <span class="p">(</span>join items<span class="p">)</span>
+
+<span class="k">fn</span> join_with <span class="p">(</span>separator<span class="p">:</span> <span class="p">&amp;</span>str<span class="p">)</span> <span class="p">(</span>items<span class="p">:</span> <span class="p">&amp;</span><span class="p">[</span><span class="p">&amp;</span>str<span class="p">]</span><span class="p">)</span> <span class="op">-&gt;</span> <span class="t">String</span><span class="p">:</span>
+    items <span class="op">&lt;-</span> join separator
+
+<span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="k">let</span> items <span class="p">=</span> <span class="p">[</span><span class="str">"alpha"</span><span class="p">,</span> <span class="str">"beta"</span><span class="p">,</span> <span class="str">"gamma"</span><span class="p">]</span>
+    <span class="com">// A strategy from an ordinary function, by partial application.</span>
+    <span class="k">let</span> commas <span class="p">=</span> <span class="str">", "</span> <span class="op">|&gt;</span> join_with
+    <span class="k">let</span> lines <span class="p">=</span> <span class="str">"\n  "</span> <span class="op">|&gt;</span> join_with
+    <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span>report <span class="p">(</span><span class="p">&amp;</span>items<span class="p">)</span> commas<span class="p">)</span>
+    <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span>report <span class="p">(</span><span class="p">&amp;</span>items<span class="p">)</span> lines<span class="p">)</span>
+    <span class="com">// Or a closure.</span>
+    <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span>report <span class="p">(</span><span class="p">&amp;</span>items<span class="p">)</span> <span class="p">(</span><span class="p">|</span>xs<span class="p">|</span> xs <span class="op">&lt;-</span> len<span class="defer">$</span> <span class="op">&lt;-</span> to_string<span class="defer">$</span><span class="p">)</span><span class="p">)</span></code></pre>
+<pre class="code"><code>report: alpha, beta, gamma
+report: alpha
+  beta
+  gamma
+report: 3</code></pre>
+<p><strong>In Harsh:</strong> partial application makes strategies out of ordinary functions:
+<code>", " |&gt; join_with</code> is a strategy that joins with commas, with no closure
+written by hand. One Rust subtlety shows here: such a closure works for the
+items it is given, not for every lifetime at once, so the skeleton names its
+lifetime, <code>report&lt;'a&gt;</code>.</p>
+<h3 id="3-6-visitor">3.6 Visitor</h3>
+<p><em>Original: <a href="https://rust-unofficial.github.io/patterns/patterns/behavioural/visitor.html">Visitor</a></em></p>
+<p>Walk a heterogeneous structure — an abstract syntax tree, say — with an
+operation that is defined apart from it. The visitor has a method per kind of
+node; the structure only knows how to hand each node to it.</p>
+<pre class="code harsh"><code><span class="com">// A tiny language: numbers and additions.</span>
+<span class="k">enum</span> <span class="t">Expr</span>
+    <span class="t">Num</span> i64
+    <span class="t">Add</span> <span class="p">(</span><span class="t">Box</span><span class="p">&lt;</span><span class="t">Expr</span><span class="p">&gt;</span><span class="p">)</span> <span class="p">(</span><span class="t">Box</span><span class="p">&lt;</span><span class="t">Expr</span><span class="p">&gt;</span><span class="p">)</span>
+
+<span class="k">trait</span> <span class="t">Visitor</span><span class="p">&lt;</span><span class="t">T</span><span class="p">&gt;</span>
+    <span class="k">fn</span> visit <span class="p">(</span><span class="p">&amp;</span><span class="k">mut</span> <span class="k">self</span><span class="p">)</span> <span class="p">(</span>e<span class="p">:</span> <span class="p">&amp;</span><span class="t">Expr</span><span class="p">)</span> <span class="op">-&gt;</span> <span class="t">T</span>
+
+<span class="com">// One operation: evaluate.</span>
+<span class="k">struct</span> <span class="t">Eval</span>
+<span class="k">impl</span> <span class="t">Visitor</span><span class="p">&lt;</span>i64<span class="p">&gt;</span> <span class="k">for</span> <span class="t">Eval</span>
+    <span class="k">fn</span> visit <span class="p">(</span><span class="p">&amp;</span><span class="k">mut</span> <span class="k">self</span><span class="p">)</span> <span class="p">(</span>e<span class="p">:</span> <span class="p">&amp;</span><span class="t">Expr</span><span class="p">)</span> <span class="op">-&gt;</span> i64<span class="p">:</span>
+        <span class="k">match</span> e\
+            <span class="t">Expr</span><span class="p">.</span><span class="t">Num</span> n <span class="op">=&gt;</span> <span class="p">*</span>n
+            <span class="t">Expr</span><span class="p">.</span><span class="t">Add</span> a b <span class="op">=&gt;</span> <span class="k">self</span> <span class="op">&lt;-</span> visit a <span class="p">+</span> <span class="k">self</span> <span class="op">&lt;-</span> visit b
+
+<span class="com">// Another, defined apart from the tree: print.</span>
+<span class="k">struct</span> <span class="t">Show</span>
+<span class="k">impl</span> <span class="t">Visitor</span><span class="p">&lt;</span><span class="t">String</span><span class="p">&gt;</span> <span class="k">for</span> <span class="t">Show</span>
+    <span class="k">fn</span> visit <span class="p">(</span><span class="p">&amp;</span><span class="k">mut</span> <span class="k">self</span><span class="p">)</span> <span class="p">(</span>e<span class="p">:</span> <span class="p">&amp;</span><span class="t">Expr</span><span class="p">)</span> <span class="op">-&gt;</span> <span class="t">String</span><span class="p">:</span>
+        <span class="k">match</span> e\
+            <span class="t">Expr</span><span class="p">.</span><span class="t">Num</span> n <span class="op">=&gt;</span> n <span class="op">&lt;-</span> to_string<span class="defer">$</span>
+            <span class="t">Expr</span><span class="p">.</span><span class="t">Add</span> a b <span class="op">=&gt;</span> <span class="mac">format!</span> <span class="str">"({} + {})"</span> <span class="p">(</span><span class="k">self</span> <span class="op">&lt;-</span> visit a<span class="p">)</span> <span class="p">(</span><span class="k">self</span> <span class="op">&lt;-</span> visit b<span class="p">)</span>
+
+<span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="k">let</span> e <span class="p">=</span> <span class="t">Expr</span><span class="p">.</span><span class="t">Add</span> <span class="p">(</span><span class="t">Box</span><span class="p">.</span>new <span class="p">(</span><span class="t">Expr</span><span class="p">.</span><span class="t">Num</span> <span class="num">1</span><span class="p">)</span><span class="p">)</span> <span class="p">(</span><span class="t">Box</span><span class="p">.</span>new <span class="p">(</span><span class="t">Expr</span><span class="p">.</span><span class="t">Add</span> <span class="p">(</span><span class="t">Box</span><span class="p">.</span>new <span class="p">(</span><span class="t">Expr</span><span class="p">.</span><span class="t">Num</span> <span class="num">2</span><span class="p">)</span><span class="p">)</span> <span class="p">(</span><span class="t">Box</span><span class="p">.</span>new <span class="p">(</span><span class="t">Expr</span><span class="p">.</span><span class="t">Num</span> <span class="num">3</span><span class="p">)</span><span class="p">)</span><span class="p">)</span><span class="p">)</span>
+    <span class="mac">println!</span> <span class="str">"{} = {}"</span> <span class="p">(</span><span class="t">Show</span> <span class="op">&lt;-</span> visit <span class="p">(</span><span class="p">&amp;</span>e<span class="p">)</span><span class="p">)</span> <span class="p">(</span><span class="t">Eval</span> <span class="op">&lt;-</span> visit <span class="p">(</span><span class="p">&amp;</span>e<span class="p">)</span><span class="p">)</span></code></pre>
+<pre class="code"><code>(1 + (2 + 3)) = 6</code></pre>
+<p><strong>In Harsh:</strong> the trait's methods and the walk read the same as in Rust; the
+<code>match</code> over node kinds opens with <code>\</code>.</p>
+<h2 id="creational-patterns">Creational patterns</h2>
+<p>Patterns for building values. The original chapter:
+<a href="https://rust-unofficial.github.io/patterns/patterns/creational/intro.html">Creational patterns</a>.</p>
+<h3 id="4-1-builder">4.1 Builder</h3>
+<p><em>Original: <a href="https://rust-unofficial.github.io/patterns/patterns/creational/builder.html">Builder</a></em></p>
+<p>When a value has many optional parts, build it step by step through a
+<em>builder</em>: each method sets one part and returns the builder, and <code>build</code>
+makes the value. Rust has no named or default arguments; this is its answer.</p>
+<pre class="code harsh"><code><span class="attr">#[derive Debug]</span>
+<span class="k">pub</span> <span class="k">struct</span> <span class="t">Request</span>
+    url<span class="p">:</span> <span class="t">String</span>
+    method<span class="p">:</span> <span class="t">String</span>
+    headers<span class="p">:</span> <span class="t">Vec</span><span class="p">&lt;</span><span class="p">(</span><span class="t">String</span><span class="p">,</span> <span class="t">String</span><span class="p">)</span><span class="p">&gt;</span>
+    body<span class="p">:</span> <span class="t">Option</span><span class="p">&lt;</span><span class="t">String</span><span class="p">&gt;</span>
+
+<span class="k">pub</span> <span class="k">struct</span> <span class="t">RequestBuilder</span>
+    request<span class="p">:</span> <span class="t">Request</span>
+
+<span class="k">impl</span> <span class="t">RequestBuilder</span>
+    <span class="k">pub</span> <span class="k">fn</span> new <span class="p">(</span>url<span class="p">:</span> <span class="p">&amp;</span>str<span class="p">)</span> <span class="op">-&gt;</span> <span class="k">Self</span><span class="p">:</span>
+        <span class="k">let</span> request <span class="p">=</span> <span class="t">Request</span>\ url <span class="p">=</span> url <span class="op">&lt;-</span> to_string<span class="defer">$</span><span class="p">,</span> method <span class="p">=</span> <span class="t">String</span><span class="p">.</span>from <span class="str">"GET"</span><span class="p">,</span> headers <span class="p">=</span> <span class="t">Vec</span><span class="p">.</span>new<span class="defer">$</span><span class="p">,</span> body <span class="p">=</span> <span class="t">None</span>
+        <span class="k">Self</span>\ request <span class="p">=</span> request
+
+    <span class="k">pub</span> <span class="k">fn</span> method <span class="p">(</span><span class="k">mut</span> <span class="k">self</span><span class="p">)</span> <span class="p">(</span>m<span class="p">:</span> <span class="p">&amp;</span>str<span class="p">)</span> <span class="op">-&gt;</span> <span class="k">Self</span><span class="p">:</span>
+        <span class="k">self</span> <span class="op">&lt;-</span> request <span class="op">&lt;-</span> method <span class="p">=</span> m <span class="op">&lt;-</span> to_string<span class="defer">$</span>
+        <span class="k">self</span>
+
+    <span class="k">pub</span> <span class="k">fn</span> header <span class="p">(</span><span class="k">mut</span> <span class="k">self</span><span class="p">)</span> <span class="p">(</span>k<span class="p">:</span> <span class="p">&amp;</span>str<span class="p">)</span> <span class="p">(</span>v<span class="p">:</span> <span class="p">&amp;</span>str<span class="p">)</span> <span class="op">-&gt;</span> <span class="k">Self</span><span class="p">:</span>
+        <span class="k">self</span> <span class="op">&lt;-</span> request <span class="op">&lt;-</span> headers <span class="op">&lt;-</span> push <span class="p">(</span>k <span class="op">&lt;-</span> to_string<span class="defer">$</span><span class="p">,</span> v <span class="op">&lt;-</span> to_string<span class="defer">$</span><span class="p">)</span>
+        <span class="k">self</span>
+
+    <span class="k">pub</span> <span class="k">fn</span> body <span class="p">(</span><span class="k">mut</span> <span class="k">self</span><span class="p">)</span> <span class="p">(</span>b<span class="p">:</span> <span class="p">&amp;</span>str<span class="p">)</span> <span class="op">-&gt;</span> <span class="k">Self</span><span class="p">:</span>
+        <span class="k">self</span> <span class="op">&lt;-</span> request <span class="op">&lt;-</span> body <span class="p">=</span> <span class="t">Some</span> <span class="p">(</span>b <span class="op">&lt;-</span> to_string<span class="defer">$</span><span class="p">)</span>
+        <span class="k">self</span>
+
+    <span class="k">pub</span> <span class="k">fn</span> build <span class="p">(</span><span class="k">self</span><span class="p">)</span> <span class="op">-&gt;</span> <span class="t">Request</span><span class="p">:</span>
+        <span class="k">self</span> <span class="op">&lt;-</span> request
+
+<span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="com">// One line per choice: the layout of a builder is its list of options.</span>
+    <span class="k">let</span> req <span class="p">=</span>
+        <span class="t">RequestBuilder</span><span class="p">.</span>new <span class="str">"https://harsh-lang.com"</span>
+          <span class="op">&lt;-</span> method <span class="str">"POST"</span>
+          <span class="op">&lt;-</span> header <span class="str">"Accept"</span> <span class="str">"text/html"</span>
+          <span class="op">&lt;-</span> body <span class="str">"hello"</span>
+          <span class="op">&lt;-</span> build<span class="defer">$</span>
+    <span class="mac">println!</span> <span class="str">"{:#?}"</span> req</code></pre>
+<pre class="code"><code>Request {
+    url: "https://harsh-lang.com",
+    method: "POST",
+    headers: [
+        (
+            "Accept",
+            "text/html",
+        ),
+    ],
+    body: Some(
+        "hello",
+    ),
+}</code></pre>
+<p><strong>In Harsh:</strong> a chain is one line per step, <code>&lt;-</code> at the start of each — the
+layout of a builder in Harsh is the list of its choices.</p>
+<h3 id="4-2-fold">4.2 Fold</h3>
+<p><em>Original: <a href="https://rust-unofficial.github.io/patterns/patterns/creational/fold.html">Fold</a></em></p>
+<p>Run a transformation over every node of a structure, producing a new
+structure: a <em>folder</em> has a method per kind of node, each returning the
+rebuilt node — the default rebuilding it unchanged, so a folder overrides only
+what it changes.</p>
+<pre class="code harsh"><code><span class="com">// A small tree of names and calls.</span>
+<span class="attr">#[derive Debug]</span>
+<span class="k">enum</span> <span class="t">Node</span>
+    <span class="t">Name</span> <span class="t">String</span>
+    <span class="t">Call</span> <span class="t">String</span> <span class="p">(</span><span class="t">Vec</span><span class="p">&lt;</span><span class="t">Node</span><span class="p">&gt;</span><span class="p">)</span>
+
+<span class="com">// A folder: a method per kind of node, each returning the rebuilt node.</span>
+<span class="k">trait</span> <span class="t">Folder</span>
+    <span class="k">fn</span> fold_name <span class="p">(</span><span class="p">&amp;</span><span class="k">mut</span> <span class="k">self</span><span class="p">)</span> <span class="p">(</span>n<span class="p">:</span> <span class="t">String</span><span class="p">)</span> <span class="op">-&gt;</span> <span class="t">Node</span><span class="p">:</span>
+        <span class="t">Node</span><span class="p">.</span><span class="t">Name</span> n
+    <span class="k">fn</span> fold_call <span class="p">(</span><span class="p">&amp;</span><span class="k">mut</span> <span class="k">self</span><span class="p">)</span> <span class="p">(</span>f<span class="p">:</span> <span class="t">String</span><span class="p">)</span> <span class="p">(</span>args<span class="p">:</span> <span class="t">Vec</span><span class="p">&lt;</span><span class="t">Node</span><span class="p">&gt;</span><span class="p">)</span> <span class="op">-&gt;</span> <span class="t">Node</span><span class="p">:</span>
+        <span class="k">let</span> args <span class="p">=</span> args <span class="op">&lt;-</span> into_iter<span class="defer">$</span> <span class="op">&lt;-</span> map <span class="p">(</span><span class="p">|</span>a<span class="p">|</span> <span class="k">self</span> <span class="op">&lt;-</span> fold a<span class="p">)</span> <span class="op">&lt;-</span> collect<span class="defer">$</span>
+        <span class="t">Node</span><span class="p">.</span><span class="t">Call</span> f args
+    <span class="k">fn</span> fold <span class="p">(</span><span class="p">&amp;</span><span class="k">mut</span> <span class="k">self</span><span class="p">)</span> <span class="p">(</span>n<span class="p">:</span> <span class="t">Node</span><span class="p">)</span> <span class="op">-&gt;</span> <span class="t">Node</span><span class="p">:</span>
+        <span class="k">match</span> n\
+            <span class="t">Node</span><span class="p">.</span><span class="t">Name</span> s <span class="op">=&gt;</span> <span class="k">self</span> <span class="op">&lt;-</span> fold_name s
+            <span class="t">Node</span><span class="p">.</span><span class="t">Call</span> f args <span class="op">=&gt;</span> <span class="k">self</span> <span class="op">&lt;-</span> fold_call f args
+
+<span class="com">// This folder overrides one method: it renames every name.</span>
+<span class="k">struct</span> <span class="t">Renamer</span>
+<span class="k">impl</span> <span class="t">Folder</span> <span class="k">for</span> <span class="t">Renamer</span>
+    <span class="k">fn</span> fold_name <span class="p">(</span><span class="p">&amp;</span><span class="k">mut</span> <span class="k">self</span><span class="p">)</span> <span class="p">(</span>n<span class="p">:</span> <span class="t">String</span><span class="p">)</span> <span class="op">-&gt;</span> <span class="t">Node</span><span class="p">:</span>
+        <span class="t">Node</span><span class="p">.</span><span class="t">Name</span> <span class="p">(</span><span class="mac">format!</span> <span class="str">"{n}_renamed"</span><span class="p">)</span>
+
+<span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="k">let</span> tree <span class="p">=</span> <span class="t">Node</span><span class="p">.</span><span class="t">Call</span> <span class="p">(</span><span class="t">String</span><span class="p">.</span>from <span class="str">"f"</span><span class="p">)</span> <span class="p">(</span><span class="mac">vec!</span> <span class="p">(</span><span class="t">Node</span><span class="p">.</span><span class="t">Name</span> <span class="p">(</span><span class="t">String</span><span class="p">.</span>from <span class="str">"x"</span><span class="p">)</span><span class="p">)</span> <span class="p">(</span><span class="t">Node</span><span class="p">.</span><span class="t">Name</span> <span class="p">(</span><span class="t">String</span><span class="p">.</span>from <span class="str">"y"</span><span class="p">)</span><span class="p">)</span><span class="p">)</span>
+    <span class="mac">println!</span> <span class="str">"{:?}"</span> <span class="p">(</span><span class="t">Renamer</span> <span class="op">&lt;-</span> fold tree<span class="p">)</span></code></pre>
+<pre class="code"><code>Call("f", [Name("x_renamed"), Name("y_renamed")])</code></pre>
+<p><strong>In Harsh:</strong> the default methods sit in the trait, and a folder that renames
+identifiers overrides one of them.</p>
+<h2 id="structural-patterns">Structural patterns</h2>
+<p>Patterns for arranging types and modules. The original chapter:
+<a href="https://rust-unofficial.github.io/patterns/patterns/structural/intro.html">Structural patterns</a>.</p>
+<h3 id="5-1-compose-structs">5.1 Compose Structs</h3>
+<p><em>Original: <a href="https://rust-unofficial.github.io/patterns/patterns/structural/compose-structs.html">Compose Structs</a></em></p>
+<p>A large struct borrowed as a whole cannot lend two of its parts at once to
+different functions. Split it into smaller structs, and each function borrows
+only the part it needs — the borrow checker then sees they do not overlap.</p>
+<pre class="code harsh"><code><span class="k">struct</span> <span class="t">Connection</span>
+    url<span class="p">:</span> <span class="t">String</span>
+<span class="k">struct</span> <span class="t">Users</span>
+    names<span class="p">:</span> <span class="t">Vec</span><span class="p">&lt;</span><span class="t">String</span><span class="p">&gt;</span>
+
+<span class="com">// Two parts instead of one large struct: each can be borrowed alone.</span>
+<span class="k">struct</span> <span class="t">Database</span>
+    connection<span class="p">:</span> <span class="t">Connection</span>
+    users<span class="p">:</span> <span class="t">Users</span>
+
+<span class="k">fn</span> log_connection <span class="p">(</span>c<span class="p">:</span> <span class="p">&amp;</span><span class="t">Connection</span><span class="p">)</span><span class="p">:</span>
+    <span class="mac">println!</span> <span class="str">"connected to {}"</span> <span class="p">(</span>c <span class="op">&lt;-</span> url<span class="p">)</span>
+
+<span class="k">fn</span> add_user <span class="p">(</span>u<span class="p">:</span> <span class="p">&amp;</span><span class="k">mut</span> <span class="t">Users</span><span class="p">)</span> <span class="p">(</span>name<span class="p">:</span> <span class="p">&amp;</span>str<span class="p">)</span><span class="p">:</span>
+    u <span class="op">&lt;-</span> names <span class="op">&lt;-</span> push <span class="p">(</span>name <span class="op">&lt;-</span> to_string<span class="defer">$</span><span class="p">)</span>
+
+<span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="k">let</span> connection <span class="p">=</span> <span class="t">Connection</span>\ url <span class="p">=</span> <span class="t">String</span><span class="p">.</span>from <span class="str">"db://local"</span>
+    <span class="k">let</span> users <span class="p">=</span> <span class="t">Users</span>\ names <span class="p">=</span> <span class="t">Vec</span><span class="p">.</span>new<span class="defer">$</span>
+    <span class="k">let</span> <span class="k">mut</span> db <span class="p">=</span> <span class="t">Database</span>\ connection <span class="p">=</span> connection<span class="p">,</span> users <span class="p">=</span> users
+    <span class="com">// A shared borrow of one part, a mutable one of the other: no conflict.</span>
+    <span class="k">let</span> c <span class="p">=</span> <span class="p">&amp;</span>db <span class="op">&lt;-</span> connection
+    add_user <span class="p">(</span><span class="p">&amp;</span><span class="k">mut</span> db <span class="op">&lt;-</span> users<span class="p">)</span> <span class="str">"ada"</span>
+    log_connection c
+    <span class="mac">println!</span> <span class="str">"{:?}"</span> <span class="p">(</span>db <span class="op">&lt;-</span> users <span class="op">&lt;-</span> names<span class="p">)</span></code></pre>
+<pre class="code"><code>connected to db://local
+["ada"]</code></pre>
+<p><strong>In Harsh:</strong> field access is <code>&lt;-</code>, so <code>db &lt;- connection</code> and <code>db &lt;- users</code>
+are the two independent borrows.</p>
+<h3 id="5-2-prefer-small-crates">5.2 Prefer Small Crates</h3>
+<p><em>Original: <a href="https://rust-unofficial.github.io/patterns/patterns/structural/small-crates.html">Prefer Small Crates</a></em></p>
+<p>Small crates that do one thing are easier to understand, reuse and compile
+in parallel; the cost is more dependencies to manage. Harsh works with the
+same crates as Rust — every crate on crates.io is a Harsh dependency — and a
+Harsh library of your own is shared as Rust with <code>hrs export</code>, or as Harsh by
+path (<em>The Harsh Programming Language</em>, chapter 17).</p>
+<p>There is no program on this page: the pattern is about how a project is cut,
+not about code.</p>
+<h3 id="5-3-contain-unsafety-in-small-modules">5.3 Contain unsafety in small modules</h3>
+<p><em>Original: <a href="https://rust-unofficial.github.io/patterns/patterns/structural/unsafe-mods.html">Contain unsafety in small modules</a></em></p>
+<p>Keep <code>unsafe</code> code in the smallest module that can hold it, with a safe
+interface around it: the module's invariants are then checked in one place,
+and the rest of the program cannot break them.</p>
+<pre class="code harsh"><code><span class="k">mod</span> ascii
+    <span class="com">// The invariant, kept in this module alone: the bytes are ASCII.</span>
+    <span class="k">pub</span> <span class="k">struct</span> <span class="t">AsciiString</span>
+        bytes<span class="p">:</span> <span class="t">Vec</span><span class="p">&lt;</span>u8<span class="p">&gt;</span>
+
+    <span class="k">impl</span> <span class="t">AsciiString</span>
+        <span class="k">pub</span> <span class="k">fn</span> new <span class="p">(</span>s<span class="p">:</span> <span class="p">&amp;</span>str<span class="p">)</span> <span class="op">-&gt;</span> <span class="t">Option</span><span class="p">&lt;</span><span class="k">Self</span><span class="p">&gt;</span><span class="p">:</span>
+            <span class="k">if</span> s <span class="op">&lt;-</span> is_ascii<span class="defer">$</span><span class="p">:</span>
+                <span class="t">Some</span> <span class="p">(</span><span class="k">Self</span>\ bytes <span class="p">=</span> s <span class="op">&lt;-</span> as_bytes<span class="defer">$</span> <span class="op">&lt;-</span> to_vec<span class="defer">$</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="t">None</span>
+
+        <span class="k">pub</span> <span class="k">fn</span> as_str <span class="p">(</span><span class="p">&amp;</span><span class="k">self</span><span class="p">)</span> <span class="op">-&gt;</span> <span class="p">&amp;</span>str<span class="p">:</span>
+            <span class="com">// Safe, because `new` checked the invariant.</span>
+            <span class="k">unsafe</span><span class="p">:</span> std<span class="p">.</span>str<span class="p">.</span>from_utf8_unchecked <span class="p">(</span><span class="p">&amp;</span><span class="k">self</span> <span class="op">&lt;-</span> bytes<span class="p">)</span>
+
+<span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="k">let</span> a <span class="p">=</span> ascii<span class="p">.</span><span class="t">AsciiString</span><span class="p">.</span>new <span class="str">"hello"</span> <span class="op">&lt;-</span> unwrap<span class="defer">$</span>
+    <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span>a <span class="op">&lt;-</span> as_str<span class="defer">$</span><span class="p">)</span>
+    <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span>ascii<span class="p">.</span><span class="t">AsciiString</span><span class="p">.</span>new <span class="str">"héllo"</span> <span class="op">&lt;-</span> is_none<span class="defer">$</span><span class="p">)</span></code></pre>
+<pre class="code"><code>hello
+true</code></pre>
+<p><strong>In Harsh:</strong> <code>unsafe:</code> opens a block like any keyword; the module's safe
+functions around it are ordinary Harsh.</p>
+<h3 id="5-4-avoid-complex-type-bounds-with-custom-traits">5.4 Avoid complex type bounds with custom traits</h3>
+<p><em>Original: <a href="https://rust-unofficial.github.io/patterns/patterns/structural/trait-for-bounds.html">Avoid complex type bounds with custom traits</a></em></p>
+<p>A struct generic over closures carries their whole signatures as bounds —
+<code>G: FnMut() -&gt; Result&lt;T, Error&gt;</code>, and a <code>T</code> just to name the output — and every
+<code>impl</code> repeats them. Name the shape once: a trait with an <strong>associated type</strong>
+for the output, implemented for every closure of that shape. The struct then
+asks for <code>G: Getter</code>, and <code>T</code> disappears from its parameters.</p>
+<pre class="code harsh"><code><span class="k">use</span> std<span class="p">.</span>fmt<span class="p">.</span><span class="t">Display</span>
+
+<span class="attr">#[derive Debug]</span>
+<span class="k">pub</span> <span class="k">struct</span> <span class="t">Error</span>
+
+<span class="attr">#[derive Debug]</span>
+<span class="k">pub</span> <span class="k">enum</span> <span class="t">Status</span>
+    <span class="t">Fresh</span>
+    <span class="t">Stale</span>
+
+<span class="com">// The closure's shape, named once: its output is an associated type.</span>
+<span class="k">pub</span> <span class="k">trait</span> <span class="t">Getter</span>
+    <span class="k">type</span> <span class="t">Output</span><span class="p">:</span> <span class="t">Display</span>
+    <span class="k">fn</span> get_value <span class="p">(</span><span class="p">&amp;</span><span class="k">mut</span> <span class="k">self</span><span class="p">)</span> <span class="op">-&gt;</span> <span class="t">Result</span><span class="p">&lt;</span><span class="k">Self</span><span class="p">.</span><span class="t">Output</span><span class="p">,</span> <span class="t">Error</span><span class="p">&gt;</span>
+
+<span class="com">// Every closure of that shape is a Getter.</span>
+<span class="k">impl</span><span class="p">&lt;</span><span class="t">F</span><span class="p">:</span> <span class="t">FnMut</span><span class="defer">$</span> <span class="op">-&gt;</span> <span class="t">Result</span><span class="p">&lt;</span><span class="t">T</span><span class="p">,</span> <span class="t">Error</span><span class="p">&gt;</span><span class="p">,</span> <span class="t">T</span><span class="p">:</span> <span class="t">Display</span><span class="p">&gt;</span> <span class="t">Getter</span> <span class="k">for</span> <span class="t">F</span>
+    <span class="k">type</span> <span class="t">Output</span> <span class="p">=</span> <span class="t">T</span>
+    <span class="k">fn</span> get_value <span class="p">(</span><span class="p">&amp;</span><span class="k">mut</span> <span class="k">self</span><span class="p">)</span> <span class="op">-&gt;</span> <span class="t">Result</span><span class="p">&lt;</span><span class="t">T</span><span class="p">,</span> <span class="t">Error</span><span class="p">&gt;</span><span class="p">:</span>
+        <span class="k">self</span><span class="defer">$</span>
+
+<span class="com">// No `T`, and no closure signature, in the struct's parameters.</span>
+<span class="k">pub</span> <span class="k">struct</span> <span class="t">Value</span><span class="p">&lt;</span><span class="t">G</span><span class="p">:</span> <span class="t">Getter</span><span class="p">,</span> <span class="t">S</span><span class="p">:</span> <span class="t">Fn</span> <span class="p">(</span><span class="p">&amp;</span><span class="t">G</span><span class="p">.</span><span class="t">Output</span><span class="p">)</span> <span class="op">-&gt;</span> <span class="t">Status</span><span class="p">&gt;</span>
+    value<span class="p">:</span> <span class="t">Option</span><span class="p">&lt;</span><span class="t">G</span><span class="p">.</span><span class="t">Output</span><span class="p">&gt;</span>
+    getter<span class="p">:</span> <span class="t">G</span>
+    status<span class="p">:</span> <span class="t">S</span>
+
+<span class="k">impl</span><span class="p">&lt;</span><span class="t">G</span><span class="p">:</span> <span class="t">Getter</span><span class="p">,</span> <span class="t">S</span><span class="p">:</span> <span class="t">Fn</span> <span class="p">(</span><span class="p">&amp;</span><span class="t">G</span><span class="p">.</span><span class="t">Output</span><span class="p">)</span> <span class="op">-&gt;</span> <span class="t">Status</span><span class="p">&gt;</span> <span class="t">Value</span><span class="p">&lt;</span><span class="t">G</span><span class="p">,</span> <span class="t">S</span><span class="p">&gt;</span>
+    <span class="k">pub</span> <span class="k">fn</span> update <span class="p">(</span><span class="p">&amp;</span><span class="k">mut</span> <span class="k">self</span><span class="p">)</span> <span class="op">-&gt;</span> <span class="t">Result</span><span class="p">&lt;</span><span class="p">(</span><span class="p">)</span><span class="p">,</span> <span class="t">Error</span><span class="p">&gt;</span><span class="p">:</span>
+        <span class="k">self</span> <span class="op">&lt;-</span> value <span class="p">=</span> <span class="t">Some</span> <span class="p">(</span><span class="p">(</span><span class="k">self</span> <span class="op">&lt;-</span> getter <span class="op">&lt;-</span> get_value<span class="defer">$</span><span class="p">)</span><span class="p">?</span><span class="p">)</span>
+        <span class="t">Ok</span> <span class="p">(</span><span class="p">)</span>
+
+    <span class="k">pub</span> <span class="k">fn</span> status <span class="p">(</span><span class="p">&amp;</span><span class="k">self</span><span class="p">)</span> <span class="op">-&gt;</span> <span class="t">Option</span><span class="p">&lt;</span><span class="t">Status</span><span class="p">&gt;</span><span class="p">:</span>
+        <span class="k">self</span> <span class="op">&lt;-</span> value <span class="op">&lt;-</span> as_ref<span class="defer">$</span> <span class="op">&lt;-</span> map <span class="p">(</span><span class="p">&amp;</span><span class="k">self</span> <span class="op">&lt;-</span> status<span class="p">)</span>
+
+<span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="k">let</span> <span class="k">mut</span> n <span class="p">=</span> <span class="num">0</span>
+    <span class="k">let</span> getter <span class="p">=</span> <span class="k">move</span> <span class="op">||</span><span class="p">:</span>
+        n <span class="op">+=</span> <span class="num">1</span>
+        <span class="k">let</span> r<span class="p">:</span> <span class="t">Result</span><span class="p">&lt;</span>i32<span class="p">,</span> <span class="t">Error</span><span class="p">&gt;</span> <span class="p">=</span> <span class="t">Ok</span> n
+        r
+    <span class="k">let</span> <span class="k">mut</span> v <span class="p">=</span> <span class="t">Value</span>\ value <span class="p">=</span> <span class="t">None</span><span class="p">,</span> getter <span class="p">=</span> getter<span class="p">,</span> status <span class="p">=</span> <span class="p">|</span>x<span class="p">:</span> <span class="p">&amp;</span>i32<span class="p">|</span> <span class="k">if</span> <span class="p">*</span>x <span class="p">&gt;</span> <span class="num">1</span><span class="p">:</span> <span class="t">Status</span><span class="p">.</span><span class="t">Stale</span> <span class="k">else</span><span class="p">:</span> <span class="t">Status</span><span class="p">.</span><span class="t">Fresh</span>
+    <span class="k">for</span> _ <span class="k">in</span> <span class="num">0..2</span><span class="p">:</span>
+        v <span class="op">&lt;-</span> update<span class="defer">$</span> <span class="op">&lt;-</span> unwrap<span class="defer">$</span>
+        <span class="mac">println!</span> <span class="str">"{:?} {:?}"</span> <span class="p">(</span>v <span class="op">&lt;-</span> value<span class="p">)</span> <span class="p">(</span>v <span class="op">&lt;-</span> status<span class="defer">$</span><span class="p">)</span></code></pre>
+<pre class="code"><code>Some(1) Some(Fresh)
+Some(2) Some(Stale)</code></pre>
+<p>A related variant, for a list of bounds rather than a closure's shape: a trait
+with those bounds as supertraits, and a blanket implementation for every type
+that meets them.</p>
+<pre class="code harsh"><code><span class="k">use</span> std<span class="p">.</span>fmt<span class="p">.</span><span class="p">(</span> <span class="t">Debug</span><span class="p">,</span> <span class="t">Display</span><span class="p">)</span>
+
+<span class="com">// The long list of bounds, named once.</span>
+<span class="k">trait</span> <span class="t">Loggable</span><span class="p">:</span> <span class="t">Debug</span> <span class="p">+</span> <span class="t">Display</span> <span class="p">+</span> <span class="t">Clone</span> <span class="p">+</span> <span class="t">PartialEq</span>
+<span class="k">impl</span><span class="p">&lt;</span><span class="t">T</span><span class="p">:</span> <span class="t">Debug</span> <span class="p">+</span> <span class="t">Display</span> <span class="p">+</span> <span class="t">Clone</span> <span class="p">+</span> <span class="t">PartialEq</span><span class="p">&gt;</span> <span class="t">Loggable</span> <span class="k">for</span> <span class="t">T</span>
+
+<span class="com">// Each function asks for the one trait.</span>
+<span class="k">fn</span> log_twice<span class="p">&lt;</span><span class="t">T</span><span class="p">:</span> <span class="t">Loggable</span><span class="p">&gt;</span> <span class="p">(</span>x<span class="p">:</span> <span class="p">&amp;</span><span class="t">T</span><span class="p">)</span><span class="p">:</span>
+    <span class="k">let</span> copy <span class="p">=</span> <span class="t">T</span><span class="p">.</span>clone x
+    <span class="mac">println!</span> <span class="str">"{x} / {copy:?} / same: {}"</span> <span class="p">(</span><span class="p">*</span>x <span class="op">==</span> copy<span class="p">)</span>
+
+<span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    log_twice <span class="p">(</span><span class="p">&amp;</span><span class="num">42</span><span class="p">)</span>
+    log_twice <span class="p">(</span><span class="p">&amp;</span><span class="t">String</span><span class="p">.</span>from <span class="str">"hello"</span><span class="p">)</span></code></pre>
+<pre class="code"><code>42 / 42 / same: true
+hello / "hello" / same: true</code></pre>
+<p><strong>In Harsh:</strong> <code>Self.Output</code> and <code>G.Output</code> are the associated type's paths,
+with dots. In the variant, the trait and its blanket impl are one line each,
+with no body —
+<code>trait Loggable: Debug + Display + …</code> and <code>impl&lt;T: …&gt; Loggable for T</code> —
+and come out as Rust's <code>{}</code> bodies. (Writing this page found that such
+empty-bodied headers were misread, a <code>:</code> in them taken for a block; fixed in
+Harsh 0.1.44.)</p>
+<h2 id="foreign-function-interface">Foreign function interface</h2>
+<p>Patterns for code that crosses into C and back. The original chapter:
+<a href="https://rust-unofficial.github.io/patterns/patterns/ffi/intro.html">FFI patterns</a>.</p>
+<h3 id="6-1-object-based-apis">6.1 Object-Based APIs</h3>
+<p><em>Original: <a href="https://rust-unofficial.github.io/patterns/patterns/ffi/export.html">Object-Based APIs</a></em></p>
+<p>Expose a Rust type to C as an opaque handle: C gets a pointer it cannot look
+inside, and every operation is a function taking that pointer. Ownership is
+explicit — one function creates the object (<code>Box::into_raw</code>), one destroys it
+(<code>Box::from_raw</code>).</p>
+<pre class="code harsh"><code><span class="com">// An opaque object for C: C holds the pointer, never the inside.</span>
+<span class="k">pub</span> <span class="k">struct</span> <span class="t">Counter</span>
+    count<span class="p">:</span> u64
+
+<span class="k">pub</span> <span class="k">extern</span> <span class="str">"C"</span> <span class="k">fn</span> counter_new<span class="defer">$</span> <span class="op">-&gt;</span> <span class="p">*</span><span class="k">mut</span> <span class="t">Counter</span><span class="p">:</span>
+    <span class="t">Box</span><span class="p">.</span>into_raw <span class="p">(</span><span class="t">Box</span><span class="p">.</span>new <span class="p">(</span><span class="t">Counter</span>\ count <span class="p">=</span> <span class="num">0</span><span class="p">)</span><span class="p">)</span>
+
+<span class="k">pub</span> <span class="k">extern</span> <span class="str">"C"</span> <span class="k">fn</span> counter_add <span class="p">(</span>c<span class="p">:</span> <span class="p">*</span><span class="k">mut</span> <span class="t">Counter</span><span class="p">)</span> <span class="p">(</span>n<span class="p">:</span> u64<span class="p">)</span><span class="p">:</span>
+    <span class="k">let</span> c <span class="p">=</span> <span class="k">unsafe</span><span class="p">:</span> <span class="p">&amp;</span><span class="k">mut</span> <span class="p">*</span>c
+    c <span class="op">&lt;-</span> count <span class="op">+=</span> n
+
+<span class="k">pub</span> <span class="k">extern</span> <span class="str">"C"</span> <span class="k">fn</span> counter_get <span class="p">(</span>c<span class="p">:</span> <span class="p">*</span><span class="k">const</span> <span class="t">Counter</span><span class="p">)</span> <span class="op">-&gt;</span> u64<span class="p">:</span>
+    <span class="k">unsafe</span><span class="p">:</span> <span class="p">(</span><span class="p">*</span>c<span class="p">)</span> <span class="op">&lt;-</span> count
+
+<span class="k">pub</span> <span class="k">extern</span> <span class="str">"C"</span> <span class="k">fn</span> counter_free <span class="p">(</span>c<span class="p">:</span> <span class="p">*</span><span class="k">mut</span> <span class="t">Counter</span><span class="p">)</span><span class="p">:</span>
+    <span class="k">if</span> <span class="p">!</span>c <span class="op">&lt;-</span> is_null<span class="defer">$</span><span class="p">:</span>
+        drop <span class="p">(</span><span class="k">unsafe</span><span class="p">:</span> <span class="t">Box</span><span class="p">.</span>from_raw c<span class="p">)</span>
+
+<span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="com">// As C would use it.</span>
+    <span class="k">let</span> c <span class="p">=</span> counter_new<span class="defer">$</span>
+    counter_add c <span class="num">5</span>
+    counter_add c <span class="num">7</span>
+    <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span>counter_get c<span class="p">)</span>
+    counter_free c</code></pre>
+<pre class="code"><code>12</code></pre>
+<p><strong>In Harsh:</strong> the exported functions are <code>pub extern "C" fn</code>, and each
+dereference of the handle sits in its own <code>unsafe:</code> block.</p>
+<h3 id="6-2-type-consolidation-into-wrappers">6.2 Type Consolidation into Wrappers</h3>
+<p><em>Original: <a href="https://rust-unofficial.github.io/patterns/patterns/ffi/wrappers.html">Type Consolidation into Wrappers</a></em></p>
+<p>Rust types with lifetimes do not cross into C. Wrap the owner and the state
+that borrows from it into one owned type — here, a collection and a cursor
+over it — and expose that single type instead.</p>
+<pre class="code harsh"><code><span class="com">// For C: one owned type, where Rust would have a collection and an iterator</span>
+<span class="com">// borrowing from it -- a lifetime C cannot express.</span>
+<span class="k">pub</span> <span class="k">struct</span> <span class="t">Words</span>
+    words<span class="p">:</span> <span class="t">Vec</span><span class="p">&lt;</span><span class="t">String</span><span class="p">&gt;</span>
+    next<span class="p">:</span> usize
+
+<span class="k">impl</span> <span class="t">Words</span>
+    <span class="k">pub</span> <span class="k">fn</span> new <span class="p">(</span>text<span class="p">:</span> <span class="p">&amp;</span>str<span class="p">)</span> <span class="op">-&gt;</span> <span class="k">Self</span><span class="p">:</span>
+        <span class="k">Self</span>\ words <span class="p">=</span> text <span class="op">&lt;-</span> split_whitespace<span class="defer">$</span> <span class="op">&lt;-</span> map <span class="t">String</span><span class="p">.</span>from <span class="op">&lt;-</span> collect<span class="defer">$</span><span class="p">,</span> next <span class="p">=</span> <span class="num">0</span>
+
+    <span class="k">pub</span> <span class="k">fn</span> next <span class="p">(</span><span class="p">&amp;</span><span class="k">mut</span> <span class="k">self</span><span class="p">)</span> <span class="op">-&gt;</span> <span class="t">Option</span><span class="p">&lt;</span><span class="p">&amp;</span>str<span class="p">&gt;</span><span class="p">:</span>
+        <span class="k">let</span> w <span class="p">=</span> <span class="k">self</span> <span class="op">&lt;-</span> words <span class="op">&lt;-</span> get <span class="p">(</span><span class="k">self</span> <span class="op">&lt;-</span> next<span class="p">)</span><span class="p">?</span>
+        <span class="k">self</span> <span class="op">&lt;-</span> next <span class="op">+=</span> <span class="num">1</span>
+        <span class="t">Some</span> <span class="p">(</span>w <span class="op">&lt;-</span> as_str<span class="defer">$</span><span class="p">)</span>
+
+<span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="k">let</span> <span class="k">mut</span> w <span class="p">=</span> <span class="t">Words</span><span class="p">.</span>new <span class="str">"one two three"</span>
+    <span class="k">while</span> <span class="k">let</span> <span class="t">Some</span> word <span class="p">=</span> w <span class="op">&lt;-</span> next<span class="defer">$</span><span class="p">:</span>
+        <span class="mac">println!</span> <span class="str">"{word}"</span></code></pre>
+<pre class="code"><code>one
+two
+three</code></pre>
+<p><strong>In Harsh:</strong> the wrapper is a plain struct with a <code>next</code> method; the
+lifetime that C could not express is gone from its interface.</p>
+<h2 id="anti-patterns">Anti-patterns</h2>
+<p>Arrangements that look like solutions and create more problems than they
+solve. Knowing them is half of avoiding them. The original chapter:
+<a href="https://rust-unofficial.github.io/patterns/anti_patterns/index.html">Anti-patterns</a>.</p>
+<h3 id="7-1-clone-to-satisfy-the-borrow-checker">7.1 Clone to satisfy the borrow checker</h3>
+<p><em>Original: <a href="https://rust-unofficial.github.io/patterns/anti_patterns/borrow_clone.html">Clone to satisfy the borrow checker</a></em></p>
+<p>When the borrow checker refuses code, cloning the value makes the error go
+away — and often hides the real mistake: two copies now drift apart, and the
+change made to one is missing from the other. First the refusal:</p>
+<pre class="code harsh"><code><span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="k">let</span> <span class="k">mut</span> names <span class="p">=</span> <span class="mac">vec!</span> <span class="p">(</span><span class="t">String</span><span class="p">.</span>from <span class="str">"Ada"</span><span class="p">)</span>
+    <span class="k">let</span> first <span class="p">=</span> <span class="p">&amp;</span>names<span class="p">[</span><span class="num">0</span><span class="p">]</span>
+    <span class="com">// Refused: `names` is borrowed by `first` while we push.</span>
+    names <span class="op">&lt;-</span> push <span class="p">(</span><span class="t">String</span><span class="p">.</span>from <span class="str">"Grace"</span><span class="p">)</span>
+    <span class="mac">println!</span> <span class="str">"{first}"</span></code></pre>
+<pre class="code"><code>error[E0502]: cannot borrow `names` as mutable because it is also borrowed as immutable
+ --&gt; clone_refused.hrs:5:5
+  |
+3 |     let first = &amp;names[0];
+  |                  ----- immutable borrow occurs here
+4 |     // Refused: `names` is borrowed by `first` while we push.
+5 |     names.push(String::from("Grace"));
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ mutable borrow occurs here
+6 |     println!("{first}")
+  |               ------- immutable borrow later used here
+
+error: aborting due to previous error
+
+For more information about this error, try `rustc --explain E0502`.</code></pre>
+<p>then the fix that keeps one value, by ending the first borrow before the
+second begins, instead of cloning:</p>
+<pre class="code harsh"><code><span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="k">let</span> <span class="k">mut</span> names <span class="p">=</span> <span class="mac">vec!</span> <span class="p">(</span><span class="t">String</span><span class="p">.</span>from <span class="str">"Ada"</span><span class="p">)</span>
+    <span class="com">// The first borrow ends before the second begins: one value, no clone.</span>
+    <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span><span class="p">&amp;</span>names<span class="p">[</span><span class="num">0</span><span class="p">]</span><span class="p">)</span>
+    names <span class="op">&lt;-</span> push <span class="p">(</span><span class="t">String</span><span class="p">.</span>from <span class="str">"Grace"</span><span class="p">)</span>
+    <span class="mac">println!</span> <span class="str">"{:?}"</span> names</code></pre>
+<pre class="code"><code>Ada
+["Ada", "Grace"]</code></pre>
+<p><strong>In Harsh:</strong> rustc's error points at the <code>.hrs</code> line it concerns, so the
+borrow to shorten is found where you wrote it.</p>
+<h3 id="7-2-deny-warnings">7.2 #[deny(warnings)]</h3>
+<p><em>Original: <a href="https://rust-unofficial.github.io/patterns/anti_patterns/deny-warnings.html">#[deny(warnings)]</a></em></p>
+<p>Denying all warnings in the source makes a build fail on the next compiler
+that adds a warning — breaking code that did nothing wrong, and every crate
+that depends on it. Deny specific lints you care about, or deny warnings in
+continuous integration only (<code>RUSTFLAGS="-D warnings"</code>), never in the crate.</p>
+<pre class="code harsh"><code><span class="com">// Deny the specific lints you mean, not every warning a future compiler adds.</span>
+<span class="attr">#![deny unused_must_use]</span>
+
+<span class="k">fn</span> checked <span class="p">(</span>n<span class="p">:</span> i32<span class="p">)</span> <span class="op">-&gt;</span> <span class="t">Result</span><span class="p">&lt;</span>i32<span class="p">,</span> <span class="t">String</span><span class="p">&gt;</span><span class="p">:</span>
+    <span class="k">if</span> n <span class="op">&gt;=</span> <span class="num">0</span><span class="p">:</span> <span class="t">Ok</span> n <span class="k">else</span><span class="p">:</span> <span class="t">Err</span> <span class="p">(</span><span class="t">String</span><span class="p">.</span>from <span class="str">"negative"</span><span class="p">)</span>
+
+<span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="com">// With `unused_must_use` denied, ignoring this Result would not compile.</span>
+    <span class="k">let</span> r <span class="p">=</span> checked <span class="num">5</span>
+    <span class="mac">println!</span> <span class="str">"{:?}"</span> r</code></pre>
+<pre class="code"><code>Ok(5)</code></pre>
+<p><strong>In Harsh:</strong> attributes take their arguments by juxtaposition, <code>#![deny
+unused_must_use]</code>; and <code>hrs check</code> passes cargo's flags through, so CI's
+<code>-D warnings</code> works as for Rust.</p>
+<h3 id="7-3-deref-polymorphism">7.3 Deref Polymorphism</h3>
+<p><em>Original: <a href="https://rust-unofficial.github.io/patterns/anti_patterns/deref.html">Deref Polymorphism</a></em></p>
+<p>Implementing <code>Deref</code> to make one struct "inherit" another's methods imitates
+inheritance, and misleads: <code>Deref</code> is for smart pointers, the target's traits
+are not inherited, and generic code does not see through it. Compose instead,
+and forward the few methods that should be shared.</p>
+<pre class="code harsh"><code><span class="k">struct</span> <span class="t">Animal</span>
+    name<span class="p">:</span> <span class="t">String</span>
+
+<span class="k">impl</span> <span class="t">Animal</span>
+    <span class="k">fn</span> name <span class="p">(</span><span class="p">&amp;</span><span class="k">self</span><span class="p">)</span> <span class="op">-&gt;</span> <span class="p">&amp;</span>str<span class="p">:</span>
+        <span class="p">&amp;</span><span class="k">self</span> <span class="op">&lt;-</span> name
+
+<span class="com">// Composition, not `Deref` to Animal: the shared method is forwarded.</span>
+<span class="k">struct</span> <span class="t">Dog</span>
+    inner<span class="p">:</span> <span class="t">Animal</span>
+    good<span class="p">:</span> bool
+
+<span class="k">impl</span> <span class="t">Dog</span>
+    <span class="k">fn</span> name <span class="p">(</span><span class="p">&amp;</span><span class="k">self</span><span class="p">)</span> <span class="op">-&gt;</span> <span class="p">&amp;</span>str<span class="p">:</span>
+        <span class="k">self</span> <span class="op">&lt;-</span> inner <span class="op">&lt;-</span> name<span class="defer">$</span>
+    <span class="k">fn</span> describe <span class="p">(</span><span class="p">&amp;</span><span class="k">self</span><span class="p">)</span> <span class="op">-&gt;</span> <span class="t">String</span><span class="p">:</span>
+        <span class="mac">format!</span> <span class="str">"{} ({})"</span> <span class="p">(</span><span class="k">self</span> <span class="op">&lt;-</span> name<span class="defer">$</span><span class="p">)</span> <span class="p">(</span><span class="k">if</span> <span class="k">self</span> <span class="op">&lt;-</span> good<span class="p">:</span> <span class="str">"good dog"</span> <span class="k">else</span><span class="p">:</span> <span class="str">"dog"</span><span class="p">)</span>
+
+<span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="k">let</span> d <span class="p">=</span> <span class="t">Dog</span>\ inner <span class="p">=</span> <span class="t">Animal</span>\ name <span class="p">=</span> <span class="t">String</span><span class="p">.</span>from <span class="str">"Rex"</span><span class="p">,</span> good <span class="p">=</span> <span class="k">true</span>
+    <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span>d <span class="op">&lt;-</span> describe<span class="defer">$</span><span class="p">)</span></code></pre>
+<pre class="code"><code>Rex (good dog)</code></pre>
+<p><strong>In Harsh:</strong> the forwarding method is one line, <code>self &lt;- inner &lt;- name$</code>.</p>
+<h2 id="functional-programming">Functional Programming</h2>
+<p>Rust borrows much from functional languages — closures, iterators, algebraic
+types — and Harsh leans further that way: pipes, partial application and
+comprehensions are its own. This chapter is where the two books differ most.
+The original chapter: <a href="https://rust-unofficial.github.io/patterns/functional/index.html">Functional usage of Rust</a>.</p>
+<h3 id="8-1-programming-paradigms">8.1 Programming paradigms</h3>
+<p><em>Original: <a href="https://rust-unofficial.github.io/patterns/functional/paradigms.html">Programming paradigms</a></em></p>
+<p>Imperative code says <em>how</em>: a counter, a loop, a mutation per step.
+Declarative code says <em>what</em>: the result as a composition of operations. Rust
+supports both; iterators make the declarative form idiomatic. Harsh adds two
+more declarative forms — the pipe and the comprehension.</p>
+<pre class="code harsh"><code><span class="k">fn</span> square <span class="p">(</span>n<span class="p">:</span> u32<span class="p">)</span> <span class="op">-&gt;</span> u32<span class="p">:</span>
+    n <span class="p">*</span> n
+
+<span class="k">fn</span> report <span class="p">(</span>total<span class="p">:</span> u32<span class="p">)</span> <span class="op">-&gt;</span> <span class="t">String</span><span class="p">:</span>
+    <span class="mac">format!</span> <span class="str">"the sum of squares is {total}"</span>
+
+<span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="com">// Imperative: how.</span>
+    <span class="k">let</span> <span class="k">mut</span> total <span class="p">=</span> <span class="num">0</span>
+    <span class="k">for</span> n <span class="k">in</span> <span class="num">1</span><span class="op">..=</span><span class="num">10</span><span class="p">:</span>
+        total <span class="op">+=</span> n <span class="p">*</span> n
+    <span class="mac">println!</span> <span class="str">"{total}"</span>
+    <span class="com">// Declarative: what -- an iterator chain.</span>
+    <span class="k">let</span> total<span class="p">:</span> u32 <span class="p">=</span> <span class="p">(</span><span class="num">1</span><span class="op">..=</span><span class="num">10</span><span class="p">)</span> <span class="op">&lt;-</span> map square <span class="op">&lt;-</span> sum<span class="defer">$</span>
+    <span class="mac">println!</span> <span class="str">"{total}"</span>
+    <span class="com">// A pipe: the result flows into the next function.</span>
+    <span class="k">let</span> line <span class="p">=</span> <span class="p">(</span><span class="p">(</span><span class="num">1</span><span class="op">..=</span><span class="num">10</span><span class="p">)</span> <span class="op">&lt;-</span> map square <span class="op">&lt;-</span> sum<span class="defer">$</span><span class="p">)</span> <span class="op">|&gt;</span> report
+    <span class="mac">println!</span> <span class="str">"{line}"</span>
+    <span class="com">// A comprehension.</span>
+    <span class="k">let</span> squares <span class="p">=</span> list<span class="p">~</span> n <span class="p">*</span> n <span class="k">for</span> n <span class="k">in</span> <span class="num">1</span><span class="op">..=</span><span class="num">10u32</span>
+    <span class="k">let</span> total<span class="p">:</span> u32 <span class="p">=</span> squares <span class="op">&lt;-</span> iter<span class="defer">$</span> <span class="op">&lt;-</span> sum<span class="defer">$</span>
+    <span class="mac">println!</span> <span class="str">"{total}"</span></code></pre>
+<pre class="code"><code>385
+385
+the sum of squares is 385
+385</code></pre>
+<p><strong>In Harsh:</strong> the same sum four ways — a loop, an iterator chain, a pipe
+through a function, and a comprehension. The last three say what is computed;
+only the first says how.</p>
+<h3 id="8-2-generics-as-type-classes">8.2 Generics as Type Classes</h3>
+<p><em>Original: <a href="https://rust-unofficial.github.io/patterns/functional/generics-type-classes.html">Generics as Type Classes</a></em></p>
+<p>A generic type's parameters can select which methods exist: an <code>impl</code> for one
+instantiation gives methods to that instantiation only — the way type classes
+work in functional languages. The compiler then refuses, at compile time, a
+method on the wrong kind of value.</p>
+<pre class="code harsh"><code><span class="k">use</span> std<span class="p">.</span>marker<span class="p">.</span><span class="t">PhantomData</span>
+
+<span class="k">struct</span> <span class="t">Http</span>
+<span class="k">struct</span> <span class="t">Ftp</span>
+
+<span class="com">// One request type; its parameter selects what it can do.</span>
+<span class="k">struct</span> <span class="t">Request</span><span class="p">&lt;</span><span class="t">P</span><span class="p">&gt;</span>
+    url<span class="p">:</span> <span class="t">String</span>
+    protocol<span class="p">:</span> <span class="t">PhantomData</span><span class="p">&lt;</span><span class="t">P</span><span class="p">&gt;</span>
+
+<span class="k">impl</span><span class="p">&lt;</span><span class="t">P</span><span class="p">&gt;</span> <span class="t">Request</span><span class="p">&lt;</span><span class="t">P</span><span class="p">&gt;</span>
+    <span class="k">fn</span> url <span class="p">(</span><span class="p">&amp;</span><span class="k">self</span><span class="p">)</span> <span class="op">-&gt;</span> <span class="p">&amp;</span>str<span class="p">:</span>
+        <span class="p">&amp;</span><span class="k">self</span> <span class="op">&lt;-</span> url
+
+<span class="k">impl</span> <span class="t">Request</span><span class="p">&lt;</span><span class="t">Http</span><span class="p">&gt;</span>
+    <span class="k">fn</span> new_http <span class="p">(</span>url<span class="p">:</span> <span class="p">&amp;</span>str<span class="p">)</span> <span class="op">-&gt;</span> <span class="k">Self</span><span class="p">:</span>
+        <span class="k">Self</span>\ url <span class="p">=</span> url <span class="op">&lt;-</span> to_string<span class="defer">$</span><span class="p">,</span> protocol <span class="p">=</span> <span class="t">PhantomData</span>
+    <span class="k">fn</span> post <span class="p">(</span><span class="p">&amp;</span><span class="k">self</span><span class="p">)</span> <span class="p">(</span>body<span class="p">:</span> <span class="p">&amp;</span>str<span class="p">)</span> <span class="op">-&gt;</span> <span class="t">String</span><span class="p">:</span>
+        <span class="mac">format!</span> <span class="str">"POST {} with {body:?}"</span> <span class="p">(</span><span class="k">self</span> <span class="op">&lt;-</span> url<span class="defer">$</span><span class="p">)</span>
+
+<span class="k">impl</span> <span class="t">Request</span><span class="p">&lt;</span><span class="t">Ftp</span><span class="p">&gt;</span>
+    <span class="k">fn</span> new_ftp <span class="p">(</span>url<span class="p">:</span> <span class="p">&amp;</span>str<span class="p">)</span> <span class="op">-&gt;</span> <span class="k">Self</span><span class="p">:</span>
+        <span class="k">Self</span>\ url <span class="p">=</span> url <span class="op">&lt;-</span> to_string<span class="defer">$</span><span class="p">,</span> protocol <span class="p">=</span> <span class="t">PhantomData</span>
+    <span class="k">fn</span> list <span class="p">(</span><span class="p">&amp;</span><span class="k">self</span><span class="p">)</span> <span class="op">-&gt;</span> <span class="t">String</span><span class="p">:</span>
+        <span class="mac">format!</span> <span class="str">"LIST {}"</span> <span class="p">(</span><span class="k">self</span> <span class="op">&lt;-</span> url<span class="defer">$</span><span class="p">)</span>
+
+<span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="k">let</span> h <span class="p">=</span> <span class="t">Request</span><span class="p">.</span>new_http <span class="str">"http://harsh-lang.com"</span>
+    <span class="k">let</span> f <span class="p">=</span> <span class="t">Request</span><span class="p">.</span>new_ftp <span class="str">"ftp://example.com"</span>
+    <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span>h <span class="op">&lt;-</span> post <span class="str">"hi"</span><span class="p">)</span>
+    <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span>f <span class="op">&lt;-</span> list<span class="defer">$</span><span class="p">)</span>
+    <span class="com">// `h &lt;- list$` would not compile: `list` exists for FTP requests only.</span></code></pre>
+<pre class="code"><code>POST http://harsh-lang.com with "hi"
+LIST ftp://example.com</code></pre>
+<p><strong>In Harsh:</strong> the two <code>impl</code> blocks, for <code>Request&lt;Http&gt;</code> and <code>Request&lt;Ftp&gt;</code>,
+read as two short lists of what each protocol allows.</p>
+<h3 id="8-3-functional-optics">8.3 Functional Optics</h3>
+<p><em>Original: <a href="https://rust-unofficial.github.io/patterns/functional/optics.html">Functional Optics</a></em></p>
+<p><em>Optics</em> are the functional vocabulary for conversions between types. An
+<strong>iso</strong> converts both ways and loses nothing; a <strong>poly iso</strong> is an iso that
+works for every type parameter; a <strong>prism</strong> converts one way always and the
+other way only sometimes — a parse that may fail, and the rendering that
+always succeeds. The original uses them to explain the design of Serde's API,
+whose deserializer drives a visitor that may fail — a prism in all but name.</p>
+<pre class="code harsh"><code><span class="k">use</span> std<span class="p">.</span>collections<span class="p">.</span><span class="t">VecDeque</span>
+
+<span class="com">// An iso: two conversions that undo each other.</span>
+<span class="attr">#[derive Debug Clone Copy PartialEq]</span>
+<span class="k">struct</span> <span class="t">Celsius</span> f64
+<span class="attr">#[derive Debug Clone Copy PartialEq]</span>
+<span class="k">struct</span> <span class="t">Fahrenheit</span> f64
+
+<span class="k">fn</span> to_f <span class="p">(</span>c<span class="p">:</span> <span class="t">Celsius</span><span class="p">)</span> <span class="op">-&gt;</span> <span class="t">Fahrenheit</span><span class="p">:</span>
+    <span class="t">Fahrenheit</span> <span class="p">(</span>c <span class="op">&lt;-</span> <span class="num">0</span> <span class="p">*</span> <span class="num">9.0</span> <span class="p">/</span> <span class="num">5.0</span> <span class="p">+</span> <span class="num">32.0</span><span class="p">)</span>
+<span class="k">fn</span> to_c <span class="p">(</span>f<span class="p">:</span> <span class="t">Fahrenheit</span><span class="p">)</span> <span class="op">-&gt;</span> <span class="t">Celsius</span><span class="p">:</span>
+    <span class="t">Celsius</span> <span class="p">(</span><span class="p">(</span>f <span class="op">&lt;-</span> <span class="num">0</span> <span class="p">-</span> <span class="num">32.0</span><span class="p">)</span> <span class="p">*</span> <span class="num">5.0</span> <span class="p">/</span> <span class="num">9.0</span><span class="p">)</span>
+
+<span class="com">// A poly iso: the same, for every element type.</span>
+<span class="k">fn</span> to_deque<span class="p">&lt;</span><span class="t">T</span><span class="p">&gt;</span> <span class="p">(</span>v<span class="p">:</span> <span class="t">Vec</span><span class="p">&lt;</span><span class="t">T</span><span class="p">&gt;</span><span class="p">)</span> <span class="op">-&gt;</span> <span class="t">VecDeque</span><span class="p">&lt;</span><span class="t">T</span><span class="p">&gt;</span><span class="p">:</span>
+    <span class="t">VecDeque</span><span class="p">.</span>from v
+<span class="k">fn</span> to_vec<span class="p">&lt;</span><span class="t">T</span><span class="p">&gt;</span> <span class="p">(</span>d<span class="p">:</span> <span class="t">VecDeque</span><span class="p">&lt;</span><span class="t">T</span><span class="p">&gt;</span><span class="p">)</span> <span class="op">-&gt;</span> <span class="t">Vec</span><span class="p">&lt;</span><span class="t">T</span><span class="p">&gt;</span><span class="p">:</span>
+    <span class="t">Vec</span><span class="p">.</span>from d
+
+<span class="com">// A prism: one way may fail, the other always succeeds.</span>
+<span class="k">fn</span> preview <span class="p">(</span>s<span class="p">:</span> <span class="p">&amp;</span>str<span class="p">)</span> <span class="op">-&gt;</span> <span class="t">Option</span><span class="p">&lt;</span>u16<span class="p">&gt;</span><span class="p">:</span>
+    s <span class="op">&lt;-</span> parse<span class="defer">$</span> <span class="op">&lt;-</span> ok<span class="defer">$</span>
+<span class="k">fn</span> review <span class="p">(</span>port<span class="p">:</span> u16<span class="p">)</span> <span class="op">-&gt;</span> <span class="t">String</span><span class="p">:</span>
+    port <span class="op">&lt;-</span> to_string<span class="defer">$</span>
+
+<span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="k">let</span> boiling <span class="p">=</span> <span class="t">Celsius</span> <span class="num">100.0</span>
+    <span class="mac">println!</span> <span class="str">"{:?} and back: {}"</span> <span class="p">(</span>to_f boiling<span class="p">)</span> <span class="p">(</span>to_c <span class="p">(</span>to_f boiling<span class="p">)</span> <span class="op">==</span> boiling<span class="p">)</span>
+    <span class="mac">println!</span> <span class="str">"{:?}"</span> <span class="p">(</span>to_vec <span class="p">(</span>to_deque <span class="p">(</span><span class="mac">vec!</span> <span class="str">'a'</span> <span class="str">'b'</span><span class="p">)</span><span class="p">)</span><span class="p">)</span>
+    <span class="mac">println!</span> <span class="str">"{:?} {:?}"</span> <span class="p">(</span>preview <span class="str">"8080"</span><span class="p">)</span> <span class="p">(</span>preview <span class="str">"http"</span><span class="p">)</span>
+    <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span>preview <span class="p">(</span><span class="p">&amp;</span>review <span class="num">443</span><span class="p">)</span> <span class="op">==</span> <span class="t">Some</span> <span class="num">443</span><span class="p">)</span></code></pre>
+<pre class="code"><code>Fahrenheit(212.0) and back: true
+['a', 'b']
+Some(8080) None
+true</code></pre>
+<p><strong>In Harsh:</strong> each optic is a pair of plain functions; the round trips at the
+end are the laws they obey.</p>
+<h2 id="additional-resources">Additional Resources</h2>
+<p><em>Original: <a href="https://rust-unofficial.github.io/patterns/additional_resources/index.html">Additional Resources</a></em></p>
+<p>The original closes with material behind the patterns rather than patterns
+themselves; its main page is the design principles.</p>
+<h3 id="9-1-design-principles">9.1 Design principles</h3>
+<p><em>Original: <a href="https://rust-unofficial.github.io/patterns/additional_resources/design-principles.html">Design principles</a></em></p>
+<p>Principles older than Rust, which hold in Harsh unchanged; this companion
+names them and leaves their discussion to the original:</p>
+<ul>
+<li><strong>SOLID</strong> — a unit has one responsibility; open to extension, closed to
+  modification; subtypes stand in for their types; small, specific
+  interfaces; depend on abstractions (in Rust: traits), not concrete types.</li>
+<li><strong>Composite reuse, or composition over inheritance</strong> — which Rust enforces,
+  having no inheritance; see <em>Deref Polymorphism</em>.</li>
+<li><strong>DRY</strong> — every piece of knowledge has one representation in the system.</li>
+<li><strong>KISS</strong> — most systems work best kept simple.</li>
+<li><strong>Law of Demeter</strong> — a unit talks to its immediate collaborators only.</li>
+<li><strong>Design by contract</strong> — preconditions, postconditions and invariants,
+  stated and checked.</li>
+<li><strong>Encapsulation</strong> — the invariants a module keeps are its own business; see
+  <em>Contain unsafety in small modules</em>.</li>
+<li><strong>Command–query separation</strong> — a function either changes something or
+  answers a question, not both.</li>
+<li><strong>Principle of least astonishment</strong> — a component behaves as its users
+  expect.</li>
+<li><strong>Linguistic modular units</strong> — modules are units of the language itself, as
+  Rust's <code>mod</code> and crates are.</li>
+<li><strong>Self-documentation</strong> — the documentation lives with the code it
+  describes, as <code>///</code> comments and their tested examples do.</li>
+<li><strong>Uniform access</strong> — a service is used the same way whether it is stored or
+  computed.</li>
+<li><strong>Single choice</strong> — where a system must choose among alternatives, one
+  module alone knows the full list — as one <code>enum</code> and its <code>match</code>es do.</li>
+<li><strong>Persistence closure</strong> — storing a value stores everything it depends on.</li>
+</ul>
+<p>Harsh's own principle is the one Rust keeps: say what you mean, and let the
+compiler check it. The layout and the pipe only make what you mean easier to
+read.</p>
+    </main>
+  </div>
+</div>
+<script>
+(function(){
+  var b=document.body, t=document.getElementById('nav-toggle');
+  try{ if(localStorage.getItem('harsh-nav')==='hidden') b.classList.add('nav-hidden'); }catch(e){}
+  t.addEventListener('click',function(){
+    b.classList.toggle('nav-hidden');
+    try{ localStorage.setItem('harsh-nav', b.classList.contains('nav-hidden')?'hidden':'shown'); }catch(e){}
+  });
+  // The back-to-top arrow: shown once the page has scrolled a screen or so.
+  var up=document.createElement('button');
+  up.className='to-top'; up.textContent='\u2191';
+  up.title='Back to the top'; up.setAttribute('aria-label','Back to the top');
+  up.addEventListener('click',function(){
+    var still=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    window.scrollTo({top:0,behavior:still?'auto':'smooth'});
+  });
+  b.appendChild(up);
+  var show=function(){ up.classList.toggle('shown', window.scrollY>400); };
+  window.addEventListener('scroll',show,{passive:true}); show();
+})();
+</script>
+<script>
+// A discreet copy button on every code block (the user's, 2026-09-27): shown
+// on hovering the block; copies the block's text; says so for a moment.
+// Editors are left alone -- their text is the textarea's.
+(function(){
+  function add(pre){
+    if (pre.dataset.copy || pre.classList.contains('editor-view')) return;
+    pre.dataset.copy = '1';
+    var b = document.createElement('button');
+    b.className = 'copy'; b.type = 'button'; b.textContent = 'Copy';
+    b.title = 'Copy the code'; b.setAttribute('aria-label', 'Copy the code');
+    b.addEventListener('click', function(){
+      var text = pre.innerText.replace(/Copy(ied)?$/, '').replace(/\n$/, '');
+      var done = function(){ b.textContent = 'Copied'; setTimeout(function(){ b.textContent = 'Copy'; }, 1400); };
+      if (navigator.clipboard) navigator.clipboard.writeText(text).then(done, function(){});
+    });
+    pre.appendChild(b);
+  }
+  function all(){ document.querySelectorAll('pre.code').forEach(add); }
+  all();
+  new MutationObserver(all).observe(document.body, { childList: true, subtree: true });
+})();
+</script>
+</body>
+</html>

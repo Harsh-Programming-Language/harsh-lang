@@ -1,0 +1,1538 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>The Harshonomicon</title>
+<!-- The Harsh logo as the tab's icon, embedded so it shows wherever the page is opened: on harsh-lang.com, from the repository, offline. -->
+<link rel="icon" type="image/png" href="data:image/png;base64,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">
+<style>
+:root{
+  --bg:#0e1418; --panel:#141c21; --line:#233039;
+  --fg:#d7e1e8; --dim:#7d919e; --faint:#5b6d79;
+  --rust:#e08b5a; --acc:#6fb3d2; --kw:#c99bdd; --str:#8fbf7f; --num:#e0c07a;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0; background:var(--bg); color:var(--fg);
+  font:16px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,
+       "Helvetica Neue",Arial,sans-serif;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1180px;margin:0 auto;padding:0 28px}
+header{padding:64px 0 40px;border-bottom:1px solid var(--line);margin-bottom:40px}
+/* The way back to the website, above every page's header. */
+.home{display:inline-block;margin:24px 0 0;font-size:14px;color:var(--dim);text-decoration:none}
+.home:hover{color:var(--acc)}
+header{padding-top:28px}
+.logo{
+  font-family:"SF Mono",SFMono-Regular,ui-monospace,"JetBrains Mono",
+              "Cascadia Code",Menlo,Consolas,monospace;
+  font-size:clamp(38px,7vw,68px); font-weight:600; letter-spacing:-.02em;
+  line-height:1; margin:0; user-select:all;
+}
+.lg-b{color:var(--faint)}
+.lg-n{color:var(--fg)}
+.lg-a{color:var(--acc)}
+.lg-r{color:var(--rust)}
+.lg-i{display:inline-block;transform:skewX(-11deg);transform-origin:50% 70%}
+.title{margin:22px 0 6px;font-size:26px;font-weight:600;letter-spacing:-.01em}
+.tag{margin:0;color:var(--dim);font-size:16px}
+.tag em{color:var(--rust);font-style:normal}
+.cols{display:grid;grid-template-columns:250px minmax(0,1fr);gap:56px;
+      align-items:start;padding-bottom:120px}
+body.nav-hidden .cols{grid-template-columns:minmax(0,1fr)}
+body.nav-hidden .toc{display:none}
+.toggle{
+  position:fixed;left:10px;top:10px;z-index:10;
+  background:transparent;color:var(--faint);border:0;
+  padding:4px 6px;font:12px/1 inherit;cursor:pointer;opacity:.5;
+}
+.toggle:hover{opacity:1;color:var(--dim)}
+.toc{position:sticky;top:24px;max-height:calc(100vh - 48px);overflow:auto;
+     font-size:14px;border-left:1px solid var(--line);padding-left:18px}
+.toc-h{margin:0 0 10px;color:var(--dim);text-transform:uppercase;
+       letter-spacing:.09em;font-size:11px}
+.toc ul{list-style:none;margin:0;padding:0}
+.toc li{margin:.22em 0}
+.toc a{color:var(--fg);text-decoration:none;display:block;padding:1px 0}
+.toc a:hover{color:var(--acc)}
+/* depth from the document's top level: a book's chapters, then sections,
+   subsections, and theirs */
+.toc .d0{font-weight:600;margin-top:.7em}
+.toc .d0:first-child{margin-top:0}
+.toc .d1{padding-left:14px;font-size:13.5px}
+.toc .d1 a{color:#c5d2db}
+.toc .d2{padding-left:28px;font-size:13px}
+.toc .d2 a{color:var(--dim)}
+.toc .d3{padding-left:42px;font-size:12.5px}
+.toc .d3 a{color:var(--dim)}
+main{min-width:0}
+h2{font-size:25px;margin:52px 0 14px;padding-top:8px;letter-spacing:-.01em;
+   border-top:1px solid var(--line)}
+h2:first-child{border-top:0;margin-top:0}
+h3{font-size:18.5px;margin:32px 0 10px;color:#eaf1f6}
+h4{font-size:15.5px;margin:24px 0 8px;color:var(--dim);
+   text-transform:uppercase;letter-spacing:.06em}
+p{margin:.75em 0}
+ul,ol{padding-left:22px}
+li{margin:.3em 0}
+li>ul,li>ol{margin:.3em 0}
+strong{color:#fff;font-weight:600}
+a{color:var(--acc)}
+code{
+  font-family:"SF Mono",SFMono-Regular,ui-monospace,"JetBrains Mono",
+              "Cascadia Code",Menlo,Consolas,monospace;
+  font-size:.9em; background:#1b252b; border:1px solid var(--line);
+  padding:.08em .34em; border-radius:4px; color:#cfe0ea;
+}
+pre.code{
+  background:var(--panel); border:1px solid var(--line); border-radius:8px;
+  padding:14px 16px; overflow:auto; margin:14px 0; line-height:1.55;
+}
+pre.code code{background:none;border:0;padding:0;font-size:13.5px;color:var(--fg)}
+pre.code.rust{border-left:3px solid var(--rust)}
+pre.code.harsh{border-left:3px solid var(--acc)}
+pre.code.diagram{border-left:3px solid var(--faint);color:var(--dim)}
+.k{color:var(--kw)} .t{color:var(--acc)} .str{color:var(--str)}
+.num{color:var(--num)} .com{color:var(--faint);font-style:italic}
+.op{color:var(--rust);font-weight:600} .mac{color:var(--num)}
+.defer{color:var(--rust);font-weight:600} .attr{color:var(--faint)}
+.p{color:var(--dim)} .blk{color:var(--rust)}
+table{border-collapse:collapse;margin:16px 0;font-size:14.5px;width:100%}
+th,td{border:1px solid var(--line);padding:7px 11px;text-align:left;
+      vertical-align:top}
+th{background:#18222a;color:#eaf1f6;font-weight:600}
+td code{font-size:.88em}
+blockquote{border-left:3px solid var(--line);margin:1em 0;padding:.1em 1em;
+           color:var(--dim)}
+footer{border-top:1px solid var(--line);padding:26px 0 60px;color:var(--faint);
+       font-size:13.5px}
+@media(max-width:900px){
+  .cols,body.nav-hidden .cols{grid-template-columns:1fr;gap:0}
+  .toc{position:static;max-height:none;border-left:0;border-bottom:1px solid
+       var(--line);padding:0 0 20px;margin-bottom:28px}
+}
+/* The back-to-top arrow (added by page-tail.html): discreet, in the corner, only after some scrolling. */
+.to-top{position:fixed;right:20px;bottom:20px;z-index:40;width:40px;height:40px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;background:var(--panel);color:var(--dim);
+  border:1px solid var(--line);font:18px/1 sans-serif;cursor:pointer;opacity:0;pointer-events:none;
+  transition:opacity .2s,color .2s,border-color .2s}
+.to-top.shown{opacity:.75;pointer-events:auto}
+.to-top:hover,.to-top:focus-visible{opacity:1;color:var(--acc);border-color:var(--acc);outline:none}
+/* The copy button on code blocks (added by page-tail.html). */
+pre.code{position:relative}
+.copy{position:absolute;top:8px;right:8px;padding:3px 9px;font:12px sans-serif;color:var(--dim);cursor:pointer;
+  background:var(--panel);border:1px solid var(--line);border-radius:6px;opacity:0;transition:opacity .15s,color .15s,border-color .15s}
+pre.code:hover .copy,.copy:focus-visible{opacity:1}
+.copy:hover{color:var(--acc);border-color:var(--acc)}
+@media (hover:none){.copy{opacity:.8}}
+</style>
+</head>
+<body>
+  <button class="toggle" id="nav-toggle" title="Show or hide the contents">☰</button>
+  <div class="wrap">
+    <a class="home" href="https://harsh-lang.com/learn">&larr; Learn &middot; harsh-lang.com</a>
+    <header>
+      <p class="logo"><span class="lg-b">#[</span><span class="lg-n">Ha</span><span class="lg-a">&lt;</span><span class="lg-r">rs</span><span class="lg-a">&gt;</span><span class="lg-a">.</span><span class="lg-n lg-i">h</span><span class="lg-b">]</span></p>
+      <h1 class="title">Harsh</h1>
+      <p class="tag">The Harshonomicon</p>
+    </header>
+    <div class="cols">
+      <nav class="toc"><p class="toc-h">Contents</p><ul>
+<li class="d0"><a href="#meet-safe-and-unsafe">Meet Safe and Unsafe</a></li>
+<li class="d1"><a href="#1-1-how-safe-and-unsafe-interact">1.1 How Safe and Unsafe Interact</a></li>
+<li class="d1"><a href="#1-2-what-unsafe-can-do">1.2 What Unsafe Can Do</a></li>
+<li class="d1"><a href="#1-3-working-with-unsafe">1.3 Working with Unsafe</a></li>
+<li class="d0"><a href="#data-layout">Data Layout</a></li>
+<li class="d1"><a href="#2-1-repr-rust">2.1 repr(Rust)</a></li>
+<li class="d1"><a href="#2-2-exotically-sized-types">2.2 Exotically Sized Types</a></li>
+<li class="d1"><a href="#2-3-other-reprs">2.3 Other reprs</a></li>
+<li class="d0"><a href="#ownership">Ownership</a></li>
+<li class="d1"><a href="#3-1-references">3.1 References</a></li>
+<li class="d1"><a href="#3-2-aliasing">3.2 Aliasing</a></li>
+<li class="d1"><a href="#3-3-lifetimes">3.3 Lifetimes</a></li>
+<li class="d1"><a href="#3-4-limits-of-lifetimes">3.4 Limits of Lifetimes</a></li>
+<li class="d1"><a href="#3-5-lifetime-elision">3.5 Lifetime Elision</a></li>
+<li class="d1"><a href="#3-6-unbounded-lifetimes">3.6 Unbounded Lifetimes</a></li>
+<li class="d1"><a href="#3-7-higher-rank-trait-bounds">3.7 Higher-Rank Trait Bounds</a></li>
+<li class="d1"><a href="#3-8-subtyping-and-variance">3.8 Subtyping and Variance</a></li>
+<li class="d1"><a href="#3-9-drop-check">3.9 Drop Check</a></li>
+<li class="d1"><a href="#3-10-phantomdata">3.10 PhantomData</a></li>
+<li class="d1"><a href="#3-11-splitting-borrows">3.11 Splitting Borrows</a></li>
+<li class="d0"><a href="#type-conversions">Type Conversions</a></li>
+<li class="d1"><a href="#4-1-coercions">4.1 Coercions</a></li>
+<li class="d1"><a href="#4-2-the-dot-operator">4.2 The Dot Operator</a></li>
+<li class="d1"><a href="#4-3-casts">4.3 Casts</a></li>
+<li class="d1"><a href="#4-4-transmutes">4.4 Transmutes</a></li>
+<li class="d0"><a href="#uninitialized-memory">Uninitialized Memory</a></li>
+<li class="d1"><a href="#5-1-checked">5.1 Checked</a></li>
+<li class="d1"><a href="#5-2-drop-flags">5.2 Drop Flags</a></li>
+<li class="d1"><a href="#5-3-unchecked">5.3 Unchecked</a></li>
+<li class="d0"><a href="#ownership-based-resource-management">Ownership Based Resource Management</a></li>
+<li class="d1"><a href="#6-1-constructors">6.1 Constructors</a></li>
+<li class="d1"><a href="#6-2-destructors">6.2 Destructors</a></li>
+<li class="d1"><a href="#6-3-leaking">6.3 Leaking</a></li>
+<li class="d0"><a href="#unwinding">Unwinding</a></li>
+<li class="d1"><a href="#7-1-exception-safety">7.1 Exception Safety</a></li>
+<li class="d1"><a href="#7-2-poisoning">7.2 Poisoning</a></li>
+<li class="d0"><a href="#concurrency">Concurrency</a></li>
+<li class="d1"><a href="#8-1-races">8.1 Races</a></li>
+<li class="d1"><a href="#8-2-send-and-sync">8.2 Send and Sync</a></li>
+<li class="d1"><a href="#8-3-atomics">8.3 Atomics</a></li>
+<li class="d0"><a href="#implementing-vec">Implementing Vec</a></li>
+<li class="d1"><a href="#9-1-layout">9.1 Layout</a></li>
+<li class="d1"><a href="#9-2-allocating">9.2 Allocating</a></li>
+<li class="d1"><a href="#9-3-push-and-pop">9.3 Push and Pop</a></li>
+<li class="d1"><a href="#9-4-deallocating">9.4 Deallocating</a></li>
+<li class="d1"><a href="#9-5-deref">9.5 Deref</a></li>
+<li class="d1"><a href="#9-6-insert-and-remove">9.6 Insert and Remove</a></li>
+<li class="d1"><a href="#9-7-intoiter">9.7 IntoIter</a></li>
+<li class="d1"><a href="#9-8-rawvec">9.8 RawVec</a></li>
+<li class="d1"><a href="#9-9-drain">9.9 Drain</a></li>
+<li class="d1"><a href="#9-10-handling-zero-sized-types">9.10 Handling Zero-Sized Types</a></li>
+<li class="d1"><a href="#9-11-final-code">9.11 Final Code</a></li>
+<li class="d0"><a href="#implementing-arc-and-mutex">Implementing Arc and Mutex</a></li>
+<li class="d1"><a href="#10-1-arc">10.1 Arc</a></li>
+<li class="d2"><a href="#10-1-1-layout">10.1.1 Layout</a></li>
+<li class="d2"><a href="#10-1-2-base-code">10.1.2 Base Code</a></li>
+<li class="d2"><a href="#10-1-3-cloning">10.1.3 Cloning</a></li>
+<li class="d2"><a href="#10-1-4-dropping">10.1.4 Dropping</a></li>
+<li class="d2"><a href="#10-1-5-final-code">10.1.5 Final Code</a></li>
+<li class="d0"><a href="#ffi">FFI</a></li>
+<li class="d0"><a href="#beneath-std">Beneath std</a></li>
+<li class="d1"><a href="#12-1-panichandler">12.1 #[panic_handler]</a></li>
+</ul></nav>
+      <main>
+  <p><em>A Harsh companion to <a href="https://doc.rust-lang.org/nomicon/">The Rustonomicon</a> — the dark arts of unsafe Rust,
+in the same order, with every program written in Harsh and built and run to
+produce the output you see.</em></p>
+<p><em>The Rustonomicon</em> is the book for the moment safe Rust is not enough: when
+you write a data structure the borrow checker cannot follow, call into C, or
+need to know exactly how a value sits in memory. It explains what <code>unsafe</code>
+allows, what it does not, and the contracts you take on when you use it.</p>
+<p>Harsh is Rust with another layout, and <code>unsafe</code> in Harsh is <code>unsafe</code> in Rust:
+the same rules, the same undefined behaviour, the same compiler checking what
+it can. Nothing in this book is a Harsh rule. What the companion adds is how
+unsafe code reads in Harsh — <code>unsafe:</code> opening a block like any keyword, raw
+pointers used with <code>&lt;-</code> like any value — in programs you can run, each short,
+each showing one rule at work.</p>
+<p>Its chapters and sections are numbered as the original's, so a section here
+and its original share a number. <strong>This companion is shorter than its
+original, on purpose.</strong> Much of <em>The
+Rustonomicon</em>'s value is its careful explanation of why each rule exists;
+each page here states the rule in a few sentences of its own and links to the
+original section. Before you write unsafe code for real, read the original.</p>
+<p>Every program in this book is <strong>well-defined</strong>: none relies on undefined
+behaviour, even to illustrate it. Where a page is about something that must
+not be done, it shows the compiler refusing it, or the safe form.</p>
+<p><em>The Rustonomicon</em> is by the Rust Project developers, licensed under the
+Apache License 2.0; this companion is under the Mozilla Public License 2.0, as
+Harsh is. See ATTRIBUTION.md.</p>
+<h2 id="meet-safe-and-unsafe">Meet Safe and Unsafe</h2>
+<p>Safe Rust guarantees there is no undefined behaviour: no dangling reference,
+no data race, no read of uninitialised memory. Unsafe Rust is the same
+language with a few more abilities, whose correctness the compiler can no
+longer check — you promise it instead. The original chapter:
+<a href="https://doc.rust-lang.org/nomicon/meet-safe-and-unsafe.html">Meet Safe and Unsafe</a>.</p>
+<h3 id="1-1-how-safe-and-unsafe-interact">1.1 How Safe and Unsafe Interact</h3>
+<p><em>Original: <a href="https://doc.rust-lang.org/nomicon/safe-unsafe-meaning.html">How Safe and Unsafe Interact</a></em></p>
+<p><code>unsafe</code> marks a contract. On a function, it says the caller must uphold
+conditions the compiler cannot check; on a block, it says <em>you</em> have checked
+them. On a trait, it says implementers must uphold an invariant; on an
+<code>impl</code>, that you have. Safe code must never be able to cause undefined
+behaviour, however it calls a safe function — that is the safe function's
+author's job.</p>
+<pre class="code harsh"><code><span class="com">// A safe function around an unsafe operation: the check makes it sound.</span>
+<span class="k">fn</span> get <span class="p">(</span>xs<span class="p">:</span> <span class="p">&amp;</span><span class="p">[</span>i32<span class="p">]</span><span class="p">)</span> <span class="p">(</span>i<span class="p">:</span> usize<span class="p">)</span> <span class="op">-&gt;</span> <span class="t">Option</span><span class="p">&lt;</span>i32<span class="p">&gt;</span><span class="p">:</span>
+    <span class="k">if</span> i <span class="p">&lt;</span> xs <span class="op">&lt;-</span> len<span class="defer">$</span><span class="p">:</span>
+        <span class="com">// Sound: `i` was checked against the length just above.</span>
+        <span class="t">Some</span> <span class="p">(</span><span class="k">unsafe</span><span class="p">:</span> <span class="p">*</span>xs <span class="op">&lt;-</span> get_unchecked i<span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="t">None</span>
+
+<span class="com">// An unsafe function: the caller promises what the function cannot check.</span>
+<span class="k">unsafe</span> <span class="k">fn</span> first_unchecked <span class="p">(</span>xs<span class="p">:</span> <span class="p">&amp;</span><span class="p">[</span>i32<span class="p">]</span><span class="p">)</span> <span class="op">-&gt;</span> i32<span class="p">:</span>
+    <span class="p">*</span>xs <span class="op">&lt;-</span> get_unchecked <span class="num">0</span>
+
+<span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="k">let</span> xs <span class="p">=</span> <span class="p">[</span><span class="num">10</span><span class="p">,</span> <span class="num">20</span><span class="p">,</span> <span class="num">30</span><span class="p">]</span>
+    <span class="mac">println!</span> <span class="str">"{:?} {:?}"</span> <span class="p">(</span>get <span class="p">(</span><span class="p">&amp;</span>xs<span class="p">)</span> <span class="num">1</span><span class="p">)</span> <span class="p">(</span>get <span class="p">(</span><span class="p">&amp;</span>xs<span class="p">)</span> <span class="num">9</span><span class="p">)</span>
+    <span class="com">// We promise: `xs` is not empty.</span>
+    <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span><span class="k">unsafe</span><span class="p">:</span> first_unchecked <span class="p">(</span><span class="p">&amp;</span>xs<span class="p">)</span><span class="p">)</span></code></pre>
+<pre class="code"><code>Some(20) None
+10</code></pre>
+<p><strong>In Harsh:</strong> <code>unsafe fn</code> is declared like any function; <code>unsafe:</code> opens a
+block, and a short one fits on its line: <code>unsafe: *xs &lt;- get_unchecked i</code>.</p>
+<h3 id="1-2-what-unsafe-can-do">1.2 What Unsafe Can Do</h3>
+<p><em>Original: <a href="https://doc.rust-lang.org/nomicon/what-unsafe-does.html">What Unsafe Can Do</a></em></p>
+<p>Only a few things: dereference a raw pointer; call an <code>unsafe</code> function
+(including C functions); implement an <code>unsafe</code> trait; access or modify a
+<code>static mut</code>; access a <code>union</code>'s fields. Everything else — the borrow
+checker, the type system — still applies inside <code>unsafe</code>. What unsafe code
+must never do is the original's other list, of undefined behaviours: a
+dangling or unaligned dereference, breaking the aliasing rules, a data race,
+producing an invalid value (a <code>bool</code> that is not 0 or 1, an enum with no
+such variant), among others.</p>
+<pre class="code harsh"><code><span class="k">static</span> <span class="k">mut</span> <span class="t">COUNTER</span><span class="p">:</span> u32 <span class="p">=</span> <span class="num">0</span>
+
+<span class="k">union</span> <span class="t">IntOrFloat</span>
+    i<span class="p">:</span> u32
+    f<span class="p">:</span> f32
+
+<span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="com">// 1. Dereference a raw pointer.</span>
+    <span class="k">let</span> x <span class="p">=</span> <span class="num">5</span>
+    <span class="k">let</span> p <span class="p">=</span> <span class="p">&amp;</span>x <span class="k">as</span> <span class="p">*</span><span class="k">const</span> i32
+    <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span><span class="k">unsafe</span><span class="p">:</span> <span class="p">*</span>p<span class="p">)</span>
+    <span class="com">// 2. Call an unsafe function.</span>
+    <span class="k">let</span> v <span class="p">=</span> <span class="mac">vec!</span> <span class="num">1</span> <span class="num">2</span> <span class="num">3</span>
+    <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span><span class="k">unsafe</span><span class="p">:</span> <span class="p">*</span>v <span class="op">&lt;-</span> get_unchecked <span class="num">2</span><span class="p">)</span>
+    <span class="com">// 3. Access a `static mut` (one thread only here).</span>
+    <span class="k">unsafe</span><span class="p">:</span>
+        <span class="t">COUNTER</span> <span class="op">+=</span> <span class="num">1</span>
+        <span class="mac">println!</span> <span class="str">"{}"</span> <span class="t">COUNTER</span>
+    <span class="com">// 4. Read a union's field.</span>
+    <span class="k">let</span> u <span class="p">=</span> <span class="t">IntOrFloat</span>\ f <span class="p">=</span> <span class="num">1.0</span>
+    <span class="mac">println!</span> <span class="str">"{:#x}"</span> <span class="p">(</span><span class="k">unsafe</span><span class="p">:</span> u <span class="op">&lt;-</span> i<span class="p">)</span></code></pre>
+<pre class="code"><code>5
+3
+1
+0x3f800000</code></pre>
+<p><strong>In Harsh:</strong> each power reads as in Rust; the raw-pointer dereference is
+<code>*p</code>, isolated in parentheses where it is an argument, <code>(*p)</code>.</p>
+<h3 id="1-3-working-with-unsafe">1.3 Working with Unsafe</h3>
+<p><em>Original: <a href="https://doc.rust-lang.org/nomicon/working-with-unsafe.html">Working with Unsafe</a></em></p>
+<p>Unsafe code depends on invariants that <em>safe</em> code around it can break: a
+<code>Vec</code>'s safe method that changes <code>len</code> wrongly is as dangerous as the unsafe
+read that trusts it. So the boundary of safety is the <strong>module</strong>: keep the
+fields that unsafe code relies on private, and let only the module's own
+code touch them.</p>
+<pre class="code harsh"><code><span class="k">mod</span> stack
+    <span class="com">// `len` is private: only this module's code can change it, so the</span>
+    <span class="com">// unsafe read below can trust it.</span>
+    <span class="k">pub</span> <span class="k">struct</span> <span class="t">Stack</span>
+        items<span class="p">:</span> <span class="p">[</span>i32<span class="p">;</span> <span class="num">8</span><span class="p">]</span>
+        len<span class="p">:</span> usize
+
+    <span class="k">impl</span> <span class="t">Stack</span>
+        <span class="k">pub</span> <span class="k">fn</span> new<span class="defer">$</span> <span class="op">-&gt;</span> <span class="k">Self</span><span class="p">:</span>
+            <span class="k">Self</span>\ items <span class="p">=</span> <span class="p">[</span><span class="num">0</span><span class="p">;</span> <span class="num">8</span><span class="p">]</span><span class="p">,</span> len <span class="p">=</span> <span class="num">0</span>
+
+        <span class="k">pub</span> <span class="k">fn</span> push <span class="p">(</span><span class="p">&amp;</span><span class="k">mut</span> <span class="k">self</span><span class="p">)</span> <span class="p">(</span>x<span class="p">:</span> i32<span class="p">)</span> <span class="op">-&gt;</span> bool<span class="p">:</span>
+            <span class="k">if</span> <span class="k">self</span> <span class="op">&lt;-</span> len <span class="op">==</span> <span class="num">8</span><span class="p">:</span>
+                <span class="k">return</span> <span class="k">false</span>
+            <span class="k">self</span> <span class="op">&lt;-</span> items<span class="p">[</span><span class="k">self</span> <span class="op">&lt;-</span> len<span class="p">]</span> <span class="p">=</span> x
+            <span class="k">self</span> <span class="op">&lt;-</span> len <span class="op">+=</span> <span class="num">1</span>
+            <span class="k">true</span>
+
+        <span class="k">pub</span> <span class="k">fn</span> top <span class="p">(</span><span class="p">&amp;</span><span class="k">self</span><span class="p">)</span> <span class="op">-&gt;</span> <span class="t">Option</span><span class="p">&lt;</span>i32<span class="p">&gt;</span><span class="p">:</span>
+            <span class="k">if</span> <span class="k">self</span> <span class="op">&lt;-</span> len <span class="op">==</span> <span class="num">0</span><span class="p">:</span>
+                <span class="t">None</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="com">// Sound because `len` is always &lt;= 8, which only this</span>
+                <span class="com">// module can break.</span>
+                <span class="t">Some</span> <span class="p">(</span><span class="k">unsafe</span><span class="p">:</span> <span class="p">*</span><span class="k">self</span> <span class="op">&lt;-</span> items <span class="op">&lt;-</span> get_unchecked <span class="p">(</span><span class="k">self</span> <span class="op">&lt;-</span> len <span class="p">-</span> <span class="num">1</span><span class="p">)</span><span class="p">)</span>
+
+<span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="k">let</span> <span class="k">mut</span> s <span class="p">=</span> stack<span class="p">.</span><span class="t">Stack</span><span class="p">.</span>new<span class="defer">$</span>
+    s <span class="op">&lt;-</span> push <span class="num">1</span>
+    s <span class="op">&lt;-</span> push <span class="num">2</span>
+    <span class="mac">println!</span> <span class="str">"{:?}"</span> <span class="p">(</span>s <span class="op">&lt;-</span> top<span class="defer">$</span><span class="p">)</span></code></pre>
+<pre class="code"><code>Some(2)</code></pre>
+<p><strong>In Harsh:</strong> the module and its private fields are the same <code>mod</code> and the
+same absence of <code>pub</code>.</p>
+<h2 id="data-layout">Data Layout</h2>
+<p>How values sit in memory: their size, their alignment, the order of their
+fields. Unsafe code that reads or writes memory directly depends on it. The
+original chapter: <a href="https://doc.rust-lang.org/nomicon/data.html">Data Representation</a>.</p>
+<h3 id="2-1-repr-rust">2.1 repr(Rust)</h3>
+<p><em>Original: <a href="https://doc.rust-lang.org/nomicon/repr-rust.html">repr(Rust)</a></em></p>
+<p>Every type has a size and an alignment. By default, Rust may reorder a
+struct's fields to reduce padding, and promises nothing else about their
+order: two structs with the same fields may be laid out differently.</p>
+<pre class="code harsh"><code><span class="k">use</span> std<span class="p">.</span>mem
+
+<span class="com">// Written loosely: a byte, a u32, a byte.</span>
+<span class="k">struct</span> <span class="t">Loose</span>
+    a<span class="p">:</span> u8
+    b<span class="p">:</span> u32
+    c<span class="p">:</span> u8
+
+<span class="com">// The same fields, in C's order.</span>
+<span class="attr">#[repr C]</span>
+<span class="k">struct</span> <span class="t">InOrder</span>
+    a<span class="p">:</span> u8
+    b<span class="p">:</span> u32
+    c<span class="p">:</span> u8
+
+<span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="com">// Rust may reorder the fields to pack them; C's order pads.</span>
+    <span class="mac">println!</span> <span class="str">"Loose:   size {} align {}"</span> <span class="p">(</span>mem<span class="p">.</span>size_of<span class="p">&lt;</span><span class="t">Loose</span><span class="p">&gt;</span><span class="defer">$</span><span class="p">)</span> <span class="p">(</span>mem<span class="p">.</span>align_of<span class="p">&lt;</span><span class="t">Loose</span><span class="p">&gt;</span><span class="defer">$</span><span class="p">)</span>
+    <span class="mac">println!</span> <span class="str">"InOrder: size {} align {}"</span> <span class="p">(</span>mem<span class="p">.</span>size_of<span class="p">&lt;</span><span class="t">InOrder</span><span class="p">&gt;</span><span class="defer">$</span><span class="p">)</span> <span class="p">(</span>mem<span class="p">.</span>align_of<span class="p">&lt;</span><span class="t">InOrder</span><span class="p">&gt;</span><span class="defer">$</span><span class="p">)</span></code></pre>
+<pre class="code"><code>Loose:   size 8 align 4
+InOrder: size 12 align 4</code></pre>
+<p><strong>In Harsh:</strong> <code>mem.size_of&lt;Loose&gt;$</code> — the generic list follows the name, and
+the transpiler writes Rust's turbofish.</p>
+<h3 id="2-2-exotically-sized-types">2.2 Exotically Sized Types</h3>
+<p><em>Original: <a href="https://doc.rust-lang.org/nomicon/exotic-sizes.html">Exotically Sized Types</a></em></p>
+<p>Not every type has a known, non-zero size. <em>Dynamically sized</em> types — <code>[T]</code>,
+<code>str</code>, <code>dyn Trait</code> — live behind pointers that carry their length or vtable,
+so those pointers are twice as wide. <em>Zero-sized</em> types take no space at all;
+<em>empty</em> types, like an enum with no variants, cannot even be built.</p>
+<pre class="code harsh"><code><span class="k">use</span> std<span class="p">.</span>mem
+
+<span class="k">struct</span> <span class="t">Nothing</span>
+<span class="k">enum</span> <span class="t">Void</span>
+
+<span class="k">trait</span> <span class="t">Shape</span>
+    <span class="k">fn</span> area <span class="p">(</span><span class="p">&amp;</span><span class="k">self</span><span class="p">)</span> <span class="op">-&gt;</span> f64
+
+<span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="com">// Zero-sized: no space at all.</span>
+    <span class="mac">println!</span> <span class="str">"()      {}"</span> <span class="p">(</span>mem<span class="p">.</span>size_of<span class="p">&lt;</span><span class="p">(</span><span class="p">)</span><span class="p">&gt;</span><span class="defer">$</span><span class="p">)</span>
+    <span class="mac">println!</span> <span class="str">"Nothing {}"</span> <span class="p">(</span>mem<span class="p">.</span>size_of<span class="p">&lt;</span><span class="t">Nothing</span><span class="p">&gt;</span><span class="defer">$</span><span class="p">)</span>
+    <span class="mac">println!</span> <span class="str">"Void    {}"</span> <span class="p">(</span>mem<span class="p">.</span>size_of<span class="p">&lt;</span><span class="t">Void</span><span class="p">&gt;</span><span class="defer">$</span><span class="p">)</span>
+    <span class="com">// A pointer to a dynamically sized type carries its length or vtable.</span>
+    <span class="mac">println!</span> <span class="str">"&amp;u8        {}"</span> <span class="p">(</span>mem<span class="p">.</span>size_of<span class="p">&lt;</span><span class="p">&amp;</span>u8<span class="p">&gt;</span><span class="defer">$</span><span class="p">)</span>
+    <span class="mac">println!</span> <span class="str">"&amp;[u8]      {}"</span> <span class="p">(</span>mem<span class="p">.</span>size_of<span class="p">&lt;</span><span class="p">&amp;</span><span class="p">[</span>u8<span class="p">]</span><span class="p">&gt;</span><span class="defer">$</span><span class="p">)</span>
+    <span class="mac">println!</span> <span class="str">"&amp;str       {}"</span> <span class="p">(</span>mem<span class="p">.</span>size_of<span class="p">&lt;</span><span class="p">&amp;</span>str<span class="p">&gt;</span><span class="defer">$</span><span class="p">)</span>
+    <span class="mac">println!</span> <span class="str">"&amp;dyn Shape {}"</span> <span class="p">(</span>mem<span class="p">.</span>size_of<span class="p">&lt;</span><span class="p">&amp;</span><span class="k">dyn</span> <span class="t">Shape</span><span class="p">&gt;</span><span class="defer">$</span><span class="p">)</span></code></pre>
+<pre class="code"><code>()      0
+Nothing 0
+Void    0
+&amp;u8        8
+&amp;[u8]      16
+&amp;str       16
+&amp;dyn Shape 16</code></pre>
+<p><strong>In Harsh:</strong> an empty enum is its header alone, <code>enum Void</code>, like any
+declaration with nothing beneath.</p>
+<h3 id="2-3-other-reprs">2.3 Other reprs</h3>
+<p><em>Original: <a href="https://doc.rust-lang.org/nomicon/other-reprs.html">Other reprs</a></em></p>
+<p><code>#[repr(C)]</code> lays out fields in order, as C does — required for FFI.
+<code>#[repr(u8)]</code> (and the other integers) fixes an enum's discriminant.
+<code>#[repr(transparent)]</code> makes a one-field wrapper laid out exactly as its
+field. <code>#[repr(packed)]</code> (or <code>packed(n)</code>) removes padding, at the cost of
+unaligned fields; <code>#[repr(align(n))]</code> raises a type's alignment.</p>
+<pre class="code harsh"><code><span class="k">use</span> std<span class="p">.</span>mem
+
+<span class="com">// A fixed discriminant, one byte.</span>
+<span class="attr">#[repr u8]</span>
+<span class="attr">#[derive Clone Copy Debug]</span>
+<span class="k">enum</span> <span class="t">Color</span>
+    <span class="t">Red</span> <span class="p">=</span> <span class="num">1</span>
+    <span class="t">Green</span> <span class="p">=</span> <span class="num">2</span>
+
+<span class="com">// A wrapper laid out exactly as its field.</span>
+<span class="attr">#[repr transparent]</span>
+<span class="k">struct</span> <span class="t">Meters</span> f64
+
+<span class="com">// No padding: the u32 may be unaligned.</span>
+<span class="attr">#[repr C packed]</span>
+<span class="k">struct</span> <span class="t">Packed</span>
+    a<span class="p">:</span> u8
+    b<span class="p">:</span> u32
+
+<span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="mac">println!</span> <span class="str">"{} {}"</span> <span class="p">(</span>mem<span class="p">.</span>size_of<span class="p">&lt;</span><span class="t">Color</span><span class="p">&gt;</span><span class="defer">$</span><span class="p">)</span> <span class="p">(</span><span class="t">Color</span><span class="p">.</span><span class="t">Green</span> <span class="k">as</span> u8<span class="p">)</span>
+    <span class="mac">println!</span> <span class="str">"{} {}"</span> <span class="p">(</span>mem<span class="p">.</span>size_of<span class="p">&lt;</span><span class="t">Meters</span><span class="p">&gt;</span><span class="defer">$</span><span class="p">)</span> <span class="p">(</span>mem<span class="p">.</span>size_of<span class="p">&lt;</span>f64<span class="p">&gt;</span><span class="defer">$</span><span class="p">)</span>
+    <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span>mem<span class="p">.</span>size_of<span class="p">&lt;</span><span class="t">Packed</span><span class="p">&gt;</span><span class="defer">$</span><span class="p">)</span></code></pre>
+<pre class="code"><code>1 2
+8 8
+5</code></pre>
+<p><strong>In Harsh:</strong> attribute arguments juxtapose, <code>#[repr C]</code>, <code>#[repr u8]</code>,
+<code>#[repr transparent]</code>.</p>
+<h2 id="ownership">Ownership</h2>
+<p>The rules the borrow checker enforces — and why unsafe code must uphold
+them too, since the compiler optimises on the assumption that they hold. The
+original chapter: <a href="https://doc.rust-lang.org/nomicon/ownership.html">Ownership</a>.</p>
+<h3 id="3-1-references">3.1 References</h3>
+<p><em>Original: <a href="https://doc.rust-lang.org/nomicon/references.html">References</a></em></p>
+<p>Two kinds: a shared reference <code>&amp;</code> and a mutable reference <code>&amp;mut</code>. Two rules
+govern them: a reference cannot outlive what it refers to, and a mutable
+reference cannot be aliased — while it is alive, nothing else reaches the
+same value. The compiler refuses a second <code>&amp;mut</code>:</p>
+<pre class="code harsh"><code><span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="k">let</span> <span class="k">mut</span> total <span class="p">=</span> <span class="num">0</span>
+    <span class="k">let</span> a <span class="p">=</span> <span class="p">&amp;</span><span class="k">mut</span> total
+    <span class="com">// Refused: `total` is already borrowed mutably by `a`.</span>
+    <span class="k">let</span> b <span class="p">=</span> <span class="p">&amp;</span><span class="k">mut</span> total
+    <span class="p">*</span>a <span class="op">+=</span> <span class="num">1</span>
+    <span class="p">*</span>b <span class="op">+=</span> <span class="num">1</span></code></pre>
+<pre class="code"><code>error[E0499]: cannot borrow `total` as mutable more than once at a time
+ --&gt; references.hrs:5:13
+  |
+3 |     let a = &amp;mut total;
+  |             ---------- first mutable borrow occurs here
+4 |     // Refused: `total` is already borrowed mutably by `a`.
+5 |     let b = &amp;mut total;
+  |             ^^^^^^^^^^ second mutable borrow occurs here
+6 |     *a += 1;
+  |     ------- first borrow later used here
+
+error: aborting due to previous error
+
+For more information about this error, try `rustc --explain E0499`.</code></pre>
+<p><strong>In Harsh:</strong> the refusal points at the <code>.hrs</code> lines of both borrows.</p>
+<h3 id="3-2-aliasing">3.2 Aliasing</h3>
+<p><em>Original: <a href="https://doc.rust-lang.org/nomicon/aliasing.html">Aliasing</a></em></p>
+<p>Why the rule matters: because a <code>&amp;mut</code> is never aliased, the compiler may
+assume a write through it changes nothing else, and a read through a <code>&amp;</code>
+sees a value that cannot change underneath it — and optimise accordingly.
+Unsafe code that creates two live <code>&amp;mut</code> to one place breaks that assumption:
+undefined behaviour, whether or not it ever writes through both.</p>
+<pre class="code harsh"><code><span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="k">let</span> <span class="k">mut</span> xs <span class="p">=</span> <span class="p">[</span><span class="num">1</span><span class="p">,</span> <span class="num">2</span><span class="p">,</span> <span class="num">3</span><span class="p">,</span> <span class="num">4</span><span class="p">,</span> <span class="num">5</span><span class="p">,</span> <span class="num">6</span><span class="p">]</span>
+    <span class="com">// Two `&amp;mut` into one array -- to disjoint halves, so sound.</span>
+    <span class="k">let</span> <span class="p">(</span>left<span class="p">,</span> right<span class="p">)</span> <span class="p">=</span> xs <span class="op">&lt;-</span> split_at_mut <span class="num">3</span>
+    left<span class="p">[</span><span class="num">0</span><span class="p">]</span> <span class="p">=</span> <span class="num">10</span>
+    right<span class="p">[</span><span class="num">0</span><span class="p">]</span> <span class="p">=</span> <span class="num">40</span>
+    <span class="mac">println!</span> <span class="str">"{:?}"</span> xs</code></pre>
+<pre class="code"><code>[10, 2, 3, 40, 5, 6]</code></pre>
+<p><strong>In Harsh:</strong> <code>split_at_mut</code> is the standard way to get two <code>&amp;mut</code> into one
+slice — to <em>disjoint</em> halves, which is what makes it sound.</p>
+<h3 id="3-3-lifetimes">3.3 Lifetimes</h3>
+<p><em>Original: <a href="https://doc.rust-lang.org/nomicon/lifetimes.html">Lifetimes</a></em></p>
+<p>A lifetime is the region of code for which a reference must stay valid.
+Within a function the compiler infers them; across a function's signature you
+name them, saying which inputs an output borrows from.</p>
+<pre class="code harsh"><code><span class="com">// The output borrows from both inputs: it lives as long as the shorter.</span>
+<span class="k">fn</span> longest<span class="p">&lt;</span>'a<span class="p">&gt;</span> <span class="p">(</span>x<span class="p">:</span> <span class="p">&amp;</span>'a str<span class="p">)</span> <span class="p">(</span>y<span class="p">:</span> <span class="p">&amp;</span>'a str<span class="p">)</span> <span class="op">-&gt;</span> <span class="p">&amp;</span>'a str<span class="p">:</span>
+    <span class="k">if</span> x <span class="op">&lt;-</span> len<span class="defer">$</span> <span class="op">&gt;=</span> y <span class="op">&lt;-</span> len<span class="defer">$</span><span class="p">:</span> x <span class="k">else</span><span class="p">:</span> y
+
+<span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="k">let</span> a <span class="p">=</span> <span class="t">String</span><span class="p">.</span>from <span class="str">"a long string"</span>
+    <span class="k">let</span> result <span class="p">=</span> <span class="k">do</span><span class="p">:</span>
+        <span class="k">let</span> b <span class="p">=</span> <span class="t">String</span><span class="p">.</span>from <span class="str">"short"</span>
+        longest <span class="p">(</span><span class="p">&amp;</span>a<span class="p">)</span> <span class="p">(</span><span class="p">&amp;</span>b<span class="p">)</span> <span class="op">&lt;-</span> to_string<span class="defer">$</span>
+    <span class="mac">println!</span> <span class="str">"{result}"</span></code></pre>
+<pre class="code"><code>a long string</code></pre>
+<p><strong>In Harsh:</strong> lifetimes are written as in Rust, <code>fn longest&lt;'a&gt; (x: &amp;'a str)
+(y: &amp;'a str) -&gt; &amp;'a str</code>.</p>
+<h3 id="3-4-limits-of-lifetimes">3.4 Limits of Lifetimes</h3>
+<p><em>Original: <a href="https://doc.rust-lang.org/nomicon/lifetime-mismatch.html">Limits of Lifetimes</a></em></p>
+<p>The borrow checker is conservative: some correct programs are refused,
+because it reasons about a borrow's whole scope rather than every path. The
+classic case: a borrow returned on one path of a function stays alive on the
+others.</p>
+<pre class="code harsh"><code><span class="k">use</span> std<span class="p">.</span>collections<span class="p">.</span><span class="t">HashMap</span>
+
+<span class="com">// Correct, yet refused: the borrow returned on the first path is taken to</span>
+<span class="com">// last for the whole function, so the insert conflicts with it.</span>
+<span class="k">fn</span> get_default<span class="p">&lt;</span>'m<span class="p">&gt;</span> <span class="p">(</span>map<span class="p">:</span> <span class="p">&amp;</span>'m <span class="k">mut</span> <span class="t">HashMap</span><span class="p">&lt;</span>i32<span class="p">,</span> <span class="t">String</span><span class="p">&gt;</span><span class="p">)</span> <span class="p">(</span>key<span class="p">:</span> i32<span class="p">)</span> <span class="op">-&gt;</span> <span class="p">&amp;</span>'m <span class="k">mut</span> <span class="t">String</span><span class="p">:</span>
+    <span class="k">match</span> map <span class="op">&lt;-</span> get_mut <span class="p">(</span><span class="p">&amp;</span>key<span class="p">)</span>\
+        <span class="t">Some</span> value <span class="op">=&gt;</span> value
+        <span class="t">None</span> <span class="op">=&gt;</span>
+            <span class="k">let</span> _ <span class="p">=</span> map <span class="op">&lt;-</span> insert key <span class="p">(</span><span class="t">String</span><span class="p">.</span>new<span class="defer">$</span><span class="p">)</span>
+            map <span class="op">&lt;-</span> get_mut <span class="p">(</span><span class="p">&amp;</span>key<span class="p">)</span> <span class="op">&lt;-</span> unwrap<span class="defer">$</span>
+
+<span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="k">let</span> <span class="k">mut</span> m <span class="p">=</span> <span class="t">HashMap</span><span class="p">.</span>new<span class="defer">$</span>
+    <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span>get_default <span class="p">(</span><span class="p">&amp;</span><span class="k">mut</span> m<span class="p">)</span> <span class="num">1</span><span class="p">)</span></code></pre>
+<pre class="code"><code>error[E0499]: cannot borrow `*map` as mutable more than once at a time
+  --&gt; limits.hrs:9:21
+   |
+5  |   fn get_default&lt;'m&gt;(map: &amp;'m mut HashMap&lt;i32, String&gt;, key: i32) -&gt; &amp;'m mut String {
+   |                  -- lifetime `'m` defined here
+6  |       match map.get_mut(&amp;key) {
+   |       -     --- first mutable borrow occurs here
+   |  _____|
+   | |
+7  | |         Some(value) =&gt; value,
+8  | |         None =&gt; {
+9  | |             let _ = map.insert(key, String::new());
+   | |                     ^^^ second mutable borrow occurs here
+10 | |             map.get_mut(&amp;key).unwrap()
+11 | |         },
+12 | |     }
+   | |_____- returning this value requires that `*map` is borrowed for `'m`
+
+error[E0499]: cannot borrow `*map` as mutable more than once at a time
+  --&gt; limits.hrs:10:13
+   |
+5  |   fn get_default&lt;'m&gt;(map: &amp;'m mut HashMap&lt;i32, String&gt;, key: i32) -&gt; &amp;'m mut String {
+   |                  -- lifetime `'m` defined here
+6  |       match map.get_mut(&amp;key) {
+   |       -     --- first mutable borrow occurs here
+   |  _____|
+   | |
+7  | |         Some(value) =&gt; value,
+8  | |         None =&gt; {
+9  | |             let _ = map.insert(key, String::new());
+10 | |             map.get_mut(&amp;key).unwrap()
+   | |             ^^^ second mutable borrow occurs here
+11 | |         },
+12 | |     }
+   | |_____- returning this value requires that `*map` is borrowed for `'m`
+
+error: aborting due to 2 previous errors
+
+For more information about this error, try `rustc --explain E0499`.</code></pre>
+<p><strong>In Harsh:</strong> rustc's refusal points at the <code>.hrs</code> lines; the usual way
+around it is to look up twice, as the next program does.</p>
+<pre class="code harsh"><code><span class="k">use</span> std<span class="p">.</span>collections<span class="p">.</span><span class="t">HashMap</span>
+
+<span class="com">// Looking up twice: no borrow outlives a path.</span>
+<span class="k">fn</span> get_default<span class="p">&lt;</span>'m<span class="p">&gt;</span> <span class="p">(</span>map<span class="p">:</span> <span class="p">&amp;</span>'m <span class="k">mut</span> <span class="t">HashMap</span><span class="p">&lt;</span>i32<span class="p">,</span> <span class="t">String</span><span class="p">&gt;</span><span class="p">)</span> <span class="p">(</span>key<span class="p">:</span> i32<span class="p">)</span> <span class="op">-&gt;</span> <span class="p">&amp;</span>'m <span class="k">mut</span> <span class="t">String</span><span class="p">:</span>
+    <span class="k">if</span> <span class="p">!</span>map <span class="op">&lt;-</span> contains_key <span class="p">(</span><span class="p">&amp;</span>key<span class="p">)</span><span class="p">:</span>
+        <span class="k">let</span> _ <span class="p">=</span> map <span class="op">&lt;-</span> insert key <span class="p">(</span><span class="t">String</span><span class="p">.</span>from <span class="str">"default"</span><span class="p">)</span>
+    map <span class="op">&lt;-</span> get_mut <span class="p">(</span><span class="p">&amp;</span>key<span class="p">)</span> <span class="op">&lt;-</span> unwrap<span class="defer">$</span>
+
+<span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="k">let</span> <span class="k">mut</span> m <span class="p">=</span> <span class="t">HashMap</span><span class="p">.</span>new<span class="defer">$</span>
+    <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span>get_default <span class="p">(</span><span class="p">&amp;</span><span class="k">mut</span> m<span class="p">)</span> <span class="num">1</span><span class="p">)</span></code></pre>
+<pre class="code"><code>default</code></pre>
+<h3 id="3-5-lifetime-elision">3.5 Lifetime Elision</h3>
+<p><em>Original: <a href="https://doc.rust-lang.org/nomicon/lifetime-elision.html">Lifetime Elision</a></em></p>
+<p>Most signatures need no lifetime names: with one reference input, the output
+borrows from it; with <code>&amp;self</code>, the output borrows from <code>self</code>. The compiler
+fills them in by these rules; you write them only when the rules do not
+decide.</p>
+<pre class="code harsh"><code><span class="k">struct</span> <span class="t">Doc</span>
+    text<span class="p">:</span> <span class="t">String</span>
+
+<span class="k">impl</span> <span class="t">Doc</span>
+    <span class="com">// Elided: the output borrows from `self`.</span>
+    <span class="k">fn</span> first_word <span class="p">(</span><span class="p">&amp;</span><span class="k">self</span><span class="p">)</span> <span class="op">-&gt;</span> <span class="p">&amp;</span>str<span class="p">:</span>
+        <span class="k">self</span> <span class="op">&lt;-</span> text <span class="op">&lt;-</span> split_whitespace<span class="defer">$</span> <span class="op">&lt;-</span> next<span class="defer">$</span> <span class="op">&lt;-</span> unwrap_or <span class="str">""</span>
+    <span class="com">// The same signature with its lifetimes written.</span>
+    <span class="k">fn</span> first_word_explicit<span class="p">&lt;</span>'a<span class="p">&gt;</span> <span class="p">(</span><span class="p">&amp;</span>'a <span class="k">self</span><span class="p">)</span> <span class="op">-&gt;</span> <span class="p">&amp;</span>'a str<span class="p">:</span>
+        <span class="k">self</span> <span class="op">&lt;-</span> text <span class="op">&lt;-</span> split_whitespace<span class="defer">$</span> <span class="op">&lt;-</span> next<span class="defer">$</span> <span class="op">&lt;-</span> unwrap_or <span class="str">""</span>
+
+<span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="k">let</span> d <span class="p">=</span> <span class="t">Doc</span>\ text <span class="p">=</span> <span class="t">String</span><span class="p">.</span>from <span class="str">"hello harsh world"</span>
+    <span class="mac">println!</span> <span class="str">"{} {}"</span> <span class="p">(</span>d <span class="op">&lt;-</span> first_word<span class="defer">$</span><span class="p">)</span> <span class="p">(</span>d <span class="op">&lt;-</span> first_word_explicit<span class="defer">$</span><span class="p">)</span></code></pre>
+<pre class="code"><code>hello hello</code></pre>
+<p><strong>In Harsh:</strong> the elided and the explicit forms side by side, identical to
+the compiler.</p>
+<h3 id="3-6-unbounded-lifetimes">3.6 Unbounded Lifetimes</h3>
+<p><em>Original: <a href="https://doc.rust-lang.org/nomicon/unbounded-lifetimes.html">Unbounded Lifetimes</a></em></p>
+<p>Dereferencing a raw pointer produces a reference whose lifetime nothing
+constrains — it becomes whatever the context asks for, even <code>'static</code>. Bound it
+at once, by returning it from a function whose signature ties it to an input.</p>
+<pre class="code harsh"><code><span class="k">struct</span> <span class="t">Owner</span>
+    value<span class="p">:</span> i32
+
+<span class="com">// The raw pointer's reference is bounded by the signature: it lives no</span>
+<span class="com">// longer than `owner`.</span>
+<span class="k">fn</span> get<span class="p">&lt;</span>'a<span class="p">&gt;</span> <span class="p">(</span>owner<span class="p">:</span> <span class="p">&amp;</span>'a <span class="t">Owner</span><span class="p">)</span> <span class="op">-&gt;</span> <span class="p">&amp;</span>'a i32<span class="p">:</span>
+    <span class="k">let</span> p<span class="p">:</span> <span class="p">*</span><span class="k">const</span> i32 <span class="p">=</span> <span class="p">&amp;</span>owner <span class="op">&lt;-</span> value
+    <span class="k">unsafe</span><span class="p">:</span> <span class="p">&amp;</span><span class="p">*</span>p
+
+<span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="k">let</span> o <span class="p">=</span> <span class="t">Owner</span>\ value <span class="p">=</span> <span class="num">42</span>
+    <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span>get <span class="p">(</span><span class="p">&amp;</span>o<span class="p">)</span><span class="p">)</span></code></pre>
+<pre class="code"><code>42</code></pre>
+<p><strong>In Harsh:</strong> the signature does the bounding, <code>fn get&lt;'a&gt; (owner: &amp;'a Owner)
+-&gt; &amp;'a i32</code>; the unsafe line inside stays one line.</p>
+<h3 id="3-7-higher-rank-trait-bounds">3.7 Higher-Rank Trait Bounds</h3>
+<p><em>Original: <a href="https://doc.rust-lang.org/nomicon/hrtb.html">Higher-Rank Trait Bounds</a></em></p>
+<p>A closure taking a reference must work for <em>every</em> lifetime its caller might
+pass, not one chosen in advance: <code>for&lt;'a&gt; Fn(&amp;'a T) -&gt; &amp;'a U</code>. Usually this is
+implied by the <code>Fn(&amp;T) -&gt; &amp;U</code> sugar, which is why it is rarely written.</p>
+<pre class="code harsh"><code><span class="com">// The closure must work for every lifetime of the references it is given:</span>
+<span class="com">// a `for&lt;'a&gt;` bound, implied by the sugar.</span>
+<span class="k">fn</span> apply_all <span class="p">(</span>f<span class="p">:</span> <span class="k">impl</span> <span class="t">Fn</span> <span class="p">(</span><span class="p">&amp;</span>str<span class="p">)</span> <span class="op">-&gt;</span> usize<span class="p">)</span> <span class="p">(</span>words<span class="p">:</span> <span class="p">&amp;</span><span class="p">[</span><span class="t">String</span><span class="p">]</span><span class="p">)</span> <span class="op">-&gt;</span> <span class="t">Vec</span><span class="p">&lt;</span>usize<span class="p">&gt;</span><span class="p">:</span>
+    words <span class="op">&lt;-</span> iter<span class="defer">$</span> <span class="op">&lt;-</span> map <span class="p">(</span><span class="p">|</span>w<span class="p">|</span> f w<span class="p">)</span> <span class="op">&lt;-</span> collect<span class="defer">$</span>
+
+<span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="k">let</span> words <span class="p">=</span> <span class="mac">vec!</span> <span class="p">(</span><span class="t">String</span><span class="p">.</span>from <span class="str">"harsh"</span><span class="p">)</span> <span class="p">(</span><span class="t">String</span><span class="p">.</span>from <span class="str">"rust"</span><span class="p">)</span>
+    <span class="mac">println!</span> <span class="str">"{:?}"</span> <span class="p">(</span>apply_all <span class="p">(</span><span class="p">|</span>w<span class="p">|</span> w <span class="op">&lt;-</span> len<span class="defer">$</span><span class="p">)</span> <span class="p">(</span><span class="p">&amp;</span>words<span class="p">)</span><span class="p">)</span></code></pre>
+<pre class="code"><code>[5, 4]</code></pre>
+<p><strong>In Harsh:</strong> the sugar, <code>impl Fn (&amp;str) -&gt; usize</code>, carries the <code>for&lt;'a&gt;</code> as
+in Rust.</p>
+<h3 id="3-8-subtyping-and-variance">3.8 Subtyping and Variance</h3>
+<p><em>Original: <a href="https://doc.rust-lang.org/nomicon/subtyping.html">Subtyping and Variance</a></em></p>
+<p>A longer lifetime can stand in for a shorter one: <code>&amp;'static str</code> is usable
+wherever a <code>&amp;'a str</code> is expected. How that extends through a type is its
+<em>variance</em>: <code>&amp;'a T</code> is covariant in <code>'a</code> and <code>T</code>; <code>&amp;'a mut T</code> is invariant in
+<code>T</code>; <code>fn(T)</code> is contravariant in <code>T</code>. Getting variance wrong in unsafe code —
+through a raw-pointer field, say — lets a short lifetime be stretched.</p>
+<pre class="code harsh"><code><span class="com">// Expects references that live for some `'a`...</span>
+<span class="k">fn</span> pick<span class="p">&lt;</span>'a<span class="p">&gt;</span> <span class="p">(</span>a<span class="p">:</span> <span class="p">&amp;</span>'a str<span class="p">)</span> <span class="p">(</span>b<span class="p">:</span> <span class="p">&amp;</span>'a str<span class="p">)</span> <span class="p">(</span>first<span class="p">:</span> bool<span class="p">)</span> <span class="op">-&gt;</span> <span class="p">&amp;</span>'a str<span class="p">:</span>
+    <span class="k">if</span> first<span class="p">:</span> a <span class="k">else</span><span class="p">:</span> b
+
+<span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="k">let</span> owned <span class="p">=</span> <span class="t">String</span><span class="p">.</span>from <span class="str">"local"</span>
+    <span class="com">// ...and a `&amp;'static str` stands in: 'static outlives 'a (covariance).</span>
+    <span class="k">let</span> s<span class="p">:</span> <span class="p">&amp;</span>'static str <span class="p">=</span> <span class="str">"static"</span>
+    <span class="mac">println!</span> <span class="str">"{} {}"</span> <span class="p">(</span>pick s <span class="p">(</span><span class="p">&amp;</span>owned<span class="p">)</span> <span class="k">true</span><span class="p">)</span> <span class="p">(</span>pick s <span class="p">(</span><span class="p">&amp;</span>owned<span class="p">)</span> <span class="k">false</span><span class="p">)</span></code></pre>
+<pre class="code"><code>static local</code></pre>
+<p><strong>In Harsh:</strong> nothing to change; variance is the type system's.</p>
+<h3 id="3-9-drop-check">3.9 Drop Check</h3>
+<p><em>Original: <a href="https://doc.rust-lang.org/nomicon/dropck.html">Drop Check</a></em></p>
+<p>A value with a destructor may use its borrows when it is dropped, so those
+borrows must strictly outlive it. The compiler checks this — <em>drop check</em> —
+and refuses a program where a borrowed value would be dropped first. The
+standard library escapes this check for its collections with an unstable
+attribute, <code>#[may_dangle]</code>, promising their destructors only drop what they
+hold.</p>
+<pre class="code harsh"><code><span class="k">struct</span> <span class="t">Inspector</span><span class="p">&lt;</span>'a<span class="p">&gt;</span>
+    seen<span class="p">:</span> <span class="p">&amp;</span>'a <span class="t">String</span>
+
+<span class="k">impl</span><span class="p">&lt;</span>'a<span class="p">&gt;</span> <span class="t">Drop</span> <span class="k">for</span> <span class="t">Inspector</span><span class="p">&lt;</span>'a<span class="p">&gt;</span>
+    <span class="k">fn</span> drop <span class="p">(</span><span class="p">&amp;</span><span class="k">mut</span> <span class="k">self</span><span class="p">)</span><span class="p">:</span>
+        <span class="com">// The destructor uses the borrow: it must still be valid.</span>
+        <span class="mac">println!</span> <span class="str">"inspecting {}"</span> <span class="p">(</span><span class="k">self</span> <span class="op">&lt;-</span> seen<span class="p">)</span>
+
+<span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="k">let</span> inspector
+    <span class="k">let</span> value <span class="p">=</span> <span class="t">String</span><span class="p">.</span>from <span class="str">"treasure"</span>
+    <span class="com">// Refused: `value` is dropped before `inspector`, whose drop reads it.</span>
+    inspector <span class="p">=</span> <span class="t">Inspector</span>\ seen <span class="p">=</span> <span class="p">&amp;</span>value
+    <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span>inspector <span class="op">&lt;-</span> seen<span class="p">)</span></code></pre>
+<pre class="code"><code>error[E0597]: `value` does not live long enough
+  --&gt; dropck.hrs:17:15
+   |
+14 |     let value = String::from("treasure");
+   |         ----- binding `value` declared here
+...
+17 |         seen: &amp;value,
+   |               ^^^^^^ borrowed value does not live long enough
+...
+20 | }
+   | -
+   | |
+   | `value` dropped here while still borrowed
+   | borrow might be used here, when `inspector` is dropped and runs the `Drop` code for type `Inspector`
+   |
+   = note: values in a scope are dropped in the opposite order they are defined
+
+error: aborting due to previous error
+
+For more information about this error, try `rustc --explain E0597`.</code></pre>
+<p><strong>In Harsh:</strong> declaring the borrowed value first, so it is dropped last, is
+the fix, as in Rust.</p>
+<h3 id="3-10-phantomdata">3.10 PhantomData</h3>
+<p><em>Original: <a href="https://doc.rust-lang.org/nomicon/phantom-data.html">PhantomData</a></em></p>
+<p>A struct holding only raw pointers tells the compiler nothing about what it
+owns or borrows. <code>PhantomData&lt;T&gt;</code> — a zero-sized field — says "act as if this
+struct held a <code>T</code>", restoring the right variance, drop checking and auto
+traits.</p>
+<pre class="code harsh"><code><span class="k">use</span> std<span class="p">.</span>marker<span class="p">.</span><span class="t">PhantomData</span>
+
+<span class="com">// Only a raw pointer inside: PhantomData says "this borrows a T for 'a".</span>
+<span class="k">struct</span> <span class="t">Slice</span><span class="p">&lt;</span>'a<span class="p">,</span> <span class="t">T</span><span class="p">&gt;</span>
+    start<span class="p">:</span> <span class="p">*</span><span class="k">const</span> <span class="t">T</span>
+    len<span class="p">:</span> usize
+    marker<span class="p">:</span> <span class="t">PhantomData</span><span class="p">&lt;</span><span class="p">&amp;</span>'a <span class="t">T</span><span class="p">&gt;</span>
+
+<span class="k">impl</span><span class="p">&lt;</span>'a<span class="p">,</span> <span class="t">T</span><span class="p">:</span> <span class="t">Copy</span><span class="p">&gt;</span> <span class="t">Slice</span><span class="p">&lt;</span>'a<span class="p">,</span> <span class="t">T</span><span class="p">&gt;</span>
+    <span class="k">fn</span> new <span class="p">(</span>xs<span class="p">:</span> <span class="p">&amp;</span>'a <span class="p">[</span><span class="t">T</span><span class="p">]</span><span class="p">)</span> <span class="op">-&gt;</span> <span class="k">Self</span><span class="p">:</span>
+        <span class="k">Self</span>\ start <span class="p">=</span> xs <span class="op">&lt;-</span> as_ptr<span class="defer">$</span><span class="p">,</span> len <span class="p">=</span> xs <span class="op">&lt;-</span> len<span class="defer">$</span><span class="p">,</span> marker <span class="p">=</span> <span class="t">PhantomData</span>
+    <span class="k">fn</span> get <span class="p">(</span><span class="p">&amp;</span><span class="k">self</span><span class="p">)</span> <span class="p">(</span>i<span class="p">:</span> usize<span class="p">)</span> <span class="op">-&gt;</span> <span class="t">Option</span><span class="p">&lt;</span><span class="t">T</span><span class="p">&gt;</span><span class="p">:</span>
+        <span class="k">if</span> i <span class="p">&lt;</span> <span class="k">self</span> <span class="op">&lt;-</span> len<span class="p">:</span>
+            <span class="com">// Sound: in bounds, and PhantomData keeps `xs` borrowed.</span>
+            <span class="t">Some</span> <span class="p">(</span><span class="k">unsafe</span><span class="p">:</span> <span class="p">*</span><span class="k">self</span> <span class="op">&lt;-</span> start <span class="op">&lt;-</span> add i<span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="t">None</span>
+
+<span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="k">let</span> data <span class="p">=</span> <span class="mac">vec!</span> <span class="num">1</span> <span class="num">2</span> <span class="num">3</span>
+    <span class="k">let</span> s <span class="p">=</span> <span class="t">Slice</span><span class="p">.</span>new <span class="p">(</span><span class="p">&amp;</span>data<span class="p">)</span>
+    <span class="mac">println!</span> <span class="str">"{:?} {:?}"</span> <span class="p">(</span>s <span class="op">&lt;-</span> get <span class="num">2</span><span class="p">)</span> <span class="p">(</span>s <span class="op">&lt;-</span> get <span class="num">3</span><span class="p">)</span></code></pre>
+<pre class="code"><code>Some(3) None</code></pre>
+<p><strong>In Harsh:</strong> <code>PhantomData</code> is a value like any unit struct: <code>marker =
+PhantomData</code> in the literal.</p>
+<h3 id="3-11-splitting-borrows">3.11 Splitting Borrows</h3>
+<p><em>Original: <a href="https://doc.rust-lang.org/nomicon/borrow-splitting.html">Splitting Borrows</a></em></p>
+<p>The borrow checker understands a struct's fields as separate places — two
+<code>&amp;mut</code> to two fields are fine — but not a slice's halves, which is why
+<code>split_at_mut</code> exists, with a little unsafe code inside.</p>
+<pre class="code harsh"><code><span class="k">struct</span> <span class="t">Point</span>
+    x<span class="p">:</span> i32
+    y<span class="p">:</span> i32
+
+<span class="k">fn</span> bump <span class="p">(</span>a<span class="p">:</span> <span class="p">&amp;</span><span class="k">mut</span> i32<span class="p">)</span> <span class="p">(</span>b<span class="p">:</span> <span class="p">&amp;</span><span class="k">mut</span> i32<span class="p">)</span><span class="p">:</span>
+    <span class="p">*</span>a <span class="op">+=</span> <span class="num">1</span>
+    <span class="p">*</span>b <span class="op">+=</span> <span class="num">10</span>
+
+<span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="k">let</span> <span class="k">mut</span> p <span class="p">=</span> <span class="t">Point</span>\ x <span class="p">=</span> <span class="num">0</span><span class="p">,</span> y <span class="p">=</span> <span class="num">0</span>
+    <span class="com">// Two fields: two disjoint places, two `&amp;mut` at once.</span>
+    bump <span class="p">(</span><span class="p">&amp;</span><span class="k">mut</span> p <span class="op">&lt;-</span> x<span class="p">)</span> <span class="p">(</span><span class="p">&amp;</span><span class="k">mut</span> p <span class="op">&lt;-</span> y<span class="p">)</span>
+    <span class="mac">println!</span> <span class="str">"{} {}"</span> <span class="p">(</span>p <span class="op">&lt;-</span> x<span class="p">)</span> <span class="p">(</span>p <span class="op">&lt;-</span> y<span class="p">)</span></code></pre>
+<pre class="code"><code>1 10</code></pre>
+<p><strong>In Harsh:</strong> field access is <code>&lt;-</code>, so <code>&amp;mut p &lt;- x</code> and <code>&amp;mut p &lt;- y</code> are the
+two disjoint borrows.</p>
+<h2 id="type-conversions">Type Conversions</h2>
+<p>The ways a value changes type: implicitly, with <code>as</code>, or by reinterpreting
+its bits. The original chapter: <a href="https://doc.rust-lang.org/nomicon/conversions.html">Type Conversions</a>.</p>
+<h3 id="4-1-coercions">4.1 Coercions</h3>
+<p><em>Original: <a href="https://doc.rust-lang.org/nomicon/coercions.html">Coercions</a></em></p>
+<p>Some conversions happen on their own, at specific places: <code>&amp;mut T</code> to <code>&amp;T</code>,
+<code>&amp;String</code> to <code>&amp;str</code> through <code>Deref</code>, an array to a slice, a concrete type to
+<code>dyn Trait</code>. They are never applied to satisfy a trait bound.</p>
+<pre class="code harsh"><code><span class="k">use</span> std<span class="p">.</span>fmt<span class="p">.</span><span class="t">Display</span>
+
+<span class="k">fn</span> count <span class="p">(</span>s<span class="p">:</span> <span class="p">&amp;</span>str<span class="p">)</span> <span class="op">-&gt;</span> usize<span class="p">:</span>
+    s <span class="op">&lt;-</span> len<span class="defer">$</span>
+
+<span class="k">fn</span> total <span class="p">(</span>xs<span class="p">:</span> <span class="p">&amp;</span><span class="p">[</span>i32<span class="p">]</span><span class="p">)</span> <span class="op">-&gt;</span> i32<span class="p">:</span>
+    xs <span class="op">&lt;-</span> iter<span class="defer">$</span> <span class="op">&lt;-</span> sum<span class="defer">$</span>
+
+<span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="k">let</span> owned <span class="p">=</span> <span class="t">String</span><span class="p">.</span>from <span class="str">"harsh"</span>
+    <span class="com">// &amp;String to &amp;str, through Deref.</span>
+    <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span>count <span class="p">(</span><span class="p">&amp;</span>owned<span class="p">)</span><span class="p">)</span>
+    <span class="com">// An array to a slice.</span>
+    <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span>total <span class="p">(</span><span class="p">&amp;</span><span class="p">[</span><span class="num">1</span><span class="p">,</span> <span class="num">2</span><span class="p">,</span> <span class="num">3</span><span class="p">]</span><span class="p">)</span><span class="p">)</span>
+    <span class="com">// A concrete type to a trait object.</span>
+    <span class="k">let</span> shown<span class="p">:</span> <span class="p">&amp;</span><span class="k">dyn</span> <span class="t">Display</span> <span class="p">=</span> <span class="p">&amp;</span><span class="num">42</span>
+    <span class="mac">println!</span> <span class="str">"{shown}"</span></code></pre>
+<pre class="code"><code>5
+6
+42</code></pre>
+<p><strong>In Harsh:</strong> the same places, the same conversions.</p>
+<h3 id="4-2-the-dot-operator">4.2 The Dot Operator</h3>
+<p><em>Original: <a href="https://doc.rust-lang.org/nomicon/dot-operator.html">The Dot Operator</a></em></p>
+<p>A method call finds its method by trying the receiver, then <code>&amp;receiver</code>,
+then <code>&amp;mut receiver</code>, then dereferencing and trying again. This is
+convenient and occasionally surprising: <code>x.clone()</code> on a <code>&amp;T</code> where <code>T</code> is not
+<code>Clone</code> clones the <em>reference</em>.</p>
+<pre class="code harsh"><code><span class="attr">#[derive Clone Debug]</span>
+<span class="k">struct</span> <span class="t">Named</span>
+    name<span class="p">:</span> <span class="t">String</span>
+
+<span class="k">struct</span> <span class="t">NotClone</span>
+
+<span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="k">let</span> n <span class="p">=</span> <span class="t">Named</span>\ name <span class="p">=</span> <span class="t">String</span><span class="p">.</span>from <span class="str">"a"</span>
+    <span class="k">let</span> r <span class="p">=</span> <span class="p">&amp;</span>n
+    <span class="com">// `Named` is Clone: r &lt;- clone$ is a Named.</span>
+    <span class="k">let</span> copy<span class="p">:</span> <span class="t">Named</span> <span class="p">=</span> r <span class="op">&lt;-</span> clone<span class="defer">$</span>
+    <span class="mac">println!</span> <span class="str">"{:?}"</span> copy
+    <span class="com">// `NotClone` is not: r2 &lt;- clone$ clones the reference itself.</span>
+    <span class="k">let</span> x <span class="p">=</span> <span class="t">NotClone</span>
+    <span class="k">let</span> r2 <span class="p">=</span> <span class="p">&amp;</span>x
+    <span class="k">let</span> also_ref<span class="p">:</span> <span class="p">&amp;</span><span class="t">NotClone</span> <span class="p">=</span> r2 <span class="op">&lt;-</span> clone<span class="defer">$</span>
+    <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span>std<span class="p">.</span>ptr<span class="p">.</span>eq r2 also_ref<span class="p">)</span></code></pre>
+<pre class="code"><code>Named { name: "a" }
+true</code></pre>
+<p><strong>In Harsh:</strong> <code>&lt;-</code> is the dot and follows the same search. Writing the trait's
+function, <code>T.clone x</code>, says which one you mean — found while writing <em>Harsh
+Design Patterns</em>, where it mattered.</p>
+<h3 id="4-3-casts">4.3 Casts</h3>
+<p><em>Original: <a href="https://doc.rust-lang.org/nomicon/casts.html">Casts</a></em></p>
+<p><code>as</code> converts between primitive types explicitly. Numeric casts truncate or
+sign-extend; a float to an integer saturates (and NaN becomes 0); pointer
+casts change the type the pointer claims. None of them is undefined
+behaviour — but a pointer cast is only as good as what it points to.</p>
+<pre class="code harsh"><code><span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="com">// Integer to a smaller integer: truncates. (A literal that does not fit</span>
+    <span class="com">// is refused outright, by the `overflowing_literals` lint.)</span>
+    <span class="k">let</span> big<span class="p">:</span> i32 <span class="p">=</span> <span class="num">300</span>
+    <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span>big <span class="k">as</span> u8<span class="p">)</span>
+    <span class="com">// Signed to unsigned: the same bits.</span>
+    <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span><span class="p">-</span><span class="num">1i32</span> <span class="k">as</span> u32<span class="p">)</span>
+    <span class="com">// Float to integer: saturates; NaN becomes 0.</span>
+    <span class="mac">println!</span> <span class="str">"{} {} {}"</span> <span class="p">(</span><span class="num">3.9f64</span> <span class="k">as</span> i32<span class="p">)</span> <span class="p">(</span><span class="num">1e20f64</span> <span class="k">as</span> i32<span class="p">)</span> <span class="p">(</span>f64<span class="p">.</span><span class="t">NAN</span> <span class="k">as</span> i32<span class="p">)</span>
+    <span class="com">// A reference to a raw pointer, and to an integer address.</span>
+    <span class="k">let</span> x <span class="p">=</span> <span class="num">7</span>
+    <span class="k">let</span> p <span class="p">=</span> <span class="p">&amp;</span>x <span class="k">as</span> <span class="p">*</span><span class="k">const</span> i32
+    <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span><span class="p">(</span>p <span class="k">as</span> usize<span class="p">)</span> <span class="p">%</span> <span class="p">(</span>std<span class="p">.</span>mem<span class="p">.</span>align_of<span class="p">&lt;</span>i32<span class="p">&gt;</span><span class="defer">$</span><span class="p">)</span><span class="p">)</span></code></pre>
+<pre class="code"><code>44
+4294967295
+3 2147483647 0
+0</code></pre>
+<p><strong>In Harsh:</strong> <code>as</code> binds as in Rust, <code>(big as u8)</code>.</p>
+<h3 id="4-4-transmutes">4.4 Transmutes</h3>
+<p><em>Original: <a href="https://doc.rust-lang.org/nomicon/transmutes.html">Transmutes</a></em></p>
+<p><code>mem::transmute</code> reinterprets the bits of one type as another of the same
+size. It is the most dangerous tool there is: almost every use has a safer
+alternative (<code>f32::to_bits</code>, <code>from_ne_bytes</code>, pointer casts), which the next
+program compares it with.</p>
+<pre class="code harsh"><code><span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="k">let</span> x <span class="p">=</span> <span class="num">1.5f32</span>
+    <span class="com">// The dangerous tool...</span>
+    <span class="k">let</span> bits<span class="p">:</span> u32 <span class="p">=</span> <span class="k">unsafe</span><span class="p">:</span> std<span class="p">.</span>mem<span class="p">.</span>transmute x
+    <span class="com">// ...and the safe one that does the same.</span>
+    <span class="mac">println!</span> <span class="str">"{:#x} {:#x}"</span> bits <span class="p">(</span>x <span class="op">&lt;-</span> to_bits<span class="defer">$</span><span class="p">)</span>
+    <span class="k">let</span> bytes <span class="p">=</span> <span class="num">0x12345678u32</span> <span class="op">&lt;-</span> to_be_bytes<span class="defer">$</span>
+    <span class="mac">println!</span> <span class="str">"{:x?}"</span> bytes
+    <span class="mac">println!</span> <span class="str">"{:#x}"</span> <span class="p">(</span>u32<span class="p">.</span>from_be_bytes bytes<span class="p">)</span></code></pre>
+<pre class="code"><code>0x3fc00000 0x3fc00000
+[12, 34, 56, 78]
+0x12345678</code></pre>
+<p><strong>In Harsh:</strong> <code>mem.transmute&lt;f32, u32&gt; x</code> would need the turbofish before an
+argument, which the transpiler does not yet write — one more reason to reach
+for <code>to_bits</code>. The program names the types in a binding instead.</p>
+<h2 id="uninitialized-memory">Uninitialized Memory</h2>
+<p>Memory that has been allocated but not yet given a value. Reading it is
+undefined behaviour; safe Rust makes that impossible, and unsafe code must
+keep it so. The original chapter:
+<a href="https://doc.rust-lang.org/nomicon/uninitialized.html">Working With Uninitialized Memory</a>.</p>
+<h3 id="5-1-checked">5.1 Checked</h3>
+<p><em>Original: <a href="https://doc.rust-lang.org/nomicon/checked-uninit.html">Checked</a></em></p>
+<p>A variable may be declared before it is given a value, but the compiler
+tracks every path and refuses a read that might come first.</p>
+<pre class="code harsh"><code><span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="k">let</span> x<span class="p">:</span> i32
+    <span class="k">let</span> ready <span class="p">=</span> std<span class="p">.</span>env<span class="p">.</span>args<span class="defer">$</span> <span class="op">&lt;-</span> count<span class="defer">$</span> <span class="p">&gt;</span> <span class="num">5</span>
+    <span class="k">if</span> ready<span class="p">:</span>
+        x <span class="p">=</span> <span class="num">1</span>
+    <span class="com">// Refused: on the other path, `x` was never given a value.</span>
+    <span class="mac">println!</span> <span class="str">"{x}"</span></code></pre>
+<pre class="code"><code>error[E0381]: used binding `x` is possibly-uninitialized
+ --&gt; checked.hrs:8:15
+  |
+2 |     let x: i32;
+  |         - binding declared here but left uninitialized
+...
+5 |         x = 1
+  |         ----- binding initialized here in some conditions
+...
+8 |     println!("{x}")
+  |               ^^^ `x` used here but it is possibly-uninitialized
+  |
+  = note: this error originates in the macro `$crate::format_args_nl` which comes from the expansion of the macro `println` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: aborting due to previous error
+
+For more information about this error, try `rustc --explain E0381`.</code></pre>
+<p><strong>In Harsh:</strong> the error points at the <code>.hrs</code> line of the read.</p>
+<h3 id="5-2-drop-flags">5.2 Drop Flags</h3>
+<p><em>Original: <a href="https://doc.rust-lang.org/nomicon/drop-flags.html">Drop Flags</a></em></p>
+<p>When a value is initialised on some paths only, or moved out on some, the
+compiler keeps a hidden <em>drop flag</em> to know at run time whether to drop it.</p>
+<pre class="code harsh"><code><span class="k">struct</span> <span class="t">Loud</span>
+    name<span class="p">:</span> <span class="p">&amp;</span>'static str
+
+<span class="k">impl</span> <span class="t">Drop</span> <span class="k">for</span> <span class="t">Loud</span>
+    <span class="k">fn</span> drop <span class="p">(</span><span class="p">&amp;</span><span class="k">mut</span> <span class="k">self</span><span class="p">)</span><span class="p">:</span>
+        <span class="mac">println!</span> <span class="str">"drop {}"</span> <span class="p">(</span><span class="k">self</span> <span class="op">&lt;-</span> name<span class="p">)</span>
+
+<span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="k">let</span> decide <span class="p">=</span> std<span class="p">.</span>env<span class="p">.</span>args<span class="defer">$</span> <span class="op">&lt;-</span> count<span class="defer">$</span> <span class="p">&lt;</span> <span class="num">5</span>
+    <span class="k">let</span> a
+    <span class="k">if</span> decide<span class="p">:</span>
+        a <span class="p">=</span> <span class="t">Loud</span>\ name <span class="p">=</span> <span class="str">"a"</span>
+    <span class="k">let</span> b <span class="p">=</span> <span class="t">Loud</span>\ name <span class="p">=</span> <span class="str">"b"</span>
+    <span class="k">let</span> c <span class="p">=</span> <span class="t">Loud</span>\ name <span class="p">=</span> <span class="str">"c"</span>
+    <span class="com">// `c` moved out on this path only: its drop flag decides at the end.</span>
+    <span class="k">if</span> decide<span class="p">:</span>
+        drop c
+    <span class="mac">println!</span> <span class="str">"end of main"</span>
+    <span class="k">let</span> _keep <span class="p">=</span> <span class="p">&amp;</span>b</code></pre>
+<pre class="code"><code>drop c
+end of main
+drop b
+drop a</code></pre>
+<p><strong>In Harsh:</strong> the same; the output shows which values were dropped, and when.</p>
+<h3 id="5-3-unchecked">5.3 Unchecked</h3>
+<p><em>Original: <a href="https://doc.rust-lang.org/nomicon/unchecked-uninit.html">Unchecked</a></em></p>
+<p>To initialise memory piece by piece — an array element by element, a buffer
+from C — use <code>MaybeUninit&lt;T&gt;</code>: it holds possibly-uninitialised memory, and
+<code>assume_init</code> is your promise that every part is now valid.</p>
+<pre class="code harsh"><code><span class="k">use</span> std<span class="p">.</span>mem<span class="p">.</span><span class="t">MaybeUninit</span>
+
+<span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="com">// Memory for four Strings, not yet any String in it.</span>
+    <span class="k">let</span> <span class="k">mut</span> slots<span class="p">:</span> <span class="p">[</span><span class="t">MaybeUninit</span><span class="p">&lt;</span><span class="t">String</span><span class="p">&gt;</span><span class="p">;</span> <span class="num">4</span><span class="p">]</span> <span class="p">=</span> std<span class="p">.</span>array<span class="p">.</span>from_fn <span class="p">(</span><span class="p">|</span>_<span class="p">|</span> <span class="t">MaybeUninit</span><span class="p">.</span>uninit<span class="defer">$</span><span class="p">)</span>
+    <span class="k">for</span> <span class="p">(</span>i<span class="p">,</span> slot<span class="p">)</span> <span class="k">in</span> slots <span class="op">&lt;-</span> iter_mut<span class="defer">$</span> <span class="op">&lt;-</span> enumerate<span class="defer">$</span><span class="p">:</span>
+        <span class="k">let</span> _ <span class="p">=</span> slot <span class="op">&lt;-</span> write <span class="p">(</span><span class="mac">format!</span> <span class="str">"item {i}"</span><span class="p">)</span>
+    <span class="com">// Our promise: every slot was written.</span>
+    <span class="k">let</span> items<span class="p">:</span> <span class="p">[</span><span class="t">String</span><span class="p">;</span> <span class="num">4</span><span class="p">]</span> <span class="p">=</span> slots <span class="op">&lt;-</span> map <span class="p">(</span><span class="p">|</span>s<span class="p">|</span> <span class="k">unsafe</span><span class="p">:</span> s <span class="op">&lt;-</span> assume_init<span class="defer">$</span><span class="p">)</span>
+    <span class="mac">println!</span> <span class="str">"{:?}"</span> items</code></pre>
+<pre class="code"><code>["item 0", "item 1", "item 2", "item 3"]</code></pre>
+<p><strong>In Harsh:</strong> each write is <code>unsafe:</code>-free here, since <code>MaybeUninit.write</code>
+is safe; only the final <code>assume_init</code> needs the promise.</p>
+<h2 id="ownership-based-resource-management">Ownership Based Resource Management</h2>
+<p>A value owns its resources — memory, files, locks — and releases them when it
+is dropped. It is the pattern everything else in Rust rests on. The original
+chapter: <a href="https://doc.rust-lang.org/nomicon/obrm.html">OBRM</a>.</p>
+<h3 id="6-1-constructors">6.1 Constructors</h3>
+<p><em>Original: <a href="https://doc.rust-lang.org/nomicon/constructors.html">Constructors</a></em></p>
+<p>There is exactly one way to create a value: name its type and give every
+field. <code>new</code> functions, <code>Default</code>, <code>Clone</code> are ordinary code built on that one
+way; nothing runs implicitly — no copy constructor, no move constructor. A
+move is always a plain copy of the bytes, after which the source is no longer
+used.</p>
+<p>There is no program on this page: there is nothing hidden to show.</p>
+<h3 id="6-2-destructors">6.2 Destructors</h3>
+<p><em>Original: <a href="https://doc.rust-lang.org/nomicon/destructors.html">Destructors</a></em></p>
+<p><code>Drop::drop</code> runs when a value goes out of scope, then its fields are dropped
+in declaration order; local variables are dropped in reverse order of
+declaration. <code>mem::forget</code> and <code>ManuallyDrop</code> stop a destructor from running.</p>
+<pre class="code harsh"><code><span class="k">use</span> std<span class="p">.</span>mem<span class="p">.</span><span class="t">ManuallyDrop</span>
+
+<span class="k">struct</span> <span class="t">Loud</span>
+    name<span class="p">:</span> <span class="p">&amp;</span>'static str
+
+<span class="k">impl</span> <span class="t">Drop</span> <span class="k">for</span> <span class="t">Loud</span>
+    <span class="k">fn</span> drop <span class="p">(</span><span class="p">&amp;</span><span class="k">mut</span> <span class="k">self</span><span class="p">)</span><span class="p">:</span>
+        <span class="mac">println!</span> <span class="str">"drop {}"</span> <span class="p">(</span><span class="k">self</span> <span class="op">&lt;-</span> name<span class="p">)</span>
+
+<span class="k">struct</span> <span class="t">Pair</span>
+    first<span class="p">:</span> <span class="t">Loud</span>
+    second<span class="p">:</span> <span class="t">Loud</span>
+
+<span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="k">let</span> _a <span class="p">=</span> <span class="t">Loud</span>\ name <span class="p">=</span> <span class="str">"local a"</span>
+    <span class="k">let</span> _b <span class="p">=</span> <span class="t">Loud</span>\ name <span class="p">=</span> <span class="str">"local b"</span>
+    <span class="k">let</span> _p <span class="p">=</span> <span class="t">Pair</span>\ first <span class="p">=</span> <span class="t">Loud</span>\ name <span class="p">=</span> <span class="str">"field first"</span><span class="p">,</span> second <span class="p">=</span> <span class="t">Loud</span>\ name <span class="p">=</span> <span class="str">"field second"</span>
+    <span class="com">// Never dropped: forgotten, and kept from dropping.</span>
+    std<span class="p">.</span>mem<span class="p">.</span>forget <span class="p">(</span><span class="t">Loud</span>\ name <span class="p">=</span> <span class="str">"forgotten"</span><span class="p">)</span>
+    <span class="k">let</span> _m <span class="p">=</span> <span class="t">ManuallyDrop</span><span class="p">.</span>new <span class="p">(</span><span class="t">Loud</span>\ name <span class="p">=</span> <span class="str">"manual"</span><span class="p">)</span>
+    <span class="mac">println!</span> <span class="str">"end of main"</span></code></pre>
+<pre class="code"><code>end of main
+drop field first
+drop field second
+drop local b
+drop local a</code></pre>
+<p><strong>In Harsh:</strong> the order of the output is the order the rules predict.</p>
+<h3 id="6-3-leaking">6.3 Leaking</h3>
+<p><em>Original: <a href="https://doc.rust-lang.org/nomicon/leaking.html">Leaking</a></em></p>
+<p>Leaking is <em>safe</em>: <code>mem::forget</code> does it on purpose, and two <code>Rc</code>s pointing at
+each other do it by accident. So unsafe code must never rely on a destructor
+running for soundness — only for tidiness. The original's examples show what
+that costs: <code>Vec::drain</code> sets the length to zero before it starts, so a
+forgotten <code>Drain</code> leaks rather than exposes moved-out elements; and the early
+<code>thread::scoped</code> API was removed because a forgotten guard let a thread
+outlive what it borrowed — which <code>thread::scope</code>, used in this book, avoids.</p>
+<pre class="code harsh"><code><span class="k">use</span> std<span class="p">.</span>cell<span class="p">.</span><span class="t">RefCell</span>
+<span class="k">use</span> std<span class="p">.</span>rc<span class="p">.</span><span class="p">(</span> <span class="t">Rc</span><span class="p">,</span> <span class="t">Weak</span><span class="p">)</span>
+
+<span class="k">struct</span> <span class="t">Node</span>
+    next<span class="p">:</span> <span class="t">RefCell</span><span class="p">&lt;</span><span class="t">Option</span><span class="p">&lt;</span><span class="t">Rc</span><span class="p">&lt;</span><span class="t">Node</span><span class="p">&gt;</span><span class="p">&gt;</span><span class="p">&gt;</span>
+    back<span class="p">:</span> <span class="t">RefCell</span><span class="p">&lt;</span><span class="t">Weak</span><span class="p">&lt;</span><span class="t">Node</span><span class="p">&gt;</span><span class="p">&gt;</span>
+
+<span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="com">// A cycle of strong pointers: neither count ever reaches zero.</span>
+    <span class="k">let</span> a <span class="p">=</span> <span class="t">Rc</span><span class="p">.</span>new <span class="p">(</span><span class="t">Node</span>\ next <span class="p">=</span> <span class="t">RefCell</span><span class="p">.</span>new <span class="t">None</span><span class="p">,</span> back <span class="p">=</span> <span class="t">RefCell</span><span class="p">.</span>new <span class="p">(</span><span class="t">Weak</span><span class="p">.</span>new<span class="defer">$</span><span class="p">)</span><span class="p">)</span>
+    <span class="k">let</span> b <span class="p">=</span> <span class="t">Rc</span><span class="p">.</span>new <span class="p">(</span><span class="t">Node</span>\ next <span class="p">=</span> <span class="t">RefCell</span><span class="p">.</span>new <span class="p">(</span><span class="t">Some</span> <span class="p">(</span>a <span class="op">&lt;-</span> clone<span class="defer">$</span><span class="p">)</span><span class="p">)</span><span class="p">,</span> back <span class="p">=</span> <span class="t">RefCell</span><span class="p">.</span>new <span class="p">(</span><span class="t">Weak</span><span class="p">.</span>new<span class="defer">$</span><span class="p">)</span><span class="p">)</span>
+    <span class="p">*</span>a <span class="op">&lt;-</span> next <span class="op">&lt;-</span> borrow_mut<span class="defer">$</span> <span class="p">=</span> <span class="t">Some</span> <span class="p">(</span>b <span class="op">&lt;-</span> clone<span class="defer">$</span><span class="p">)</span>
+    <span class="mac">println!</span> <span class="str">"strong: a {} b {} -- a leak when both go"</span> <span class="p">(</span><span class="t">Rc</span><span class="p">.</span>strong_count <span class="p">(</span><span class="p">&amp;</span>a<span class="p">)</span><span class="p">)</span> <span class="p">(</span><span class="t">Rc</span><span class="p">.</span>strong_count <span class="p">(</span><span class="p">&amp;</span>b<span class="p">)</span><span class="p">)</span>
+    <span class="com">// Break it: a Weak pointer back does not keep its target alive.</span>
+    <span class="p">*</span>a <span class="op">&lt;-</span> next <span class="op">&lt;-</span> borrow_mut<span class="defer">$</span> <span class="p">=</span> <span class="t">None</span>
+    <span class="p">*</span>a <span class="op">&lt;-</span> back <span class="op">&lt;-</span> borrow_mut<span class="defer">$</span> <span class="p">=</span> <span class="t">Rc</span><span class="p">.</span>downgrade <span class="p">(</span><span class="p">&amp;</span>b<span class="p">)</span>
+    <span class="mac">println!</span> <span class="str">"strong: a {} b {}"</span> <span class="p">(</span><span class="t">Rc</span><span class="p">.</span>strong_count <span class="p">(</span><span class="p">&amp;</span>a<span class="p">)</span><span class="p">)</span> <span class="p">(</span><span class="t">Rc</span><span class="p">.</span>strong_count <span class="p">(</span><span class="p">&amp;</span>b<span class="p">)</span><span class="p">)</span></code></pre>
+<pre class="code"><code>strong: a 2 b 2 -- a leak when both go
+strong: a 2 b 1</code></pre>
+<p><strong>In Harsh:</strong> <code>Weak</code> breaks the cycle; the counts show it.</p>
+<h2 id="unwinding">Unwinding</h2>
+<p>A panic unwinds the stack, running destructors as it goes. Unsafe code in
+the middle of changing an invariant must leave things sound if a panic
+interrupts it. The original chapter: <a href="https://doc.rust-lang.org/nomicon/unwinding.html">Unwinding</a>.</p>
+<h3 id="7-1-exception-safety">7.1 Exception Safety</h3>
+<p><em>Original: <a href="https://doc.rust-lang.org/nomicon/exception-safety.html">Exception Safety</a></em></p>
+<p>Code that calls something which may panic must be <em>exception safe</em>: when the
+panic unwinds through it, every invariant unsafe code depends on must still
+hold. The usual tool is a guard whose destructor restores the invariant — as
+the standard <code>BinaryHeap::sift_up</code> does with a <em>hole</em> that is always filled
+back in, even if a comparison panics.</p>
+<pre class="code harsh"><code><span class="k">use</span> std<span class="p">.</span>panic
+
+<span class="k">struct</span> <span class="t">Restore</span><span class="p">&lt;</span>'a<span class="p">&gt;</span>
+    flag<span class="p">:</span> <span class="p">&amp;</span>'a <span class="k">mut</span> bool
+
+<span class="k">impl</span><span class="p">&lt;</span>'a<span class="p">&gt;</span> <span class="t">Drop</span> <span class="k">for</span> <span class="t">Restore</span><span class="p">&lt;</span>'a<span class="p">&gt;</span>
+    <span class="k">fn</span> drop <span class="p">(</span><span class="p">&amp;</span><span class="k">mut</span> <span class="k">self</span><span class="p">)</span><span class="p">:</span>
+        <span class="com">// Runs during the unwind too: the invariant comes back.</span>
+        <span class="p">*</span><span class="k">self</span> <span class="op">&lt;-</span> flag <span class="p">=</span> <span class="k">true</span>
+        <span class="mac">println!</span> <span class="str">"invariant restored"</span>
+
+<span class="k">fn</span> risky <span class="p">(</span>flag<span class="p">:</span> <span class="p">&amp;</span><span class="k">mut</span> bool<span class="p">)</span><span class="p">:</span>
+    <span class="p">*</span>flag <span class="p">=</span> <span class="k">false</span>
+    <span class="k">let</span> _guard <span class="p">=</span> <span class="t">Restore</span>\ flag <span class="p">=</span> flag
+    <span class="mac">panic!</span> <span class="str">"interrupted in the middle"</span>
+
+<span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="com">// No message on stderr for the expected panic.</span>
+    panic<span class="p">.</span>set_hook <span class="p">(</span><span class="t">Box</span><span class="p">.</span>new <span class="p">(</span><span class="p">|</span>_<span class="p">|</span> <span class="p">(</span><span class="p">)</span><span class="p">)</span><span class="p">)</span>
+    <span class="k">let</span> <span class="k">mut</span> consistent <span class="p">=</span> <span class="k">true</span>
+    <span class="k">let</span> result <span class="p">=</span> panic<span class="p">.</span>catch_unwind <span class="p">(</span>panic<span class="p">.</span><span class="t">AssertUnwindSafe</span> <span class="p">(</span><span class="op">||</span> risky <span class="p">(</span><span class="p">&amp;</span><span class="k">mut</span> consistent<span class="p">)</span><span class="p">)</span><span class="p">)</span>
+    <span class="mac">println!</span> <span class="str">"panicked: {}, consistent: {}"</span> <span class="p">(</span>result <span class="op">&lt;-</span> is_err<span class="defer">$</span><span class="p">)</span> consistent</code></pre>
+<pre class="code"><code>invariant restored
+panicked: true, consistent: true</code></pre>
+<p><strong>In Harsh:</strong> the guard is a struct with a <code>Drop</code>; the output shows it
+running during the unwind.</p>
+<h3 id="7-2-poisoning">7.2 Poisoning</h3>
+<p><em>Original: <a href="https://doc.rust-lang.org/nomicon/poisoning.html">Poisoning</a></em></p>
+<p>A <code>Mutex</code> whose holder panicked is <em>poisoned</em>: its data may be half-updated,
+so the next <code>lock</code> returns an error. The data is still reachable, for code
+that knows how to check it.</p>
+<pre class="code harsh"><code><span class="k">use</span> std<span class="p">.</span>sync<span class="p">.</span><span class="p">(</span> <span class="t">Arc</span><span class="p">,</span> <span class="t">Mutex</span><span class="p">)</span>
+<span class="k">use</span> std<span class="p">.</span>thread
+
+<span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    std<span class="p">.</span>panic<span class="p">.</span>set_hook <span class="p">(</span><span class="t">Box</span><span class="p">.</span>new <span class="p">(</span><span class="p">|</span>_<span class="p">|</span> <span class="p">(</span><span class="p">)</span><span class="p">)</span><span class="p">)</span>
+    <span class="k">let</span> data <span class="p">=</span> <span class="t">Arc</span><span class="p">.</span>new <span class="p">(</span><span class="t">Mutex</span><span class="p">.</span>new <span class="p">(</span><span class="mac">vec!</span> <span class="num">1</span> <span class="num">2</span> <span class="num">3</span><span class="p">)</span><span class="p">)</span>
+    <span class="k">let</span> d <span class="p">=</span> data <span class="op">&lt;-</span> clone<span class="defer">$</span>
+    <span class="k">let</span> _ <span class="p">=</span> thread<span class="p">.</span>spawn <span class="p">(</span><span class="k">move</span> <span class="op">||</span><span class="p">:</span>
+        <span class="k">let</span> <span class="k">mut</span> v <span class="p">=</span> d <span class="op">&lt;-</span> lock<span class="defer">$</span> <span class="op">&lt;-</span> unwrap<span class="defer">$</span>
+        v <span class="op">&lt;-</span> push <span class="num">4</span>
+        <span class="mac">panic!</span> <span class="str">"the holder panicked"</span>
+    <span class="p">)</span> <span class="op">&lt;-</span> join<span class="defer">$</span>
+    <span class="mac">println!</span> <span class="str">"poisoned: {}"</span> <span class="p">(</span>data <span class="op">&lt;-</span> is_poisoned<span class="defer">$</span><span class="p">)</span>
+    <span class="k">let</span> result <span class="p">=</span> data <span class="op">&lt;-</span> lock<span class="defer">$</span>
+    <span class="k">let</span> shown <span class="p">=</span> <span class="k">match</span> result\
+        <span class="t">Ok</span> v <span class="op">=&gt;</span> <span class="mac">format!</span> <span class="str">"ok {:?}"</span> <span class="p">(</span><span class="p">*</span>v<span class="p">)</span>
+        <span class="t">Err</span> poisoned <span class="op">=&gt;</span> <span class="mac">format!</span> <span class="str">"recovered {:?}"</span> <span class="p">(</span><span class="p">*</span>poisoned <span class="op">&lt;-</span> into_inner<span class="defer">$</span><span class="p">)</span>
+    <span class="mac">println!</span> <span class="str">"{shown}"</span></code></pre>
+<pre class="code"><code>poisoned: true
+recovered [1, 2, 3, 4]</code></pre>
+<p><strong>In Harsh:</strong> the panicking thread's closure is a <code>move ||:</code> block; <code>lock</code>'s
+result is matched like any other.</p>
+<h2 id="concurrency">Concurrency</h2>
+<p>Safe Rust makes data races impossible; it does not make every race
+impossible. Unsafe code that shares memory between threads must uphold the
+same guarantee. The original chapter:
+<a href="https://doc.rust-lang.org/nomicon/concurrency.html">Concurrency and Parallelism</a>.</p>
+<h3 id="8-1-races">8.1 Races</h3>
+<p><em>Original: <a href="https://doc.rust-lang.org/nomicon/races.html">Races</a></em></p>
+<p>A <em>data race</em> — two threads touching the same memory unsynchronised, at least
+one writing — is undefined behaviour, and safe Rust prevents it. A <em>race
+condition</em> — a result depending on timing — is only a bug, and safe Rust
+allows it. Atomics and locks are how threads share memory without a data race.</p>
+<pre class="code harsh"><code><span class="k">use</span> std<span class="p">.</span>sync<span class="p">.</span>atomic<span class="p">.</span><span class="p">(</span> <span class="t">AtomicUsize</span><span class="p">,</span> <span class="t">Ordering</span><span class="p">)</span>
+<span class="k">use</span> std<span class="p">.</span>thread
+
+<span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="k">let</span> counter <span class="p">=</span> <span class="t">AtomicUsize</span><span class="p">.</span>new <span class="num">0</span>
+    thread<span class="p">.</span>scope <span class="p">(</span><span class="p">|</span>s<span class="p">|</span><span class="p">:</span>
+        <span class="k">for</span> _ <span class="k">in</span> <span class="num">0..4</span><span class="p">:</span>
+            <span class="k">let</span> _ <span class="p">=</span> s <span class="op">&lt;-</span> spawn <span class="p">(</span><span class="op">||</span><span class="p">:</span>
+                <span class="k">for</span> _ <span class="k">in</span> <span class="num">0..1000</span><span class="p">:</span>
+                    <span class="k">let</span> _ <span class="p">=</span> counter <span class="op">&lt;-</span> fetch_add <span class="num">1</span> <span class="t">Ordering</span><span class="p">.</span><span class="t">Relaxed</span>
+            <span class="p">)</span>
+    <span class="p">)</span>
+    <span class="com">// Four threads, no data race: always 4000.</span>
+    <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span>counter <span class="op">&lt;-</span> load <span class="t">Ordering</span><span class="p">.</span><span class="t">Relaxed</span><span class="p">)</span></code></pre>
+<pre class="code"><code>4000</code></pre>
+<p><strong>In Harsh:</strong> the threads are spawned in a scope, so they may borrow the
+counter; each adds with an atomic <code>fetch_add</code>.</p>
+<h3 id="8-2-send-and-sync">8.2 Send and Sync</h3>
+<p><em>Original: <a href="https://doc.rust-lang.org/nomicon/send-and-sync.html">Send and Sync</a></em></p>
+<p><code>Send</code>: a value may move to another thread. <code>Sync</code>: a reference to it may be
+shared between threads. The compiler derives both from a type's fields; raw
+pointers are neither, so a type built on them states its own, with an
+<code>unsafe impl</code> — a promise.</p>
+<pre class="code harsh"><code><span class="k">use</span> std<span class="p">.</span>thread
+
+<span class="com">// A raw pointer is neither Send nor Sync: the wrapper promises it is safe to</span>
+<span class="com">// send, because the data outlives the thread and nothing else touches it.</span>
+<span class="k">struct</span> <span class="t">Pointer</span> <span class="p">(</span><span class="p">*</span><span class="k">mut</span> i32<span class="p">)</span>
+<span class="k">unsafe</span> <span class="k">impl</span> <span class="t">Send</span> <span class="k">for</span> <span class="t">Pointer</span>
+
+<span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="k">let</span> <span class="k">mut</span> value <span class="p">=</span> <span class="num">41</span>
+    <span class="k">let</span> p <span class="p">=</span> <span class="t">Pointer</span> <span class="p">(</span><span class="p">&amp;</span><span class="k">mut</span> value <span class="k">as</span> <span class="p">*</span><span class="k">mut</span> i32<span class="p">)</span>
+    thread<span class="p">.</span>scope <span class="p">(</span><span class="p">|</span>s<span class="p">|</span><span class="p">:</span>
+        <span class="k">let</span> _ <span class="p">=</span> s <span class="op">&lt;-</span> spawn <span class="p">(</span><span class="k">move</span> <span class="op">||</span><span class="p">:</span>
+            <span class="k">let</span> p <span class="p">=</span> p
+            <span class="k">unsafe</span><span class="p">:</span>
+                <span class="p">*</span>p <span class="op">&lt;-</span> <span class="num">0</span> <span class="op">+=</span> <span class="num">1</span>
+        <span class="p">)</span>
+    <span class="p">)</span>
+    <span class="mac">println!</span> <span class="str">"{value}"</span></code></pre>
+<pre class="code"><code>42</code></pre>
+<p><strong>In Harsh:</strong> <code>unsafe impl Send for Pointer</code> is one line with no body.</p>
+<h3 id="8-3-atomics">8.3 Atomics</h3>
+<p><em>Original: <a href="https://doc.rust-lang.org/nomicon/atomics.html">Atomics</a></em></p>
+<p>Atomics carry an <em>ordering</em>: <code>Relaxed</code> orders nothing but the atomic itself;
+<code>Release</code> on a store and <code>Acquire</code> on the load that sees it make everything
+written before the store visible after the load; <code>SeqCst</code> adds a single total
+order. Most synchronisation is a Release/Acquire pair.</p>
+<pre class="code harsh"><code><span class="k">use</span> std<span class="p">.</span>sync<span class="p">.</span>atomic<span class="p">.</span><span class="p">(</span> <span class="t">AtomicBool</span><span class="p">,</span> <span class="t">AtomicU64</span><span class="p">,</span> <span class="t">Ordering</span><span class="p">)</span>
+<span class="k">use</span> std<span class="p">.</span>thread
+
+<span class="k">static</span> <span class="t">DATA</span><span class="p">:</span> <span class="t">AtomicU64</span> <span class="p">=</span> <span class="t">AtomicU64</span><span class="p">.</span>new <span class="num">0</span>
+<span class="k">static</span> <span class="t">READY</span><span class="p">:</span> <span class="t">AtomicBool</span> <span class="p">=</span> <span class="t">AtomicBool</span><span class="p">.</span>new <span class="k">false</span>
+
+<span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    thread<span class="p">.</span>scope <span class="p">(</span><span class="p">|</span>s<span class="p">|</span><span class="p">:</span>
+        <span class="k">let</span> _ <span class="p">=</span> s <span class="op">&lt;-</span> spawn <span class="p">(</span><span class="op">||</span><span class="p">:</span>
+            <span class="t">DATA</span> <span class="op">&lt;-</span> store <span class="num">42</span> <span class="t">Ordering</span><span class="p">.</span><span class="t">Relaxed</span>
+            <span class="com">// Release: everything before this store is visible to the</span>
+            <span class="com">// thread whose Acquire load sees it.</span>
+            <span class="t">READY</span> <span class="op">&lt;-</span> store <span class="k">true</span> <span class="t">Ordering</span><span class="p">.</span><span class="t">Release</span>
+        <span class="p">)</span>
+        <span class="k">let</span> _ <span class="p">=</span> s <span class="op">&lt;-</span> spawn <span class="p">(</span><span class="op">||</span><span class="p">:</span>
+            <span class="k">while</span> <span class="p">!</span><span class="t">READY</span> <span class="op">&lt;-</span> load <span class="t">Ordering</span><span class="p">.</span><span class="t">Acquire</span><span class="p">:</span>
+                std<span class="p">.</span>hint<span class="p">.</span>spin_loop<span class="defer">$</span>
+            <span class="mac">println!</span> <span class="str">"data = {}"</span> <span class="p">(</span><span class="t">DATA</span> <span class="op">&lt;-</span> load <span class="t">Ordering</span><span class="p">.</span><span class="t">Relaxed</span><span class="p">)</span>
+        <span class="p">)</span>
+    <span class="p">)</span></code></pre>
+<pre class="code"><code>data = 42</code></pre>
+<p><strong>In Harsh:</strong> <code>Ordering.Release</code>, <code>Ordering.Acquire</code> — paths with dots.</p>
+<h2 id="implementing-vec">Implementing Vec</h2>
+<p><em>Original: <a href="https://doc.rust-lang.org/nomicon/vec/vec.html">Implementing Vec</a></em></p>
+<p>The original builds <code>Vec</code> in eleven steps. This companion follows them as
+sections, each saying what the step does and where it is in one program —
+given in full under <em>Final Code</em> — which covers the core in Harsh. Three steps
+(<code>IntoIter</code>, <code>RawVec</code>, <code>Drain</code>) and zero-sized types add no new Harsh, only
+more of the same care; for them, read the original.</p>
+<h3 id="9-1-layout">9.1 Layout</h3>
+<p><em>Original: <a href="https://doc.rust-lang.org/nomicon/vec/vec-layout.html">Layout</a></em></p>
+<p>A pointer, a capacity and a length. The pointer is <code>NonNull&lt;T&gt;</code>, never null —
+so <code>Option&lt;MyVec&lt;T&gt;&gt;</code> costs nothing extra — and the type owns its <code>T</code>s, so it
+is <code>Send</code> and <code>Sync</code> when they are: two <code>unsafe impl</code> lines.</p>
+<h3 id="9-2-allocating">9.2 Allocating</h3>
+<p><em>Original: <a href="https://doc.rust-lang.org/nomicon/vec/vec-alloc.html">Allocating</a></em></p>
+<p>Nothing is allocated until the first push: the pointer is <code>NonNull::dangling</code>.
+<code>grow</code> allocates, or reallocates to twice the capacity, with a <code>Layout</code> built
+from the element's size and alignment, and aborts through
+<code>handle_alloc_error</code> if the allocator fails.</p>
+<h3 id="9-3-push-and-pop">9.3 Push and Pop</h3>
+<p><em>Original: <a href="https://doc.rust-lang.org/nomicon/vec/vec-push-pop.html">Push and Pop</a></em></p>
+<p><code>push</code> <em>writes</em> into the slot past the end (<code>ptr::write</code>: the slot holds no
+value to drop); <code>pop</code> <em>reads</em> the last element out (<code>ptr::read</code>), and the slot
+is uninitialised again, past <code>len</code>.</p>
+<h3 id="9-4-deallocating">9.4 Deallocating</h3>
+<p><em>Original: <a href="https://doc.rust-lang.org/nomicon/vec/vec-dealloc.html">Deallocating</a></em></p>
+<p><code>Drop</code> drops the <code>len</code> elements in place, then frees the allocation with the
+same layout it was made with.</p>
+<h3 id="9-5-deref">9.5 Deref</h3>
+<p><em>Original: <a href="https://doc.rust-lang.org/nomicon/vec/vec-deref.html">Deref</a></em></p>
+<p><code>Deref</code> and <code>DerefMut</code> to <code>[T]</code>, through <code>slice::from_raw_parts</code>: every slice
+method — <code>sort</code>, <code>iter</code>, indexing — becomes the vector's.</p>
+<h3 id="9-6-insert-and-remove">9.6 Insert and Remove</h3>
+<p><em>Original: <a href="https://doc.rust-lang.org/nomicon/vec/vec-insert-remove.html">Insert and Remove</a></em></p>
+<p><code>ptr::copy</code> shifts the tail by one — <code>memmove</code>, since the ranges overlap — to
+open a gap for <code>insert</code> or close one after <code>remove</code>.</p>
+<h3 id="9-7-intoiter">9.7 IntoIter</h3>
+<p><em>Original: <a href="https://doc.rust-lang.org/nomicon/vec/vec-into-iter.html">IntoIter</a></em></p>
+<p>A by-value iterator reading elements out from both ends, which takes over the
+allocation. Not in this program.</p>
+<h3 id="9-8-rawvec">9.8 RawVec</h3>
+<p><em>Original: <a href="https://doc.rust-lang.org/nomicon/vec/vec-raw.html">RawVec</a></em></p>
+<p>The allocation logic factored out, shared by the vector and its <code>IntoIter</code>.
+Not in this program.</p>
+<h3 id="9-9-drain">9.9 Drain</h3>
+<p><em>Original: <a href="https://doc.rust-lang.org/nomicon/vec/vec-drain.html">Drain</a></em></p>
+<p>A borrowing iterator that removes elements; it sets the length to zero before
+starting, so a leaked <code>Drain</code> is safe (see <em>Leaking</em>). Not in this program.</p>
+<h3 id="9-10-handling-zero-sized-types">9.10 Handling Zero-Sized Types</h3>
+<p><em>Original: <a href="https://doc.rust-lang.org/nomicon/vec/vec-zsts.html">Handling Zero-Sized Types</a></em></p>
+<p>A zero-sized <code>T</code> needs no allocation and makes pointer offsets meaningless;
+the original handles it throughout. This program refuses it, with an
+<code>assert!</code> in <code>new</code>.</p>
+<h3 id="9-11-final-code">9.11 Final Code</h3>
+<p><em>Original: <a href="https://doc.rust-lang.org/nomicon/vec/vec-final.html">Final Code</a></em></p>
+<pre class="code harsh"><code><span class="k">use</span> std<span class="p">.</span>alloc<span class="p">.</span><span class="p">(</span> <span class="k">self</span><span class="p">,</span> <span class="t">Layout</span><span class="p">)</span>
+<span class="k">use</span> std<span class="p">.</span>mem
+<span class="k">use</span> std<span class="p">.</span>ops<span class="p">.</span><span class="p">(</span> <span class="t">Deref</span><span class="p">,</span> <span class="t">DerefMut</span><span class="p">)</span>
+<span class="k">use</span> std<span class="p">.</span>ptr<span class="p">.</span><span class="p">(</span> <span class="k">self</span><span class="p">,</span> <span class="t">NonNull</span><span class="p">)</span>
+
+<span class="k">pub</span> <span class="k">struct</span> <span class="t">MyVec</span><span class="p">&lt;</span><span class="t">T</span><span class="p">&gt;</span>
+    ptr<span class="p">:</span> <span class="t">NonNull</span><span class="p">&lt;</span><span class="t">T</span><span class="p">&gt;</span>
+    cap<span class="p">:</span> usize
+    len<span class="p">:</span> usize
+
+<span class="com">// As Vec: it owns its Ts, so it is Send and Sync when they are.</span>
+<span class="k">unsafe</span> <span class="k">impl</span><span class="p">&lt;</span><span class="t">T</span><span class="p">:</span> <span class="t">Send</span><span class="p">&gt;</span> <span class="t">Send</span> <span class="k">for</span> <span class="t">MyVec</span><span class="p">&lt;</span><span class="t">T</span><span class="p">&gt;</span>
+<span class="k">unsafe</span> <span class="k">impl</span><span class="p">&lt;</span><span class="t">T</span><span class="p">:</span> <span class="t">Sync</span><span class="p">&gt;</span> <span class="t">Sync</span> <span class="k">for</span> <span class="t">MyVec</span><span class="p">&lt;</span><span class="t">T</span><span class="p">&gt;</span>
+
+<span class="k">impl</span><span class="p">&lt;</span><span class="t">T</span><span class="p">&gt;</span> <span class="t">MyVec</span><span class="p">&lt;</span><span class="t">T</span><span class="p">&gt;</span>
+    <span class="k">pub</span> <span class="k">fn</span> new<span class="defer">$</span> <span class="op">-&gt;</span> <span class="k">Self</span><span class="p">:</span>
+        <span class="mac">assert!</span> <span class="p">(</span>mem<span class="p">.</span>size_of<span class="p">&lt;</span><span class="t">T</span><span class="p">&gt;</span><span class="defer">$</span> <span class="op">!=</span> <span class="num">0</span><span class="p">)</span> <span class="str">"zero-sized types are not handled here"</span>
+        <span class="k">Self</span>\ ptr <span class="p">=</span> <span class="t">NonNull</span><span class="p">.</span>dangling<span class="defer">$</span><span class="p">,</span> cap <span class="p">=</span> <span class="num">0</span><span class="p">,</span> len <span class="p">=</span> <span class="num">0</span>
+
+    <span class="k">fn</span> layout <span class="p">(</span>cap<span class="p">:</span> usize<span class="p">)</span> <span class="op">-&gt;</span> <span class="t">Layout</span><span class="p">:</span>
+        <span class="t">Layout</span><span class="p">.</span>from_size_align <span class="p">(</span>cap <span class="p">*</span> mem<span class="p">.</span>size_of<span class="p">&lt;</span><span class="t">T</span><span class="p">&gt;</span><span class="defer">$</span><span class="p">)</span> <span class="p">(</span>mem<span class="p">.</span>align_of<span class="p">&lt;</span><span class="t">T</span><span class="p">&gt;</span><span class="defer">$</span><span class="p">)</span> <span class="op">&lt;-</span> unwrap<span class="defer">$</span>
+
+    <span class="k">fn</span> grow <span class="p">(</span><span class="p">&amp;</span><span class="k">mut</span> <span class="k">self</span><span class="p">)</span><span class="p">:</span>
+        <span class="k">let</span> new_cap <span class="p">=</span> <span class="k">if</span> <span class="k">self</span> <span class="op">&lt;-</span> cap <span class="op">==</span> <span class="num">0</span><span class="p">:</span> <span class="num">4</span> <span class="k">else</span><span class="p">:</span> <span class="num">2</span> <span class="p">*</span> <span class="k">self</span> <span class="op">&lt;-</span> cap
+        <span class="k">let</span> new_layout <span class="p">=</span> <span class="k">Self</span><span class="p">.</span>layout new_cap
+        <span class="k">let</span> raw <span class="p">=</span> <span class="k">if</span> <span class="k">self</span> <span class="op">&lt;-</span> cap <span class="op">==</span> <span class="num">0</span><span class="p">:</span> <span class="k">unsafe</span><span class="p">:</span> alloc<span class="p">.</span>alloc new_layout <span class="k">else</span><span class="p">:</span> <span class="k">unsafe</span><span class="p">:</span> alloc<span class="p">.</span>realloc <span class="p">(</span><span class="k">self</span> <span class="op">&lt;-</span> ptr <span class="op">&lt;-</span> as_ptr<span class="defer">$</span> <span class="k">as</span> <span class="p">*</span><span class="k">mut</span> u8<span class="p">)</span> <span class="p">(</span><span class="k">Self</span><span class="p">.</span>layout <span class="p">(</span><span class="k">self</span> <span class="op">&lt;-</span> cap<span class="p">)</span><span class="p">)</span> <span class="p">(</span>new_layout <span class="op">&lt;-</span> size<span class="defer">$</span><span class="p">)</span>
+        <span class="k">self</span> <span class="op">&lt;-</span> ptr <span class="p">=</span> <span class="k">match</span> <span class="t">NonNull</span><span class="p">.</span>new <span class="p">(</span>raw <span class="k">as</span> <span class="p">*</span><span class="k">mut</span> <span class="t">T</span><span class="p">)</span>\
+            <span class="t">Some</span> p <span class="op">=&gt;</span> p
+            <span class="t">None</span> <span class="op">=&gt;</span> alloc<span class="p">.</span>handle_alloc_error new_layout
+        <span class="k">self</span> <span class="op">&lt;-</span> cap <span class="p">=</span> new_cap
+
+    <span class="k">pub</span> <span class="k">fn</span> push <span class="p">(</span><span class="p">&amp;</span><span class="k">mut</span> <span class="k">self</span><span class="p">)</span> <span class="p">(</span>elem<span class="p">:</span> <span class="t">T</span><span class="p">)</span><span class="p">:</span>
+        <span class="k">if</span> <span class="k">self</span> <span class="op">&lt;-</span> len <span class="op">==</span> <span class="k">self</span> <span class="op">&lt;-</span> cap<span class="p">:</span>
+            <span class="k">self</span> <span class="op">&lt;-</span> grow<span class="defer">$</span>
+        <span class="com">// Written, not assigned: the slot holds no value to drop.</span>
+        <span class="k">unsafe</span><span class="p">:</span> ptr<span class="p">.</span>write <span class="p">(</span><span class="k">self</span> <span class="op">&lt;-</span> ptr <span class="op">&lt;-</span> as_ptr<span class="defer">$</span> <span class="op">&lt;-</span> add <span class="p">(</span><span class="k">self</span> <span class="op">&lt;-</span> len<span class="p">)</span><span class="p">)</span> elem
+        <span class="k">self</span> <span class="op">&lt;-</span> len <span class="op">+=</span> <span class="num">1</span>
+
+    <span class="k">pub</span> <span class="k">fn</span> pop <span class="p">(</span><span class="p">&amp;</span><span class="k">mut</span> <span class="k">self</span><span class="p">)</span> <span class="op">-&gt;</span> <span class="t">Option</span><span class="p">&lt;</span><span class="t">T</span><span class="p">&gt;</span><span class="p">:</span>
+        <span class="k">if</span> <span class="k">self</span> <span class="op">&lt;-</span> len <span class="op">==</span> <span class="num">0</span><span class="p">:</span>
+            <span class="k">return</span> <span class="t">None</span>
+        <span class="k">self</span> <span class="op">&lt;-</span> len <span class="op">-=</span> <span class="num">1</span>
+        <span class="com">// Read out: the slot is now uninitialised, and past `len`.</span>
+        <span class="t">Some</span> <span class="p">(</span><span class="k">unsafe</span><span class="p">:</span> ptr<span class="p">.</span>read <span class="p">(</span><span class="k">self</span> <span class="op">&lt;-</span> ptr <span class="op">&lt;-</span> as_ptr<span class="defer">$</span> <span class="op">&lt;-</span> add <span class="p">(</span><span class="k">self</span> <span class="op">&lt;-</span> len<span class="p">)</span><span class="p">)</span><span class="p">)</span>
+
+    <span class="k">pub</span> <span class="k">fn</span> insert <span class="p">(</span><span class="p">&amp;</span><span class="k">mut</span> <span class="k">self</span><span class="p">)</span> <span class="p">(</span>index<span class="p">:</span> usize<span class="p">)</span> <span class="p">(</span>elem<span class="p">:</span> <span class="t">T</span><span class="p">)</span><span class="p">:</span>
+        <span class="mac">assert!</span> <span class="p">(</span>index <span class="op">&lt;=</span> <span class="k">self</span> <span class="op">&lt;-</span> len<span class="p">)</span> <span class="str">"index out of bounds"</span>
+        <span class="k">if</span> <span class="k">self</span> <span class="op">&lt;-</span> len <span class="op">==</span> <span class="k">self</span> <span class="op">&lt;-</span> cap<span class="p">:</span>
+            <span class="k">self</span> <span class="op">&lt;-</span> grow<span class="defer">$</span>
+        <span class="k">unsafe</span><span class="p">:</span>
+            <span class="k">let</span> p <span class="p">=</span> <span class="k">self</span> <span class="op">&lt;-</span> ptr <span class="op">&lt;-</span> as_ptr<span class="defer">$</span> <span class="op">&lt;-</span> add index
+            <span class="com">// Shift the tail right by one, then write into the gap.</span>
+            ptr<span class="p">.</span>copy p <span class="p">(</span>p <span class="op">&lt;-</span> add <span class="num">1</span><span class="p">)</span> <span class="p">(</span><span class="k">self</span> <span class="op">&lt;-</span> len <span class="p">-</span> index<span class="p">)</span>
+            ptr<span class="p">.</span>write p elem
+        <span class="k">self</span> <span class="op">&lt;-</span> len <span class="op">+=</span> <span class="num">1</span>
+
+    <span class="k">pub</span> <span class="k">fn</span> remove <span class="p">(</span><span class="p">&amp;</span><span class="k">mut</span> <span class="k">self</span><span class="p">)</span> <span class="p">(</span>index<span class="p">:</span> usize<span class="p">)</span> <span class="op">-&gt;</span> <span class="t">T</span><span class="p">:</span>
+        <span class="mac">assert!</span> <span class="p">(</span>index <span class="p">&lt;</span> <span class="k">self</span> <span class="op">&lt;-</span> len<span class="p">)</span> <span class="str">"index out of bounds"</span>
+        <span class="k">self</span> <span class="op">&lt;-</span> len <span class="op">-=</span> <span class="num">1</span>
+        <span class="k">unsafe</span><span class="p">:</span>
+            <span class="k">let</span> p <span class="p">=</span> <span class="k">self</span> <span class="op">&lt;-</span> ptr <span class="op">&lt;-</span> as_ptr<span class="defer">$</span> <span class="op">&lt;-</span> add index
+            <span class="k">let</span> out <span class="p">=</span> ptr<span class="p">.</span>read p
+            ptr<span class="p">.</span>copy <span class="p">(</span>p <span class="op">&lt;-</span> add <span class="num">1</span><span class="p">)</span> p <span class="p">(</span><span class="k">self</span> <span class="op">&lt;-</span> len <span class="p">-</span> index<span class="p">)</span>
+            out
+
+<span class="k">impl</span><span class="p">&lt;</span><span class="t">T</span><span class="p">&gt;</span> <span class="t">Drop</span> <span class="k">for</span> <span class="t">MyVec</span><span class="p">&lt;</span><span class="t">T</span><span class="p">&gt;</span>
+    <span class="k">fn</span> drop <span class="p">(</span><span class="p">&amp;</span><span class="k">mut</span> <span class="k">self</span><span class="p">)</span><span class="p">:</span>
+        <span class="k">if</span> <span class="k">self</span> <span class="op">&lt;-</span> cap <span class="op">!=</span> <span class="num">0</span><span class="p">:</span>
+            <span class="k">unsafe</span><span class="p">:</span>
+                <span class="com">// Drop the elements, then free the memory.</span>
+                ptr<span class="p">.</span>drop_in_place <span class="p">(</span>ptr<span class="p">.</span>slice_from_raw_parts_mut <span class="p">(</span><span class="k">self</span> <span class="op">&lt;-</span> ptr <span class="op">&lt;-</span> as_ptr<span class="defer">$</span><span class="p">)</span> <span class="p">(</span><span class="k">self</span> <span class="op">&lt;-</span> len<span class="p">)</span><span class="p">)</span>
+                alloc<span class="p">.</span>dealloc <span class="p">(</span><span class="k">self</span> <span class="op">&lt;-</span> ptr <span class="op">&lt;-</span> as_ptr<span class="defer">$</span> <span class="k">as</span> <span class="p">*</span><span class="k">mut</span> u8<span class="p">)</span> <span class="p">(</span><span class="k">Self</span><span class="p">.</span>layout <span class="p">(</span><span class="k">self</span> <span class="op">&lt;-</span> cap<span class="p">)</span><span class="p">)</span>
+
+<span class="k">impl</span><span class="p">&lt;</span><span class="t">T</span><span class="p">&gt;</span> <span class="t">Deref</span> <span class="k">for</span> <span class="t">MyVec</span><span class="p">&lt;</span><span class="t">T</span><span class="p">&gt;</span>
+    <span class="k">type</span> <span class="t">Target</span> <span class="p">=</span> <span class="p">[</span><span class="t">T</span><span class="p">]</span>
+    <span class="k">fn</span> deref <span class="p">(</span><span class="p">&amp;</span><span class="k">self</span><span class="p">)</span> <span class="op">-&gt;</span> <span class="p">&amp;</span><span class="p">[</span><span class="t">T</span><span class="p">]</span><span class="p">:</span>
+        <span class="k">unsafe</span><span class="p">:</span> std<span class="p">.</span>slice<span class="p">.</span>from_raw_parts <span class="p">(</span><span class="k">self</span> <span class="op">&lt;-</span> ptr <span class="op">&lt;-</span> as_ptr<span class="defer">$</span><span class="p">)</span> <span class="p">(</span><span class="k">self</span> <span class="op">&lt;-</span> len<span class="p">)</span>
+
+<span class="k">impl</span><span class="p">&lt;</span><span class="t">T</span><span class="p">&gt;</span> <span class="t">DerefMut</span> <span class="k">for</span> <span class="t">MyVec</span><span class="p">&lt;</span><span class="t">T</span><span class="p">&gt;</span>
+    <span class="k">fn</span> deref_mut <span class="p">(</span><span class="p">&amp;</span><span class="k">mut</span> <span class="k">self</span><span class="p">)</span> <span class="op">-&gt;</span> <span class="p">&amp;</span><span class="k">mut</span> <span class="p">[</span><span class="t">T</span><span class="p">]</span><span class="p">:</span>
+        <span class="k">unsafe</span><span class="p">:</span> std<span class="p">.</span>slice<span class="p">.</span>from_raw_parts_mut <span class="p">(</span><span class="k">self</span> <span class="op">&lt;-</span> ptr <span class="op">&lt;-</span> as_ptr<span class="defer">$</span><span class="p">)</span> <span class="p">(</span><span class="k">self</span> <span class="op">&lt;-</span> len<span class="p">)</span>
+
+<span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="k">let</span> <span class="k">mut</span> v <span class="p">=</span> <span class="t">MyVec</span><span class="p">.</span>new<span class="defer">$</span>
+    <span class="k">for</span> word <span class="k">in</span> <span class="p">[</span><span class="str">"delta"</span><span class="p">,</span> <span class="str">"alpha"</span><span class="p">,</span> <span class="str">"charlie"</span><span class="p">]</span><span class="p">:</span>
+        v <span class="op">&lt;-</span> push <span class="p">(</span>word <span class="op">&lt;-</span> to_string<span class="defer">$</span><span class="p">)</span>
+    v <span class="op">&lt;-</span> insert <span class="num">1</span> <span class="p">(</span><span class="t">String</span><span class="p">.</span>from <span class="str">"bravo"</span><span class="p">)</span>
+    <span class="mac">println!</span> <span class="str">"{:?} len {} cap {}"</span> <span class="p">(</span><span class="p">&amp;</span>v<span class="p">[</span><span class="op">..</span><span class="p">]</span><span class="p">)</span> <span class="p">(</span>v <span class="op">&lt;-</span> len<span class="defer">$</span><span class="p">)</span> <span class="p">(</span>v <span class="op">&lt;-</span> cap<span class="p">)</span>
+    <span class="com">// The slice's methods, through Deref and DerefMut.</span>
+    v <span class="op">&lt;-</span> sort<span class="defer">$</span>
+    <span class="mac">println!</span> <span class="str">"{:?}"</span> <span class="p">(</span><span class="p">&amp;</span>v<span class="p">[</span><span class="op">..</span><span class="p">]</span><span class="p">)</span>
+    <span class="mac">println!</span> <span class="str">"removed {}, popped {:?}"</span> <span class="p">(</span>v <span class="op">&lt;-</span> remove <span class="num">0</span><span class="p">)</span> <span class="p">(</span>v <span class="op">&lt;-</span> pop<span class="defer">$</span><span class="p">)</span>
+    <span class="mac">println!</span> <span class="str">"{:?}"</span> <span class="p">(</span><span class="p">&amp;</span>v<span class="p">[</span><span class="op">..</span><span class="p">]</span><span class="p">)</span></code></pre>
+<pre class="code"><code>["delta", "bravo", "alpha", "charlie"] len 4 cap 4
+["alpha", "bravo", "charlie", "delta"]
+removed alpha, popped Some("delta")
+["bravo", "charlie"]</code></pre>
+<p><strong>In Harsh:</strong> each unsafe step is an <code>unsafe:</code> block of a line or two, which
+makes the unsafe surface easy to see and to review. The layout comes from
+<code>Layout.from_size_align</code> with the size and alignment named, rather than
+<code>Layout::array::&lt;T&gt;</code> — Harsh does not yet write a turbofish before an argument.</p>
+<h2 id="implementing-arc-and-mutex">Implementing Arc and Mutex</h2>
+<p><em>Original: <a href="https://doc.rust-lang.org/nomicon/arc-mutex/arc-and-mutex.html">Implementing Arc and Mutex</a></em></p>
+<p>The original's chapter, despite its title, implements <code>Arc</code>; this companion
+follows its sections, with the program under <em>Final Code</em>.</p>
+<h3 id="10-1-arc">10.1 Arc</h3>
+<p><em>Original: <a href="https://doc.rust-lang.org/nomicon/arc-mutex/arc.html">Arc</a></em></p>
+<p>A pointer to a heap allocation holding the value and an atomic count of
+owners, shared across threads.</p>
+<h4 id="10-1-1-layout">10.1.1 Layout</h4>
+<p><em>Original: <a href="https://doc.rust-lang.org/nomicon/arc-mutex/arc-layout.html">Layout</a></em></p>
+<p><code>MyArc&lt;T&gt;</code> holds a <code>NonNull&lt;ArcInner&lt;T&gt;&gt;</code> — the count and the data together —
+and a <code>PhantomData&lt;ArcInner&lt;T&gt;&gt;</code>, telling the drop checker it owns an
+<code>ArcInner&lt;T&gt;</code>. It is <code>Send</code> and <code>Sync</code> only when <code>T</code> is both.</p>
+<h4 id="10-1-2-base-code">10.1.2 Base Code</h4>
+<p><em>Original: <a href="https://doc.rust-lang.org/nomicon/arc-mutex/arc-base.html">Base Code</a></em></p>
+<p><code>new</code> boxes the inner value with a count of one and keeps the raw pointer;
+<code>Deref</code> reaches the data through it.</p>
+<h4 id="10-1-3-cloning">10.1.3 Cloning</h4>
+<p><em>Original: <a href="https://doc.rust-lang.org/nomicon/arc-mutex/arc-clone.html">Cloning</a></em></p>
+<p>Cloning increments the count, <code>Relaxed</code> — a new owner needs no
+synchronisation with the others — and aborts if the count nears overflow.</p>
+<h4 id="10-1-4-dropping">10.1.4 Dropping</h4>
+<p><em>Original: <a href="https://doc.rust-lang.org/nomicon/arc-mutex/arc-drop.html">Dropping</a></em></p>
+<p>Dropping decrements, <code>Release</code>; the owner that brings the count to zero
+issues an <code>Acquire</code> fence, so it sees every other owner's writes, and frees
+the allocation.</p>
+<h4 id="10-1-5-final-code">10.1.5 Final Code</h4>
+<p><em>Original: <a href="https://doc.rust-lang.org/nomicon/arc-mutex/arc-final.html">Final Code</a></em></p>
+<pre class="code harsh"><code><span class="k">use</span> std<span class="p">.</span>marker<span class="p">.</span><span class="t">PhantomData</span>
+<span class="k">use</span> std<span class="p">.</span>ops<span class="p">.</span><span class="t">Deref</span>
+<span class="k">use</span> std<span class="p">.</span>ptr<span class="p">.</span><span class="t">NonNull</span>
+<span class="k">use</span> std<span class="p">.</span>sync<span class="p">.</span>atomic<span class="p">.</span><span class="p">(</span> <span class="k">self</span><span class="p">,</span> <span class="t">AtomicUsize</span><span class="p">,</span> <span class="t">Ordering</span><span class="p">)</span>
+<span class="k">use</span> std<span class="p">.</span>thread
+
+<span class="k">struct</span> <span class="t">ArcInner</span><span class="p">&lt;</span><span class="t">T</span><span class="p">&gt;</span>
+    rc<span class="p">:</span> <span class="t">AtomicUsize</span>
+    data<span class="p">:</span> <span class="t">T</span>
+
+<span class="k">pub</span> <span class="k">struct</span> <span class="t">MyArc</span><span class="p">&lt;</span><span class="t">T</span><span class="p">&gt;</span>
+    ptr<span class="p">:</span> <span class="t">NonNull</span><span class="p">&lt;</span><span class="t">ArcInner</span><span class="p">&lt;</span><span class="t">T</span><span class="p">&gt;</span><span class="p">&gt;</span>
+    phantom<span class="p">:</span> <span class="t">PhantomData</span><span class="p">&lt;</span><span class="t">ArcInner</span><span class="p">&lt;</span><span class="t">T</span><span class="p">&gt;</span><span class="p">&gt;</span>
+
+<span class="com">// Shared across threads: sound when T may be both sent and shared.</span>
+<span class="k">unsafe</span> <span class="k">impl</span><span class="p">&lt;</span><span class="t">T</span><span class="p">:</span> <span class="t">Sync</span> <span class="p">+</span> <span class="t">Send</span><span class="p">&gt;</span> <span class="t">Send</span> <span class="k">for</span> <span class="t">MyArc</span><span class="p">&lt;</span><span class="t">T</span><span class="p">&gt;</span>
+<span class="k">unsafe</span> <span class="k">impl</span><span class="p">&lt;</span><span class="t">T</span><span class="p">:</span> <span class="t">Sync</span> <span class="p">+</span> <span class="t">Send</span><span class="p">&gt;</span> <span class="t">Sync</span> <span class="k">for</span> <span class="t">MyArc</span><span class="p">&lt;</span><span class="t">T</span><span class="p">&gt;</span>
+
+<span class="k">impl</span><span class="p">&lt;</span><span class="t">T</span><span class="p">&gt;</span> <span class="t">MyArc</span><span class="p">&lt;</span><span class="t">T</span><span class="p">&gt;</span>
+    <span class="k">pub</span> <span class="k">fn</span> new <span class="p">(</span>data<span class="p">:</span> <span class="t">T</span><span class="p">)</span> <span class="op">-&gt;</span> <span class="t">MyArc</span><span class="p">&lt;</span><span class="t">T</span><span class="p">&gt;</span><span class="p">:</span>
+        <span class="k">let</span> boxed <span class="p">=</span> <span class="t">Box</span><span class="p">.</span>new <span class="p">(</span><span class="t">ArcInner</span>\ rc <span class="p">=</span> <span class="t">AtomicUsize</span><span class="p">.</span>new <span class="num">1</span><span class="p">,</span> data <span class="p">=</span> data<span class="p">)</span>
+        <span class="t">MyArc</span>\ ptr <span class="p">=</span> <span class="t">NonNull</span><span class="p">.</span>new <span class="p">(</span><span class="t">Box</span><span class="p">.</span>into_raw boxed<span class="p">)</span> <span class="op">&lt;-</span> unwrap<span class="defer">$</span><span class="p">,</span> phantom <span class="p">=</span> <span class="t">PhantomData</span>
+
+    <span class="k">pub</span> <span class="k">fn</span> count <span class="p">(</span>this<span class="p">:</span> <span class="p">&amp;</span><span class="k">Self</span><span class="p">)</span> <span class="op">-&gt;</span> usize<span class="p">:</span>
+        <span class="k">let</span> inner <span class="p">=</span> <span class="k">unsafe</span><span class="p">:</span> this <span class="op">&lt;-</span> ptr <span class="op">&lt;-</span> as_ref<span class="defer">$</span>
+        inner <span class="op">&lt;-</span> rc <span class="op">&lt;-</span> load <span class="t">Ordering</span><span class="p">.</span><span class="t">Acquire</span>
+
+<span class="k">impl</span><span class="p">&lt;</span><span class="t">T</span><span class="p">&gt;</span> <span class="t">Deref</span> <span class="k">for</span> <span class="t">MyArc</span><span class="p">&lt;</span><span class="t">T</span><span class="p">&gt;</span>
+    <span class="k">type</span> <span class="t">Target</span> <span class="p">=</span> <span class="t">T</span>
+    <span class="k">fn</span> deref <span class="p">(</span><span class="p">&amp;</span><span class="k">self</span><span class="p">)</span> <span class="op">-&gt;</span> <span class="p">&amp;</span><span class="t">T</span><span class="p">:</span>
+        <span class="k">let</span> inner <span class="p">=</span> <span class="k">unsafe</span><span class="p">:</span> <span class="k">self</span> <span class="op">&lt;-</span> ptr <span class="op">&lt;-</span> as_ref<span class="defer">$</span>
+        <span class="p">&amp;</span>inner <span class="op">&lt;-</span> data
+
+<span class="k">impl</span><span class="p">&lt;</span><span class="t">T</span><span class="p">&gt;</span> <span class="t">Clone</span> <span class="k">for</span> <span class="t">MyArc</span><span class="p">&lt;</span><span class="t">T</span><span class="p">&gt;</span>
+    <span class="k">fn</span> clone <span class="p">(</span><span class="p">&amp;</span><span class="k">self</span><span class="p">)</span> <span class="op">-&gt;</span> <span class="t">MyArc</span><span class="p">&lt;</span><span class="t">T</span><span class="p">&gt;</span><span class="p">:</span>
+        <span class="k">let</span> inner <span class="p">=</span> <span class="k">unsafe</span><span class="p">:</span> <span class="k">self</span> <span class="op">&lt;-</span> ptr <span class="op">&lt;-</span> as_ref<span class="defer">$</span>
+        <span class="com">// Relaxed: a new owner needs no synchronisation with the others.</span>
+        <span class="k">let</span> old <span class="p">=</span> inner <span class="op">&lt;-</span> rc <span class="op">&lt;-</span> fetch_add <span class="num">1</span> <span class="t">Ordering</span><span class="p">.</span><span class="t">Relaxed</span>
+        <span class="k">if</span> old <span class="op">&gt;=</span> isize<span class="p">.</span><span class="t">MAX</span> <span class="k">as</span> usize<span class="p">:</span>
+            std<span class="p">.</span>process<span class="p">.</span>abort<span class="defer">$</span>
+        <span class="t">MyArc</span>\ ptr <span class="p">=</span> <span class="k">self</span> <span class="op">&lt;-</span> ptr<span class="p">,</span> phantom <span class="p">=</span> <span class="t">PhantomData</span>
+
+<span class="k">impl</span><span class="p">&lt;</span><span class="t">T</span><span class="p">&gt;</span> <span class="t">Drop</span> <span class="k">for</span> <span class="t">MyArc</span><span class="p">&lt;</span><span class="t">T</span><span class="p">&gt;</span>
+    <span class="k">fn</span> drop <span class="p">(</span><span class="p">&amp;</span><span class="k">mut</span> <span class="k">self</span><span class="p">)</span><span class="p">:</span>
+        <span class="k">let</span> inner <span class="p">=</span> <span class="k">unsafe</span><span class="p">:</span> <span class="k">self</span> <span class="op">&lt;-</span> ptr <span class="op">&lt;-</span> as_ref<span class="defer">$</span>
+        <span class="k">let</span> old <span class="p">=</span> inner <span class="op">&lt;-</span> rc <span class="op">&lt;-</span> fetch_sub <span class="num">1</span> <span class="t">Ordering</span><span class="p">.</span><span class="t">Release</span>
+        <span class="k">if</span> old <span class="op">!=</span> <span class="num">1</span><span class="p">:</span>
+            <span class="k">return</span>
+        <span class="com">// The last owner: see every other owner's writes, then free.</span>
+        atomic<span class="p">.</span>fence <span class="t">Ordering</span><span class="p">.</span><span class="t">Acquire</span>
+        <span class="k">unsafe</span><span class="p">:</span> drop <span class="p">(</span><span class="t">Box</span><span class="p">.</span>from_raw <span class="p">(</span><span class="k">self</span> <span class="op">&lt;-</span> ptr <span class="op">&lt;-</span> as_ptr<span class="defer">$</span><span class="p">)</span><span class="p">)</span>
+
+<span class="k">struct</span> <span class="t">Payload</span>
+    text<span class="p">:</span> <span class="t">String</span>
+
+<span class="k">impl</span> <span class="t">Drop</span> <span class="k">for</span> <span class="t">Payload</span>
+    <span class="k">fn</span> drop <span class="p">(</span><span class="p">&amp;</span><span class="k">mut</span> <span class="k">self</span><span class="p">)</span><span class="p">:</span>
+        <span class="mac">println!</span> <span class="str">"payload freed"</span>
+
+<span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="k">let</span> shared <span class="p">=</span> <span class="t">MyArc</span><span class="p">.</span>new <span class="p">(</span><span class="t">Payload</span>\ text <span class="p">=</span> <span class="t">String</span><span class="p">.</span>from <span class="str">"shared text"</span><span class="p">)</span>
+    <span class="k">let</span> <span class="k">mut</span> handles <span class="p">=</span> <span class="t">Vec</span><span class="p">.</span>new<span class="defer">$</span>
+    <span class="k">for</span> i <span class="k">in</span> <span class="num">0..3</span><span class="p">:</span>
+        <span class="k">let</span> mine <span class="p">=</span> shared <span class="op">&lt;-</span> clone<span class="defer">$</span>
+        handles <span class="op">&lt;-</span> push <span class="p">(</span>thread<span class="p">.</span>spawn <span class="p">(</span><span class="k">move</span> <span class="op">||</span> <span class="mac">format!</span> <span class="str">"thread {i} read {:?}"</span> <span class="p">(</span>mine <span class="op">&lt;-</span> text<span class="p">)</span><span class="p">)</span><span class="p">)</span>
+    <span class="k">for</span> h <span class="k">in</span> handles<span class="p">:</span>
+        <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span>h <span class="op">&lt;-</span> join<span class="defer">$</span> <span class="op">&lt;-</span> unwrap<span class="defer">$</span><span class="p">)</span>
+    <span class="mac">println!</span> <span class="str">"owners left: {}"</span> <span class="p">(</span><span class="t">MyArc</span><span class="p">.</span>count <span class="p">(</span><span class="p">&amp;</span>shared<span class="p">)</span><span class="p">)</span></code></pre>
+<pre class="code"><code>thread 0 read "shared text"
+thread 1 read "shared text"
+thread 2 read "shared text"
+owners left: 1
+payload freed</code></pre>
+<p><strong>In Harsh:</strong> the counts' orderings read as they are named; the value is
+shared by three threads, and freed once, after the last owner is gone.</p>
+<h2 id="ffi">FFI</h2>
+<p><em>Original: <a href="https://doc.rust-lang.org/nomicon/ffi.html">FFI</a></em></p>
+<p>Calling C from Rust means declaring its functions in an <code>extern "C"</code> block and
+calling them in <code>unsafe</code> — the compiler cannot check C. Strings cross as
+<code>CString</code> and <code>*const c_char</code>; callbacks cross as <code>extern "C" fn</code>. The
+original's examples link to the <code>snappy</code> library; these use the C standard
+library, which every program is linked with already.</p>
+<pre class="code harsh"><code><span class="k">use</span> std<span class="p">.</span>ffi<span class="p">.</span><span class="p">(</span> <span class="t">CStr</span><span class="p">,</span> <span class="t">CString</span><span class="p">)</span>
+<span class="k">use</span> std<span class="p">.</span>os<span class="p">.</span>raw<span class="p">.</span><span class="p">(</span> c_char<span class="p">,</span> c_int<span class="p">)</span>
+
+<span class="com">// Declarations of C functions: their bodies are in the C library.</span>
+<span class="k">extern</span> <span class="str">"C"</span>
+    <span class="k">fn</span> abs <span class="p">(</span>x<span class="p">:</span> c_int<span class="p">)</span> <span class="op">-&gt;</span> c_int
+    <span class="k">fn</span> strlen <span class="p">(</span>s<span class="p">:</span> <span class="p">*</span><span class="k">const</span> c_char<span class="p">)</span> <span class="op">-&gt;</span> usize
+
+<span class="com">// A safe interface: a `&amp;CStr` is always valid and terminated, so the call</span>
+<span class="com">// is sound for every caller.</span>
+<span class="k">fn</span> c_len <span class="p">(</span>s<span class="p">:</span> <span class="p">&amp;</span><span class="t">CStr</span><span class="p">)</span> <span class="op">-&gt;</span> usize<span class="p">:</span>
+    <span class="k">unsafe</span><span class="p">:</span> strlen <span class="p">(</span>s <span class="op">&lt;-</span> as_ptr<span class="defer">$</span><span class="p">)</span>
+
+<span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="k">let</span> s <span class="p">=</span> <span class="t">CString</span><span class="p">.</span>new <span class="str">"harsh"</span> <span class="op">&lt;-</span> unwrap<span class="defer">$</span>
+    <span class="com">// The compiler cannot check C: each direct call is our promise.</span>
+    <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span><span class="k">unsafe</span><span class="p">:</span> abs <span class="p">(</span><span class="p">-</span><span class="num">42</span><span class="p">)</span><span class="p">)</span>
+    <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span>c_len <span class="p">(</span><span class="p">&amp;</span>s<span class="p">)</span><span class="p">)</span></code></pre>
+<pre class="code"><code>42
+5</code></pre>
+<p>The original's next step is a <strong>safe interface</strong>: a Rust function that takes
+Rust types, upholds C's requirements itself, and hides the <code>unsafe</code> from its
+callers — <code>c_len</code> above, taking a <code>&amp;CStr</code> that is sure to be valid and
+terminated.</p>
+<p>A callback: C's <code>qsort</code> sorting an array with a comparison written in Harsh.</p>
+<pre class="code harsh"><code><span class="k">use</span> std<span class="p">.</span>ffi<span class="p">.</span>c_void
+<span class="k">use</span> std<span class="p">.</span>os<span class="p">.</span>raw<span class="p">.</span>c_int
+
+<span class="k">extern</span> <span class="str">"C"</span>
+    <span class="k">fn</span> qsort <span class="p">(</span>base<span class="p">:</span> <span class="p">*</span><span class="k">mut</span> c_void<span class="p">)</span> <span class="p">(</span>n<span class="p">:</span> usize<span class="p">)</span> <span class="p">(</span>size<span class="p">:</span> usize<span class="p">)</span> <span class="p">(</span>compare<span class="p">:</span> <span class="k">extern</span> <span class="str">"C"</span> <span class="k">fn</span> <span class="p">(</span><span class="p">*</span><span class="k">const</span> c_void<span class="p">)</span> <span class="p">(</span><span class="p">*</span><span class="k">const</span> c_void<span class="p">)</span> <span class="op">-&gt;</span> c_int<span class="p">)</span>
+
+<span class="com">// Written in Harsh, called by C.</span>
+<span class="k">extern</span> <span class="str">"C"</span> <span class="k">fn</span> by_value <span class="p">(</span>a<span class="p">:</span> <span class="p">*</span><span class="k">const</span> c_void<span class="p">)</span> <span class="p">(</span>b<span class="p">:</span> <span class="p">*</span><span class="k">const</span> c_void<span class="p">)</span> <span class="op">-&gt;</span> c_int<span class="p">:</span>
+    <span class="k">let</span> <span class="p">(</span>x<span class="p">,</span> y<span class="p">)</span> <span class="p">=</span> <span class="k">unsafe</span><span class="p">:</span> <span class="p">(</span><span class="p">*</span><span class="p">(</span>a <span class="k">as</span> <span class="p">*</span><span class="k">const</span> i32<span class="p">)</span><span class="p">,</span> <span class="p">*</span><span class="p">(</span>b <span class="k">as</span> <span class="p">*</span><span class="k">const</span> i32<span class="p">)</span><span class="p">)</span>
+    <span class="p">(</span>x <span class="p">&gt;</span> y<span class="p">)</span> <span class="k">as</span> c_int <span class="p">-</span> <span class="p">(</span>x <span class="p">&lt;</span> y<span class="p">)</span> <span class="k">as</span> c_int
+
+<span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="k">let</span> <span class="k">mut</span> xs <span class="p">=</span> <span class="p">[</span><span class="num">5</span><span class="p">,</span> <span class="num">3</span><span class="p">,</span> <span class="num">9</span><span class="p">,</span> <span class="num">1</span><span class="p">,</span> <span class="num">7</span><span class="p">]</span>
+    <span class="k">unsafe</span><span class="p">:</span> qsort <span class="p">(</span>xs <span class="op">&lt;-</span> as_mut_ptr<span class="defer">$</span> <span class="k">as</span> <span class="p">*</span><span class="k">mut</span> c_void<span class="p">)</span> <span class="p">(</span>xs <span class="op">&lt;-</span> len<span class="defer">$</span><span class="p">)</span> <span class="p">(</span>std<span class="p">.</span>mem<span class="p">.</span>size_of<span class="p">&lt;</span>i32<span class="p">&gt;</span><span class="defer">$</span><span class="p">)</span> by_value
+    <span class="mac">println!</span> <span class="str">"{:?}"</span> xs</code></pre>
+<pre class="code"><code>[1, 3, 5, 7, 9]</code></pre>
+<p><strong>In Harsh:</strong> the <code>extern "C"</code> block holds its declarations beneath its
+header, each one line with no body; a function for C to call is <code>extern "C"
+fn</code> with its body, like any function.</p>
+<h2 id="beneath-std">Beneath std</h2>
+<p><em>Original: <a href="https://doc.rust-lang.org/nomicon/beneath-std.html">Beneath std</a></em></p>
+<p>Everything so far used the standard library. Code for bare metal, kernels or
+embedded devices uses <code>#![no_std]</code>: only <code>core</code> (and <code>alloc</code>, if an allocator
+is provided). Such a program must define what happens on a panic — a
+function marked <code>#[panic_handler]</code> — and, as a binary, its own entry point.</p>
+<p>Harsh transpiles such code as it does any other — <code>#![no_std]</code> is an
+attribute like the rest — but a <code>no_std</code> binary cannot be built and run the
+way this book runs its programs, so this page has none. The original shows
+the pieces; with them written in Harsh's spelling, <code>hrs build</code> for an embedded
+target works as <code>cargo build</code> does.</p>
+<h3 id="12-1-panichandler">12.1 #[panic_handler]</h3>
+<p><em>Original: <a href="https://doc.rust-lang.org/nomicon/panic-handler.html">#[panic_handler]</a></em></p>
+<p>A <code>no_std</code> program has no panic machinery of its own: exactly one function in
+the final binary must be marked <code>#[panic_handler]</code>, taking a
+<code>&amp;core::panic::PanicInfo</code> and never returning (<code>-&gt; !</code>). It may loop, reset the
+device, or report over a serial port. In Harsh it is written as any function —
+<code>#[panic_handler]</code> above <code>fn panic (info: &amp;PanicInfo) -&gt; !:</code> — with its body
+beneath.</p>
+<p>That is the end of the dark arts. Use them sparingly, keep them in small
+modules, and write down, next to every <code>unsafe:</code>, why it is sound.</p>
+    </main>
+  </div>
+</div>
+<script>
+(function(){
+  var b=document.body, t=document.getElementById('nav-toggle');
+  try{ if(localStorage.getItem('harsh-nav')==='hidden') b.classList.add('nav-hidden'); }catch(e){}
+  t.addEventListener('click',function(){
+    b.classList.toggle('nav-hidden');
+    try{ localStorage.setItem('harsh-nav', b.classList.contains('nav-hidden')?'hidden':'shown'); }catch(e){}
+  });
+  // The back-to-top arrow: shown once the page has scrolled a screen or so.
+  var up=document.createElement('button');
+  up.className='to-top'; up.textContent='\u2191';
+  up.title='Back to the top'; up.setAttribute('aria-label','Back to the top');
+  up.addEventListener('click',function(){
+    var still=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    window.scrollTo({top:0,behavior:still?'auto':'smooth'});
+  });
+  b.appendChild(up);
+  var show=function(){ up.classList.toggle('shown', window.scrollY>400); };
+  window.addEventListener('scroll',show,{passive:true}); show();
+})();
+</script>
+<script>
+// A discreet copy button on every code block (the user's, 2026-09-27): shown
+// on hovering the block; copies the block's text; says so for a moment.
+// Editors are left alone -- their text is the textarea's.
+(function(){
+  function add(pre){
+    if (pre.dataset.copy || pre.classList.contains('editor-view')) return;
+    pre.dataset.copy = '1';
+    var b = document.createElement('button');
+    b.className = 'copy'; b.type = 'button'; b.textContent = 'Copy';
+    b.title = 'Copy the code'; b.setAttribute('aria-label', 'Copy the code');
+    b.addEventListener('click', function(){
+      var text = pre.innerText.replace(/Copy(ied)?$/, '').replace(/\n$/, '');
+      var done = function(){ b.textContent = 'Copied'; setTimeout(function(){ b.textContent = 'Copy'; }, 1400); };
+      if (navigator.clipboard) navigator.clipboard.writeText(text).then(done, function(){});
+    });
+    pre.appendChild(b);
+  }
+  function all(){ document.querySelectorAll('pre.code').forEach(add); }
+  all();
+  new MutationObserver(all).observe(document.body, { childList: true, subtree: true });
+})();
+</script>
+</body>
+</html>

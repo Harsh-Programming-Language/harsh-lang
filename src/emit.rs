@@ -490,11 +490,17 @@ impl<'a> Emitter<'a> {
             }
         }
         if end == toks.len() {
-            // No return type: the region ends at the block-opening colon.
-            end = toks
-                .iter()
-                .rposition(|t| t.kind == Tk::Colon)
-                .unwrap_or(toks.len());
+            // No return type: the region ends at the block-opening colon --
+            // when there is one, as the line's last token. A declaration
+            // with no body (a trait method, a function in an `extern "C"`
+            // block) has none, and its last `:` may be a parameter's own;
+            // taking it for the block mark left several parameters
+            // unconverted, `(a: A)(b: B)` (found 2026-09-28, `qsort`).
+            let last = toks.iter().rposition(|t| !t.is_comment());
+            end = match last {
+                Some(k) if toks[k].kind == Tk::Colon => k,
+                _ => toks.len(),
+            };
         }
         if start >= end {
             return out;
@@ -1602,6 +1608,14 @@ impl<'a> Emitter<'a> {
         }
         match kind {
             BlockKind::Items => {
+                // An empty-bodied `trait` or `impl` -- a marker trait and its
+                // blanket impl -- has braces in Rust, never `;` (2026-09-27);
+                // so has an empty `enum`, a type with no values, `enum Void`
+                // (2026-09-28). A unit `struct` keeps its `;`.
+                if !is_block && !already_semi && matches!(kw, Some("trait") | Some("impl") | Some("enum")) {
+                    self.out.push_str(" {}");
+                    return;
+                }
                 // A non-block line in an item position is a declaration without
                 // a body -- a trait method signature, an associated type or
                 // const, a `use`, or an item macro. All of them terminate with

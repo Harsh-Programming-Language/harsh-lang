@@ -1127,6 +1127,16 @@ fn inline_colon(toks: &[Token], from: usize, to: usize, outer: BlockKind) -> Opt
                     return None;
                 }
                 if let Some(kw) = opener_kw(toks, from, i, outer) {
+                    // A declaration takes no `:` as a block mark, so a `:` in
+                    // its header -- supertraits, `trait Loggable: Debug +
+                    // Display`; a bound, `impl<T: Debug> Loggable for T` --
+                    // belongs to the header. Read as an inline block, it
+                    // swallowed the rest of the line as a body, and an
+                    // empty-bodied marker trait or blanket impl could not be
+                    // written (found 2026-09-27 writing Harsh Design Patterns).
+                    if matches!(kw, "struct" | "enum" | "union" | "impl" | "trait" | "mod") {
+                        continue;
+                    }
                     return Some((i, kw));
                 }
             }

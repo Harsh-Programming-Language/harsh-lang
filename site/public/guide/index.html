@@ -804,9 +804,12 @@ to the writer: a literal inside a literal, an <code>if</code> of three clauses a
         name                                    <span class="com">// on the fence: short</span>
         <span class="p">(</span><span class="k">if</span> good<span class="p">:</span> <span class="str">"good dog"</span> <span class="k">else</span><span class="p">:</span> <span class="str">"dog"</span><span class="p">)</span>       <span class="com">// a long argument</span></code></pre>
 <ul>
-<li><strong>A literal holding another literal</strong> is broken, the outer one field per
-  line — an inner literal written inline ends with its line, so it cannot take
-  the outer one's fields.</li>
+<li><strong>A literal holding another literal</strong>: on one line the inner one is
+  parenthesised — the transpiler refuses it otherwise, since where it ends
+  cannot be seen: <code>inner = (Animal\\ name = "Rex"), good = true</code> when <code>good</code>
+  is the outer literal's, <code>inner = (Animal\\ name = "Rex", good = true)</code> when
+  it is the inner's. Or the outer literal goes one field per line, where the
+  line ends the inner one:</li>
 </ul>
 <pre class="code harsh"><code><span class="k">let</span> d <span class="p">=</span>
     <span class="t">Dog</span>\

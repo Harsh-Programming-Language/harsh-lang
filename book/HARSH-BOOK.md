@@ -6542,7 +6542,7 @@ $ hrs test
 running 1 test
 test target/hrs/lib.rs - add_one (line 10) ... ok
 
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.19s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.18s
 ```
 
 `cargo doc --open` renders every `///` and `//!` in the crate as HTML, with the Markdown inside them — headings, code blocks, links — laid out. The conventional sections are `# Examples`, `# Panics` (when the function can), `# Errors` (what `Err`s it returns) and `# Safety` (for `unsafe` functions). The example in the `///` is Harsh, like everything else in the file, and `cargo test` *runs it* — every code block in a doc comment is a test, so documentation cannot drift from the code without failing the build.
@@ -9613,8 +9613,11 @@ written by mistake while this book's companions were written:
 - **`f a.b` passes the path `a.b`,** not a field: fields are `a <- b`.
 - **`x <- g` is a field, `x <- g$` a call.**
 - **`*p <- field` dereferences the field,** not `p`: write `(*p) <- field`.
-- **A struct literal written inline inside another** takes the outer one's
-  remaining fields: bind the inner one first, or parenthesise it.
+- **A struct literal inside another, on one line,** is refused: where the
+  inner one ends cannot be seen. Parenthesise it — `inner = (Animal\\ name =
+  "Rex"), good = true` when `good` is the outer literal's, `inner =
+  (Animal\\ name = "Rex", good = true)` when it is the inner's — or give the
+  outer literal one field per line, where the line ends the inner one.
 
 ## The rules at work
 

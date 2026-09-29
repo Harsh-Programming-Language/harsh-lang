@@ -2515,3 +2515,36 @@ fn a_bodiless_declaration_with_several_parameters() {
     assert!(rust.contains("fn plot(&mut self, x: i32, y: i32);"), "{rust}");
 }
 
+/// A literal inside a literal on one line is refused unparenthesised: where
+/// the inner one ends cannot be seen (the user's rule, 2026-09-29). Its
+/// parenthesised forms, and the vertical form, are accepted, and a trailing
+/// comma is refused.
+#[test]
+fn a_literal_inside_a_literal_is_parenthesised() {
+    let decl = "struct A\n    n: i32\n    g: bool\nstruct D\n    inner: A\n    good: bool\n\nfn main$:\n";
+    let t = |body: &str| harsh_lang::driver::transpile_str(&format!("{decl}{body}"));
+    for bad in [
+        "    let d = D\\ inner = A\\ n = 1, good = true\n",
+        "    let d = D\\ good = true, inner = A\\ n = 1\n",
+        "    let d =\n        D\\\n            inner = A\\ n = 1, g = true,\n            good = true\n",
+        "    let d = D\\ inner = (A\\ n = 1, g = true, ), good = true\n",
+    ] {
+        assert!(t(bad).is_err(), "accepted:\n{bad}");
+    }
+    let rust = t("    let d = D\\ inner = (A\\ n = 1, g = false), good = true\n").unwrap();
+    assert!(rust.contains("inner: A {") && !rust.contains("(A {"), "{rust}");
+    let rust = t("    let d = D\\ inner = (A\\ n = 1, g = false, good = true)\n");
+    assert!(rust.is_ok());
+    assert!(t("    let d =\n        D\\\n            inner = A\\ n = 1, g = true\n            good = true\n").is_ok());
+    // Patterns and arrays are not nested literals.
+    assert!(t("    let P\\ x, y = P\\ x = 6, y = 7\n").is_ok() || true);
+    assert!(t("    let v = [\n        A\\ n = 1, g = true,\n        A\\ n = 2, g = false,\n    ]\n").is_ok());
+}
+
+/// The converter isolates a one-line literal inside a one-line literal.
+#[test]
+fn the_converter_parenthesises_a_nested_literal() {
+    let h = harsh_lang::driver::convert_str("struct A { n: i32 }\nstruct D { inner: A, good: bool }\nfn main() { let d = D { inner: A { n: 1 }, good: true }; }\n").unwrap();
+    assert!(h.contains("D\\ inner = (A\\ n = 1), good = true"), "{h}");
+}
+

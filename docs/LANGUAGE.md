@@ -743,9 +743,12 @@ fn describe (good: bool) (name: &str) -> String:
         (if good: "good dog" else: "dog")       // a long argument
 ```
 
-- **A literal holding another literal** is broken, the outer one field per
-  line — an inner literal written inline ends with its line, so it cannot take
-  the outer one's fields.
+- **A literal holding another literal**: on one line the inner one is
+  parenthesised — the transpiler refuses it otherwise, since where it ends
+  cannot be seen: `inner = (Animal\\ name = "Rex"), good = true` when `good`
+  is the outer literal's, `inner = (Animal\\ name = "Rex", good = true)` when
+  it is the inner's. Or the outer literal goes one field per line, where the
+  line ends the inner one:
 
 ```rust harsh
 let d =

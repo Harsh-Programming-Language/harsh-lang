@@ -82,8 +82,11 @@ written by mistake while this book's companions were written:
 - **`f a.b` passes the path `a.b`,** not a field: fields are `a <- b`.
 - **`x <- g` is a field, `x <- g$` a call.**
 - **`*p <- field` dereferences the field,** not `p`: write `(*p) <- field`.
-- **A struct literal written inline inside another** takes the outer one's
-  remaining fields: bind the inner one first, or parenthesise it.
+- **A struct literal inside another, on one line,** is refused: where the
+  inner one ends cannot be seen. Parenthesise it — `inner = (Animal\\ name =
+  "Rex"), good = true` when `good` is the outer literal's, `inner =
+  (Animal\\ name = "Rex", good = true)` when it is the inner's — or give the
+  outer literal one field per line, where the line ends the inner one.
 
 ## The rules at work
 

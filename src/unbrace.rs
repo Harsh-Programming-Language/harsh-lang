@@ -3008,8 +3008,38 @@ impl<'a> Writer<'a> {
                                         !semi
                                     }
                             });
+                            // A one-line literal inside another one-line literal:
+                            // Harsh refuses it unparenthesised (the user's rule,
+                            // 2026-09-29) -- where the inner one ends cannot be
+                            // seen. Inside a multi-line literal the field's line
+                            // ends it, and nothing is needed.
+                            let nested_inline = toks[close].line == toks[i].line && {
+                                let mut stack: Vec<(char, usize)> = Vec::new();
+                                for (k, t) in toks[..i].iter().enumerate() {
+                                    match t.kind {
+                                        Tk::Open(c) => stack.push((c, k)),
+                                        Tk::Close(_) => {
+                                            stack.pop();
+                                        }
+                                        _ => {}
+                                    }
+                                }
+                                stack.last().map_or(false, |&(c, o)| {
+                                    let mut d = 0i32;
+                                    let oc = (o..toks.len()).find(|&k| {
+                                        match toks[k].kind {
+                                            Tk::Open(_) => d += 1,
+                                            Tk::Close(_) => d -= 1,
+                                            _ => {}
+                                        }
+                                        d == 0
+                                    });
+                                    c == '{' && oc.map_or(false, |oc| toks[oc].line == toks[o].line && Self::is_struct_literal(toks, o, oc))
+                                })
+                            };
                             let in_brackets = (innermost_open_is_bracket(toks, i) && !last_in_brackets && !macro_list)
-                                || innermost_open_is_tuple(toks, i);
+                                || innermost_open_is_tuple(toks, i)
+                                || nested_inline;
                             if in_brackets {
                                 // The name is already written: put `(` before it.
                                 let line = self.out.rsplit('\n').next().unwrap_or("").to_string();

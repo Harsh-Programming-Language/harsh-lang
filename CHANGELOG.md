@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.53 — 2026-09-29  (`hrs_std` 0.1.3 and the Jupyter kernel 0.1.3, unchanged)
+
+- **A literal inside a literal on one line is refused unparenthesised** (the user's proposal): in `Dog\ inner = Animal\ name = x, good = true` the reader cannot see where `Animal` ends -- `good` went to `Dog`, and our own docs had said the opposite. The error offers both readings: `inner = (Animal\ name = x), good = true`, or `inner = (Animal\ name = x, good = true)`. The vertical form, the inner literal alone on its field line, needs nothing. **A trailing comma** at the end of a field list is refused too (`inner = Animal\ name = x,` on a field line was accepted); a comma ending a line inside brackets remains the group's separator.
+- **Fixed:** a parenthesised literal as a field's value kept its `(` and lost its `)` in the Rust. **The converter** (`hrs-from`, the website's Converter) now parenthesises a one-line literal inside a one-line literal, as it already did inside a tuple.
+- The Book's *Precedence* traps and the guide's rules corrected: they said an inline inner literal takes the outer one's remaining fields.
+
 ## 0.1.52 — 2026-09-29  (`hrs_std` 0.1.3 and the Jupyter kernel 0.1.3, unchanged)
 
 - **`hrs fmt` applies the rules for breaking long lines** (the user's agreement): inline lists of three items or more -- literals, inline `struct`s and `enum`s, inline `match`es -- go one item per line, commas dropped (and a declaration's `\`); `if` chains of three clauses or more go on several lines, each `else` under its `if`; a call goes vertical only when an argument is long (20 columns or more; a string does not count), and after `=>`, `=` or a block's `:` it first moves to a fresh line one unit in -- never aligned far to the right. What asks for judgment stays the writer's: a literal inside a literal, a `let`'s three-clause `if`, a call deep in another. Six tests; the formatter's corpus test (361 files) finds every book program already formatted; the guide's two inline-form examples now follow the rules. `docs/FMT.md` records it.

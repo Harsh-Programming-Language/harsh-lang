@@ -1459,6 +1459,12 @@ impl<'a> Emitter<'a> {
             let hi = self.here();
             self.map.push(MapEntry { gen_lo: lo, gen_hi: hi, src_lo: head[0].span.lo, src_hi: head[0].span.hi, ctx: head[0].ctx });
             self.out.push(' ');
+            // The dropped `(` is marked by its index in the whole head; the
+            // field's value is written from `head[2..]`, so the mark moves
+            // with it (an isolated literal as a field's value,
+            // `inner = (A\ n = 1), good = true`, kept its `(` and lost its
+            // `)` -- found 2026-09-29).
+            self.forced_skip = self.forced_skip.and_then(|k| k.checked_sub(2));
             self.line_tokens_ctx(&head[2..], !b.arrow_opener, true, false);
         } else {
             self.line_tokens(head, !b.arrow_opener);

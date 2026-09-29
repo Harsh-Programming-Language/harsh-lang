@@ -655,6 +655,106 @@ fn check_backslash_head(sig: &[&Token]) -> Result<(), LayoutError> {
                 span: sig[i].span,
             });
         }
+        // A `!` macro's brace call is the macro's own syntax.
+        if i >= 1 && sig[i - 1].text == "!" {
+            continue;
+        }
+        // The list this `\` opens on its line: to the end of the line, or
+        // to the `)` closing a group opened before it; a pattern after `let`
+        // (`let P\ x, y = ..`) ends at the binding's `=`.
+        let pattern = (0..i).rev().find(|&k| sig[k].is_kw("let")).map_or(false, |l| !sig[l..i].iter().any(|t| t.kind == Tk::Eq));
+        // An arm's pattern, before its `=>`: its list ends at the `|` of an
+        // or-pattern or at the `=>` (`A\ x, .. | B\ x, .. => e` is two
+        // patterns side by side, not a literal inside a literal).
+        let arm_pattern = {
+            let mut d = 0i32;
+            let mut found = false;
+            for t in &sig[i + 1..] {
+                match t.kind {
+                    Tk::Open(_) => d += 1,
+                    Tk::Close(_) => d -= 1,
+                    Tk::FatArrow if d == 0 => {
+                        found = true;
+                        break;
+                    }
+                    _ => {}
+                }
+                if d < 0 {
+                    break;
+                }
+            }
+            found
+        };
+        // Inside brackets written across lines (`[`, one element per line),
+        // the list ends with its physical line, and a comma there is the
+        // group's separator, not the list's.
+        let in_group = sig[..i].iter().fold(0i32, |d, t| match t.kind {
+            Tk::Open(_) => d + 1,
+            Tk::Close(_) => d - 1,
+            _ => d,
+        }) > 0;
+        let mut d = 0i32;
+        let mut end = sig.len();
+        let mut by_line = false;
+        for (k, t) in sig.iter().enumerate().skip(i + 1) {
+            if in_group && t.line_start.is_some() {
+                end = k;
+                by_line = true;
+                break;
+            }
+            match t.kind {
+                Tk::Open(_) => d += 1,
+                Tk::Close(_) => {
+                    d -= 1;
+                    if d < 0 {
+                        end = k;
+                        break;
+                    }
+                }
+                Tk::Eq if d == 0 && pattern => {
+                    end = k;
+                    break;
+                }
+                Tk::FatArrow if d == 0 && arm_pattern => {
+                    end = k;
+                    break;
+                }
+                Tk::Punct if d == 0 && (arm_pattern || pattern) && t.text == "|" => {
+                    end = k;
+                    break;
+                }
+                _ => {}
+            }
+        }
+        if end <= i + 1 {
+            continue;
+        }
+        // A trailing comma: a list ends with its last entry (the user's
+        // rule; `inner = Animal\ name = x,` on a field line was accepted).
+        if sig[end - 1].kind == Tk::Comma && !by_line {
+            return Err(LayoutError {
+                msg: "`,` is not written at the end of a field list; a comma separates entries on one line, the newline separates field lines".into(),
+                span: sig[end - 1].span,
+            });
+        }
+        // A literal inside a literal on one line (the user's rule,
+        // 2026-09-29): where the inner one ends cannot be seen, so it is
+        // parenthesised. Its fields on their own lines need no parentheses:
+        // the line ends it.
+        let mut d = 0i32;
+        for t in &sig[i + 1..end] {
+            match t.kind {
+                Tk::Open(_) => d += 1,
+                Tk::Close(_) => d -= 1,
+                Tk::Backslash if d == 0 => {
+                    return Err(LayoutError {
+                        msg: "a literal inside a literal on one line: parenthesise the inner one, so the reader sees where it ends -- `a = (Inner\\ x = 1), b = 2` when `b` is the outer literal's, `a = (Inner\\ x = 1, b = 2)` when it is the inner's -- or give the outer literal one field per line".into(),
+                        span: t.span,
+                    });
+                }
+                _ => {}
+            }
+        }
     }
     Ok(())
 }

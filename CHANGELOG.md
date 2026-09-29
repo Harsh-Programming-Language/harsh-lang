@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.48 — 2026-09-28  (no change to the transpiler)
+
+- **Fixed: the Learn page's links to the books.** Its cards linked relatively (`book/`), which resolved to `/book/` while the site was one page at `/learn`; with static generation each page is a folder, `/learn/`, and the links became `/learn/book/` -- "Not found", on every book (the user's screenshots). They are now absolute, `/book/`. Two guards: `check.sh` refuses a relative link in the site's source, and the deploy follows every internal link on every pre-rendered page and fails, before publishing, if one leads nowhere.
+
 ## 0.1.47 — 2026-09-28  (no change to the transpiler: `hrs_std` 0.1.3 and the Jupyter kernel 0.1.3, as before)
 
 - ***The Harshonomicon*, checked against the original.** The user supplied the current *Rustonomicon*, and the companion now follows its table of contents one for one: its numbering (chapters 1 to 12, the introduction unnumbered), its titles, *References* and *Aliasing* as two sections (with a new program: the compiler refusing a second `&mut`), *Implementing Vec*'s eleven sections and *Implementing Arc and Mutex*'s *Arc* with its five, each pointing into the program given under *Final Code*, and *Beneath std*'s *#[panic_handler]*. Details the original adds, now stated: its list of undefined behaviours, `repr(align(n))`, drop check's `#[may_dangle]`, leaking's `Drain` and `thread::scoped`, `BinaryHeap::sift_up`'s guard, and FFI's safe interface (the program gains one). 36 programs, every one built and run.

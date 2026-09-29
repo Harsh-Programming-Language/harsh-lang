@@ -106,6 +106,19 @@ jobs:
           test -f dist/book/index.html && test -f dist/by-example/index.html && test -f dist/patterns/index.html && test -f dist/nomicon/index.html && test -f dist/guide/index.html
           # An unknown path: the app loads and its router shows the
           # not-found page.
+          # Every internal link on the app's pre-rendered pages leads to a
+          # file that is published (2026-09-28: the Learn cards pointed at
+          # /learn/book/ -- the books were there, the links were not).
+          for f in $(find dist -name index.html -not -path 'dist/book/*' -not -path 'dist/by-example/*' -not -path 'dist/patterns/*' -not -path 'dist/nomicon/*' -not -path 'dist/guide/*'); do
+            for h in $(grep -o 'href="[^"#]*"' "$f" | sed 's/^href="//; s/"$//' | grep -v '^http\|^mailto:' | sort -u); do
+              case "$h" in
+                /*) p="dist$h" ;;
+                *) echo "relative link $h in $f"; exit 1 ;;
+              esac
+              [ -f "$p" ] || [ -f "$p/index.html" ] || [ -f "${p%/}/index.html" ] || { echo "broken link $h in $f"; exit 1; }
+            done
+          done
+          echo "every internal link arrives"
           cp dist/index.html dist/404.html
           touch dist/.nojekyll
           ls dist

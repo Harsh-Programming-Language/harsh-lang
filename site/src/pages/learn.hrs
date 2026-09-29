@@ -14,21 +14,21 @@ pub fn Learn$ -> Element:
                 "with the Book. If you know Rust, the guide's quick reference is a page."
             }
             div { class: "cards",
-                a { class: "card", href: "book/",
+                a { class: "card", href: "/book/",
                     h3 { "The Harsh Book" }
                     p {
                         "The Rust Book's path, in Harsh: 21 chapters, every example "
                         "built and run, shown as Harsh, the Rust it becomes, and its output."
                     }
                 }
-                a { class: "card", href: "by-example/",
+                a { class: "card", href: "/by-example/",
                     h3 { "Harsh by Example" }
                     p {
                         "A Rust by Example equivalent: short runnable pages, one concept each, "
                         "with Harsh's own -- pipes, comprehensions, matrices -- beside Rust's."
                     }
                 }
-                a { class: "card", href: "patterns/",
+                a { class: "card", href: "/patterns/",
                     h3 { "Harsh Design Patterns" }
                     p {
                         "A Harsh companion to Rust Design Patterns: the idioms, patterns and "
@@ -36,7 +36,7 @@ pub fn Learn$ -> Element:
                         "partial application change the picture."
                     }
                 }
-                a { class: "card", href: "nomicon/",
+                a { class: "card", href: "/nomicon/",
                     h3 { "The Harshonomicon" }
                     p {
                         "A Harsh companion to The Rustonomicon: unsafe code, layout, lifetimes, "
@@ -44,7 +44,7 @@ pub fn Learn$ -> Element:
                         "program in Harsh."
                     }
                 }
-                a { class: "card", href: "guide/",
+                a { class: "card", href: "/guide/",
                     h3 { "The language guide" }
                     p {
                         "The reference: every construct, every form, every error message, "
@@ -58,7 +58,7 @@ pub fn Learn$ -> Element:
                         "and solutions, and a runner written in Harsh."
                     }
                 }
-                a { class: "card", href: "guide/macros.html",
+                a { class: "card", href: "/guide/macros.html",
                     h3 { "Macros and DSLs" }
                     p {
                         "Harsh's own macros, " code { "name~" } ", expanded before anything is "
@@ -66,7 +66,7 @@ pub fn Learn$ -> Element:
                         code { "view!" } " or " code { "rsx!" } " with Harsh in holes -- how this site is written."
                     }
                 }
-                a { class: "card", href: "guide/tutorial.html",
+                a { class: "card", href: "/guide/tutorial.html",
                     h3 { "The tutorial" }
                     p { "One small program, built up a function at a time." }
                 }

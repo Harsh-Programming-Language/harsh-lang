@@ -147,6 +147,14 @@ say "The guide: every code block transpiles"
 PATH="$ROOT/target/release:$PATH" python3 "$ROOT/docs/check-guide.py" > "$WORK/guide.log" 2>&1 || { cat "$WORK/guide.log"; exit 1; }
 echo "  $(tail -1 "$WORK/guide.log" | sed 's|^docs/LANGUAGE.md: ||')"
 
+say "Site: every link is absolute"
+# Each page is pre-rendered in a folder of its own (`/learn/`), so a relative
+# `book/` resolves to `/learn/book/`, which does not exist. It did exactly
+# that, 2026-09-28, once static generation came: every book link on Learn.
+rel=$(grep -rn 'href: "' --include=*.hrs "$ROOT/site/src" | grep -v 'href: "/\|href: "http\|href: "mailto\|href: "#\|href: "{' || true)
+if [ -n "$rel" ]; then echo "  relative links (write them from the site root, /like/this/):"; echo "$rel"; exit 1; fi
+echo "  none relative"
+
 say "Harsh Design Patterns and The Harshonomicon: every program transpiles"
 # Its full build (`patterns/sources/build.py`) compiles and runs them; this
 # gate keeps each program valid Harsh as the language moves. Development

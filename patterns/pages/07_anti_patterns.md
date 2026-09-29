@@ -12,7 +12,7 @@ When the borrow checker refuses code, cloning the value makes the error go
 away — and often hides the real mistake: two copies now drift apart, and the
 change made to one is missing from the other. First the refusal:
 
-```
+```rust harsh
 fn main$:
     let mut names = vec! (String.from "Ada")
     let first = &names[0]
@@ -41,7 +41,7 @@ For more information about this error, try `rustc --explain E0502`.
 then the fix that keeps one value, by ending the first borrow before the
 second begins, instead of cloning:
 
-```
+```rust harsh
 fn main$:
     let mut names = vec! (String.from "Ada")
     // The first borrow ends before the second begins: one value, no clone.
@@ -67,7 +67,7 @@ that adds a warning — breaking code that did nothing wrong, and every crate
 that depends on it. Deny specific lints you care about, or deny warnings in
 continuous integration only (`RUSTFLAGS="-D warnings"`), never in the crate.
 
-```
+```rust harsh
 // Deny the specific lints you mean, not every warning a future compiler adds.
 #![deny unused_must_use]
 
@@ -97,7 +97,7 @@ inheritance, and misleads: `Deref` is for smart pointers, the target's traits
 are not inherited, and generic code does not see through it. Compose instead,
 and forward the few methods that should be shared.
 
-```
+```rust harsh
 struct Animal
     name: String
 

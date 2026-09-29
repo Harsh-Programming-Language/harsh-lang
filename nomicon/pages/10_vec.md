@@ -87,7 +87,7 @@ the original handles it throughout. This program refuses it, with an
 
 *Original: [Final Code](https://doc.rust-lang.org/nomicon/vec/vec-final.html)*
 
-```
+```rust harsh
 use std.alloc.( self, Layout)
 use std.mem
 use std.ops.( Deref, DerefMut)

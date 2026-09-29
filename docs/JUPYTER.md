@@ -28,17 +28,17 @@ example is written.
 
 ## What a cell can hold
 
-```
+```rust harsh
 let v = vec! 1 2 3
 v <- iter$ <- sum.<i32>$          // a trailing expression is the cell's value
 ```
 
-```
+```rust harsh
 fn twice n: i32 -> i32:            // an item persists for the rest of the session
     n * 2
 ```
 
-```
+```rust harsh
 macro_rules~ pair                  // a Harsh macro unfolds in the cell
     (($a:expr) ($b:expr)) => do:
         ($a, $b)
@@ -58,7 +58,7 @@ crates.io; so the first time a cell uses it, the kernel writes it with
 session. That first cell says so, and takes a minute or two while evcxr
 compiles nalgebra; later cells are quick.
 
-```
+```rust harsh
 let v = v~ [1, 3, 4]
 v
 ```

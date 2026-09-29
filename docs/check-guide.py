@@ -5,7 +5,8 @@ The guide shows Harsh beside Rust, construct by construct, and until now
 nothing checked that the Harsh it shows is Harsh the transpiler accepts,
 or that the Rust beside it is what the transpiler writes. This does both:
 
-- an untagged fence is Harsh and must transpile;
+- a fence tagged `rust harsh` is Harsh and must transpile (the first word
+  colours it on GitLab and GitHub; untagged is refused);
 - a fence whose lines carry a second column -- Harsh on the left, Rust on
   the right, separated by four spaces or more -- or written `harsh  →  rust`
   on one line, is split: the left must transpile and the transpiler's Rust
@@ -162,14 +163,21 @@ def main():
         tag, body = m.group(1).strip(), m.group(2).rstrip("\n")
         line = md[: m.start()].count("\n") + 1
         where = f"docs/LANGUAGE.md:{line} ({body.splitlines()[0][:50]!r})"
+        # Harsh is fenced `rust harsh`: GitLab and GitHub, which know no
+        # Harsh, colour it as Rust by the first word; the tools read the
+        # second (the user's choice, 2026-09-29). A fragment is `rust
+        # fragment`. Plain `rust` is Rust.
         if tag in ("text", "toml", "sh", "rust"):
             continue
         if re.search(r"[│└─┌┐┘├┤]", body):
             continue
-        if tag == "fragment":
+        if tag in ("rust fragment", "fragment"):
             n_frag += 1
             continue
-        if tag:
+        if tag == "":
+            fail(f"{where}: an untagged fence; Harsh is fenced ```rust harsh")
+            continue
+        if tag not in ("rust harsh", "harsh"):
             fail(f"{where}: unknown fence tag {tag!r}")
             continue
         cols = split_columns(body)

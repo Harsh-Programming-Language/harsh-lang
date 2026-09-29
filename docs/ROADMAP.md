@@ -18,7 +18,7 @@ Sizing is relative: XS, S, M, L. "Blocked by" matters more than the estimate.
 
 ## Open, in order (2026-09-25)
 
-**Where things stand.** 0.1.49 is delivered (2026-09-28); 0.1.32 is on
+**Where things stand.** 0.1.50 is delivered (2026-09-29); 0.1.32 is on
 GitLab, and the website is live at https://harsh-lang.com/. `RELEASE.md` has
 publishing and installing every product, in order; publishing is the
 user's. 0.1.30 and 0.1.31 were handed over and are spent. The design questions
@@ -26,6 +26,13 @@ are gathered in the development notes and wait on his use of what exists -- he d
 after a few days with it. What needs no decision is done, or listed last below.
 
 ### Waiting on the user, after his testing
+
+- **Real Harsh colours on GitLab and GitHub.** Since 0.1.50 Harsh blocks are
+  fenced `rust harsh` and coloured as Rust there. For Harsh's own colours:
+  GitLab highlights with Rouge, which accepts new lexers from contributors (a
+  Harsh lexer in Ruby, from our TextMate grammar; then GitLab's upgrade of
+  Rouge); GitHub's Linguist admits a language used in about 200 repositories.
+  Then the tag could become `harsh`.
 
 - ~~**The Harshonomicon**~~ -- delivered in 0.1.45 (13 chapters, 35
   programs), after *Harsh Design Patterns* in 0.1.44.
@@ -315,7 +322,7 @@ written at the end of the line that opens the block, exactly where `:` and
 `do:` go. `:` and `do:` keep their meaning: real blocks, with Rust's
 separators. The example that motivated it:
 
-```
+```rust harsh
 quick_error!:
     #[derive Debug]
     pub enum DocumentServiceError #,:
@@ -365,7 +372,7 @@ information, and the header already ends itself: only a name can follow
 it says "statement block", which an item body is not, and it would teach
 that fluently and wrongly.
 
-```
+```rust harsh
 mod garden                          mod garden;                 // no deeper line: Rust's file module
 
 mod geometry                        mod geometry {              // a deeper line: an inline module
@@ -389,7 +396,7 @@ The two cases bare has to survive, and both do:
 - **A multi-line `where`** would otherwise read as the body's first item;
   the clause is bracketed, so the layout pass and the reader both see it:
 
-```
+```rust harsh
 impl<T> Summary for Wrapper<T>      impl<T> Summary for Wrapper<T>
     [where T: Display]                  where
     fn summarize (&self) -> String:         T: Display,
@@ -490,7 +497,7 @@ in `docs/MACROS.md` has to move.* The case that raised it, a `quick_error!`
 variant whose entries are applications with no separator and whose second
 entry runs onto a continuation line:
 
-```
+```rust harsh
 Io (filename: &str) (cause: io.Error) #:      Io(filename: &str, cause: io::Error) {
     display "I/O error: {} for filename {}"       display("I/O error: {} for filename {}",
         cause filename                                    cause, filename)

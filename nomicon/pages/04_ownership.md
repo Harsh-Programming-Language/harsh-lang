@@ -13,7 +13,7 @@ govern them: a reference cannot outlive what it refers to, and a mutable
 reference cannot be aliased — while it is alive, nothing else reaches the
 same value. The compiler refuses a second `&mut`:
 
-```
+```rust harsh
 fn main$:
     let mut total = 0
     let a = &mut total
@@ -52,7 +52,7 @@ sees a value that cannot change underneath it — and optimise accordingly.
 Unsafe code that creates two live `&mut` to one place breaks that assumption:
 undefined behaviour, whether or not it ever writes through both.
 
-```
+```rust harsh
 fn main$:
     let mut xs = [1, 2, 3, 4, 5, 6]
     // Two `&mut` into one array -- to disjoint halves, so sound.
@@ -77,7 +77,7 @@ A lifetime is the region of code for which a reference must stay valid.
 Within a function the compiler infers them; across a function's signature you
 name them, saying which inputs an output borrows from.
 
-```
+```rust harsh
 // The output borrows from both inputs: it lives as long as the shorter.
 fn longest<'a> (x: &'a str) (y: &'a str) -> &'a str:
     if x <- len$ >= y <- len$: x else: y
@@ -106,7 +106,7 @@ because it reasons about a borrow's whole scope rather than every path. The
 classic case: a borrow returned on one path of a function stays alive on the
 others.
 
-```
+```rust harsh
 use std.collections.HashMap
 
 // Correct, yet refused: the borrow returned on the first path is taken to
@@ -168,7 +168,7 @@ For more information about this error, try `rustc --explain E0499`.
 **In Harsh:** rustc's refusal points at the `.hrs` lines; the usual way
 around it is to look up twice, as the next program does.
 
-```
+```rust harsh
 use std.collections.HashMap
 
 // Looking up twice: no borrow outlives a path.
@@ -195,7 +195,7 @@ borrows from it; with `&self`, the output borrows from `self`. The compiler
 fills them in by these rules; you write them only when the rules do not
 decide.
 
-```
+```rust harsh
 struct Doc
     text: String
 
@@ -227,7 +227,7 @@ Dereferencing a raw pointer produces a reference whose lifetime nothing
 constrains — it becomes whatever the context asks for, even `'static`. Bound it
 at once, by returning it from a function whose signature ties it to an input.
 
-```
+```rust harsh
 struct Owner
     value: i32
 
@@ -257,7 +257,7 @@ A closure taking a reference must work for *every* lifetime its caller might
 pass, not one chosen in advance: `for<'a> Fn(&'a T) -> &'a U`. Usually this is
 implied by the `Fn(&T) -> &U` sugar, which is why it is rarely written.
 
-```
+```rust harsh
 // The closure must work for every lifetime of the references it is given:
 // a `for<'a>` bound, implied by the sugar.
 fn apply_all (f: impl Fn (&str) -> usize) (words: &[String]) -> Vec<usize>:
@@ -285,7 +285,7 @@ wherever a `&'a str` is expected. How that extends through a type is its
 `T`; `fn(T)` is contravariant in `T`. Getting variance wrong in unsafe code —
 through a raw-pointer field, say — lets a short lifetime be stretched.
 
-```
+```rust harsh
 // Expects references that live for some `'a`...
 fn pick<'a> (a: &'a str) (b: &'a str) (first: bool) -> &'a str:
     if first: a else: b
@@ -314,7 +314,7 @@ standard library escapes this check for its collections with an unstable
 attribute, `#[may_dangle]`, promising their destructors only drop what they
 hold.
 
-```
+```rust harsh
 struct Inspector<'a>
     seen: &'a String
 
@@ -366,7 +366,7 @@ owns or borrows. `PhantomData<T>` — a zero-sized field — says "act as if thi
 struct held a `T`", restoring the right variance, drop checking and auto
 traits.
 
-```
+```rust harsh
 use std.marker.PhantomData
 
 // Only a raw pointer inside: PhantomData says "this borrows a T for 'a".
@@ -406,7 +406,7 @@ The borrow checker understands a struct's fields as separate places — two
 `&mut` to two fields are fine — but not a slice's halves, which is why
 `split_at_mut` exists, with a little unsafe code inside.
 
-```
+```rust harsh
 struct Point
     x: i32
     y: i32

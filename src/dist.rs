@@ -29,7 +29,7 @@ Harsh's standard library: the types behind the matrix and vector literals of
 *Rust without braces, with pipes, partial application, comprehensions and
 linear algebra*.
 
-```
+```rust harsh
 let x = m~ [1.0 1.0; 1.0 2.0; 1.0 3.0]
 let y = v~ [1.0, 2.0, 2.9]
 let beta = x <- solve (&y)          // Julia's X \ y: the least-squares fit
@@ -1768,7 +1768,7 @@ harsh-lang = { version = "0.1.30", path = "..", default-features = false }
 The runtime of Harsh's own procedural macros. A Harsh proc macro is an
 ordinary Harsh function marked `#[proc_macro~]`:
 
-```
+```rust harsh
 use hrs_proc_macro.TokenStream
 
 #[proc_macro~]
@@ -3119,7 +3119,7 @@ hrs_proc_macro = { version = "0.2", path = "../hrs_proc_macro" }
 
 Harsh's counterpart to Rust's `quote`. In a Harsh proc-macro crate:
 
-```
+```rust harsh
 use hrs_quote.quote
 
 let expanded = quote~ do:
@@ -3842,7 +3842,7 @@ hrs_quote = { version = "0.1", path = "../hrs_quote" }
 
 Harsh's counterpart to Rust's `syn`, for procedural macros written in Harsh:
 
-```
+```rust harsh
 use hrs_proc_macro.TokenStream
 use hrs_quote.quote
 use hrs_syn.{parse_macro_input, DeriveInput}

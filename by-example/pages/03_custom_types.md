@@ -2,7 +2,7 @@
 
 ## 3.1 Structures
 
-```
+```rust harsh
 #[derive Debug]
 struct Person
     name: String
@@ -58,7 +58,7 @@ constructing**, read backwards.
 
 ## 3.2 Enums
 
-```
+```rust harsh
 // A variant can carry nothing, a payload, or named fields.
 #[derive Debug]
 enum Event
@@ -110,7 +110,7 @@ arms then go beneath, or inline after the `\`:
 
 ## 3.3 Constants
 
-```
+```rust harsh
 // A `const` is inlined wherever it is used; a `static` has one address.
 const THRESHOLD: i32 = 10
 static LANGUAGE: &str = "Harsh"

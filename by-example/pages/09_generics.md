@@ -2,7 +2,7 @@
 
 ## 9.1 Generics
 
-```
+```rust harsh
 // A generic function: one definition, many types.
 fn largest<T: PartialOrd + Copy> (items: &[T]) -> T:
     let mut best = items[0]
@@ -38,7 +38,7 @@ Generic parameters sit in `<>` after the name, with their bounds, exactly as
 in Rust. A bound long enough to be awkward goes in a bracketed `where` clause, which is
 Harsh's own spelling:
 
-```
+```rust harsh
 // A bound long enough to be awkward goes in a bracketed `where` clause.
 // Brackets suppress layout, so the clause may span lines and its own `:`
 // cannot be mistaken for a block opener.
@@ -62,7 +62,7 @@ and its colons cannot be mistaken for openers.
 
 ## 9.2 Traits
 
-```
+```rust harsh
 trait Greet
     // A method with no body: whoever implements the trait writes it.
     fn name (&self) -> String
@@ -109,7 +109,7 @@ compile time.
 
 ## 9.3 Operators are traits
 
-```
+```rust harsh
 use std.ops.Add
 
 #[derive Debug Clone Copy]

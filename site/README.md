@@ -5,7 +5,7 @@ The site for **Harsh — Rust without the braces**, written in Harsh: a
 holes, built to a static site and published on GitHub Pages by the
 repository's workflow (`.github/workflows/pages.yml`).
 
-```
+```text
 src/          the site, in Harsh (src/**.hrs)
 assets/       the stylesheet, the logo, the favicon
 public/       the Book, By Example and the guide, as this tree renders them
@@ -20,7 +20,7 @@ From the repository root, with `hrs` built or installed
 (`cargo install --path .`), the Dioxus CLI (`cargo install dioxus-cli`) and
 the wasm target (`rustup target add wasm32-unknown-unknown`):
 
-```
+```sh
 cd site
 hrs cargo metadata --no-deps > /dev/null    # transpile src/**.hrs to target/hrs/
 dx serve                                    # then http://localhost:8080

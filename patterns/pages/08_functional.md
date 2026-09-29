@@ -14,7 +14,7 @@ Declarative code says *what*: the result as a composition of operations. Rust
 supports both; iterators make the declarative form idiomatic. Harsh adds two
 more declarative forms — the pipe and the comprehension.
 
-```
+```rust harsh
 fn square (n: u32) -> u32:
     n * n
 
@@ -59,7 +59,7 @@ instantiation gives methods to that instantiation only — the way type classes
 work in functional languages. The compiler then refuses, at compile time, a
 method on the wrong kind of value.
 
-```
+```rust harsh
 use std.marker.PhantomData
 
 struct Http
@@ -113,7 +113,7 @@ other way only sometimes — a parse that may fail, and the rendering that
 always succeeds. The original uses them to explain the design of Serde's API,
 whose deserializer drives a visitor that may fail — a prism in all but name.
 
-```
+```rust harsh
 use std.collections.VecDeque
 
 // An iso: two conversions that undo each other.

@@ -2,7 +2,7 @@
 
 ## 5.1 if and else
 
-```
+```rust harsh
 fn main$:
     let n = 7
 
@@ -34,7 +34,7 @@ Each `else` answers the nearest open `if`.
 
 ## 5.2 Loops
 
-```
+```rust harsh
 fn main$:
     // `loop` runs until something breaks out of it -- and `break` may
     // carry a value, which makes the loop an expression.
@@ -85,7 +85,7 @@ can leave an outer loop rather than the one it stands in.
 
 ## 5.3 match
 
-```
+```rust harsh
 fn describe (n: i32) -> String:
     match n\
         0 => String.from "zero"
@@ -128,7 +128,7 @@ backwards. A guard is an `if` after the pattern, and `_` catches the rest.
 
 ## 5.4 if let, let else, while let
 
-```
+```rust harsh
 fn main$:
     let some: Option<i32> = Some 7
     let none: Option<i32> = None

@@ -10,7 +10,7 @@ A crate is the unit of compilation: `rustc` is given one file — the *crate roo
 
 A module is a named scope for items — functions, structs, enums, other modules — declared with `mod` and a block:
 
-```
+```rust harsh
 mod front_of_house
     mod hosting
         fn add_to_waitlist$:
@@ -57,7 +57,7 @@ Modules are for organising code the way directories organise files, and — the 
 
 To call something in a module you name its path, the way you name a file in a directory. A path is either *absolute*, starting from `crate`, or *relative*, starting from the current module; the segments are joined with `.`:
 
-```
+```rust harsh
 mod front_of_house
     mod hosting
         fn add_to_waitlist$:
@@ -93,7 +93,7 @@ Both paths are correctly spelled and the program does not build, because `hostin
 
 `pub` is that decision:
 
-```
+```rust harsh
 mod front_of_house
     pub mod hosting
         pub fn add_to_waitlist$:
@@ -118,7 +118,7 @@ added to waitlist
 
 A path may also start from the *parent* module, with `super`:
 
-```
+```rust harsh
 fn deliver_order$:
     println! "delivered"
 
@@ -145,7 +145,7 @@ delivered
 
 `pub` on a struct makes the *type* public, and each field is still private unless it too is marked:
 
-```
+```rust harsh
 mod back_of_house
     pub struct Breakfast
         pub toast: String
@@ -170,7 +170,7 @@ I'd like Wheat toast please
 
 `toast` is public and `seasonal_fruit` is not, so outside `back_of_house` a `Breakfast` can be read and written through `toast` alone — and cannot be constructed with a literal at all, since a literal has to give every field. That is why `summer` exists: a public associated function is the way to build a struct that has a private field, and it is where the module gets to choose the default. Try the private field from outside:
 
-```
+```rust harsh
 mod back_of_house
     pub struct Breakfast
         pub toast: String
@@ -197,7 +197,7 @@ error[E0616]: field `seasonal_fruit` of struct `Breakfast` is private
 
 An enum is the opposite: `pub enum` makes every variant public, because an enum with hidden variants would be one you could not match on:
 
-```
+```rust harsh
 mod back_of_house
     #[derive Debug]
     pub enum Appetizer
@@ -218,7 +218,7 @@ Soup Salad
 
 Writing the full path at every call is tedious, and `use` brings a path into scope once:
 
-```
+```rust harsh
 mod front_of_house
     pub mod hosting
         pub fn add_to_waitlist$:
@@ -241,7 +241,7 @@ After `use crate.front_of_house.hosting`, the name `hosting` is in scope in this
 
 A `use` is scoped to the module it appears in. It does not reach into a child module:
 
-```
+```rust harsh
 mod front_of_house
     pub mod hosting
         pub fn add_to_waitlist$:
@@ -272,7 +272,7 @@ The `use` is in the crate root; `customer` is a child; the name is not in scope 
 
 When two imports would have the same name, rename one:
 
-```
+```rust harsh
 use std.fmt.Result
 use std.io.Result as IoResult             // two `Result`s: rename one
 
@@ -296,7 +296,7 @@ Both `std.fmt` and `std.io` define a `Result`. `use std.io.Result as IoResult` b
 
 `use` brings a name in for *this* module. `pub use` brings it in and passes it on, so that users of this module see it as if it had been defined here:
 
-```
+```rust harsh
 mod restaurant
     mod front_of_house
         pub mod hosting
@@ -319,7 +319,7 @@ added to waitlist
 
 Several imports from one place can share their prefix:
 
-```
+```rust harsh
 use std.(cmp.Ordering, collections.HashMap)   // two paths sharing a prefix
 use std.io.(self, Write)                      // the module itself, and one item from it
 use std.collections.*                         // everything: the glob, for tests and preludes
@@ -349,7 +349,7 @@ So far every module has had its body inline. As a program grows, a module goes i
 
 `src/main.hrs`
 
-```
+```rust harsh
 use crate.garden.vegetables.Asparagus
 
 pub mod garden      // the body is in src/garden.hrs
@@ -361,13 +361,13 @@ fn main$:
 
 `src/garden.hrs`
 
-```
+```rust harsh
 pub mod vegetables  // the body is in src/garden/vegetables.hrs
 ```
 
 `src/garden/vegetables.hrs`
 
-```
+```rust harsh
 #[derive Debug]
 pub struct Asparagus
 ```

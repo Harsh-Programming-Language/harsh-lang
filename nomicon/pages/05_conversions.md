@@ -11,7 +11,7 @@ Some conversions happen on their own, at specific places: `&mut T` to `&T`,
 `&String` to `&str` through `Deref`, an array to a slice, a concrete type to
 `dyn Trait`. They are never applied to satisfy a trait bound.
 
-```
+```rust harsh
 use std.fmt.Display
 
 fn count (s: &str) -> usize:
@@ -48,7 +48,7 @@ then `&mut receiver`, then dereferencing and trying again. This is
 convenient and occasionally surprising: `x.clone()` on a `&T` where `T` is not
 `Clone` clones the *reference*.
 
-```
+```rust harsh
 #[derive Clone Debug]
 struct Named
     name: String
@@ -86,7 +86,7 @@ sign-extend; a float to an integer saturates (and NaN becomes 0); pointer
 casts change the type the pointer claims. None of them is undefined
 behaviour — but a pointer cast is only as good as what it points to.
 
-```
+```rust harsh
 fn main$:
     // Integer to a smaller integer: truncates. (A literal that does not fit
     // is refused outright, by the `overflowing_literals` lint.)
@@ -120,7 +120,7 @@ size. It is the most dangerous tool there is: almost every use has a safer
 alternative (`f32::to_bits`, `from_ne_bytes`, pointer casts), which the next
 program compares it with.
 
-```
+```rust harsh
 fn main$:
     let x = 1.5f32
     // The dangerous tool...

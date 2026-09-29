@@ -12,7 +12,7 @@ Every type has a size and an alignment. By default, Rust may reorder a
 struct's fields to reduce padding, and promises nothing else about their
 order: two structs with the same fields may be laid out differently.
 
-```
+```rust harsh
 use std.mem
 
 // Written loosely: a byte, a u32, a byte.
@@ -51,7 +51,7 @@ Not every type has a known, non-zero size. *Dynamically sized* types — `[T]`,
 so those pointers are twice as wide. *Zero-sized* types take no space at all;
 *empty* types, like an enum with no variants, cannot even be built.
 
-```
+```rust harsh
 use std.mem
 
 struct Nothing
@@ -95,7 +95,7 @@ declaration with nothing beneath.
 field. `#[repr(packed)]` (or `packed(n)`) removes padding, at the cost of
 unaligned fields; `#[repr(align(n))]` raises a type's alignment.
 
-```
+```rust harsh
 use std.mem
 
 // A fixed discriminant, one byte.

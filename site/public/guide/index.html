@@ -303,7 +303,7 @@ pre.code:hover .copy,.copy:focus-visible{opacity:1}
 <span class="k">let</span> beta <span class="p">=</span> x<span class="p">.</span>svd<span class="p">(</span><span class="k">true</span><span class="p">,</span> <span class="k">true</span><span class="p">)</span><span class="p">.</span>solve<span class="p">(</span><span class="p">&amp;</span>y<span class="p">,</span> <span class="num">1e</span><span class="p">-</span><span class="num">12</span><span class="p">)</span><span class="p">.</span>unwrap<span class="p">(</span><span class="p">)</span><span class="p">;</span></code></pre>
 <p>Each has its section below: <a href="#partial-application-with-the-pipes">Pipes and partial application</a>, <a href="#generator-comprehensions">Generator comprehensions</a>, <a href="#matrices-and-linear-algebra">Matrices and linear algebra</a>.</p>
 <h3 id="the-mark">The mark</h3>
-<pre class="code diagram"><code>#[Ha&lt;rs&gt;.h]
+<pre class="code"><code>#[Ha&lt;rs&gt;.h]
      │  │
      │  └── .h
      └───── rs</code></pre>
@@ -337,7 +337,7 @@ pre.code:hover .copy,.copy:focus-visible{opacity:1}
 </ul>
 <h4 id="building-the-tools">Building the tools</h4>
 <p>From the published crate:</p>
-<pre class="code harsh"><code>cargo install harsh<span class="p">-</span>lang</code></pre>
+<pre class="code"><code>cargo install harsh-lang</code></pre>
 <p>or, from the repository root, <code>cargo install --path .</code> to get the tree as it is. Either installs four executables into <code>~/.cargo/bin</code>, which rustup already put on your <code>PATH</code>:</p>
 <table>
 <thead>
@@ -367,7 +367,7 @@ pre.code:hover .copy,.copy:focus-visible{opacity:1}
 </table>
 <p>Check with <code>hrs</code> alone, which prints its usage. (If you would rather not install, <code>cargo build --release</code> leaves the same four under <code>target/release/</code>.)</p>
 <h4 id="your-first-project">Your first project</h4>
-<pre class="code harsh"><code>hrs new hello
+<pre class="code"><code>hrs new hello
 cd hello
 hrs run</code></pre>
 <p>prints <code>Hello from Harsh</code>. The project <code>hrs new</code> creates has three files:</p>
@@ -400,7 +400,7 @@ hrs &lt;input.hrs&gt; [-o out.rs] [--map out.map.json]
 <p>Anything after the subcommand goes to cargo unchanged: <code>hrs run --release</code>, <code>hrs test -- --nocapture</code>. Each command first reports what the transpile step did — <code>hrs: transpiled 1 of 3 file(s)</code> or <code>hrs: 3 file(s) up to date</code> — so a build that does nothing says so.</p>
 <p>The generated Rust under <code>target/hrs/</code> is not meant to be read. It keeps the <code>.hrs</code> file's line breaks so that every diagnostic maps back to the right line, and it is not formatted, because formatting would move every byte the source map depends on. When a Rust reader needs the code — a reviewer, a collaborator without <code>hrs</code>, a crates.io upload — <code>hrs export</code> writes the project as an ordinary cargo crate: <code>Cargo.toml</code> with its targets under <code>src/</code>, every module transpiled, no source maps, and <code>cargo fmt</code> run over the result (when rustfmt is installed; <code>rustup component add rustfmt</code>). The exported crate builds with <code>cargo build</code> alone. Nothing in it points back at the <code>.hrs</code> files, so it is a copy, not a link: export again after changes.</p>
 <h4 id="bringing-existing-rust-in">Bringing existing Rust in</h4>
-<pre class="code harsh"><code>hrs<span class="p">-</span>from src<span class="p">/</span>old<span class="p">.</span>rs <span class="p">-</span>o src<span class="p">/</span>old<span class="p">.</span>hrs</code></pre>
+<pre class="code"><code>hrs-from src/old.rs -o src/old.hrs</code></pre>
 <p>The converter writes Harsh from Rust: braces become indentation, <code>::</code> becomes <code>.</code>, <code>.method()</code> becomes <code>&lt;- method$</code>, a <code>fn</code>'s parameter list becomes one group per parameter, <code>use a::{b, c}</code> becomes <code>use a.(b, c)</code>. Its output is valid Harsh that transpiles back to token-identical Rust — the transpiler's own source goes through this round trip in the test suite — and it is the fastest way to see what a file of your own looks like in Harsh.</p>
 <h4 id="editors">Editors</h4>
 <ul>
@@ -2063,9 +2063,9 @@ v <span class="op">&lt;-</span> map <span class="p">|</span>x<span class="p">|</
     x <span class="p">*</span> <span class="num">2</span>                              isolate the closure <span class="k">in</span> parens
 <span class="op">&lt;-</span> count<span class="defer">$</span></code></pre>
 <h3 id="command-line">Command line</h3>
-<pre class="code harsh"><code>hrs input<span class="p">.</span>hrs <span class="p">-</span>o out<span class="p">/</span>main<span class="p">.</span>rs <span class="p">-</span><span class="p">-</span>map out<span class="p">/</span>main<span class="p">.</span>map<span class="p">.</span>json
-cargo build <span class="p">-</span><span class="p">-</span>message<span class="p">-</span>format<span class="p">=</span>json <span class="p">|</span> hrs<span class="p">-</span>remap <span class="p">-</span><span class="p">-</span>map out<span class="p">/</span>main<span class="p">.</span>map<span class="p">.</span>json
-hrs<span class="p">-</span>from existing<span class="p">.</span>rs <span class="p">-</span>o existing<span class="p">.</span>hrs</code></pre>
+<pre class="code"><code>hrs input.hrs -o out/main.rs --map out/main.map.json
+cargo build --message-format=json | hrs-remap --map out/main.map.json
+hrs-from existing.rs -o existing.hrs</code></pre>
 <p><code>hrs-from</code> converts Rust source to Harsh, for bringing existing code in. It matches braces from the lexer's bracket depth, so nesting is exact; the only judgement is whether each <code>{</code> becomes indentation, and when that is not clear-cut the braces are left alone, which is always valid Harsh.</p>
 <p>The source map records one entry per token as byte offsets. The remapper rewrites every span in every diagnostic and sub-diagnostic, then re-renders against the original source, so errors report the correct line and column in your <code>.hrs</code> file rather than in the generated Rust.</p>
 <h3 id="quick-reference">Quick reference</h3>

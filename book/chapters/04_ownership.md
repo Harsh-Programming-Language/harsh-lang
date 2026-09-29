@@ -18,7 +18,7 @@ That "give it back" is the whole problem. Give the memory back too early and som
 
 Scope is the ordinary thing: a variable is valid from where it is declared until the end of the block that declares it.
 
-```
+```rust harsh
 fn main$:
     do:
         let s = "hello"          // s is valid from here
@@ -39,7 +39,7 @@ hello
 
 `String` is the type you reach for when text is not fixed at compile time — it can grow:
 
-```
+```rust harsh
 fn main$:
     let mut s = String.from "hello"
     s <- push_str ", world"       // append to the heap buffer
@@ -59,7 +59,7 @@ hello, world!
 
 Now the rule bites. What happens when a `String` is assigned to a second variable?
 
-```
+```rust harsh
 fn main$:
     let s1 = String.from "hello"
     let s2 = s1                   // s1 is moved into s2
@@ -87,7 +87,7 @@ This is the moment people come to Rust from anywhere else and feel the floor shi
 
 When you actually want two strings, say so:
 
-```
+```rust harsh
 fn main$:
     let s1 = String.from "hello"
     let s2 = s1 <- clone$       // a second, independent copy of the heap data
@@ -104,7 +104,7 @@ s1 = hello, s2 = hello
 
 Integers did not behave this way in chapter 3, and they still do not:
 
-```
+```rust harsh
 fn main$:
     let x = 5
     let y = x                     // an integer is copied, not moved
@@ -121,7 +121,7 @@ An `i32` is a value that lives entirely on the stack, has no buffer to free, and
 
 Passing a value to a function is the same as assigning it to the parameter, and follows the same rule:
 
-```
+```rust harsh
 fn takes_ownership some_string: String:
     println! "{}" some_string
     // some_string goes out of scope here and is freed
@@ -157,7 +157,7 @@ error[E0382]: borrow of moved value: `s`
 
 Returning a value moves it too — out of the function and into whatever receives it:
 
-```
+```rust harsh
 fn gives_ownership$ -> String:
     let some_string = String.from "yours"
     some_string                   // moved out to the caller
@@ -180,7 +180,7 @@ yours hello
 
 This is correct and it is also tedious. A function that only wants to *look* at a `String` — measure it, say — has to give it back or the caller loses it, and giving it back means returning it alongside the real answer:
 
-```
+```rust harsh
 fn calculate_length s: String -> (String, usize):
     let length = s <- len$
     (s, length)                   // hand the String back along with the answer
@@ -201,7 +201,7 @@ It works. It is also nobody's idea of a good time, and Rust has a better one.
 
 A **reference** lets a function use a value without owning it. Write `&s1` and you get a reference to `s1`; the function receives `&String` — "a reference to a String" — and when its parameter goes out of scope nothing is freed, because the parameter never owned anything:
 
-```
+```rust harsh
 fn calculate_length s: &String -> usize:
     s <- len$
     // s goes out of scope, but it never owned the String, so nothing is freed
@@ -222,7 +222,7 @@ Creating a reference is called **borrowing**, and the word is chosen with care: 
 
 A borrowed value cannot be changed through the borrow:
 
-```
+```rust harsh
 fn change some_string: &String:
     some_string <- push_str ", world"
 
@@ -242,7 +242,7 @@ error[E0596]: cannot borrow `*some_string` as mutable, as it is behind a `&` ref
 
 A plain `&` reference is a promise to only read. To change something through a reference you need a **mutable reference**, `&mut`, and the value you borrow from has to be `mut` in the first place:
 
-```
+```rust harsh
 fn change some_string: &mut String:
     some_string <- push_str ", world"
 
@@ -262,7 +262,7 @@ Three `mut`s: the variable is declared mutable, the borrow is taken mutably, and
 
 Here is the restriction that makes borrowing safe, and it is the compiler's most-argued-with error:
 
-```
+```rust harsh
 fn main$:
     let mut s = String.from "hello"
     let r1 = &mut s
@@ -286,7 +286,7 @@ error[E0499]: cannot borrow `s` as mutable more than once at a time
 
 The scope of a reference is what matters, so the borrows only conflict while both are alive. Give the first one a block of its own and the second is fine:
 
-```
+```rust harsh
 fn main$:
     let mut s = String.from "hello"
 
@@ -306,7 +306,7 @@ hello there!
 
 Mixing is refused for the same reason. Readers were promised nothing would change under them; a writer breaks that promise:
 
-```
+```rust harsh
 fn main$:
     let mut s = String.from "hello"
     let r1 = &s
@@ -329,7 +329,7 @@ error[E0502]: cannot borrow `s` as mutable because it is also borrowed as immuta
 
 A reference's scope, though, is not its enclosing block. It runs from where the reference is created to **the last place it is used**. So this compiles, because `r1` and `r2` are not used after the first `println!`, and the compiler can see that:
 
-```
+```rust harsh
 fn main$:
     let mut s = String.from "hello"
     let r1 = &s
@@ -353,7 +353,7 @@ The compiler tracks where each borrow ends by use, not by block, and this is wha
 
 In languages with pointers it is possible to hand out a pointer to memory that is then freed — a *dangling* pointer, the classic source of crashes and worse. Rust guarantees this cannot happen: a reference is never allowed to outlive the value it points to. Try to return a reference to a local and see:
 
-```
+```rust harsh
 fn dangle$ -> &String:
     let s = String.from "hello"
     &s                            // a reference to s…
@@ -375,7 +375,7 @@ error[E0106]: missing lifetime specifier
 
 `s` is created inside `dangle`, so it is dropped when `dangle` returns; a reference to it would point at freed memory. The compiler's message is about *lifetimes*, a word chapter 10 explains in full — for now, read the first `help`: the return type is a borrowed value and there is nothing in this function it could be borrowed *from*. The fix is to return the `String` itself, moving it out to the caller:
 
-```
+```rust harsh
 fn no_dangle$ -> String:
     let s = String.from "hello"
     s                             // move the String out instead
@@ -397,7 +397,7 @@ To sum up this section in two lines: at any time, either one mutable reference o
 
 A **slice** is a reference to a contiguous part of a collection rather than the whole thing. It exists to solve a problem that references alone leave open, so here is the problem first. Say we want the first word of a string. Without slices, the natural answer is an *index* — the position where the first word ends:
 
-```
+```rust harsh
 fn first_word s: &String -> usize:
     let bytes = s <- as_bytes$
 
@@ -426,7 +426,7 @@ Two things about the function itself. `as_bytes` gives the string's bytes, `iter
 
 A string slice is a reference to part of a `String`:
 
-```
+```rust harsh
 fn main$:
     let s = String.from "hello world"
     let hello = &s[0..5]
@@ -445,7 +445,7 @@ hello world hello world hello world
 
 Now `first_word` can return the word itself, tied to the string it came from:
 
-```
+```rust harsh
 fn first_word s: &str -> &str:
     let bytes = s <- as_bytes$
 
@@ -475,7 +475,7 @@ The signature takes `&str`, not `&String`, and that is the more useful signature
 
 And now the bug from the start of the section is caught, by the borrowing rule we already have:
 
-```
+```rust harsh
 fn first_word s: &str -> &str:
     let bytes = s <- as_bytes$
 
@@ -510,7 +510,7 @@ error[E0502]: cannot borrow `s` as mutable because it is also borrowed as immuta
 
 Slices are not only for strings. Part of an array is `&[i32]`, a slice of integers, and it works the same way:
 
-```
+```rust harsh
 fn main$:
     let a = [1, 2, 3, 4, 5]
     let middle: &[i32] = &a[1..4]

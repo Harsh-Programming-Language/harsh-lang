@@ -4,7 +4,7 @@ You have been writing patterns since chapter 2: `Ok n`, `Some max`, `(key, value
 
 ## 22.1 Where patterns appear
 
-```
+```rust harsh
 fn main$:
     // match arms
     let x = Some 3
@@ -69,7 +69,7 @@ Six places. `match` arms, where every case must be covered. `if let`, for one ca
 
 A pattern that can fail to match is *refutable*; one that always matches is *irrefutable*. `Some x` is refutable, `x` and `(a, b)` are not. `let`, `for` and function parameters need an irrefutable pattern, because they have nothing to do when it fails; `if let`, `while let` and `match` arms accept a refutable one, because failing is what their `else`, their end, and their next arm are for:
 
-```
+```rust harsh
 fn main$:
     let some_option_value: Option<i32> = None
     let Some x = some_option_value
@@ -94,7 +94,7 @@ error[E0005]: refutable pattern in local binding
 
 ### Literals, names, ranges, alternatives
 
-```
+```rust harsh
 fn main$:
     let x = 1
 
@@ -143,7 +143,7 @@ A literal matches itself. A name matches anything and binds it — and inside an
 
 ### Destructuring
 
-```
+```rust harsh
 struct Point
     x: i32
     y: i32
@@ -212,7 +212,7 @@ A struct pattern is a field list like any other, marked with `\`: `Point\ x: a, 
 
 ### Ignoring
 
-```
+```rust harsh
 fn foo (_: i32) (y: i32):                // an unused parameter, by name
     println! "This code only uses the y parameter: {y}"
 
@@ -272,7 +272,7 @@ Some numbers: 2, 32
 
 ## 22.4 Guards and bindings
 
-```
+```rust harsh
 enum Message
     Hello\
         id: i32

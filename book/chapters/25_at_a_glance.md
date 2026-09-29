@@ -2,7 +2,7 @@
 
 Everything of Harsh's own, in one place, each rule with the chapter that teaches it. There is little of it, because Harsh states rules only for what it changes; wherever this page is silent, what you learned of Rust in the chapters holds unchanged. One program first, with most of the page in it, built and run like every other in this book:
 
-```
+```rust harsh
 use std.collections.HashMap          // `.` walks a path
 
 #[derive Debug Clone PartialEq]      // an attribute applies inside its brackets

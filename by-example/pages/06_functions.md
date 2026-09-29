@@ -2,7 +2,7 @@
 
 ## 6.1 Declaring and calling
 
-```
+```rust harsh
 // One group per parameter. A single parameter may drop its parentheses.
 fn double n: i32 -> i32:
     n * 2
@@ -54,7 +54,7 @@ looks like.
 
 ## 6.2 Methods
 
-```
+```rust harsh
 struct Rect
     w: f64
     h: f64
@@ -95,7 +95,7 @@ value is `r <- area$`. An associated function is reached through the type,
 
 ## 6.3 Closures
 
-```
+```rust harsh
 fn apply (f: impl Fn i32 -> i32) (to: i32) -> i32:
     f to
 

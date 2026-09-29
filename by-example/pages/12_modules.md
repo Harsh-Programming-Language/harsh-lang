@@ -1,6 +1,6 @@
 # 12. Modules
 
-```
+```rust harsh
 // A module groups items. Its body follows the header, with no mark.
 mod shapes
     // Items are private to the module unless they say `pub`.
@@ -40,7 +40,7 @@ import is written with parentheses: `use std.io.(Read, Write)`.
 
 Privacy is checked, so reaching a field that is not `pub` is refused:
 
-```
+```rust harsh
 mod counter
     pub struct Counter
         // Not `pub`: only this module may touch it.

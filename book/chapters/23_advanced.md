@@ -6,7 +6,7 @@ Everything in this chapter is something a Rust program can go a long way without
 
 Every guarantee so far — no dangling references, no data races, no out-of-bounds reads — is enforced by the compiler *refusing programs it cannot prove safe*. Some correct programs cannot be proved safe: talking to the operating system, implementing a data structure with raw pointers, calling C. For those, `unsafe` marks a region where the programmer takes over the proof:
 
-```
+```rust harsh
 fn main$:
     let mut num = 5
     let r1 = &num as *const i32          // raw pointers can be made in safe code
@@ -25,7 +25,7 @@ r2 is: 6
 
 A *raw pointer* — `*const T` or `*mut T` — may be created anywhere; it is *dereferencing* one that is unsafe, since nothing guarantees it points at a live value, so that happens inside `unsafe:`. Five things need the keyword: dereferencing a raw pointer, calling an unsafe function, accessing a mutable static, implementing an unsafe trait, and accessing a union's fields. Everything else — the borrow checker, the type checker — stays on inside the block. `unsafe` does not turn Rust off; it turns off five checks, and marks where.
 
-```
+```rust harsh
 use std.slice
 
 unsafe fn dangerous$:
@@ -61,7 +61,7 @@ this function is unsafe to call
 
 `unsafe fn dangerous$` is a function whose *caller* must uphold some contract, and may only be called from an `unsafe:` block. `split_at_mut` is the pattern that matters: a *safe* function that uses unsafe code inside, after checking the contract itself. Two mutable slices into one vector cannot be expressed to the borrow checker, so the function takes a raw pointer, asserts that `mid` is in range, and builds the slices from raw parts inside `unsafe:` — and its callers never see the keyword, because the function has done the reasoning and stands behind it. This is how the standard library is written, and the discipline to copy: keep `unsafe` small, wrap it in a safe interface, and write down the invariant it depends on.
 
-```
+```rust harsh
 extern "C"                             // a foreign block: a layout block like any other
     fn abs (input: i32) -> i32           // a foreign function has no body; the `;` is supplied
 
@@ -94,7 +94,7 @@ COUNTER: 3
 
 Chapter 13 showed `Iterator`'s `type Item`. Here is a type implementing it:
 
-```
+```rust harsh
 struct Counter
     count: u32
 
@@ -130,7 +130,7 @@ fn main$:
 
 `+` is a trait, `Add`, and a type implements it to be addable:
 
-```
+```rust harsh
 use std.ops.Add
 
 #[derive Debug Copy Clone PartialEq]
@@ -172,7 +172,7 @@ Point { x: 3, y: 3 }
 
 Two traits may define a method with the same name, and a type may implement both, and have an inherent method of that name as well:
 
-```
+```rust harsh
 trait Pilot
     fn fly (&self)
 
@@ -229,7 +229,7 @@ A baby dog is called a puppy
 
 A trait may require another:
 
-```
+```rust harsh
 use std.fmt
 
 // A supertrait: OutlinePrint requires Display, and may use it.
@@ -281,7 +281,7 @@ The second half is the *newtype* pattern, the answer to chapter 10's orphan rule
 
 ## 23.3 Advanced types
 
-```
+```rust harsh
 use std.fmt
 
 // A type alias: a synonym, not a new type.
@@ -335,7 +335,7 @@ A *dynamically sized type* is one whose size is not known at compile time: `str`
 
 ## 23.4 Functions and closures as values
 
-```
+```rust harsh
 fn add_one x: i32 -> i32:
     x + 1
 
@@ -404,7 +404,7 @@ Harsh's own macros come in two families, as Rust's do. A **declarative** macro i
 
 A declarative Harsh macro is a set of patterns and what each expands to:
 
-```
+```rust harsh
 // A declarative macro: pattern-matched at compile time. Both sides are
 // written in Harsh. The matcher is a parameter list -- one group per fragment,
 // a repetition of groups for a list -- and the transcriber is a `do:` block.
@@ -468,7 +468,7 @@ proc-macro = true
 
 `hello_macro_derive/src/lib.hrs`
 
-```
+```rust harsh
 use hrs_proc_macro.TokenStream
 use hrs_quote.quote
 use hrs_syn.{parse_macro_input, DeriveInput}
@@ -500,7 +500,7 @@ proc-macros = ["../hello_macro_derive"]
 
 `app/src/main.hrs`
 
-```
+```rust harsh
 trait HelloMacro
     fn hello_macro$
 
@@ -534,7 +534,7 @@ proc-macro = true
 
 `describe/src/lib.hrs`
 
-```
+```rust harsh
 use hrs_proc_macro.TokenStream
 use hrs_quote.quote
 use hrs_syn.{parse_macro_input, Data, DeriveInput, Error}
@@ -569,7 +569,7 @@ proc-macros = ["../describe"]
 
 `app/src/main.hrs`
 
-```
+```rust harsh
 #[derive Debug]
 #[derive~ Describe]
 struct Point
@@ -612,7 +612,7 @@ proc-macro = true
 
 `web/src/lib.hrs`
 
-```
+```rust harsh
 use hrs_proc_macro.TokenStream
 use hrs_quote.quote
 use hrs_syn.{parse_macro_input, ItemFn}
@@ -641,7 +641,7 @@ proc-macros = ["../web"]
 
 `app/src/main.hrs`
 
-```
+```rust harsh
 #[route~ POST "/api/v1/submit"]
 fn handle_submit$:
     println! "Processing payload..."
@@ -674,7 +674,7 @@ proc-macro = true
 
 `hello/src/lib.hrs`
 
-```
+```rust harsh
 use hrs_proc_macro.TokenStream
 
 #[proc_macro~]
@@ -693,7 +693,7 @@ proc-macros = ["../hello"]
 
 `app/src/main.hrs`
 
-```
+```rust harsh
 fn main$:
     println! "{}" (hello_macro~ world)
     let greeting = hello_macro~ Harsh readers
@@ -718,7 +718,7 @@ The Rust Book: [*Declarative Macros for General Metaprogramming*](https://doc.ru
 
 In Harsh, a `macro_rules!` may be written inside a Harsh file. It is a zone of Rust there: `hrs` copies it out byte for byte, its braces delimit it, and its body is laid out as Rust, so nothing inside it is Harsh — `#[macro_export]` and the rest mean what they mean in Rust. Only the definition is Rust; its calls are Harsh calls, `square! n`, `square! (n + 1)`:
 
-```
+```rust harsh
 macro_rules! square {
     ($x:expr) => { $x * $x };
 }
@@ -781,7 +781,7 @@ hello_macro_derive = { path = "../hello_macro_derive" }
 
 `app/src/main.hrs`
 
-```
+```rust harsh
 use hello_macro_derive.HelloMacro
 
 trait HelloMacro
@@ -828,7 +828,7 @@ Most macros you call come from Rust libraries: `println!` and `vec!` from the st
 
 A Rust macro that takes a language of its own — the markup of a web framework's `view!`, the element tree of Dioxus's `rsx!`, a query — takes it in braces, and what is inside the braces is that language, written exactly as its documentation shows. Harsh reads none of it. The only Harsh inside is what you mark: a hole opens with `@:` and always closes with `:@`, and between the two is ordinary Harsh, transpiled in place:
 
-```
+```rust harsh
 // A stand-in for a UI framework's `view!`: it swallows the markup and yields
 // unit, so this file compiles without a dependency. Only the spelling of the
 // call is the point here.
@@ -859,7 +859,7 @@ rendered 3
 
 The markup's own `{count}` needs no mark — a name is the same in both languages — while the handler, written in Harsh, sits in a hole. A hole may span lines: `@:` on the line where it opens, the Harsh beneath at that line's indentation, `:@` where it ends. The same convention serves a tree of braces as it serves markup, because Harsh never learns either:
 
-```
+```rust harsh
 // A stand-in for Dioxus's `rsx!`, as `view!` above: it swallows the tree and
 // yields unit.
 macro_rules! rsx {
@@ -901,7 +901,7 @@ Holes follow a few conventions. A hole always closes, with `:@`, even at the end
 
 Every use of parentheses in this book has been one of a short list, and the list is worth stating now that all of it has been seen:
 
-```
+```rust harsh
 fn double x: i32 -> i32:
     x * 2
 

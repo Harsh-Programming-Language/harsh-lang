@@ -12,7 +12,7 @@ Braces are where Harsh starts, not where it stops. It adds four things Rust has 
 
 **Pipes and partial application.** Give a function fewer arguments than it takes, and you get a function waiting for the rest:
 
-```
+```rust harsh
 let double = 2.0 |> scale
 let doubled: Vec<f64> = readings <- iter$ <- map (|&x| double x) <- collect$
 ```
@@ -24,7 +24,7 @@ let doubled: Vec<f64> = readings.iter().map(|&x| double(x)).collect();
 
 **Generator comprehensions.** Say what a collection holds, not how to fill it:
 
-```
+```rust harsh
 let triples =
     list~ (a, b, c)
         for a in 1..20
@@ -41,7 +41,7 @@ let triples: Vec<_> = (1..20)
 
 **Linear algebra, as in Julia.** Julia's matrix literal, Julia's `*`, and Julia's `X \ y`, here fitting a line by least squares:
 
-```
+```rust harsh
 let x = m~ [1.0 1.0; 1.0 2.0; 1.0 3.0]
 let y = v~ [1.0, 2.0, 2.9]
 let beta = x <- solve (&y)
@@ -87,7 +87,7 @@ Harsh is Rust with indentation instead of braces. This bundle contains the compl
 
 ## Quick start
 
-```
+```sh
 cargo build --release
 ./check.sh
 ```
@@ -102,7 +102,7 @@ cargo build --release
 | `hrs-from` | Rust → Harsh | Brings existing Rust code in. |
 | `hrs-remap` | — | Rewrites rustc and clippy diagnostics to point at your `.hrs` source, with correct line *and* column. |
 
-```
+```sh
 hrs src/main.hrs -o generated/main.rs --map generated/main.map.json
 cargo build --message-format=json | hrs-remap --map generated/main.map.json
 hrs-from existing.rs -o existing.hrs
@@ -110,7 +110,7 @@ hrs-from existing.rs -o existing.hrs
 
 ## Source layout
 
-```
+```text
 src/lex.rs        tokens with byte spans; knows nothing about blocks
 src/layout.rs     logical lines, then a tree of blocks
 src/rules.rs      keyword tables shared by both directions

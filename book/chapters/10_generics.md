@@ -8,7 +8,7 @@ Three mechanisms let one piece of code serve many types, and this chapter is all
 
 Two functions that differ only in a type:
 
-```
+```rust harsh
 fn largest_i32 list: &[i32] -> &i32:
     let mut largest = &list[0]
 
@@ -39,7 +39,7 @@ y
 
 Same body, twice, for `i32` and for `char`, and there would be a third for `f64`. The duplication is in the *type*, so the fix is a parameter for the type:
 
-```
+```rust harsh
 fn largest<T> list: &[T] -> &T:
     let mut largest = &list[0]
 
@@ -66,7 +66,7 @@ error[E0369]: binary operation `>` cannot be applied to type `&T`
 
 `fn largest<T> list: &[T] -> &T` — the `<T>` after the name declares a type parameter, and then `T` is used where the type would be. It does not compile, and the error is the chapter's first lesson: `>` is not defined for *every* type, so the compiler will not let a function that takes *any* `T` compare two of them. It has to be told which `T`s are allowed, and the help says how: restrict the type parameter.
 
-```
+```rust harsh
 fn largest<T: PartialOrd> list: &[T] -> &T:
     let mut largest = &list[0]
 
@@ -92,7 +92,7 @@ y
 
 A struct's fields can be generic too:
 
-```
+```rust harsh
 #[derive Debug]
 struct Point<T>
     x: T
@@ -131,7 +131,7 @@ Mixed { x: 5, y: 4.0 }
 
 Both fields of `Point<T>` are the same `T`, and the compiler holds you to it:
 
-```
+```rust harsh
 struct Point<T>
     x: T
     y: T
@@ -153,7 +153,7 @@ error[E0308]: mismatched types
 
 A trait is a set of methods a type may implement — an interface, a protocol, whichever word your last language used. It is defined with `trait`, and a type implements it with `impl … for`:
 
-```
+```rust harsh
 pub trait Summary
     fn summarize (&self) -> String
 
@@ -206,7 +206,7 @@ One rule to know: you may implement a trait for a type only if the trait or the 
 
 A trait method may have a body, used by any type that does not supply its own:
 
-```
+```rust harsh
 pub trait Summary
     fn summarize_author (&self) -> String
 
@@ -239,7 +239,7 @@ fn main$:
 
 A function that takes "anything summarizable" has four spellings, all in this example:
 
-```
+```rust harsh
 use std.fmt.Display
 
 pub trait Summary
@@ -300,7 +300,7 @@ tweet by horse_ebooks — @horse_ebooks
 
 `impl Trait` works in return position too:
 
-```
+```rust harsh
 pub trait Summary
     fn summarize (&self) -> String
 
@@ -328,7 +328,7 @@ fn main$:
 
 A method can exist only when the type parameter meets a bound:
 
-```
+```rust harsh
 use std.fmt.Display
 
 struct Pair<T>
@@ -369,7 +369,7 @@ The largest member is y = 7
 
 Every reference has a *lifetime*: the region of the program during which it is valid. Usually the compiler works it out and you write nothing — every `&` so far had a lifetime you never saw. It has to be written only when the compiler cannot tell how the lifetimes of several references relate, and the classic case is a function that returns one of two borrowed arguments:
 
-```
+```rust harsh
 fn longest (x: &str) (y: &str) -> &str:
     if x <- len$ > y <- len$: x else: y
 
@@ -391,7 +391,7 @@ error[E0106]: missing lifetime specifier
 
 Read the help: the return type is a borrowed value, and the signature does not say whether it is borrowed from `x` or from `y`. The compiler needs to know, because the caller's borrow checker needs to know how long the returned reference may be used — as long as `x` lives, as long as `y` lives, or only as long as both do. The signature has to say. The syntax for saying it is a *lifetime parameter*:
 
-```
+```rust harsh
 fn longest<'a> (x: &'a str) (y: &'a str) -> &'a str:
     if x <- len$ > y <- len$: x else: y
 
@@ -410,7 +410,7 @@ The longest string is abcd
 
 And it does verify:
 
-```
+```rust harsh
 fn longest<'a> (x: &'a str) (y: &'a str) -> &'a str:
     if x <- len$ > y <- len$: x else: y
 
@@ -444,7 +444,7 @@ error[E0597]: `string2` does not live long enough
 
 Chapter 5's `&str` field had this error. A struct that holds a reference declares a lifetime, and the struct cannot outlive what it borrows:
 
-```
+```rust harsh
 #[derive Debug]
 struct ImportantExcerpt<'a>
     part: &'a str
@@ -481,7 +481,7 @@ Call me Ishmael
 
 If every reference needed a written lifetime the language would be unusable, so three rules fill them in when they can, and you write one only when they cannot:
 
-```
+```rust harsh
 // One input lifetime: the output gets it. Written out, this is
 // fn first_word<'a> s: &'a str -> &'a str.
 fn first_word s: &str -> &str:
@@ -514,7 +514,7 @@ I have a static lifetime.
 
 ### All three at once
 
-```
+```rust harsh
 use std.fmt.Display
 
 fn longest_with_an_announcement<'a, T> (x: &'a str) (y: &'a str) (ann: T) -> &'a str

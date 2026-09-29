@@ -14,7 +14,7 @@ one writing — is undefined behaviour, and safe Rust prevents it. A *race
 condition* — a result depending on timing — is only a bug, and safe Rust
 allows it. Atomics and locks are how threads share memory without a data race.
 
-```
+```rust harsh
 use std.sync.atomic.( AtomicUsize, Ordering)
 use std.thread
 
@@ -47,7 +47,7 @@ shared between threads. The compiler derives both from a type's fields; raw
 pointers are neither, so a type built on them states its own, with an
 `unsafe impl` — a promise.
 
-```
+```rust harsh
 use std.thread
 
 // A raw pointer is neither Send nor Sync: the wrapper promises it is safe to
@@ -83,7 +83,7 @@ Atomics carry an *ordering*: `Relaxed` orders nothing but the atomic itself;
 written before the store visible after the load; `SeqCst` adds a single total
 order. Most synchronisation is a Release/Acquire pair.
 
-```
+```rust harsh
 use std.sync.atomic.( AtomicBool, AtomicU64, Ordering)
 use std.thread
 

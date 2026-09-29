@@ -2,7 +2,7 @@
 
 Harsh's counterpart to Rust's `quote`. In a Harsh proc-macro crate:
 
-```
+```rust harsh
 use hrs_quote.quote
 
 let expanded = quote~ do:

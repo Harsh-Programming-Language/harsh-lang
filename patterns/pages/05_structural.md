@@ -11,7 +11,7 @@ A large struct borrowed as a whole cannot lend two of its parts at once to
 different functions. Split it into smaller structs, and each function borrows
 only the part it needs — the borrow checker then sees they do not overlap.
 
-```
+```rust harsh
 struct Connection
     url: String
 struct Users
@@ -68,7 +68,7 @@ Keep `unsafe` code in the smallest module that can hold it, with a safe
 interface around it: the module's invariants are then checked in one place,
 and the rest of the program cannot break them.
 
-```
+```rust harsh
 mod ascii
     // The invariant, kept in this module alone: the bytes are ASCII.
     pub struct AsciiString
@@ -109,7 +109,7 @@ A struct generic over closures carries their whole signatures as bounds —
 for the output, implemented for every closure of that shape. The struct then
 asks for `G: Getter`, and `T` disappears from its parameters.
 
-```
+```rust harsh
 use std.fmt.Display
 
 #[derive Debug]
@@ -166,7 +166,7 @@ A related variant, for a list of bounds rather than a closure's shape: a trait
 with those bounds as supertraits, and a blanket implementation for every type
 that meets them.
 
-```
+```rust harsh
 use std.fmt.( Debug, Display)
 
 // The long list of bounds, named once.

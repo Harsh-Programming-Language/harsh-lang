@@ -3,7 +3,7 @@
 The runtime of Harsh's own procedural macros. A Harsh proc macro is an
 ordinary Harsh function marked `#[proc_macro~]`:
 
-```
+```rust harsh
 use hrs_proc_macro.TokenStream
 
 #[proc_macro~]

@@ -12,7 +12,7 @@ keep it so. The original chapter:
 A variable may be declared before it is given a value, but the compiler
 tracks every path and refuses a read that might come first.
 
-```
+```rust harsh
 fn main$:
     let x: i32
     let ready = std.env.args$ <- count$ > 5
@@ -51,7 +51,7 @@ For more information about this error, try `rustc --explain E0381`.
 When a value is initialised on some paths only, or moved out on some, the
 compiler keeps a hidden *drop flag* to know at run time whether to drop it.
 
-```
+```rust harsh
 struct Loud
     name: &'static str
 
@@ -90,7 +90,7 @@ To initialise memory piece by piece — an array element by element, a buffer
 from C — use `MaybeUninit<T>`: it holds possibly-uninitialised memory, and
 `assume_init` is your promise that every part is now valid.
 
-```
+```rust harsh
 use std.mem.MaybeUninit
 
 fn main$:

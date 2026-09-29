@@ -5,7 +5,7 @@ so in its return type, and the caller has to deal with it.
 
 ## 10.1 Option
 
-```
+```rust harsh
 fn first_even (xs: &[i32]) -> Option<i32>:
     for &x in xs <- iter$:
         if x % 2 == 0:
@@ -50,7 +50,7 @@ like any other, so the payload is juxtaposed and an expression is isolated.
 
 ## 10.2 Result
 
-```
+```rust harsh
 fn parse_age (text: &str) -> Result<u32, String>:
     // `map_err` turns one error into another.
     let n: u32 =
@@ -85,7 +85,7 @@ error out of it.
 
 ## 10.3 An error type of your own
 
-```
+```rust harsh
 use std.fmt
 
 // An error of one's own is a type with a `Display`.

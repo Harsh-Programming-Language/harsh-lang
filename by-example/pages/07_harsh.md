@@ -5,7 +5,7 @@ part that is Harsh's own.
 
 ## 7.1 The pipes
 
-```
+```rust harsh
 fn sub (a: i32) (b: i32) (c: i32) -> i32:
     a - b - c
 
@@ -56,7 +56,7 @@ an application, isolate it: `(f a) |> g`.
 
 ## 7.2 Partial application
 
-```
+```rust harsh
 fn label (prefix: &str) (name: &str) (suffix: &str) -> String:
     format! "{prefix}{name}{suffix}"
 
@@ -98,7 +98,7 @@ Your own, written in Harsh.
 
 #### Declarative macros
 
-```
+```rust harsh
 // A Harsh macro is matched and expanded by `hrs`, in Harsh, before anything
 // is transpiled. The mark is `~`.
 macro_rules~ greet
@@ -211,7 +211,7 @@ before calling. Rust's operators follow in Rust's order, then the pipes. A
 negative or dereferenced argument is parenthesised: `f (-1)`, `f (*x)`. The
 full table is the Book's appendix *Precedence*.
 
-```
+```rust harsh
 struct Switch<'a>
     flag: &'a mut bool
 

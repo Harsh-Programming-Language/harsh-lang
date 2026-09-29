@@ -2,7 +2,7 @@
 
 ## 16.1 g~
 
-```
+```rust harsh
 fn main$:
     // A comprehension: the value, then where it comes from.
     let squares: Vec<i32> = (g~ x * x for x in 1..6) <- collect$
@@ -37,7 +37,7 @@ it takes the iterable by value; write `xs <- iter$` to borrow instead.
 
 ## 16.2 Conditions, and several `for`s
 
-```
+```rust harsh
 fn main$:
     // `if`s filter, and every `if` belongs to the `for` before it.
     let picked: Vec<i32> = (g~ x for x in 0..30 if x % 3 == 0 if x % 2 == 1) <- collect$
@@ -58,7 +58,7 @@ bound up to that point — `y > x` uses both — and runs as early as it can.
 
 ## 16.3 Where a condition may go
 
-```
+```rust harsh
 fn main$:
     let triples =
         list~ (a, b, c)
@@ -77,7 +77,7 @@ Every `for` makes one more name available, and a condition can use only the
 names bound up to its place — so a test goes after the last `for` whose name it
 uses. Attached to `for a`, the same test cannot see `b`:
 
-```
+```rust harsh
 fn main$:
     // The test needs b and c, but it is attached to `for a`,
     // where neither exists yet.
@@ -121,7 +121,7 @@ For more information about this error, try `rustc --explain E0425`.
 
 ## 16.4 Collecting: list~, set~, dict~
 
-```
+```rust harsh
 use std.collections.HashMap
 use std.collections.HashSet
 
@@ -155,7 +155,7 @@ written out.
 
 ## 16.5 Laying one out
 
-```
+```rust harsh
 fn main$:
     // Every line indented beneath the call belongs to it, so a long one is
     // laid out one clause per line. Pythagorean triples:
@@ -180,7 +180,7 @@ wins in that file. The prelude's is still there as `hrs_std.g~`.
 
 ## 16.6 Lazy, and by value
 
-```
+```rust harsh
 fn main$:
     // `g~` is an iterator: nothing runs until something asks for values.
     // So an endless source is fine, as long as something stops asking.
@@ -206,7 +206,7 @@ value; give it a borrow, `(words <- iter$)`, to keep the collection.
 
 ## 16.7 What it stands for
 
-```
+```rust harsh
 fn main$:
     let wanted: Vec<i32> =
         (g~ x * 10 + y
@@ -238,7 +238,7 @@ the innermost flattened. The `flatten$` is part of the generator, so it is
 never written by hand; the `collect$` is not, because a generator is lazy —
 write it, or use `list~`. Chapter 15 of the Book shows the whole expansion.
 
-```
+```rust harsh
 fn main$:
     let scores = vec! 72 45 91 60 88
 

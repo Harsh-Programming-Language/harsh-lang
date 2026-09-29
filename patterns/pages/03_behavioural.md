@@ -14,7 +14,7 @@ Turn actions into values, so they can be stored, queued, logged, or undone.
 In Rust there are three ways: trait objects (one type per command), function
 pointers, or closures — the last the most flexible when commands carry data.
 
-```
+```rust harsh
 // Commands as values: a trait object each.
 trait Migration
     fn execute (&self) -> String
@@ -67,7 +67,7 @@ For a problem that recurs in many forms, define a small language for it and
 interpret sentences of that language — here, arithmetic expressions turned
 from infix into postfix by a recursive-descent parser.
 
-```
+```rust harsh
 // Infix to postfix: `2+3-4` becomes `23+4-`.
 struct Interpreter<'a>
     it: std.str.Chars<'a>
@@ -121,7 +121,7 @@ Wrap a type in a tuple struct of one field to give it a new identity: its own
 traits, its own rules, and no mixing with the type it wraps. It costs nothing
 at run time.
 
-```
+```rust harsh
 use std.fmt
 
 // A String with its own identity: never printed in clear.
@@ -154,7 +154,7 @@ Tie a resource to a value's lifetime: acquiring it returns a *guard*, and
 dropping the guard releases it. The borrow checker then guarantees nothing
 uses the resource after release — `MutexGuard` is the standard example.
 
-```
+```rust harsh
 use std.sync.Mutex
 
 struct Noisy
@@ -191,7 +191,7 @@ long the lock is held.
 Separate an algorithm's skeleton from its details, so the details can vary:
 the skeleton takes a strategy, as a trait object, a generic, or a closure.
 
-```
+```rust harsh
 // The skeleton: a report, with the joining left to a strategy.
 // The lifetime is named: a closure made by partial application works for
 // these items, not for every lifetime at once.
@@ -234,7 +234,7 @@ Walk a heterogeneous structure — an abstract syntax tree, say — with an
 operation that is defined apart from it. The visitor has a method per kind of
 node; the structure only knows how to hand each node to it.
 
-```
+```rust harsh
 // A tiny language: numbers and additions.
 enum Expr
     Num i64

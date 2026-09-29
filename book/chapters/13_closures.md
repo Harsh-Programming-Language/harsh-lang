@@ -6,7 +6,7 @@ Two features Rust took from the functional languages, and the two that most chan
 
 A closure captures its environment. Here one reads a struct field it was not passed:
 
-```
+```rust harsh
 #[derive Debug PartialEq Copy Clone]
 enum ShirtColor
     Red
@@ -58,7 +58,7 @@ The user with preference None gets Blue
 
 A closure is `|parameters| body`, and the body is an expression or a block:
 
-```
+```rust harsh
 fn add_one_v1 x: u32 -> u32:
     x + 1
 
@@ -85,7 +85,7 @@ fn main$:
 
 Four spellings of `x + 1`. `add_one_v2` annotates everything and has a block body under a `:`; `v3` is the short form, inferred types and an expression; `v4` is inferred with a block. The `:` after the parameter list opens the body's block exactly as it does after a function signature, and the body indents from the closure. Annotations are optional because a closure is usually short and used once, close to where its types are obvious; the compiler infers them from the first use, and holds the closure to it:
 
-```
+```rust harsh
 fn main$:
     let example_closure = |x| x
     let s = example_closure (String.from "hello")
@@ -111,7 +111,7 @@ error[E0308]: mismatched types
 
 A closure captures each variable it uses in the least demanding way that works — by shared reference, by mutable reference, or by value — and the borrow checker treats the closure as holding that borrow from its creation to its last use:
 
-```
+```rust harsh
 fn main$:
     let list = vec! 1 2 3
     println! "Before defining closure: {list:?}"
@@ -131,7 +131,7 @@ After calling closure: [1, 2, 3]
 
 `only_borrows` reads `list`, so it holds `&list`, and `list` can still be printed before and after the call, since shared borrows coexist. Now a closure that writes:
 
-```
+```rust harsh
 fn main$:
     let mut list = vec! 1 2 3
     println! "Before defining closure: {list:?}"
@@ -150,7 +150,7 @@ After calling closure: [1, 2, 3, 7]
 
 To make a closure take ownership of what it uses — needed when it will outlive the current function, as a closure handed to a new thread will — write `move`:
 
-```
+```rust harsh
 use std.thread
 
 fn main$:
@@ -179,7 +179,7 @@ How a closure captures determines which of three traits it implements, and every
 
 The type of a closure is written as the trait applied to its parameter types, the return after `->`:
 
-```
+```rust harsh
 // A closure's type is written as the trait applied to its parameter types,
 // with `->` for the return: `Fn i32 -> i32` takes one i32 and returns one.
 
@@ -221,7 +221,7 @@ moved out
 
 `unwrap_or_else` takes `FnOnce`, the most permissive, because it calls the closure at most once. `sort_by_key` calls its closure once per comparison, so it asks for `FnMut`:
 
-```
+```rust harsh
 #[derive Debug]
 struct Rectangle
     width: u32
@@ -258,7 +258,7 @@ fn main$:
 
 `(|r| r <- width)` reads a field and returns it: it is `Fn`, which is also `FnMut`, so it qualifies. Here is one that does not:
 
-```
+```rust harsh
 #[derive Debug]
 struct Rectangle
     width: u32
@@ -295,7 +295,7 @@ error[E0507]: cannot move out of `value`, a captured variable in an `FnMut` clos
 
 The closure pushes `value` — a `String`, moved out of the capture — onto a vector. That can happen once, so the closure is `FnOnce` only, and `sort_by_key` needs to call it many times; the error names both facts. Mutating a capture *without* moving it is fine:
 
-```
+```rust harsh
 #[derive Debug]
 struct Rectangle
     width: u32
@@ -341,7 +341,7 @@ fn main$:
 
 An iterator produces a sequence of values, one at a time, on request. The whole of the `Iterator` trait that matters is one method:
 
-```
+```rust harsh
 pub trait Iterator
     type Item
     fn next (&mut self) -> Option<Self.Item>
@@ -349,7 +349,7 @@ pub trait Iterator
 
 `next` returns `Some item` until the sequence is finished and `None` after; `Item` is an *associated type* (chapter 23) naming what it yields. Everything else is built on `next`:
 
-```
+```rust harsh
 fn main$:
     let v1 = vec! 1 2 3
     let mut v1_iter = v1 <- iter$            // nothing happens yet
@@ -374,7 +374,7 @@ Got: 3
 
 Methods on iterators come in two kinds. A *consumer* calls `next` until the end and produces something:
 
-```
+```rust harsh
 fn main$:
     let v1 = vec! 1 2 3
     let total: i32 = v1 <- iter$ <- sum$     // a consumer: drives the iterator to the end
@@ -387,7 +387,7 @@ fn main$:
 
 `sum$` drives the iterator to exhaustion and adds. `collect$` gathers into a collection (the type must be written or inferable); `count$`, `max$`, `min$`, `last$`, `find`, `any`, `all` and `fold` are consumers too. An *adaptor* takes one iterator and returns another that transforms its items as they pass:
 
-```
+```rust harsh
 fn main$:
     let v1: Vec<i32> = vec! 1 2 3
     let v2: Vec<_> =
@@ -403,7 +403,7 @@ fn main$:
 
 `map (|x| x + 1)` yields each item plus one; `collect$` at the end consumes the result. That last step is not optional:
 
-```
+```rust harsh
 fn main$:
     let v1: Vec<i32> = vec! 1 2 3
     v1 <- iter$ <- map (|x| x + 1);         // an adaptor alone does nothing
@@ -415,7 +415,7 @@ An adaptor alone does nothing, because iterators are *lazy*: `map` builds an ite
 
 An adaptor's closure can use variables from outside, which is most of their power:
 
-```
+```rust harsh
 #[derive PartialEq Debug]
 struct Shoe
     size: u32
@@ -456,7 +456,7 @@ fn main$:
 
 Adaptors compose, and this is where the chain layout matters:
 
-```
+```rust harsh
 fn main$:
     let words = ["apple", "banana", "cherry", "date", "elderberry", "fig"]
 
@@ -501,7 +501,7 @@ Filter, map, collect; map then sum; `find` for the first match; `any` for a yes-
 
 The layout has one rule for chains, and the formatter applies it, so you rarely decide it yourself:
 
-```
+```rust harsh
 fn main$:
     let words = ["apple", "banana", "cherry", "date"]
 
@@ -545,7 +545,7 @@ Chapter 12's program used `clone` in `Config.build` and a `for` loop with a `pus
 
 `src/main.hrs`
 
-```
+```rust harsh
 use std.env
 use std.process
 
@@ -563,7 +563,7 @@ fn main$:
 
 `src/lib.hrs`
 
-```
+```rust harsh
 use std.env
 use std.error.Error
 use std.fs

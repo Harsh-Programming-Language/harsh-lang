@@ -6,7 +6,7 @@ All four are in Harsh's *prelude*: every file can use them with no `use`. They a
 
 ## 15.1 The shape
 
-```
+```rust harsh
 fn main$:
     // The value first, then where it comes from.
     let squares: Vec<i32> = (g~ x * x for x in 1..6) <- collect$
@@ -29,7 +29,7 @@ The whole call is in parentheses because the result is chained on: `(g~ …) <- 
 
 ## 15.2 Conditions
 
-```
+```rust harsh
 fn main$:
     // `if`s filter, and every `if` belongs to the `for` before it.
     let picked: Vec<i32> = (g~ x for x in 0..30 if x % 3 == 0 if x % 2 == 1) <- collect$
@@ -51,7 +51,7 @@ Each `if` belongs to the `for` it follows. That is the one rule of the syntax, a
 
 ## 15.3 Several `for`s
 
-```
+```rust harsh
 fn main$:
     // Three `for`s: every right triangle with sides under 30.
     let triangles: Vec<(u32, u32, u32)> =
@@ -83,7 +83,7 @@ Because an `if` belongs to its `for`, where you put it decides when it runs. In 
 
 The rule that each `if` belongs to the `for` before it has a consequence: every `for` makes one more name available, and a condition can use only the names bound up to its place.
 
-```
+```rust harsh
 fn main$:
     let triples =
         list~ (a, b, c)
@@ -100,7 +100,7 @@ fn main$:
 
 The test needs `a`, `b` and `c`, so it goes after the `for` that binds `c`. This, though it looks as if it says the same thing, does not compile:
 
-```
+```rust harsh
 fn main$:
     // The test needs b and c, but it is attached to `for a`,
     // where neither exists yet.
@@ -146,7 +146,7 @@ Attached to `for a`, the test runs once per `a`, before `b` and `c` have been ch
 
 ## 15.5 Lazy, and by value
 
-```
+```rust harsh
 fn main$:
     // `g~` is an iterator: nothing runs until something asks for values.
     // So an endless source is fine, as long as something stops asking.
@@ -172,7 +172,7 @@ fn main$:
 
 ## 15.6 Collecting: `list~`, `set~`, `dict~`
 
-```
+```rust harsh
 use std.collections.(HashMap, HashSet)
 
 fn main$:
@@ -209,7 +209,7 @@ two
 
 A generator comprehension is a chain written another way. Here is what `g~` writes for a two-level comprehension — the Harsh that `hrs expand` shows, laid out:
 
-```
+```rust harsh
 g~ x * 10 + y
     for x in (0..6) if x % 2 == 0 if x > 0
     for y in (0..6) if y > x if y % 2 == 1
@@ -217,7 +217,7 @@ g~ x * 10 + y
 
 becomes
 
-```
+```rust harsh
 (0..6) <- into_iter$
 <- flat_map (move |x|
     ((true && (x % 2 == 0) && (x > 0)) <- then (||
@@ -233,7 +233,7 @@ Two things are easy to misplace. **The `flatten$` is part of the generator.** Th
 
 The proof that the two are the same:
 
-```
+```rust harsh
 fn main$:
     let wanted: Vec<i32> =
         (g~ x * 10 + y
@@ -261,7 +261,7 @@ fn main$:
 
 And for a single level, the chain you would have written by hand:
 
-```
+```rust harsh
 fn main$:
     let scores = vec! 72 45 91 60 88
 

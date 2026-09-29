@@ -6,7 +6,7 @@ The compiler checks a great deal — types, ownership, exhaustive matches — an
 
 A test is a function with `#[test]` above it. It passes if it returns, and fails if it panics:
 
-```
+```rust harsh
 pub fn add (left: u64) (right: u64) -> u64:
     left + right
 
@@ -31,7 +31,7 @@ Everything after `#[cfg test]` is the conventional shape. `mod tests:` is an ord
 
 Here is what failure looks like:
 
-```
+```rust harsh
 #[cfg test]
 mod tests
     #[test]
@@ -63,7 +63,7 @@ test result: FAILED. 1 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out
 
 `assert!` takes something that must be true:
 
-```
+```rust harsh
 #[derive Debug]
 struct Rectangle
     width: u32
@@ -102,7 +102,7 @@ Both tests call a method and assert on the result: the first that it holds, the 
 
 `assert_eq!` and `assert_ne!` compare two values and, on failure, print both — which is why they beat `assert! (a == b)`, whose failure would only say "false":
 
-```
+```rust harsh
 pub fn add_two a: u64 -> u64:
     a + 3        // a bug
 
@@ -137,7 +137,7 @@ test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out
 
 Every assertion macro takes extra arguments after the required ones, and they are a format string and its values, printed on failure:
 
-```
+```rust harsh
 pub fn greeting name: &str -> String:
     String.from "Hello!"      // forgot the name
 
@@ -172,7 +172,7 @@ When a test fails a week after it was written, "assertion failed" is not enough;
 
 Sometimes the correct behaviour *is* a panic — chapter 9's `Guess.new` on a bad value — and a test asserts that it happens:
 
-```
+```rust harsh
 pub struct Guess
     value: i32
 
@@ -209,7 +209,7 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out
 
 A test may return a `Result` instead of panicking:
 
-```
+```rust harsh
 #[cfg test]
 mod tests
     #[test]
@@ -238,7 +238,7 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out
 
 A name after `cargo test` runs only the tests whose path contains it:
 
-```
+```rust harsh
 pub fn add_two a: u64 -> u64:
     a + 2
 
@@ -281,7 +281,7 @@ Rust distinguishes *unit* tests, which live in the file with the code and test i
 
 Unit tests are what this chapter has shown: a `#[cfg test] mod tests:` at the bottom of each file. Because it is a child module of the code it tests, it can see private items:
 
-```
+```rust harsh
 pub fn add_two a: u64 -> u64:
     internal_adder a 2
 

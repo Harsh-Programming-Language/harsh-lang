@@ -6,7 +6,7 @@ A reference, `&T`, points at a value it does not own. A *smart pointer* is a str
 
 A `Box` is the simplest: one value, on the heap, owned by the box:
 
-```
+```rust harsh
 fn main$:
     let b = Box.new 5           // an i32 on the heap
     println! "b = {b}"
@@ -18,7 +18,7 @@ b = 5
 
 `Box.new 5` allocates and returns the box; `b` is used like the `i32` it holds, and freed when `b` goes out of scope. On its own that is pointless — an `i32` is happier on the stack — and boxes are for three situations: a type whose size is not known at compile time, a large value you want to move without copying, and a value you own but only care about the trait it implements (chapter 21). The first is the classic:
 
-```
+```rust harsh
 enum List
     Cons i32 List
     Nil
@@ -41,7 +41,7 @@ error[E0072]: recursive type `List` has infinite size
 
 A *cons list* — each element holds a value and the rest of the list — is the recursive structure of the functional languages. Written directly it is a type error: a `List` contains a `List` contains a `List`, so the compiler cannot say how many bytes one takes. The help says exactly what to do: put the recursion behind a pointer, whose size is known.
 
-```
+```rust harsh
 #[derive Debug]
 enum List
     Cons i32 (Box<List>)
@@ -67,7 +67,7 @@ Cons(1, Cons(2, Cons(3, Nil)))
 
 `*b` on a `Box` gives the value inside, as `*r` on a reference does. That works because `Box` implements the `Deref` trait, and you can implement it for a type of your own:
 
-```
+```rust harsh
 use std.ops.Deref
 
 struct MyBox<T> T
@@ -109,7 +109,7 @@ The second half is *deref coercion*: `hello` takes `&str`, and is passed `&m`, a
 
 A smart pointer's other half is what happens when it goes away. The `Drop` trait is a method the compiler calls when a value goes out of scope:
 
-```
+```rust harsh
 struct CustomSmartPointer
     data: String
 
@@ -142,7 +142,7 @@ Dropping CustomSmartPointer with data `other stuff`!
 
 Chapter 4 said a value has exactly one owner. Sometimes that is the wrong model — a node in a graph belongs to every edge that reaches it — and `Rc<T>`, the *reference-counted* pointer, is how Rust expresses it:
 
-```
+```rust harsh
 #[derive Debug]
 enum List
     Cons i32 (Rc<List>)
@@ -186,7 +186,7 @@ An `Rc<T>` only hands out *shared* references to its value. Several owners and o
 
 The borrow rules — one `&mut` or many `&`, never both — are enforced by the compiler, on what it can prove:
 
-```
+```rust harsh
 fn main$:
     let x = 5
     let y = &mut x
@@ -205,7 +205,7 @@ error[E0596]: cannot borrow `x` as mutable, as it is not declared as mutable
 
 `RefCell<T>` enforces the same rules *at run time*: `borrow$` gives a shared reference and `borrow_mut$` a mutable one, each counted while it lives, and a violation is a panic rather than a compile error. The value may then be mutated through something that is itself only shared — an `Rc`, say:
 
-```
+```rust harsh
 use std.cell.RefCell
 use std.rc.Rc
 
@@ -238,7 +238,7 @@ c after = Cons(RefCell { value: 4 }, Cons(RefCell { value: 15 }, Nil))
 
 And checked they are:
 
-```
+```rust harsh
 use std.cell.RefCell
 
 fn main$:
@@ -259,7 +259,7 @@ Two `borrow_mut$` guards alive at once is exactly what the compiler forbids for 
 
 `Rc` frees when the count reaches zero; two `Rc`s that point at each other never reach zero, and the memory leaks. Rust does not prevent this — a leak is safe, just wasteful — so structures with pointers in both directions use a `Weak<T>` for one direction. A weak pointer does not count toward ownership, and to use it you `upgrade$` it into an `Option<Rc<T>>` that is `None` if the value is gone:
 
-```
+```rust harsh
 use std.cell.RefCell
 use std.rc.(Rc, Weak)
 

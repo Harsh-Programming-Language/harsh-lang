@@ -12,7 +12,7 @@ themselves, `m~` and `v~`, need no `use`: they are part of the language.
 hrs_std = "0.1"
 ```
 
-```
+```rust harsh
 fn main$:
     // A matrix: spaces between entries, `;` between rows.
     let a = m~ [1 2 3; 4 5 6]
@@ -62,7 +62,7 @@ A matrix prints its shape and its element type, as Julia does.
 hrs_std = "0.1"
 ```
 
-```
+```rust harsh
 fn main$:
     let a = m~ [1.0 2.0; 3.0 4.0]
     let b = m~ [0.0 1.0; 1.0 0.0]
@@ -105,7 +105,7 @@ still there on the next line. Without it, the product would consume them.
 hrs_std = "0.1"
 ```
 
-```
+```rust harsh
 use hrs_std.(UniformScaling, I)
 
 fn main$:
@@ -139,7 +139,7 @@ needs, and `I` is the identity itself — Julia's own names.
 hrs_std = "0.1"
 ```
 
-```
+```rust harsh
 fn main$:
     let a = m~ [1 2; 3 4]
     // Any matrix is a block, so the literal joins matrices as it joins numbers.
@@ -169,7 +169,7 @@ is isolated in parentheses, `(&a)`, as any argument with an operator is.
 hrs_std = "0.1"
 ```
 
-```
+```rust harsh
 fn main$:
     // 2x + y = 5 and x + y = 3, as a matrix and a vector.
     let a = m~ [2.0 1.0; 1.0 1.0]
@@ -205,7 +205,7 @@ every collection in Harsh.
 hrs_std = "0.1"
 ```
 
-```
+```rust harsh
 use hrs_std.Matrix
 
 fn main$:
@@ -243,7 +243,7 @@ a comprehension. Chapter 16 of the Book explains each step.
 hrs_std = "0.1"
 ```
 
-```
+```rust harsh
 fn main$:
     let mut a = m~ [1 2 3; 4 5 6; 7 8 9]
     // The method copies, as Julia's `a[1:2, :]` does. `..` alone is Julia's `:`.
@@ -302,7 +302,7 @@ part of a matrix is a `slice` or a `view`.
 hrs_std = "0.1"
 ```
 
-```
+```rust harsh
 fn relu (x: f64) -> f64:
     x <- max 0.0
 
@@ -367,7 +367,7 @@ method, `a <- map f`, as `slice` is beneath the index.
 hrs_std = "0.1"
 ```
 
-```
+```rust harsh
 use hrs_std.UniformScaling
 
 fn main$:

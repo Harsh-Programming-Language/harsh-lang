@@ -17,7 +17,7 @@ them. On a trait, it says implementers must uphold an invariant; on an
 behaviour, however it calls a safe function — that is the safe function's
 author's job.
 
-```
+```rust harsh
 // A safe function around an unsafe operation: the check makes it sound.
 fn get (xs: &[i32]) (i: usize) -> Option<i32>:
     if i < xs <- len$:
@@ -58,7 +58,7 @@ dangling or unaligned dereference, breaking the aliasing rules, a data race,
 producing an invalid value (a `bool` that is not 0 or 1, an enum with no
 such variant), among others.
 
-```
+```rust harsh
 static mut COUNTER: u32 = 0
 
 union IntOrFloat
@@ -105,7 +105,7 @@ read that trusts it. So the boundary of safety is the **module**: keep the
 fields that unsafe code relies on private, and let only the module's own
 code touch them.
 
-```
+```rust harsh
 mod stack
     // `len` is private: only this module's code can change it, so the
     // unsafe read below can trust it.

@@ -47,7 +47,7 @@ Braces are where Harsh starts, not where it stops. It adds four things Rust has 
 
 **Pipes and partial application.** Give a function fewer arguments than it takes, and you get a function waiting for the rest:
 
-```
+```rust harsh
 let double = 2.0 |> scale
 let doubled: Vec<f64> = readings <- iter$ <- map (|&x| double x) <- collect$
 ```
@@ -59,7 +59,7 @@ let doubled: Vec<f64> = readings.iter().map(|&x| double(x)).collect();
 
 **Generator comprehensions.** Say what a collection holds, not how to fill it:
 
-```
+```rust harsh
 let triples =
     list~ (a, b, c)
         for a in 1..20
@@ -76,7 +76,7 @@ let triples: Vec<_> = (1..20)
 
 **Linear algebra, as in Julia.** Julia's matrix literal, Julia's `*`, and Julia's `X \ y`, here fitting a line by least squares:
 
-```
+```rust harsh
 let x = m~ [1.0 1.0; 1.0 2.0; 1.0 3.0]
 let y = v~ [1.0, 2.0, 2.9]
 let beta = x <- solve (&y)
@@ -92,7 +92,7 @@ Each has its section below: [Pipes and partial application](#partial-application
 
 ## The mark
 
-```
+```text
 #[Ha<rs>.h]
      │  │
      │  └── .h
@@ -135,7 +135,7 @@ Everything below was run, as written, before it was written down. Harsh needs on
 
 From the published crate:
 
-```
+```sh
 cargo install harsh-lang
 ```
 
@@ -152,7 +152,7 @@ Check with `hrs` alone, which prints its usage. (If you would rather not install
 
 ### Your first project
 
-```
+```sh
 hrs new hello
 cd hello
 hrs run
@@ -160,7 +160,7 @@ hrs run
 
 prints `Hello from Harsh`. The project `hrs new` creates has three files:
 
-```
+```rust harsh
 hello/
   Cargo.toml
   .gitignore
@@ -206,7 +206,7 @@ The generated Rust under `target/hrs/` is not meant to be read. It keeps the `.h
 
 ### Bringing existing Rust in
 
-```
+```sh
 hrs-from src/old.rs -o src/old.hrs
 ```
 
@@ -232,7 +232,7 @@ The program counts words in a text and prints the most frequent ones in a chosen
 
 Harsh has no braces. A colon at the end of a line opens a block, and the block is whatever is indented beneath it.
 
-```
+```rust harsh
 fn tokenize text: &str -> Vec<String>:
     text <- split_whitespace$ <- map (|w| w <- to_lowercase$) <- collect$
 ```
@@ -255,7 +255,7 @@ fn tokenize(text: &str) -> Vec<String> {
 
 Arguments are juxtaposed: the function, then each argument separated by spaces.
 
-```
+```rust harsh
 fn main$:
     let words = tokenize "the cat sat on the mat"
     println! "{} words" (words <- len$)
@@ -267,7 +267,7 @@ Macros and functions follow the same rule. `println! "{} words" x` is `println!(
 
 ## Counting
 
-```
+```rust harsh
 use std.collections.HashMap
 
 fn count (words: &[String]) -> HashMap<String, usize>:
@@ -286,7 +286,7 @@ fn count (words: &[String]) -> HashMap<String, usize>:
 
 `sorted` turns the map into a list ordered by count. The chain of method calls is long, so it is broken across lines: a more-indented line continues the current one, and the leading `<-` makes each link visible.
 
-```
+```rust harsh
 fn sorted counts: HashMap<String, usize> -> Vec<(String, usize)>:
     let mut v: Vec<(String, usize)> = counts <- into_iter$ <- collect$
     v <- sort_by
@@ -303,7 +303,7 @@ The whole of `v <- sort_by |a, b|: …` is one statement — the closure is an e
 
 The three functions compose into a pipeline. `|>` passes the values on its left to the function on its right — and if fewer are given than the function takes, the rest is deferred as a closure, which is how the pipes double as partial application. Here every function takes one value, so each step is a plain call.
 
-```
+```rust harsh
 fn pipeline text: &str -> Vec<(String, usize)>:
     text |> tokenize |> (|w: Vec<String>| count (&w)) |> sorted
 ```
@@ -316,7 +316,7 @@ The backward pipe `<|` exists as well: `tokenize <| text`. It is right-associati
 
 The pipes do one more thing, and it is the thing that makes them Harsh's rather than borrowed. A pipe may carry **several values** — `3 5 |> sub` — and if it carries *fewer* than the function takes, the rest is **deferred**: the result is a closure waiting for what is missing. `|>` fills parameters from the left, `<|` from the right, and both on one function leave a hole in the middle.
 
-```fragment
+```rust fragment
 fn scale (factor: f64) (offset: f64) (x: f64) -> f64:
     x * factor + offset
 
@@ -334,7 +334,7 @@ The reference section "Pipes" and "Partial application with the pipes" have ever
 
 ## A type for the output
 
-```
+```rust harsh
 #[derive Debug Clone PartialEq]
 enum Format
     Plain
@@ -345,7 +345,7 @@ enum Format
 
 An enum body lists its variants one per line, and nothing marks the body: only a name can follow `enum`, so the deeper lines can only be variants. Each variant is one of the three struct forms: `Plain` is unit-like, a tuple variant would be `Circle f64` — the payload types juxtaposed after the name — and `Boxed` is a record variant whose fields are indented beneath it, or written `Boxed\ width: usize` on one line when that reads better.
 
-```
+```rust harsh
 struct Report
     counts: Vec<(String, usize)>
     format: Format
@@ -362,7 +362,7 @@ Struct fields go one per line with no commas, and the declaration's body follows
 
 ## Matching
 
-```
+```rust harsh
     fn render_line (&self) (idx: usize) (word: &str) (n: usize) -> String:
         match &self <- format\
             Format.Plain => format! "{word} {n}"
@@ -376,7 +376,7 @@ Struct fields go one per line with no commas, and the declaration's body follows
 
 An arm whose body needs several lines ends with `=>` and indents:
 
-```
+```rust harsh
     fn render (&self) (n: usize) -> String:
         let mut out = Vec<String>.new$
         for (i, (w, c)) in self <- top n <- iter$ <- enumerate$:
@@ -388,7 +388,7 @@ An arm whose body needs several lines ends with `=>` and indents:
 
 ## Putting it together
 
-```
+```rust harsh
 fn main$:
     let text = "the cat sat on the mat. The mat sat still; the cat did not."
     let counts = pipeline text
@@ -398,7 +398,7 @@ fn main$:
     println! "{}" (ranked <- render 2)
 ```
 
-```
+```rust harsh
 |the   |  4|
 |cat   |  2|
 |mat   |  2|
@@ -431,7 +431,7 @@ block in Harsh is one of them:
 can follow them, exactly as for `struct` and `enum`: the header ends itself,
 so what follows deeper can only be the body.
 
-```
+```rust harsh
 impl Point                          impl Point {
     fn x (&self) -> f64:                fn x(&self) -> f64 {
         self <- x                           self.x
@@ -447,7 +447,7 @@ all: it is written in the macro's braces, as Rust, with Harsh in its holes
 
 A logical line whose last significant token is a colon opens a block. The colon is replaced by an opening brace, the following more-indented lines become the body, and a closing brace is emitted when indentation returns to the header's level.
 
-```
+```rust harsh
 fn greet (name: &str) -> String:
     format! "Hello, {name}"
 ```
@@ -460,7 +460,7 @@ fn greet(name: &str) -> String {
 
 A `match` is a specification block in use, like a literal's fields, so it is opened by `\` — `match value\` with the arms beneath, or `match value\ p => e, q => f` inline — and its arms are comma-separated in the Rust. Each arm's body opens with a fat arrow, since an arm already has one:
 
-```
+```rust harsh
 match value\
     Some n =>
         log n
@@ -476,7 +476,7 @@ match value\
 
 - Every block can be written indented, inline on one line, or with Rust's braces, and all three emit identical Rust.
 
-```
+```rust harsh
 fn indented (t: bool) -> i32:
     if t:
         1
@@ -500,7 +500,7 @@ fn braced (t: bool) -> i32:
 
 - `:` and `do:` open a block interchangeably, on any construct that takes one. (A declaration takes none — `struct`, `enum`, `union`, `impl`, `trait`, `mod`, `extern`: the body follows the header, and `struct P do` is refused like `struct P:`; a literal is marked `\`.) A `:` inside a declaration's header is the header's own, as in Rust: supertraits, `trait Loggable: Debug + Display`, and bounds, `impl<T: Debug> Loggable for T`. A `trait`, `impl` or `enum` with no body is its header alone, one line, and becomes Rust's `{}` -- a marker trait and its blanket implementation (0.1.44), a type with no values, `enum Void` (0.1.45); a unit `struct` keeps Rust's `;`.
 
-```
+```rust harsh
 fn f (x: i32) -> i32 do:
     x + 1
 
@@ -519,7 +519,7 @@ fn g$:
 
 A more-indented line that does *not* follow a block opener is a continuation of the current logical line rather than a new block. This is what makes multi-line method chains work with no leading-dot rule and no explicit line-continuation marker.
 
-```
+```rust harsh
 let listener =
     TcpListener.bind "127.0.0.1:8089"
         <- await
@@ -535,7 +535,7 @@ let d =
 - A logical line ends when the next line is at the same indentation or shallower.
 - Continuation applies to any construct, including multi-line `where` clauses before a block-opening colon.
 
-```
+```rust harsh
 fn parse_all<'a, I> (items: I) -> Result<Vec<i64>, ParseErr>
         where I: Iterator<Item = &'a str>:
     // body
@@ -556,7 +556,7 @@ The layout rules require a block to be indented past its *statement*. The recomm
 
 The way to keep the opener at the start of its line is to break after `=`, so the closure or `match` begins the continuation and its body indents from there:
 
-```fragment
+```rust fragment
 let a =                           not      let a = |x: i32| -> i32:
     |x: i32| -> i32:                          let d = x * 2
         let d = x * 2                         d + 1
@@ -576,7 +576,7 @@ let z = || 7                      not      let z = ||:
 
 A chain's shape follows its length. **One or two links sit on one line; three or more take one link per line, the arrows aligned under the first.** The one-line form gives way when the line would pass 72 columns of code: then every link stands on its own line. A chain that is the value of a `=` starts on the line after it — `=` ends its line — and if it is one or two links that fit there, it stays horizontal on that line. A block-bodied closure never sits inside a horizontal chain, since its dedent breaks the line the chain is drawing:
 
-```fragment
+```rust fragment
 let message =                          not      let message = receiver <- lock$ <- unwrap$ <- recv$
     receiver <- lock$
              <- unwrap$
@@ -593,7 +593,7 @@ v <- iter$                             not      v <- iter$ <- map (|x|:
 
 In a chain with one link per line the arrows align under the first arrow when it follows a single name, whatever column that is — alignment outranks the indentation unit, which governs only the first line of a construct. When the receiver is a longer expression the links sit one unit past its line instead, so they do not drift to the right of a long receiver:
 
-```
+```rust harsh
 ["/sleep", "/", "/nope", "/"] <- iter$
     <- map (|path| fetch path)
     <- collect$
@@ -603,7 +603,7 @@ A chain is a run of arrows each applied to the result of the one before. The fou
 
 When the chain has a left-hand side, break after `=`; the `=` always ends its line and never starts one. A block-bodied closure, if one is needed, is isolated in parentheses with the `)` on its own line:
 
-```fragment
+```rust fragment
 let d: Vec<i32> =                 not      let d: Vec<i32> = v <- iter$ <- map (|x|:
     v <- iter$                                   x * 10
       <- map (|x| x * 10)                      ) <- collect$
@@ -620,7 +620,7 @@ let d: Vec<i32> =                 not      let d: Vec<i32>
 
 Every bracket group — the parentheses isolating an argument, a tuple's, a list's brackets, a macro's — has an **anchor**: the callee when a name precedes the bracket (`map (`, `foo.bar (`), the bracket itself when nothing does (`let t = (`). The group's contents are one unit past the anchor, and its closer stands on its own line under the anchor. The group then has one shape wherever it sits, and the shape survives a rename, since no column depends on the length of a name. Inside the brackets, Rust's rules hold as always — a tuple or array spelled one element per line keeps its commas:
 
-```fragment
+```rust fragment
 let t =                           let xs =
     (                                 [
         1,                                1,
@@ -630,7 +630,7 @@ let t =                           let xs =
 
 A call with several arguments does not use parentheses this way — a parenthesised group is one argument — so it breaks by juxtaposition, each argument a continuation line one unit past the callee, and there is no closer:
 
-```
+```rust harsh
 let t =
     compute
         1
@@ -641,7 +641,7 @@ Breaking after `=` is again what puts the anchor at the start of its line; `let 
 
 One compact form is accepted: when the nested construct begins on the same line as the bracket and its body is a single line, the closer ends that line rather than taking one of its own —
 
-```
+```rust harsh
 v <- iter$
   <- map (|x|:
               x * 10)
@@ -652,7 +652,7 @@ v <- iter$
 
 When the receiver is long — a long name, or a path call — it takes the continuation line alone and the arrows hang under it, one level in:
 
-```
+```rust harsh
 let listener =
     TcpListener.bind "127.0.0.1:8089"
         <- await
@@ -675,7 +675,7 @@ None of this is enforced by the transpiler; all of it is what the formatter will
 
 A fenced block inside a `///` or `//!` comment is the one part of a comment the transpiler reads, because rustdoc reads it too: it lifts the block out, compiles it and runs it as a test. It is code, so it is Harsh, and the transpiler writes the Rust rustdoc expects.
 
-```
+```rust harsh
 /// Adds one to the number given.
 ///
 /// # Examples
@@ -716,7 +716,7 @@ pub fn add_one(x: i32) -> i32 {
 
 A function has one parameter syntax: **one parenthesised group per parameter.** The groups concatenate into Rust's comma list. A single parameter may drop its parentheses — that is not a second form, only the one-group case with nothing to separate.
 
-```
+```rust harsh
 fn greet2 (name: &str) (age: i32) -> String:
     format! "Hello, {name}, age {}" age
 
@@ -736,7 +736,7 @@ fn greet(name: &str) -> String { .. }
 
 The bare form has one restriction. A parameter type may itself contain `->`, and there is then no way to tell which arrow ends the parameter, so a type containing a top-level `->` must be parenthesised:
 
-```
+```rust harsh
 fn apply (g: fn i32 -> i32) (v: i32) -> i32:
     g v
 ```
@@ -747,7 +747,7 @@ Arguments juxtapose in the same way; see Application.
 
 - All of these are legal and produce the Rust shown.
 
-```fragment
+```rust fragment
 fn curried (a: i32) (b: i32) -> i32:       fn curried (a: i32, b: i32) -> i32
 fn bare name: &str -> String:              fn bare (name: &str) -> String
 fn tuple ((a, b): (i32, i32)) -> i32:      fn tuple ((a, b): (i32, i32)) -> i32
@@ -774,14 +774,14 @@ A colon that is **not** the last token on a line opens an inline block. It ends 
 
 An inline block holds **one expression** — one rule, no separator. Several statements on one line are Rust's braces, `if c { f$; g$ } else { h$ }` or `{ let a = 1; a * 2 }` on its own, and a `;` inside an inline colon-block is an error. The reason is that an inline statement block nested in a comma-block has no end the layout can find: `A => do: f(); g(), B => 2` would put `g()` outside the arm. Braces say where a block ends; the colon form does not, on one line. The two are not combined: `if c: { .. }` is an error, since the braces open the block by themselves and the colon would open a second one inside it. Braces are for short blocks — Rust's line and Rust's judgement; anything longer takes the indented form. (A `;` that ends the whole line still discards the tail value, as everywhere.)
 
-```
+```rust harsh
 if t: 1 else: 2              →  if t { 1 } else { 2 }
 for i in 0..3: f i           →  for i in 0..3 { f(i) }
 ```
 
 Each `else` binds to the nearest open `if`. Braces select the other reading:
 
-```
+```rust harsh
 if a: if b: 1 else: 2 else: 3        →  if a { if b { 1 } else { 2 } } else { 3 }
 if a: if b { 1 } else { 0 } else: 2  →  if a { if b { 1 } else { 0 } } else { 2 }
 ```
@@ -792,7 +792,7 @@ The inline and indented forms of the same program emit identical Rust; this is e
 
 - Every block-opening construct has an inline form, and what separates its items is whatever the indented form would have inserted.
 
-```
+```rust harsh
 if t: 1 else: 2
 if let Some n = v: n else: -1
 match n\ 0 => "zero", 1 | 2 => "small", _ => "big"
@@ -805,7 +805,7 @@ struct P\ x: i32, y: i32
 - A `let` binding may take an inline block as its value: `let r = if let Some n = v: n * 2 else: 0`.
 - An inline block ends at the end of its logical line. Writing `else: if …` on one line and `else:` on the next therefore orphans the second `else`, and it is rejected; both the fully inline and the fully indented chain work.
 
-```fragment
+```rust fragment
 if n == 1: 10 else: if n == 2: 20 else: 30      ✓ one line
 
 if n == 1:                                       ✓ indented
@@ -830,7 +830,7 @@ it becomes.
 
 Application, chains, and operators:
 
-```
+```rust harsh
 let a = f$                              let a = f();
 let a = f a b                           let a = f(a, b);
 let a = f (-1) (&x) (*y) (a + b)        let a = f(-1, &x, *y, a + b);
@@ -848,7 +848,7 @@ let a = (1..=10) <- map f               let a = (1..=10).map(f);
 
 Dereference is a prefix operator on the whole chain after it:
 
-```
+```rust harsh
 let a = *p <- field                     let a = *p.field;
 let a = (*p) <- field                   let a = (*p).field;
 let a = *p <- m$                        let a = *p.m();
@@ -861,7 +861,7 @@ let a = **x                             let a = **x;
 Pipes: atoms on the left, one function on the right, `|>` left to right and
 `<|` right to left:
 
-```
+```rust harsh
 let a = 2 3 |> add                      let a = add(2, 3);
 let a = a |> f |> g                     let a = g(f(a));
 let a = (f x) |> g                      let a = g(f(x));
@@ -873,7 +873,7 @@ let a = (a |> f) + 1                    let a = (f(a)) + 1;
 `x + 1 |> f` too: a pipe's left side is atoms. And the traps, each of which
 transpiles to something that is not a call:
 
-```
+```rust harsh
 let a = f -1                            let a = f -1;         subtraction: write f (-1)
 let a = f *x                            let a = f *x;         multiplication: write f (*x)
 let a = f x |> g                        let a = g(f, x);      two values piped: write (f x) |> g
@@ -884,7 +884,7 @@ let a = f a.b                           let a = f(a::b);      a path: the field 
 
 A closure body may be indented, using either `|x|:` or `|x| do:` — the two are identical, because `do:` is the existing bare-block marker and a closure body is a brace block.
 
-```
+```rust harsh
 let f =
     |x: i32| -> i32:
         x * 2
@@ -896,7 +896,7 @@ let z = || 7
 
 As a trailing argument, the closure's argument list closes after the block. If the chain continues past it, the closure is isolated in parentheses so the `)` says where it ends:
 
-```
+```rust harsh
 v <- iter$                        v.iter()
   <- map (|n|:                        .map(|n| {
        n * 2                              n * 2
@@ -906,7 +906,7 @@ v <- iter$                        v.iter()
 
 Closure parameters are written as in Rust: a comma list inside the pipes, typed or not — `|a, b|`, `|a: i32, b: i32|`, `|a: &i32, b: &i32| -> bool:` with a block body. There is no curried closure form, because Rust already gives `|a| |b| body` a meaning — a closure returning a closure — and Harsh never changes what Rust means. So the asymmetry is Rust's: `fn` parameters are one group each; closure parameters are a comma list. When what you want is a closure over the remaining parameters of a function, a pipe gives it without writing one.
 
-```
+```rust harsh
 let add = |a: i32, b: i32| a + b    // two parameters, comma list
 let curried = |a: i32| move |b: i32| a * b    // a closure returning a closure, as in Rust
 let sub2 = 10 |> sub    // a closure over the remaining parameters
@@ -916,7 +916,7 @@ A closure is recognised only where it is unambiguous — parameters ending a blo
 
 ### Every closure form
 
-```
+```rust harsh
 let a =
     |x: i32| -> i32:    // indented body, with return type
         let d = x * 2
@@ -942,7 +942,7 @@ let c = apply (|x| x + 100) 1    // inline body, isolated as an argument
 
 - When a closure's parameter list ends a line, the indented block beneath is its body, and the statement containing it is an ordinary statement — it ends where its block ends and takes a `;` if another statement follows.
 
-```
+```rust harsh
 v <- sort_by                       v.sort_by(|a, b| {
     |a, b|:                             a.cmp(b)
         a <- cmp b                 });
@@ -952,7 +952,7 @@ println! "{:?}" v                  println!("{:?}", v)
 - Whether a following line is inside the closure or after it is decided by indentation alone, like any block: indent it under the body and it is part of the closure.
 - **If a chain continues after the closure, the closure must be isolated in parens.** The `)` is what says where the closure ends and the chain resumes; without it the chain has nothing to attach to, and it is rejected with a message naming this fix.
 
-```
+```rust harsh
 v <- iter$                               v.iter()
   <- map (|x|:                               .map(|x| {
        x * 2                                       x * 2
@@ -963,7 +963,7 @@ v <- iter$                               v.iter()
 
 - The `)` sits on a line of its own at the closure's column, as above; it may also end the body's last line, `x * 2)`, which the layout accepts but the style does not use.
 
-```
+```rust harsh
 let d: Vec<i32> =
     v <- iter$
       <- map (|x|:
@@ -975,7 +975,7 @@ let d: Vec<i32> =
 - Parens are transparent to layout: the `:` opens a block inside them exactly as it would outside, and the body is governed by the same rules — several statements, nested blocks, its own closures. Parens isolate, or raise precedence; they neither open nor close anything. A block written inside a group simply owns no token outside it, so it ends where the group ends.
 - The same holds on one line. A closure's prototype `|p|` followed by `:` opens an inline block, and the block ends at the `)` of its group; whatever follows the `)` carries on the statement, and may open another such block:
 
-```
+```rust harsh
 xs <- iter$ <- map (|p|: if *p > 1: *p else: 0) <- collect$      xs.iter().map(|p| { if *p > 1 { *p } else { 0 } }).collect()
 xs <- iter$ <- map (|p: &i32|: *p + 1) <- sum$                     xs.iter().map(|p: &i32| { *p + 1 }).sum()
 xs <- iter$ <- fold 0 (|acc, x|: acc + x)                          xs.iter().fold(0, |acc, x| { acc + x })
@@ -996,7 +996,7 @@ Semicolons are optional. The transpiler inserts them from the layout, and an exp
 - A nested block gets a semicolon after its closing brace only when its header began with `let`, `const`, `static`, `type`, or `use`. An `if` or `match` used as a statement does not.
 - Attribute lines never take a separator and never count as a block's tail.
 
-```
+```rust harsh
 fn total (xs: &[i64]) -> i64:
     let mut sum = 0
     for x in xs:
@@ -1020,7 +1020,7 @@ fn total(xs: &[i64]) -> i64 {
 - A `;` is written in Harsh in exactly one place: at the end of a block's last statement, where it means *emit one*. That discards the tail value, as it does in Rust. A `;` anywhere else is rejected, since the newline already ended that statement.
 - In the Rust, every statement ends with `;` except the last in its block, which gets one only if the Harsh had one. This applies at every nesting level independently — a closure body is a block and is governed by the same rule at its own level.
 
-```fragment
+```rust fragment
 parent_statement                 parent_statement;
 my_func                          my_func(|| {
     || do:                           closure_statement;
@@ -1030,7 +1030,7 @@ parent_statement                 parent_statement;
 last_parent_statement            last_parent_statement
 ```
 
-```fragment
+```rust fragment
 parent_statement                 parent_statement;
 my_func                          my_func(|| {
     || do:                           closure_statement;
@@ -1045,7 +1045,7 @@ last_parent_statement;
 
 ### Worked forms
 
-```
+```rust harsh
 fn tail$ -> i32:            fn tail() -> i32 {
     let a = 1                     let a = 1;
     a + 1                         a + 1
@@ -1075,7 +1075,7 @@ This is the largest departure from Rust, and the one that costs paste-compatibil
 
 A dot is the path separator, replacing `::`.
 
-```
+```rust harsh
 use std.collections.HashMap
 let v = geometry.Vec2\ x = 1.0, y = 2.0
 let e = ParseErr.BadDigit c
@@ -1095,7 +1095,7 @@ error: `::` is not valid in Harsh; the path separator is `.`
 
 A left arrow is field access and method call, replacing Rust's dot.
 
-```
+```rust harsh
 self <- x * self <- x + self <- y * self <- y
 let name = params <- name <- as_deref$ <- unwrap_or "World"
 ```
@@ -1110,7 +1110,7 @@ The mapping is a plain substitution in both directions, with no context and no e
 | `::` | `.` |
 | `.` | `<-` |
 
-```
+```rust harsh
 "empty" <- to_string$
 String.from "hi" <- len$
 s <- len$
@@ -1122,7 +1122,7 @@ self <- field
 
 - Spacing around `<-` is insignificant: spaced, tight and mixed produce identical Rust.
 
-```
+```rust harsh
 let a = p <- x
 let b = p<-y
 let c = v <- len$<-to_string$
@@ -1130,7 +1130,7 @@ let c = v <- len$<-to_string$
 
 - A horizontal chain and a vertical one are the same expression; the vertical form is the continuation rule with `<-` leading each line.
 
-```
+```rust harsh
 let e = v <- iter$ <- max$ <- copied$ <- unwrap_or 0
 
 let d =
@@ -1160,7 +1160,7 @@ There is no accommodation for pasted Rust. Use `hrs-from`, which converts comple
 
 Generic argument lists pass through unchanged in type position and are automatically turbofished when followed by a path separator.
 
-```
+```rust harsh
 let v = Vec<i32>.new$
 let m = HashMap<String, usize>.new$
 let counts: Vec<(String, usize)> = tally (&words) <- into_iter$ <- collect$
@@ -1177,7 +1177,7 @@ let counts: Vec<(String, usize)> = tally(&words).into_iter().collect();
 
 ### Generics in every position
 
-```fragment
+```rust fragment
 fn generic<T: std.fmt.Debug> (label: &str) (item: T) -> String:     function
 struct Generic<T>:                                                   struct
     inner: T
@@ -1197,7 +1197,7 @@ let v: Vec<i32> = q$                                               type — unto
 
 A dot followed by a parenthesised group is a use-tree group. It is the only grouped form: `use` never opens an indented block, and `use a.b:` with entries below is a syntax error. Inside the parentheses the commas are yours, as in Rust.
 
-```
+```rust harsh
 use axum.(
         serve,
         Router,
@@ -1224,7 +1224,7 @@ use tokio::net::TcpListener;
 
 - Nested groups and `self` work inside a group:
 
-```
+```rust harsh
 use std.io.(self, Write)
 use std.collections.(
         BTreeMap,
@@ -1236,7 +1236,7 @@ use std.collections.(
 
 A declaration's body follows its name with no mark: `struct` and `enum` take exactly one name (and its generics, and at most a `[where …]`), so what stands deeper can only be the body. Fields and variants are one per line; the commas are supplied.
 
-```
+```rust harsh
 #[derive Debug Clone]                        #[derive(Debug, Clone)]
 struct Point                                 struct Point {
     x: f64                                       x: f64,
@@ -1257,7 +1257,7 @@ There are three forms of struct — **record** (named fields; Rust's docs call t
 
 **Inline**, the field list is marked with `\` and its items comma-separated. The `\` says where the header ends and the parts begin, as the newline does in the block form:
 
-```
+```rust harsh
 struct Point\ x: f64, y: f64
 enum Shape\ Empty, Circle f64, Rect Point Point, (Named\ name: String, sides: u8)
 struct Wrapper<T> [where T: Display]\ field: T, other: u32
@@ -1265,7 +1265,7 @@ struct Wrapper<T> [where T: Display]\ field: T, other: u32
 
 **Every struct form:**
 
-```
+```rust harsh
 struct Unit                             struct Unit;                       // unit-like struct
 struct Meters f64                       struct Meters(f64);                // tuple struct: the name applied to its payload
 struct Pair i32 i32                     struct Pair(i32, i32);
@@ -1292,7 +1292,7 @@ struct Bounded<T> [where T: Display]    struct Bounded<T>                  // wi
 
 A value is always marked `\`. In expression position a bare `Point` is a complete expression already (a unit struct's value, a constant, a function), so the mark is what says "the name is the head, and fields follow". Fields take `=` — the `:` is the declaration's — a bare `field` is the shorthand, `..base` is last:
 
-```
+```rust harsh
 let p =                                      let p = Point {
     Point\                                       x: 5.0,
         x = 5.0                                  y: 7.0,
@@ -1306,7 +1306,7 @@ let m = Message.Move\ x = 1, y = 2          let m = Message::Move { x: 1, y: 2 }
 
 An inline literal reads to the end of its line or to the `)` that isolates it, which is what lets it stand anywhere an expression can — in a header, in a list, as an operand:
 
-```fragment
+```rust fragment
 match (Point\ x = 1.0, y = 4.0)\            match (Point { x: 1.0, y: 4.0 }) {
     Point\ x, .. => x
 if p == (Point\ x = 1.0):                   if p == (Point { x: 1.0 }) {
@@ -1316,7 +1316,7 @@ let v = vec! (Point\ x = 1) (Point\ x = 2)
 
 Because the field list reaches its group's `)`, a name after the last `=` field is a shorthand field, never something outside the literal — the transpiler reads no type to decide, so the line says what it means on its own, and rustc says whether the fields fit:
 
-```
+```rust harsh
 struct Point                                struct Point {
     x: i32                                      x: i32,
     msg: String                                 msg: String,
@@ -1343,7 +1343,7 @@ Written `(Point\ x = 1, msg)` when `Point` has no field `msg`, it is still one l
 
 A pattern destructures with the same mark: `Point\ x, y`, `Point\ x: px, ..` (a rename keeps Rust's `:`). The braced pattern is still accepted.
 
-```
+```rust harsh
 let Point\ x, y = p
 match q\
     Point\ x: 0, y => println! "on the y axis at {y}"
@@ -1354,7 +1354,7 @@ match q\
 
 Item bodies take no separator, except that a declaration without a body gets a semicolon.
 
-```
+```rust harsh
 pub trait Shape
     fn area (&self) -> f64
 
@@ -1372,7 +1372,7 @@ impl Shape for Circle
 
 - A generic `impl` and a trait `impl` for a tuple struct:
 
-```
+```rust harsh
 impl<T: std.fmt.Debug> Generic<T>
     fn show (&self) -> String:
         format! "{:?}" (self <- inner)
@@ -1384,7 +1384,7 @@ impl Area for Tuple
 
 ### Modules
 
-```
+```rust harsh
 mod geometry
     pub struct Vec2
         pub x: f64
@@ -1399,14 +1399,14 @@ A module declaration without a body is just `mod name` and gets its semicolon au
 
 ### Constants and statics
 
-```
+```rust harsh
 const MAX_DEPTH: usize = 8
 static GREETING: &str = "tokenizing"
 ```
 
 ### Type aliases
 
-```
+```rust harsh
 type Pair = (i32, i32)
 let p: Pair = (8, 9)
 ```
@@ -1417,14 +1417,14 @@ let p: Pair = (8, 9)
 
 - Two forms, both legal. The single-line bare form needs nothing:
 
-```
+```rust harsh
 fn one<T> (x: T) -> T where T: Clone:
     x
 ```
 
 - The multi-line form is bracketed, so that the clause reads as part of the header rather than as a sibling of the body — which lets the body sit at the same indent as the clause instead of one level further right:
 
-```
+```rust harsh
 fn three<T, U> (a: T) (b: U) -> String
     [where
         T: std.fmt.Debug,
@@ -1436,7 +1436,7 @@ fn three<T, U> (a: T) (b: U) -> String
 
 A `where` clause that spans lines must be bracketed, because the `:` in a bound would otherwise be read as a block opener. Brackets suppress layout, so the bound is safe inside them; they are stripped on emission.
 
-```
+```rust harsh
 fn f<T> (x: T) -> T
     [where T: Clone + Send]:
     x
@@ -1455,7 +1455,7 @@ fn g<T, U> (a: T) (b: U) -> String
 
 A run of atoms is a call. Parentheses **isolate one argument** and never group several, so a group with commas is always a tuple, and an empty group `()` is the unit value. Applying to *nothing* is `$`, a suffix.
 
-```
+```rust harsh
 f a b            →  f(a, b)          two arguments
 f (a, b)         →  f((a, b))        one tuple argument
 f$               →  f()              zero arguments: `$` applies a name to nothing
@@ -1467,14 +1467,14 @@ An atom is a non-keyword identifier (with optional path, generics and macro bang
 
 Application binds tighter than `<-`: `f x <- g$` is `(f x) <- g$`. To apply the arrow to the argument instead, isolate it.
 
-```
+```rust harsh
 show "abc" <- to_string$     →  show("abc").to_string()
 show ("abc" <- trim$)        →  show("abc".trim())
 ```
 
 Macros follow the identical rule:
 
-```
+```rust harsh
 println! "{}" (greet "Ben")   →  println!("{}", greet("Ben"))
 format! "Hello, {name}"       →  format!("Hello, {name}")
 ```
@@ -1497,7 +1497,7 @@ format! "Hello, {name}"       →  format!("Hello, {name}")
 
 - The rule that decides every row: **if it contains an operator, isolate it.** `count &w` is bitwise-and; `count (&w)` is a call. `render i w *c` is a multiplication; `render i w (*c)` is a call.
 
-```
+```rust harsh
 let b = two (a + 1) (one 2)      →  let b = two(a + 1, one(2))
 let e = takes_unit ()            →  let e = takes_unit(())
 let f = (one) 3                  →  let f = (one)(3)
@@ -1521,7 +1521,7 @@ let f = (one) 3                  →  let f = (one)(3)
 
 Two operators, and one idea: a pipe **fills a function's parameters** — `|>` from the left, `<|` from the right. When the count reaches the function's arity the result is a plain call; when it falls short, what is missing is **deferred** as one flat closure. That makes the pipes both the way to apply without parentheses and the way to partially apply.
 
-```fragment
+```rust fragment
 fn sub (a: i32) (b: i32) (c: i32) -> i32:
     a - b - c
 
@@ -1540,7 +1540,7 @@ sub <| 3 5 10       →  sub(3, 5, 10)
 - **The function is one atom**, and `a |> f <| b` is one application: `a` fills from the left, `b` from the right.
 - `|>` is left-associative, `<|` right-associative, and a chained result is one value: `x |> f |> g` is `g(f(x))`, `f <| g <| x` is `f(g(x))`.
 
-```
+```rust harsh
 double <| 21                →  double(21)
 show <| double <| 3         →  show(double(3))
 5 |> double                 →  double(5)
@@ -1553,7 +1553,7 @@ show (double <| 4)          →  show(double(4))       a pipe inside an argument
 
 A pipe that supplies fewer values than the function takes does not fail; it **defers**. The result is a closure over the parameters that were not filled, and that closure is an ordinary value.
 
-```fragment
+```rust fragment
 fn sub (a: i32) (b: i32) (c: i32) -> i32:
     a - b - c
 
@@ -1568,7 +1568,7 @@ s3 5 1                     →  s3(5, 1)                                        
 - **Arity** is what tells a call from a partial. Harsh knows it for a `fn` declared anywhere in the project, whatever declaration form was used, and for a partial bound by `let`. It does not know it for an imported function, a method, or a closure parameter — those live in Rust's type checker. **Unknown arity: the atoms given are taken as all of them, and it is a plain call**, so `text |> String.from` and `x |> println!` work as they read; if the count was wrong, rustc says so. Known arity with too many arguments is a Harsh error naming the function and both counts.
 - A partial is a **value**: bind it, pass it, store it, return it, apply it by juxtaposition like any function. Bound by `let`, its remaining arity is known, so it composes.
 
-```
+```rust harsh
 fn sub (a: i32) (b: i32) (c: i32) -> i32:     fn sub(a: i32, b: i32, c: i32) -> i32 {
     a - b - c                                     a - b - c
                                               }
@@ -1591,7 +1591,7 @@ fn main$:                                     fn main() {
 - A function with nothing supplied is already a value in Rust, so there is nothing to defer: pass `one`, not a pipe.
 - Errors, each naming the fix:
 
-```fragment
+```rust fragment
 1 2 3 4 |> sub          `sub` takes 3 parameter(s) and 4 were piped in
 x |> f y                after a pipe's function only `<|` may follow; isolate: `x |> (f a)`
 1 + 2 |> f              a pipe's arguments are atoms; isolate an expression in parentheses
@@ -1605,7 +1605,7 @@ fn f ():                `()` is the unit value; a function with no parameters is
 
 Written as a function returning a closure, with no special support needed — the ordinary rules apply the result:
 
-```fragment
+```rust fragment
 fn add a: i32 -> impl Fn i32 -> i32:
     move |b| a + b
 
@@ -1621,7 +1621,7 @@ A parenthesised group may head an application, which is what makes `(add 10) 7` 
 
 Arms are separated by line breaks rather than commas. An arm body may be inline after the fat arrow, or an indented block when the arrow ends the line.
 
-```
+```rust harsh
 match parse_all items\
     Ok ns =>
         let total: i64 = ns <- iter$ <- sum$
@@ -1635,7 +1635,7 @@ match parse_all items\
 
 A struct literal may appear in a scrutinee or condition, which Rust itself forbids. Harsh has no ambiguity there, since the `:` ends the expression, so the expression is parenthesised on emission:
 
-```
+```rust harsh
 match P { x: 1, y: 2 }\
     P { x, y } => x + y
 ```
@@ -1648,7 +1648,7 @@ match (P { x: 1, y: 2 }) {
 
 ### Every match form
 
-```
+```rust harsh
 match s\    // indented arms
     Shape.Empty => "empty" <- to_string$
     Shape.Circle r => format! "circle {r}"
@@ -1667,7 +1667,7 @@ match n { 0 => "zero", _ => "other" }    // braced
 - Patterns juxtapose with the same grammar as application: `Shape.Circle r`, `Shape.Rect w h`, `Some x`, `Ok (a, b)` for a tuple payload.
 - Record patterns keep braces: `Shape.Named { name, sides }`, `E.Rec { a, b }`.
 
-```
+```rust harsh
 match n\    // guards
     x if x < 0 => "neg"
     0 => "zero"
@@ -1693,7 +1693,7 @@ match n\ 0 => "zero", 1 | 2 => "small", _ => "big"    // or-patterns
 
 ### Match as a value and nested matches
 
-```
+```rust harsh
 let r = match n\
     1 => 10
     _ => 20
@@ -1713,7 +1713,7 @@ match a\
 
 ### Every if form
 
-```fragment
+```rust fragment
 if n < 0:                                       indented, with else-if chain
     "neg"
 else if n == 0:
@@ -1731,7 +1731,7 @@ if a: if b { 1 } else { 0 } else: 2             braces select the outer binding 
 
 ### If let
 
-```
+```rust harsh
 if let Some n = v:    // indented
     n
 else:
@@ -1749,7 +1749,7 @@ let r = if let Some n = v: n * 2 else: 0    // as a value
 
 Every Rust control-flow construct opens its block with a colon.
 
-```
+```rust harsh
 for i in 0..3:
     if i % 2 == 0:
         println! "even {i}"
@@ -1767,7 +1767,7 @@ if let Some first = words <- first$:
 
 ### Loops
 
-```
+```rust harsh
 for i in 0..4:    // for, indented
     s += i
 
@@ -1799,7 +1799,7 @@ let found = loop:    // loop with a break value
 
 ### Every let form
 
-```
+```rust harsh
 let a = 1    // plain
 let b: i64 = 2    // typed
 let mut c = 3    // mutable
@@ -1823,7 +1823,7 @@ let h = { let u = 3; u * u }    // several statements on one line: Rust's braces
 
 A bare block is written `do:`. The keyword is a marker only and never reaches the output — Rust reserves `do` but has no syntax for it, which is exactly why it was chosen: it collides with no real identifier.
 
-```
+```rust harsh
 let scoped =
     do:
         let a = 10
@@ -1843,7 +1843,7 @@ let scoped = {
 
 Struct literals keep Rust's brace form. Braces remain legal everywhere they are in Rust, and inside them layout is suppressed.
 
-```
+```rust harsh
 let c = Circle\ r = 2.0
 let p = Point\ x = 3, y = 4
 ```
@@ -1854,7 +1854,7 @@ Struct literals: `Point\` with the fields beneath, or inline; the mark is what d
 
 - Rust's `?` operator, `Result`, `Option` and `let … else` all pass through, since none of them involve braces or the tokens Harsh rewrites.
 
-```
+```rust harsh
 fn fallible (n: i32) -> Result<i32, String>:
     if n < 0: Err ("negative" <- to_string$) else: Ok (n * 2)
 
@@ -1868,7 +1868,7 @@ fn uses_question (n: i32) -> Result<i32, String>:
 
 ## Unsafe and async
 
-```
+```rust harsh
 fn unsafe_block$ -> i32:
     let x = 5
     let p = &x as *const i32
@@ -1898,7 +1898,7 @@ Your own macros, written in Harsh. `hrs` expands them into Harsh before anything
 
 Both sides of a `macro_rules~` are written in Harsh, and both follow rules already stated: a matcher is a parameter list, a transcriber is a block. The macro unfolds **into Harsh** before anything is transpiled, so the generated Rust holds no macro at all — only what the expansion came to.
 
-```
+```rust harsh
 macro_rules~ twice                                   fn main() {
     (($e:expr)) => do:                                   let v = {
         $e * 2                                               let mut tmp = Vec::new();
@@ -1941,7 +1941,7 @@ and its helper attributes leave the item once it has run.
 
 An attribute-like macro is placed on any item -- a function, a module, a `struct` -- and what it returns *replaces* the item. It is a `pub fn` marked `#[proc_macro_attribute~]` taking two streams, as Rust's takes them: `(attr: TokenStream) (item: TokenStream)`. `#[route~ GET "/"]` above `fn index$:` hands it the arguments as written, `GET "/"`, and the function; `#[route~]`, without arguments, an empty first stream. The shape of the arguments is the macro's author's to decide -- written with Harsh in mind, usually juxtaposed, with isolation parentheses around one of several tokens, `#[route~ GET "/" (some_attr = some_value)]`. The macro receives the item with every other attribute it carries, above and below its own, and its output is all that remains of it. `hrs_syn`'s `ItemFn` parses a function into its signature, name and body:
 
-```
+```rust harsh
 #[proc_macro_attribute~]
 pub fn route (attr: TokenStream) (item: TokenStream) -> TokenStream:
     let route = attr <- to_string$
@@ -1961,7 +1961,7 @@ pub fn route (attr: TokenStream) (item: TokenStream) -> TokenStream:
 A proc macro is an ordinary Harsh function marked `#[proc_macro~]`, taking
 and returning a `TokenStream` -- text, in this version:
 
-```
+```rust harsh
 use hrs_proc_macro.TokenStream
 
 #[proc_macro~]
@@ -2016,7 +2016,7 @@ Macros imported from Rust libraries -- `println!` and `vec!` from the standard l
 
 #### Calling one
 
-```
+```rust harsh
 println! "{} {}" a (twice~ 4)      →  println!("{} {}", a, twice!(4))      juxtaposed
 let s = format! "value={a}"        →  let s = format!("value={a}")                 a single argument
 let v = vec! 1 2 3                 →  let v = vec!(1, 2, 3)                        juxtaposed, like any macro
@@ -2040,7 +2040,7 @@ Rust's own derives are written as any attribute, by juxtaposition: `#[derive Deb
 
 A Rust macro whose stream is not a list of values — `tokio.select!`'s arms, a framework's `view!` markup or `rsx!` tree, a `quote!` template — takes it in braces, and **what is inside the braces is Rust**, or the macro's own language, written exactly as its documentation shows. Harsh reads none of it and changes none of it. The only Harsh inside is what you mark: a **hole** opens with `@:` and **always closes** with `:@`, and between the two is ordinary Harsh, transpiled in place.
 
-```
+```rust harsh
 let winner = tokio.select! {              let winner = tokio::select! {
     n = @: slow "slow" :@ => n,               n = slow("slow") => n,
     n = @: fast "fast" :@ => n,               n = fast("fast") => n,
@@ -2065,13 +2065,13 @@ view! {                                   view! {
 
 `g~` is the **generator comprehension**, in Harsh's prelude: every file may use it with no `use`, and a file that never calls it is untouched. The names are Python's — `g~` is lazy, as a generator is; `list~`, `set~` and `dict~` are the list, set and dict comprehensions that collect it. (A generator here is a lazy iterator, not Rust's unstable feature of that name.)
 
-```fragment
+```rust fragment
 g~ value for pattern in iterable if condition … for pattern in iterable if condition …
 ```
 
 - **Each `if` belongs to the `for` before it.** A condition sees every name bound up to that point and nothing after, and a condition on an outer `for` filters before the inner one runs. So a test goes after the last `for` whose name it uses:
 
-```
+```rust harsh
 fn main$:
     let triples =
         list~ (a, b, c)
@@ -2084,7 +2084,7 @@ fn main$:
   Attached to `for a`, the same test fails: *cannot find value `b` in this scope*, reported on the Harsh line.
 - **Each `for` is one closure**, its `if`s folded into one test under `bool::then`, and every level but the innermost is flattened:
 
-```fragment
+```rust fragment
 g~ x * 2 for x in xs if x > 1 if x < 9
     →  (xs).into_iter().flat_map(move |x| ((true && (x > 1) && (x < 9)).then(|| x * 2)))
 
@@ -2096,7 +2096,7 @@ g~ (x, y) for x in 0..3 for y in 0..3 if y > x
 
 (Spacing tidied; the structure is exactly what `hrs` emits.) In Harsh, as `hrs expand` shows it:
 
-```fragment
+```rust fragment
 g~ x * 10 + y
     for x in (0..6) if x % 2 == 0 if x > 0
     for y in (0..6) if y > x if y % 2 == 1
@@ -2117,7 +2117,7 @@ g~ x * 10 + y
 - **The call takes the rest of its line and every line indented beneath it**, so a long comprehension is laid out one clause per line; isolate the whole call to chain on it, `(g~ …) <- collect$`.
 - **Shorthands** collect: `list~ …` into a `Vec`, `set~ …` into a `HashSet`, `dict~ key => value for …` into a `HashMap` — where a repeated key keeps its last value, as `insert` does.
 
-```
+```rust harsh
 fn main$:
     let evens = list~ x for x in 0..10 if x % 2 == 0
     let pairs = list~ (x, y) for x in 1..4 for y in 1..4 if y > x
@@ -2144,7 +2144,7 @@ hrs_std = "0.1"
 
 Every entry is a *block*: a number is 1×1, a matrix is itself, and a nested bracket is built by the same rules.
 
-```fragment
+```rust fragment
 m~ [1 2 3; 4 5 6]             →  hrs_std::Matrix::from_rows(vec!(vec!(1, 2, 3), vec!(4, 5, 6)))
 m~ [1 2 3                        the same: a line break is a `;`
     4 5 6]
@@ -2160,7 +2160,7 @@ An entry with an operator in it is isolated, `(k + 1)`, as any argument is; a ne
 
 **The operations** — Julia's names wherever Julia has one:
 
-```fragment
+```rust fragment
 &a * &b            the matrix product          k * a        scaling
 &a * &x            matrix × vector: a vector   &a + &b      entrywise, as is -
 a <- solve (&b)    Julia's a \ b: exact for a square matrix, least squares for a tall one
@@ -2177,7 +2177,7 @@ x <- norm$         x <- dot (&y)     x[0]                   a[0, 1]
 
 **Slicing** — Julia's `a[1:2, :]`, in Harsh's own ranges: 0-based, the end left out, and `..` alone for Julia's `:`.
 
-```fragment
+```rust fragment
 a <- slice (0..2) (..)      a copy, as Julia's is: rows 0 and 1, every column
 a <- slice 1 (..)           an axis taken by a number is dropped: a row, as a vector
 a <- view (0..2) (..)       a view: borrowed, nothing copied -- Julia's view(a, 1:2, :)
@@ -2194,7 +2194,7 @@ a <- view_mut 2 (..) <- fill 0     a row written through
 
 **Broadcasting** — a dot before an operator applies it element by element, Julia's own spelling: `.*`, `.+`, `.-`, `./`.
 
-```fragment
+```rust fragment
 &a .* &b             element by element; &a * &b is still the matrix product
 &a .* 2.0 .+ &row    shapes stretch: along an axis two lengths are equal, or one of them is 1
 x + &a .* &b         precedence is the operator's own: the product first
@@ -2210,7 +2210,7 @@ a <- map relu        the method beneath f<>, as slice is beneath the index
 - **Rust's empty generic list is dropped.** `f::<>(x)` and `P<>` mean nothing in Rust; in Harsh `f<>` is the mark, and `hrs-from` leaves Rust's out. It is the one place Harsh is not a superset of Rust.
 - A mismatch is Julia's: `DimensionMismatch: arrays could not be broadcast to a common size; got a dimension with lengths 2 and 3`.
 
-```
+```rust harsh
 fn main$:
     let hours = [1.0, 2.0, 3.0, 4.0]
     let score = v~ [52.0, 55.0, 61.0, 64.0]
@@ -2223,7 +2223,7 @@ fn main$:
 
 An attribute is an application inside its brackets, exactly as a macro call is after its bang: a name, then its arguments one atom each, parens only to isolate what is not one atom. Dots are path separators inside it as everywhere.
 
-```
+```rust harsh
 #[derive Debug Clone]                              #[derive(Debug, Clone)]
 #[cfg (feature = "hydrate")]                       #[cfg(feature = "hydrate")]
 #[cfg (not (feature = "ssr"))]                     #[cfg(not(feature = "ssr"))]
@@ -2238,7 +2238,7 @@ An attribute is an application inside its brackets, exactly as a macro call is a
 - Rust's `#[derive Debug Clone]` is an error, as `f(x)` is anywhere: see "One syntax for applying".
 - Doc comments on items and on fields both survive into the Rust, so `cargo doc` documents your `.hrs` source.
 
-```
+```rust harsh
 /// A doc comment survives into the Rust, so rustdoc sees it.
 #[derive Debug Default]
 struct Config
@@ -2250,7 +2250,7 @@ struct Config
 
 Harsh has one way to apply a name to arguments, and it is juxtaposition. A parenthesised group after a name isolates one argument and is **separated from the name by a space**; when the argument is a single token the group is not needed. Written tight, `f(x)` reads as Rust's call, and Harsh has no call syntax — so it is an error, everywhere:
 
-```fragment
+```rust fragment
 f (a + b)   /   f x                 f(a + b)   /   f(x)
 Some (a + b)   /   Some n           patterns and constructors alike
 m~ (a + b)   /   m~ a               macros
@@ -2261,7 +2261,7 @@ Circle (f64)                        a variant's payload — the group is Rust's 
 
 The parenthesised types follow the same rule. `Fn`, `FnMut`, `FnOnce` and a `fn` in type position are applications, and `$` applies to nothing there as everywhere, so that `()` is only ever the unit value:
 
-```
+```rust harsh
 type A = fn (x: i32) (y: f64) -> &str       type A = fn(x: i32, y: f64) -> &str;
 type B = Box<dyn Fn i32 -> i32>              type B = Box<dyn Fn(i32) -> i32>;
 type C = Box<dyn Fn (i32) (f64) -> i32>      type C = Box<dyn Fn(i32, f64) -> i32>;
@@ -2297,7 +2297,7 @@ A paren block's tail may itself open the statement's block — `if xs <- iter$ <
 
 A foreign block is a layout block, its bodiless functions taking their `;` from the layout:
 
-```
+```rust harsh
 extern "C":                         extern "C" {
     fn abs (input: i32) -> i32          fn abs(input: i32) -> i32;
                                     }
@@ -2324,7 +2324,7 @@ Because the transpiler substitutes tokens rather than reconstructing a tree, the
 
 - Each of these is a syntax error with a message naming the fix.
 
-```fragment
+```rust fragment
 let x = a::b                           `::` is not valid in Harsh; the path separator is `.`
 println!("{}", 1)                      a macro takes juxtaposed arguments, not a parenthesised list
 matches! (a, n if n > 3)               the same — a parenthesised list is a tuple
@@ -2351,7 +2351,7 @@ v <- map |x|:                          a chain cannot continue after a bare clos
 
 ## Command line
 
-```
+```sh
 hrs input.hrs -o out/main.rs --map out/main.map.json
 cargo build --message-format=json | hrs-remap --map out/main.map.json
 hrs-from existing.rs -o existing.hrs

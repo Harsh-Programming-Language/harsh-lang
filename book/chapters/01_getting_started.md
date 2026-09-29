@@ -4,7 +4,7 @@
 
 Every program in this book is a complete file that you could save as `src/main.hrs` in a project made by `hrs new` and run with `hrs run`. Here is the smallest one:
 
-```
+```rust harsh
 fn main$:
     println! "Hello, world!"
 ```
@@ -33,7 +33,7 @@ You never read `target/hrs/main.rs` unless you want to; in daily use it is an in
 
 Programs take input. The simplest input is what follows the program's name on the command line, which Rust hands you through the standard library:
 
-```
+```rust harsh
 use std.env
 
 fn main$:
@@ -56,7 +56,7 @@ Two things about `let` that will matter soon: a variable declared with `let` can
 
 ## 1.4 Comments
 
-```
+```rust harsh
 // A comment runs from `//` to the end of the line.
 fn main$:
     // This one explains the next line.

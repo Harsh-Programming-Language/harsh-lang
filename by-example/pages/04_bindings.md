@@ -2,7 +2,7 @@
 
 ## 4.1 Bindings
 
-```
+```rust harsh
 fn main$:
     // A binding is immutable unless it says otherwise.
     let x = 1
@@ -51,7 +51,7 @@ so: as a scope of its own, as a closure's body, as a value.
 Assigning to a binding that never said `mut` is refused before the program
 runs:
 
-```
+```rust harsh
 fn main$:
     let x = 1
     x = 2
@@ -77,7 +77,7 @@ For more information about this error, try `rustc --explain E0384`.
 
 ## 4.2 Types
 
-```
+```rust harsh
 fn main$:
     // An annotation names the type; otherwise it is inferred.
     let n: u8 = 200

@@ -1,6 +1,6 @@
 # The mark
 
-```
+```text
 #[Ha<rs>.h]
 ```
 
@@ -32,7 +32,7 @@ Eleven characters. Five readings, none of which contradicts the others.
 
 - The mark contains `.hrs`, split across the word.
 
-```
+```text
 #[Ha<rs>.h]
      │  │
      │  └── .h

@@ -22,7 +22,7 @@ hrs_std = "0.1"
 
 `src/main.hrs`
 
-```
+```rust harsh
 fn main$:
     // Spaces between entries, `;` between rows.
     let a = m~ [1 2 3; 4 5 6]
@@ -74,7 +74,7 @@ hrs_std = "0.1"
 
 `src/main.hrs`
 
-```
+```rust harsh
 fn main$:
     let a = m~ [1.0 2.0; 3.0 4.0]
     let b = m~ [0.0 1.0; 1.0 0.0]
@@ -119,7 +119,7 @@ hrs_std = "0.1"
 
 `src/main.hrs`
 
-```
+```rust harsh
 use hrs_std.(UniformScaling, I)
 
 fn main$:
@@ -156,7 +156,7 @@ hrs_std = "0.1"
 
 `src/main.hrs`
 
-```
+```rust harsh
 fn main$:
     let a = m~ [1 2; 3 4]
     let z = m~ [0 0; 0 0]
@@ -190,7 +190,7 @@ hrs_std = "0.1"
 
 `src/main.hrs`
 
-```
+```rust harsh
 fn main$:
     // 2x + y = 5 and x + y = 3, as a matrix and a vector.
     let a = m~ [2.0 1.0; 1.0 1.0]
@@ -231,7 +231,7 @@ hrs_std = "0.1"
 
 `src/main.hrs`
 
-```
+```rust harsh
 use hrs_std.Matrix
 
 fn main$:
@@ -274,7 +274,7 @@ hrs_std = "0.1"
 
 `src/main.hrs`
 
-```
+```rust harsh
 fn main$:
     // Three days of readings from three sensors: a row a day.
     let mut readings = m~ [21 22 19; 22 24 21; 18 19 17]
@@ -335,7 +335,7 @@ hrs_std = "0.1"
 
 `src/main.hrs`
 
-```
+```rust harsh
 fn relu (x: f64) -> f64:
     x <- max 0.0
 
@@ -402,7 +402,7 @@ hrs_std = "0.1"
 
 `src/main.hrs`
 
-```
+```rust harsh
 fn main$:
     let a = m~ [1 2 3; 4 5 6]
     // A 2×3 matrix times a 2×3 matrix: the inner sizes, 3 and 2, differ.

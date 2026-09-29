@@ -2,7 +2,7 @@
 
 Harsh's counterpart to Rust's `syn`, for procedural macros written in Harsh:
 
-```
+```rust harsh
 use hrs_proc_macro.TokenStream
 use hrs_quote.quote
 use hrs_syn.{parse_macro_input, DeriveInput}

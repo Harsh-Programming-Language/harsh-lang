@@ -365,25 +365,25 @@ proc-macros = ["../hello"]</code></pre>
 <h3 id="re-exporting-a-harsh-macro">Re-exporting a Harsh macro</h3>
 <p>As in Rust, a library can hand its users a macro from its proc-macro crate, so
 they depend on the library alone (the user's ruling, 2026-09-24, option (a)):</p>
-<pre class="code harsh"><code><span class="p">#</span> hello_macro<span class="p">/</span><span class="t">Cargo</span><span class="p">.</span>toml
-<span class="p">[</span>package<span class="p">.</span>metadata<span class="p">.</span>harsh<span class="p">]</span>
-proc<span class="p">-</span>macros <span class="p">=</span> <span class="p">[</span><span class="str">"../hello_macro_derive"</span><span class="p">]</span>
+<pre class="code"><code># hello_macro/Cargo.toml
+[package.metadata.harsh]
+proc-macros = ["../hello_macro_derive"]
 
-<span class="p">#</span> hello_macro<span class="p">/</span>src<span class="p">/</span>lib<span class="p">.</span>hrs
-<span class="k">pub</span> <span class="k">trait</span> <span class="t">HelloMacro</span>
-    <span class="k">fn</span> hello_macro<span class="defer">$</span>
+# hello_macro/src/lib.hrs
+pub trait HelloMacro
+    fn hello_macro$
 
-<span class="k">pub</span> <span class="k">use</span> hello_macro_derive<span class="p">.</span><span class="t">HelloMacro</span>        <span class="p">#</span> resolved by hrs<span class="p">;</span> absent from the <span class="t">Rust</span>
+pub use hello_macro_derive.HelloMacro        # resolved by hrs; absent from the Rust
 
-<span class="p">#</span> app<span class="p">/</span><span class="t">Cargo</span><span class="p">.</span>toml <span class="p">-</span><span class="p">-</span> depends on hello_macro only
-<span class="p">[</span>dependencies<span class="p">]</span>
-hello_macro <span class="p">=</span> <span class="p">{</span> path <span class="p">=</span> <span class="str">"../hello_macro"</span> <span class="p">}</span>
+# app/Cargo.toml -- depends on hello_macro only
+[dependencies]
+hello_macro = { path = "../hello_macro" }
 
-<span class="p">#</span> app<span class="p">/</span>src<span class="p">/</span>main<span class="p">.</span>hrs
-<span class="k">use</span> hello_macro<span class="p">.</span><span class="t">HelloMacro</span>
+# app/src/main.hrs
+use hello_macro.HelloMacro
 
-<span class="attr">#[derive~ HelloMacro]</span>
-<span class="k">struct</span> <span class="t">Pancakes</span></code></pre>
+#[derive~ HelloMacro]
+struct Pancakes</code></pre>
 <p><code>hrs</code> blanks every <code>use</code> naming a macro crate the project lists -- it has no
 Rust meaning -- and when it builds <code>app</code>, reads its path dependencies for
 <code>pub use &lt;macro crate&gt;.&lt;Name&gt;</code> (or <code>.{A, B}</code>) and adds those macros, and only

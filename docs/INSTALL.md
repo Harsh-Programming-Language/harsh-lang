@@ -7,13 +7,13 @@ idempotent: running it again over an older install just replaces it.
 
 From the published crate ([`harsh-lang`](https://crates.io/crates/harsh-lang)):
 
-```
+```sh
 cargo install harsh-lang
 ```
 
 or from a checkout, to run what is in the tree rather than the last release:
 
-```
+```sh
 cd harsh
 cargo install --path .
 ```
@@ -28,7 +28,7 @@ Check: `hrs --version`. The version carries the bundle's date as build metadata 
 
 ## 2. Verify the tree
 
-```
+```sh
 cargo test
 ./check.sh
 ```
@@ -42,13 +42,13 @@ trips them through `hrs-from`, and self-hosts.
 
 From the Marketplace ([`harsh-lang.harsh-lang`](https://marketplace.visualstudio.com/items?itemName=harsh-lang.harsh-lang)):
 
-```
+```sh
 code --install-extension harsh-lang.harsh-lang
 ```
 
 or, when `editors/vscode-harsh` has changed and you want that version:
 
-```
+```sh
 cd editors/vscode-harsh
 npm install                       # first time only
 npx @vscode/vsce package          # produces harsh-lang-0.1.1.vsix
@@ -85,7 +85,7 @@ any GitHub namespace and name that.)
 
 [Harshlings](https://gitlab.com/bahiminin.benoit.dah.opensource/harshlings) is fifty small exercises in Harsh, Rustlings-style:
 
-```
+```sh
 git clone https://gitlab.com/bahiminin.benoit.dah.opensource/harshlings
 cd harshlings
 hrs run
@@ -95,7 +95,7 @@ It opens the first exercise that is not done, shows why it fails on the line of 
 
 ## 6. Day to day
 
-```
+```sh
 hrs new myproject            # a project laid out for Harsh
 hrs check | hrs build | hrs run | hrs test | hrs lint
 hrs watch [check]            # rebuild on every save

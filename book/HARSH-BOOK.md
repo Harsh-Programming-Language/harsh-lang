@@ -41,14 +41,14 @@ Braces are where Harsh starts, not where it stops. It adds four things Rust has 
 
 **Pipes and partial application.** Give a function fewer arguments than it takes, and you get a function waiting for the rest:
 
-```
+```rust harsh
 let double = 2.0 |> scale
 let doubled: Vec<f64> = readings <- iter$ <- map (|&x| double x) <- collect$
 ```
 
 **Generator comprehensions.** Say what a collection holds, not how to fill it:
 
-```
+```rust harsh
 let triples =
     list~ (a, b, c)
         for a in 1..20
@@ -58,7 +58,7 @@ let triples =
 
 **Linear algebra, as in Julia.** Julia's matrix literal, Julia's `*`, and Julia's `X \ y`, here fitting a line by least squares:
 
-```
+```rust harsh
 let x = m~ [1.0 1.0; 1.0 2.0; 1.0 3.0]
 let y = v~ [1.0, 2.0, 2.9]
 let beta = x <- solve (&y)
@@ -105,7 +105,7 @@ Add rust-analyzer, Rust's own language server, once — `rustup component add ru
 
 Every program in this book is a complete file that you could save as `src/main.hrs` in a project made by `hrs new` and run with `hrs run`. Here is the smallest one:
 
-```
+```rust harsh
 fn main$:
     println! "Hello, world!"
 ```
@@ -134,7 +134,7 @@ You never read `target/hrs/main.rs` unless you want to; in daily use it is an in
 
 Programs take input. The simplest input is what follows the program's name on the command line, which Rust hands you through the standard library:
 
-```
+```rust harsh
 use std.env
 
 fn main$:
@@ -157,7 +157,7 @@ Two things about `let` that will matter soon: a variable declared with `let` can
 
 ## 1.4 Comments
 
-```
+```rust harsh
 // A comment runs from `//` to the end of the line.
 fn main$:
     // This one explains the next line.
@@ -181,7 +181,7 @@ Before the language is taken apart piece by piece, here is one whole program: a 
 
 Reading input from the keyboard is where most languages' toy programs cheat, so this one does not. Run with the guesses `50`, `25`, `37`:
 
-```
+```rust harsh
 use std.io
 use std.cmp.Ordering
 
@@ -215,7 +215,7 @@ Now the same program, walked through.
 
 ## 2.2 Bringing a name into scope
 
-```
+```rust harsh
 use std.io
 ```
 
@@ -223,7 +223,7 @@ The standard library is large and nothing in it is in scope by default except a 
 
 ## 2.3 The secret
 
-```
+```rust harsh
 let secret = 37
 ```
 
@@ -233,7 +233,7 @@ Two things about this `let` will feel strange coming from most languages. First,
 
 ## 2.4 Loop, read, trim, parse
 
-```
+```rust harsh
 loop:
     let mut line = String.new$
     io.stdin$ <- read_line (&mut line) <- expect "read failed"
@@ -249,7 +249,7 @@ The next line is a **method chain**, and it is worth reading slowly because you 
 - `<- read_line (&mut line)` calls `read_line` on that handle, passing `&mut line` — a *mutable reference* to the string, which is how a function is allowed to change a value that belongs to you. The `&mut` is not decoration; without it the call does not compile. That is chapter 4 again.
 - `read_line` does not return the line. It returns a `Result` — a value that is either `Ok(bytes_read)` or `Err(some_error)` — because reading can fail. `<- expect "read failed"` says: if it is `Ok`, give me what is inside; if it is `Err`, stop the program and print this message. It is the bluntest way to handle a `Result`, fine for a toy, and chapter 9 replaces it.
 
-```
+```rust harsh
     let guess: u32 = match line <- trim$ <- parse$:
         Ok n => n
         Err _ => continue
@@ -264,7 +264,7 @@ The line the user typed ends in a newline, so `<- trim$` removes it. `<- parse$`
 
 ## 2.5 Compare and decide
 
-```
+```rust harsh
     match guess <- cmp (&secret)\
         Ordering.Less => println! "higher"
         Ordering.Greater => println! "lower"
@@ -283,7 +283,7 @@ Three arms, one per alternative, and the compiler checks that there are three. T
 
 You have now read a whole program, so this is the moment to say what the shape of it means. There is not much to say, and all of it is one idea: **where a line starts is what it belongs to.**
 
-```
+```rust harsh
 // The same function three times: one block, three spellings.
 
 fn indented (t: bool) -> i32:
@@ -321,7 +321,7 @@ fn main$:
 
 There is one more shape on that page, and it is the one that looks least like other languages:
 
-```
+```rust harsh
 fn greet name: &str -> String:
     format! "hello, {name}"
 
@@ -370,7 +370,7 @@ Variables, types, functions, control flow: every language has them, and Rust's v
 
 A variable is immutable unless declared otherwise. This is the first Rust decision that surprises people, so here is the compiler enforcing it:
 
-```
+```rust harsh
 fn main$:
     let x = 5
     println! "x is {}" x
@@ -391,7 +391,7 @@ error[E0384]: cannot assign twice to immutable variable `x`
 
 Read the error the way Rust means it. It is not "you cannot change variables"; it is "you did not say this one would change". The fix is one word:
 
-```
+```rust harsh
 fn main$:
     let mut x = 5
     println! "x is {}" x
@@ -410,7 +410,7 @@ Why the default? Because most values in most programs are never reassigned, and 
 
 You may declare a new variable with the name of an old one. The new one *shadows* the old for the rest of its scope:
 
-```
+```rust harsh
 fn main$:
     let x = 5
     let x = x + 1
@@ -441,7 +441,7 @@ Shadowing is not mutation. Each `let x` is a fresh variable; the earlier one is 
 
 Rust is statically typed: every value has a type known at compile time. Usually the compiler infers it and you write nothing; when it cannot, or when you want a specific size, you annotate.
 
-```
+```rust harsh
 fn main$:
     let a: i32 = -7            // signed 32-bit, the default integer
     let b: u8 = 255            // unsigned 8-bit: 0 to 255
@@ -472,7 +472,7 @@ Integers come in signed (`i8`, `i16`, `i32`, `i64`, `i128`) and unsigned (`u8` �
 
 Adding one to a `u8` holding 255 cannot fit. In a debug build Rust *panics* — stops the program with a message — rather than silently wrapping, which is what most languages do. In a release build it wraps. When you mean wrapping, say so; when you want to know, ask:
 
-```
+```rust harsh
 fn main$:
     let big: u8 = 255
     let bigger = big <- wrapping_add 1
@@ -488,7 +488,7 @@ fn main$:
 
 ## 3.3 Compound types
 
-```
+```rust harsh
 fn main$:
     // A tuple holds a fixed number of values of any types.
     let pair: (i32, &str) = (1, "one")
@@ -512,7 +512,7 @@ A tuple is fixed-length and heterogeneous; you take it apart by destructuring or
 
 ## 3.4 Functions
 
-```
+```rust harsh
 fn greet name: &str:
     println! "hello, {}" name
 
@@ -547,7 +547,7 @@ That last point has a sharp edge. A *statement* does something and produces no v
 
 Here is what a stray one does to a function that meant to return a value:
 
-```
+```rust harsh
 fn plus_one x: i32 -> i32:
     x + 1;
 
@@ -571,7 +571,7 @@ The error is Rust's most-quoted: the signature promises an `i32`, the body ends 
 
 ### `if`
 
-```
+```rust harsh
 fn main$:
     let n = 7
 
@@ -605,7 +605,7 @@ big
 
 The condition must be a `bool` — `if n:` with an integer `n` is a type error, not a truthiness test. And `if` is an expression, so it can sit on the right of a `let`; when it does, every arm must produce the same type, because `kind` has to be *some* one type:
 
-```
+```rust harsh
 fn main$:
     let n = 7
     let kind = if n > 5: "big" else: 0
@@ -624,7 +624,7 @@ error[E0308]: `if` and `else` have incompatible types
 
 Notice the shape of the multi-line `if` in the previous example: the `if` begins its own line after `let sign =`, so its arms indent from *it*. That is the rule everywhere a construct opens in the middle of a line: a block's lines are indented past the column of the construct that opened it, not merely past the statement, and when that would push the block too far right, `=` ends its line instead and the opener starts its own. Every control-flow construct also has the inline shape chapter 2 showed for blocks:
 
-```
+```rust harsh
 fn main$:
     let n = 7
 
@@ -669,7 +669,7 @@ odd many 1 small small 3
 
 ### Loops
 
-```
+```rust harsh
 fn main$:
     // `loop` repeats until `break`, and `break` can carry the loop's value.
     let mut counter = 0
@@ -739,7 +739,7 @@ That "give it back" is the whole problem. Give the memory back too early and som
 
 Scope is the ordinary thing: a variable is valid from where it is declared until the end of the block that declares it.
 
-```
+```rust harsh
 fn main$:
     do:
         let s = "hello"          // s is valid from here
@@ -760,7 +760,7 @@ hello
 
 `String` is the type you reach for when text is not fixed at compile time — it can grow:
 
-```
+```rust harsh
 fn main$:
     let mut s = String.from "hello"
     s <- push_str ", world"       // append to the heap buffer
@@ -780,7 +780,7 @@ hello, world!
 
 Now the rule bites. What happens when a `String` is assigned to a second variable?
 
-```
+```rust harsh
 fn main$:
     let s1 = String.from "hello"
     let s2 = s1                   // s1 is moved into s2
@@ -808,7 +808,7 @@ This is the moment people come to Rust from anywhere else and feel the floor shi
 
 When you actually want two strings, say so:
 
-```
+```rust harsh
 fn main$:
     let s1 = String.from "hello"
     let s2 = s1 <- clone$       // a second, independent copy of the heap data
@@ -825,7 +825,7 @@ s1 = hello, s2 = hello
 
 Integers did not behave this way in chapter 3, and they still do not:
 
-```
+```rust harsh
 fn main$:
     let x = 5
     let y = x                     // an integer is copied, not moved
@@ -842,7 +842,7 @@ An `i32` is a value that lives entirely on the stack, has no buffer to free, and
 
 Passing a value to a function is the same as assigning it to the parameter, and follows the same rule:
 
-```
+```rust harsh
 fn takes_ownership some_string: String:
     println! "{}" some_string
     // some_string goes out of scope here and is freed
@@ -878,7 +878,7 @@ error[E0382]: borrow of moved value: `s`
 
 Returning a value moves it too — out of the function and into whatever receives it:
 
-```
+```rust harsh
 fn gives_ownership$ -> String:
     let some_string = String.from "yours"
     some_string                   // moved out to the caller
@@ -901,7 +901,7 @@ yours hello
 
 This is correct and it is also tedious. A function that only wants to *look* at a `String` — measure it, say — has to give it back or the caller loses it, and giving it back means returning it alongside the real answer:
 
-```
+```rust harsh
 fn calculate_length s: String -> (String, usize):
     let length = s <- len$
     (s, length)                   // hand the String back along with the answer
@@ -922,7 +922,7 @@ It works. It is also nobody's idea of a good time, and Rust has a better one.
 
 A **reference** lets a function use a value without owning it. Write `&s1` and you get a reference to `s1`; the function receives `&String` — "a reference to a String" — and when its parameter goes out of scope nothing is freed, because the parameter never owned anything:
 
-```
+```rust harsh
 fn calculate_length s: &String -> usize:
     s <- len$
     // s goes out of scope, but it never owned the String, so nothing is freed
@@ -943,7 +943,7 @@ Creating a reference is called **borrowing**, and the word is chosen with care: 
 
 A borrowed value cannot be changed through the borrow:
 
-```
+```rust harsh
 fn change some_string: &String:
     some_string <- push_str ", world"
 
@@ -963,7 +963,7 @@ error[E0596]: cannot borrow `*some_string` as mutable, as it is behind a `&` ref
 
 A plain `&` reference is a promise to only read. To change something through a reference you need a **mutable reference**, `&mut`, and the value you borrow from has to be `mut` in the first place:
 
-```
+```rust harsh
 fn change some_string: &mut String:
     some_string <- push_str ", world"
 
@@ -983,7 +983,7 @@ Three `mut`s: the variable is declared mutable, the borrow is taken mutably, and
 
 Here is the restriction that makes borrowing safe, and it is the compiler's most-argued-with error:
 
-```
+```rust harsh
 fn main$:
     let mut s = String.from "hello"
     let r1 = &mut s
@@ -1007,7 +1007,7 @@ error[E0499]: cannot borrow `s` as mutable more than once at a time
 
 The scope of a reference is what matters, so the borrows only conflict while both are alive. Give the first one a block of its own and the second is fine:
 
-```
+```rust harsh
 fn main$:
     let mut s = String.from "hello"
 
@@ -1027,7 +1027,7 @@ hello there!
 
 Mixing is refused for the same reason. Readers were promised nothing would change under them; a writer breaks that promise:
 
-```
+```rust harsh
 fn main$:
     let mut s = String.from "hello"
     let r1 = &s
@@ -1050,7 +1050,7 @@ error[E0502]: cannot borrow `s` as mutable because it is also borrowed as immuta
 
 A reference's scope, though, is not its enclosing block. It runs from where the reference is created to **the last place it is used**. So this compiles, because `r1` and `r2` are not used after the first `println!`, and the compiler can see that:
 
-```
+```rust harsh
 fn main$:
     let mut s = String.from "hello"
     let r1 = &s
@@ -1074,7 +1074,7 @@ The compiler tracks where each borrow ends by use, not by block, and this is wha
 
 In languages with pointers it is possible to hand out a pointer to memory that is then freed — a *dangling* pointer, the classic source of crashes and worse. Rust guarantees this cannot happen: a reference is never allowed to outlive the value it points to. Try to return a reference to a local and see:
 
-```
+```rust harsh
 fn dangle$ -> &String:
     let s = String.from "hello"
     &s                            // a reference to s…
@@ -1096,7 +1096,7 @@ error[E0106]: missing lifetime specifier
 
 `s` is created inside `dangle`, so it is dropped when `dangle` returns; a reference to it would point at freed memory. The compiler's message is about *lifetimes*, a word chapter 10 explains in full — for now, read the first `help`: the return type is a borrowed value and there is nothing in this function it could be borrowed *from*. The fix is to return the `String` itself, moving it out to the caller:
 
-```
+```rust harsh
 fn no_dangle$ -> String:
     let s = String.from "hello"
     s                             // move the String out instead
@@ -1118,7 +1118,7 @@ To sum up this section in two lines: at any time, either one mutable reference o
 
 A **slice** is a reference to a contiguous part of a collection rather than the whole thing. It exists to solve a problem that references alone leave open, so here is the problem first. Say we want the first word of a string. Without slices, the natural answer is an *index* — the position where the first word ends:
 
-```
+```rust harsh
 fn first_word s: &String -> usize:
     let bytes = s <- as_bytes$
 
@@ -1147,7 +1147,7 @@ Two things about the function itself. `as_bytes` gives the string's bytes, `iter
 
 A string slice is a reference to part of a `String`:
 
-```
+```rust harsh
 fn main$:
     let s = String.from "hello world"
     let hello = &s[0..5]
@@ -1166,7 +1166,7 @@ hello world hello world hello world
 
 Now `first_word` can return the word itself, tied to the string it came from:
 
-```
+```rust harsh
 fn first_word s: &str -> &str:
     let bytes = s <- as_bytes$
 
@@ -1196,7 +1196,7 @@ The signature takes `&str`, not `&String`, and that is the more useful signature
 
 And now the bug from the start of the section is caught, by the borrowing rule we already have:
 
-```
+```rust harsh
 fn first_word s: &str -> &str:
     let bytes = s <- as_bytes$
 
@@ -1231,7 +1231,7 @@ error[E0502]: cannot borrow `s` as mutable because it is also borrowed as immuta
 
 Slices are not only for strings. Part of an array is `&[i32]`, a slice of integers, and it works the same way:
 
-```
+```rust harsh
 fn main$:
     let a = [1, 2, 3, 4, 5]
     let middle: &[i32] = &a[1..4]
@@ -1262,7 +1262,7 @@ This is also the first chapter where Harsh has a shape of its own to show. A rec
 
 ## 5.1 The three forms
 
-```
+```rust harsh
 // A record struct: named fields, one per line...
 struct Point
     x: f64
@@ -1297,7 +1297,7 @@ fn main$:
 
 ### Record structs
 
-```
+```rust harsh
 struct User
     active: bool
     username: String
@@ -1332,7 +1332,7 @@ Notice the parentheses around `(user1 <- username)` when it is handed to `printl
 
 A function that returns a struct is the ordinary way to construct one with defaults:
 
-```
+```rust harsh
 struct User
     active: bool
     username: String
@@ -1364,7 +1364,7 @@ someusername123 <someone@example.com>
 
 Often a new instance is an old one with a few fields changed. The *struct update syntax*, `..user1`, says "and every field I did not mention comes from `user1`":
 
-```
+```rust harsh
 struct User
     active: bool
     username: String
@@ -1397,7 +1397,7 @@ true
 
 It must be last in the literal. And it moves: `..user1` copies the `Copy` fields (`active`, `sign_in_count`) and *moves* the rest (`username`), exactly as `let x = user1.username` would. After it, `user1` is partly gone — `user1 <- active` is still usable, `user1 <- username` is not:
 
-```
+```rust harsh
 struct User
     active: bool
     username: String
@@ -1436,7 +1436,7 @@ The compiler tracks moves per field. That is the chapter 4 rule at a finer grain
 
 A tuple struct has a name and positional fields with no names of their own — a tuple with a type:
 
-```
+```rust harsh
 struct Color i32 i32 i32
 struct Point i32 i32 i32
 
@@ -1460,7 +1460,7 @@ fn main$:
 
 A struct can have no fields at all:
 
-```
+```rust harsh
 struct AlwaysEqual
 
 fn main$:
@@ -1479,7 +1479,7 @@ made one
 
 Every `String` in `User` is owned by the instance: when the instance is dropped, its strings are. That is why the fields were `String` and not `&str`. Try the reference:
 
-```
+```rust harsh
 struct User
     username: &str
     email: &str
@@ -1514,7 +1514,7 @@ A struct holding a reference must say how long the referenced data lives — the
 
 Here is a small program built three times, to show what a struct does for readability. Compute the area of a rectangle, first with two separate variables:
 
-```
+```rust harsh
 fn area (width: u32) (height: u32) -> u32:
     width * height
 
@@ -1532,7 +1532,7 @@ The area of the rectangle is 1500 square pixels.
 
 It works, and `area` takes two parameters that are related — they are one rectangle's width and height — without saying so. Group them in a tuple:
 
-```
+```rust harsh
 fn area dimensions: (u32, u32) -> u32:
     dimensions.0 * dimensions.1
 
@@ -1549,7 +1549,7 @@ The area of the rectangle is 1500 square pixels.
 
 Now one argument, but `dimensions.0` and `dimensions.1` are worse than `width` and `height`: the reader has to know which is which, and so does the next person who edits it. Name them:
 
-```
+```rust harsh
 struct Rectangle
     width: u32
     height: u32
@@ -1574,7 +1574,7 @@ The area of the rectangle is 1500 square pixels.
 
 `println!` with `{}` knows how to print numbers and strings; it does not know how to print a `Rectangle`, and it says so:
 
-```
+```rust harsh
 struct Rectangle
     width: u32
     height: u32
@@ -1597,7 +1597,7 @@ error[E0277]: `Rectangle` doesn't implement `Debug`
 
 `{}` uses the `Display` trait, which is for user-facing output, and Rust will not guess what a user-facing rectangle looks like. The `{:?}` in the message is the *debug* format, which can be derived automatically — read the compiler's note, which tells you exactly what to add:
 
-```
+```rust harsh
 #[derive Debug]
 struct Rectangle
     width: u32
@@ -1623,7 +1623,7 @@ rect1 is Rectangle {
 
 A *method* is a function that belongs to a type. It is defined inside an `impl` block and its first parameter is `self`, the instance it is called on:
 
-```
+```rust harsh
 #[derive Debug]
 struct Rectangle
     width: u32
@@ -1663,7 +1663,7 @@ A method may have the same name as a field. `rect1 <- width$` is the method, `re
 
 After `self`, a method's parameters are groups like any function's:
 
-```
+```rust harsh
 #[derive Debug]
 struct Rectangle
     width: u32
@@ -1696,7 +1696,7 @@ Can rect1 hold rect3? false
 
 A function in an `impl` block that does *not* take `self` is an *associated function*: it belongs to the type but not to an instance. Constructors are the classic case:
 
-```
+```rust harsh
 #[derive Debug]
 struct Rectangle
     width: u32
@@ -1735,7 +1735,7 @@ A struct says "all of these, together". An *enum* says "exactly one of these". A
 
 An IP address is version four or version six — never both, never neither. That is an enum:
 
-```
+```rust harsh
 #[derive Debug]
 enum IpAddrKind
     V4
@@ -1762,7 +1762,7 @@ routing V6
 
 The kind alone is not much use; an address has a value. A variant can carry one:
 
-```
+```rust harsh
 #[derive Debug]
 enum IpAddr
     V4 u8 u8 u8 u8
@@ -1782,7 +1782,7 @@ V4(127, 0, 0, 1) V6("::1")
 
 Variants can take any shape a struct can — and that sentence is the whole of what an enum is. An enum is a *union* of variants, and each variant is one of chapter 5's three forms: a unit-like struct, a record struct, or a tuple struct, spelled exactly as the struct of that form is spelled, with the word `struct` and the name's own line taken away. (A type built this way — a choice among bundles — is what Haskell and its relatives call an *algebraic data type*; Rust's enums are that, with the word left out.)
 
-```
+```rust harsh
 #[derive Debug]
 enum Message
     Quit                          // a unit-like struct
@@ -1820,7 +1820,7 @@ calling ChangeColor(0, 160, 255)
 
 > **Harsh —** `Quit` is a unit-like struct; `Move` with `x` and `y` beneath it is a record struct; `Write String` and `ChangeColor i32 i32 i32` are tuple structs, the name applied to the payload's types. Each is written as chapter 5 wrote it, and each has the inline form chapter 5 had too — `Move\ x: i32, y: i32` on one line — so the same enum reads either way, and which to use is the same judgement as for a struct: what the names and their lengths make clearest.
 
-```
+```rust harsh
 enum Message
     Quit
     Move\ x: i32, y: i32
@@ -1843,7 +1843,7 @@ moved to 1,2
 
 Rust has no null. Where another language returns a value that might be null, Rust returns a value that might be *absent*, and says so in the type:
 
-```
+```rust harsh
 fn main$:
     let some_number = Some 5
     let some_char = Some 'e'
@@ -1859,7 +1859,7 @@ Some(5) Some('e') None
 
 What `Option` buys you is that an `Option<i8>` is *not* an `i8`, and the compiler will not let you treat it as one:
 
-```
+```rust harsh
 fn main$:
     let x: i8 = 5
     let y: Option<i8> = Some 5
@@ -1887,7 +1887,7 @@ In a language with null, `x + y` compiles and fails at runtime when `y` happens 
 
 `match` takes a value and a list of *arms*, each a pattern and the code to run when the pattern fits. The first arm whose pattern matches wins:
 
-```
+```rust harsh
 enum Coin
     Penny
     Nickel
@@ -1922,7 +1922,7 @@ Lucky penny!
 
 When a variant carries data, the pattern names it and the arm can use it:
 
-```
+```rust harsh
 #[derive Debug]
 enum UsState
     Alabama
@@ -1958,7 +1958,7 @@ State quarter from Alaska!
 
 Now the `Option` from the previous section can be used:
 
-```
+```rust harsh
 fn plus_one x: Option<i32> -> Option<i32>:
     match x\
         None => None
@@ -1981,7 +1981,7 @@ Some(6) None
 
 Leave a case out and the compiler stops you:
 
-```
+```rust harsh
 fn plus_one x: Option<i32> -> Option<i32>:
     match x\
         Some i => Some (i + 1)
@@ -2007,7 +2007,7 @@ Every possible value must be covered by some arm. This is what makes `Option` sa
 
 When only some values matter, the last arm can catch the rest:
 
-```
+```rust harsh
 fn add_fancy_hat$:
     println! "fancy hat"
 fn remove_fancy_hat$:
@@ -2044,7 +2044,7 @@ move 4 spaces
 
 A `match` with one arm that matters and a `_ => ()` is a lot of lines for "if this is a `Some`, do this":
 
-```
+```rust harsh
 fn main$:
     let config_max = Some 3u8
 
@@ -2068,7 +2068,7 @@ The maximum is configured to be 3
 
 `if let` takes an `else`, which runs for everything the pattern did not match:
 
-```
+```rust harsh
 #[derive Debug]
 enum UsState
     Alabama
@@ -2099,7 +2099,7 @@ State quarter from Alabama!
 
 Sometimes the pattern is a guard at the top of a function: if the value has the right shape, carry on with its contents; otherwise leave. `let … else` is that, without nesting the rest of the function inside an `if`:
 
-```
+```rust harsh
 #[derive Debug]
 enum UsState
     Alabama
@@ -2160,7 +2160,7 @@ A crate is the unit of compilation: `rustc` is given one file — the *crate roo
 
 A module is a named scope for items — functions, structs, enums, other modules — declared with `mod` and a block:
 
-```
+```rust harsh
 mod front_of_house
     mod hosting
         fn add_to_waitlist$:
@@ -2207,7 +2207,7 @@ Modules are for organising code the way directories organise files, and — the 
 
 To call something in a module you name its path, the way you name a file in a directory. A path is either *absolute*, starting from `crate`, or *relative*, starting from the current module; the segments are joined with `.`:
 
-```
+```rust harsh
 mod front_of_house
     mod hosting
         fn add_to_waitlist$:
@@ -2243,7 +2243,7 @@ Both paths are correctly spelled and the program does not build, because `hostin
 
 `pub` is that decision:
 
-```
+```rust harsh
 mod front_of_house
     pub mod hosting
         pub fn add_to_waitlist$:
@@ -2268,7 +2268,7 @@ added to waitlist
 
 A path may also start from the *parent* module, with `super`:
 
-```
+```rust harsh
 fn deliver_order$:
     println! "delivered"
 
@@ -2295,7 +2295,7 @@ delivered
 
 `pub` on a struct makes the *type* public, and each field is still private unless it too is marked:
 
-```
+```rust harsh
 mod back_of_house
     pub struct Breakfast
         pub toast: String
@@ -2320,7 +2320,7 @@ I'd like Wheat toast please
 
 `toast` is public and `seasonal_fruit` is not, so outside `back_of_house` a `Breakfast` can be read and written through `toast` alone — and cannot be constructed with a literal at all, since a literal has to give every field. That is why `summer` exists: a public associated function is the way to build a struct that has a private field, and it is where the module gets to choose the default. Try the private field from outside:
 
-```
+```rust harsh
 mod back_of_house
     pub struct Breakfast
         pub toast: String
@@ -2347,7 +2347,7 @@ error[E0616]: field `seasonal_fruit` of struct `Breakfast` is private
 
 An enum is the opposite: `pub enum` makes every variant public, because an enum with hidden variants would be one you could not match on:
 
-```
+```rust harsh
 mod back_of_house
     #[derive Debug]
     pub enum Appetizer
@@ -2368,7 +2368,7 @@ Soup Salad
 
 Writing the full path at every call is tedious, and `use` brings a path into scope once:
 
-```
+```rust harsh
 mod front_of_house
     pub mod hosting
         pub fn add_to_waitlist$:
@@ -2391,7 +2391,7 @@ After `use crate.front_of_house.hosting`, the name `hosting` is in scope in this
 
 A `use` is scoped to the module it appears in. It does not reach into a child module:
 
-```
+```rust harsh
 mod front_of_house
     pub mod hosting
         pub fn add_to_waitlist$:
@@ -2422,7 +2422,7 @@ The `use` is in the crate root; `customer` is a child; the name is not in scope 
 
 When two imports would have the same name, rename one:
 
-```
+```rust harsh
 use std.fmt.Result
 use std.io.Result as IoResult             // two `Result`s: rename one
 
@@ -2446,7 +2446,7 @@ Both `std.fmt` and `std.io` define a `Result`. `use std.io.Result as IoResult` b
 
 `use` brings a name in for *this* module. `pub use` brings it in and passes it on, so that users of this module see it as if it had been defined here:
 
-```
+```rust harsh
 mod restaurant
     mod front_of_house
         pub mod hosting
@@ -2469,7 +2469,7 @@ added to waitlist
 
 Several imports from one place can share their prefix:
 
-```
+```rust harsh
 use std.(cmp.Ordering, collections.HashMap)   // two paths sharing a prefix
 use std.io.(self, Write)                      // the module itself, and one item from it
 use std.collections.*                         // everything: the glob, for tests and preludes
@@ -2499,7 +2499,7 @@ So far every module has had its body inline. As a program grows, a module goes i
 
 `src/main.hrs`
 
-```
+```rust harsh
 use crate.garden.vegetables.Asparagus
 
 pub mod garden      // the body is in src/garden.hrs
@@ -2511,13 +2511,13 @@ fn main$:
 
 `src/garden.hrs`
 
-```
+```rust harsh
 pub mod vegetables  // the body is in src/garden/vegetables.hrs
 ```
 
 `src/garden/vegetables.hrs`
 
-```
+```rust harsh
 #[derive Debug]
 pub struct Asparagus
 ```
@@ -2547,7 +2547,7 @@ The standard library's collections hold many values on the heap, so they can gro
 
 A `Vec<T>` is a list of values of one type, stored next to each other, growable:
 
-```
+```rust harsh
 fn main$:
     let v: Vec<i32> = Vec.new$          // empty: the type must be written
     let w = vec! 1 2 3              // from values: the type is inferred
@@ -2568,7 +2568,7 @@ fn main$:
 
 There are two ways to read an element, and the difference is what happens when it is not there:
 
-```
+```rust harsh
 fn main$:
     let v = vec! 1 2 3 4 5
     let third: &i32 = &v[2]             // index: panics if out of range
@@ -2591,7 +2591,7 @@ None Some(1)
 
 `&v[2]` is indexing: a reference to the third element, and a *panic* if there is no third element. `v <- get 2` returns an `Option<&i32>`: `Some` with the reference, or `None`. Which to use is a decision about the program, not about the vector. Index when an out-of-range access is a bug in your logic and should stop the program loudly; `get` when it is an ordinary event — user input, say — that the code should handle. Here is the loud version:
 
-```
+```rust harsh
 fn main$:
     let v = vec! 1 2 3 4 5
     let does_not_exist = v <- get 100
@@ -2613,7 +2613,7 @@ The program printed `None` for `get 100`, then reached `&v[100]` and stopped, wi
 
 Chapter 4's rule applies, and the vector is where it first surprises people:
 
-```
+```rust harsh
 fn main$:
     let mut v = vec! 1 2 3 4 5
     let first = &v[0]
@@ -2639,7 +2639,7 @@ Holding a reference to the first element and then pushing looks harmless — the
 
 To visit every element, borrow the vector and loop:
 
-```
+```rust harsh
 fn main$:
     let v = vec! 100 32 57
 
@@ -2667,7 +2667,7 @@ fn main$:
 
 A vector holds one type. When you need several, make the one type an enum:
 
-```
+```rust harsh
 #[derive Debug]
 enum SpreadsheetCell
     Int i32
@@ -2700,7 +2700,7 @@ float 10.12
 
 You have used `String` since chapter 1. Here is what it is: a `Vec<u8>` that is guaranteed to hold valid UTF-8, with methods that know it. That guarantee is the source of everything that seems awkward about strings in Rust, and also of everything that is not a bug.
 
-```
+```rust harsh
 fn main$:
     let mut s = String.new$
     let data = "initial contents"
@@ -2727,7 +2727,7 @@ bar! initial contents initial contents initial contents
 
 `+` joins strings, with a rule that is easy to misread:
 
-```
+```rust harsh
 fn main$:
     let s1 = String.from "Hello, "
     let s2 = String.from "world!"
@@ -2750,7 +2750,7 @@ tic-tac-toe tic tac toe
 
 ### Why you cannot index a string
 
-```
+```rust harsh
 fn main$:
     let s1 = String.from "hello"
     let h = s1[0]
@@ -2779,7 +2779,7 @@ error[E0277]: the type `String` cannot be indexed by `{integer}`
 
 What there is: a *byte range* slice, and iterators over characters or bytes:
 
-```
+```rust harsh
 fn main$:
     let hello = "Здравствуйте"
     let s = &hello[0..4]          // four bytes: two Cyrillic characters
@@ -2808,7 +2808,7 @@ fn main$:
 
 A `HashMap<K, V>` stores values under keys and finds a value by hashing its key:
 
-```
+```rust harsh
 use std.collections.HashMap
 
 fn main$:
@@ -2842,7 +2842,7 @@ Yellow: 50
 
 Insert moves what it is given:
 
-```
+```rust harsh
 use std.collections.HashMap
 
 fn main$:
@@ -2874,7 +2874,7 @@ error[E0382]: borrow of moved value: `field_name`
 
 Inserting under an existing key overwrites; sometimes that is not what you want:
 
-```
+```rust harsh
 use std.collections.HashMap
 
 fn main$:
@@ -2894,7 +2894,7 @@ Some(25) Some(50)
 
 `entry` is the answer: `scores <- entry key` is a handle to the slot for that key, filled or not, and `or_insert 50` fills it if it is empty and returns a mutable reference to whatever is there either way. So the `Yellow` line inserts and the `Blue` line does nothing, and the `25` survives. That returned reference is what makes `entry` the idiom for counting:
 
-```
+```rust harsh
 use std.collections.HashMap
 
 fn main$:
@@ -2930,7 +2930,7 @@ Rust has two kinds of error and refuses to blur them. An *unrecoverable* error i
 
 You can panic on purpose:
 
-```
+```rust harsh
 fn main$:
     println! "about to fail"
     panic! "crash and burn"
@@ -2946,7 +2946,7 @@ The program printed its first line, reached `panic!`, printed the message with t
 
 Most panics are not written; they are hit:
 
-```
+```rust harsh
 fn main$:
     let v = vec! 1 2 3
     v[99];                          // the `;` discards the value; the index still runs
@@ -2963,7 +2963,7 @@ Chapter 8's index rule, seen from the other side. In C this reads whatever happe
 
 Opening a file can fail for reasons that are nobody's bug. So `File.open` returns a `Result`:
 
-```
+```rust harsh
 enum Result<T, E>
     Ok T
     Err E
@@ -2971,7 +2971,7 @@ enum Result<T, E>
 
 `Ok` carries the value when the operation worked, `Err` the error when it did not, and the caller takes it apart with `match`, exactly as it would an `Option`:
 
-```
+```rust harsh
 use std.fs.File
 
 fn main$:
@@ -2996,7 +2996,7 @@ There is no `hello.txt`, so the `Err` arm ran and the program panicked with the 
 
 An `io.Error` says what went wrong, and a program can act on that:
 
-```
+```rust harsh
 use std.fs.File
 use std.io.ErrorKind
 
@@ -3026,7 +3026,7 @@ Ok(true)
 
 `match` on every `Result` is verbose, and there are two shortcuts for "give me the value or panic":
 
-```
+```rust harsh
 use std.fs.File
 
 fn main$:
@@ -3041,7 +3041,7 @@ called `Result::unwrap()` on an `Err` value: Os { code: 2, kind: NotFound, messa
 
 `unwrap$` is the `match` above with a generic message. `expect` is the same with *your* message:
 
-```
+```rust harsh
 use std.fs.File
 
 fn main$:
@@ -3063,7 +3063,7 @@ Prefer `expect`: when it fires, the message says what you were assuming, and tha
 
 The usual answer is that the function that hit the error is not the one that knows what to do about it; it should hand the error up. That is *propagating*, and written by hand it looks like this:
 
-```
+```rust harsh
 use std.fs.File
 use std.io.(self, Read)
 
@@ -3097,7 +3097,7 @@ The function returns `Result<String, io.Error>`; each step that can fail is matc
 
 `?` after a `Result` means: if it is `Ok`, give me the value; if it is `Err`, return it from this function right now.
 
-```
+```rust harsh
 use std.fs.File
 use std.io.(self, Read)
 
@@ -3120,7 +3120,7 @@ The same function in three lines. `File.open "hello.txt"?` is the file or an ear
 
 `?` works on `Option` too, returning `None` early:
 
-```
+```rust harsh
 fn last_char_of_first_line text: &str -> Option<char>:
     text <- lines$
          <- next$?
@@ -3145,7 +3145,7 @@ None
 
 `?` can only be used in a function whose return type it fits — which means not in a `main` that returns nothing:
 
-```
+```rust harsh
 use std.fs.File
 
 fn main$:
@@ -3166,7 +3166,7 @@ error[E0277]: the `?` operator can only be used in a function that returns `Resu
 
 The compiler says exactly what is missing: `main` returns `()`, and `?` needs somewhere to send the error. `main` may return a `Result`:
 
-```
+```rust harsh
 use std.error.Error
 use std.fs.File
 
@@ -3197,7 +3197,7 @@ The rule of thumb: panic when the program has reached a state it was not written
 
 That last point is what types are for, and a type can carry a check so that no caller has to repeat it:
 
-```
+```rust harsh
 pub struct Guess
     value: i32
 
@@ -3243,7 +3243,7 @@ Three mechanisms let one piece of code serve many types, and this chapter is all
 
 Two functions that differ only in a type:
 
-```
+```rust harsh
 fn largest_i32 list: &[i32] -> &i32:
     let mut largest = &list[0]
 
@@ -3274,7 +3274,7 @@ y
 
 Same body, twice, for `i32` and for `char`, and there would be a third for `f64`. The duplication is in the *type*, so the fix is a parameter for the type:
 
-```
+```rust harsh
 fn largest<T> list: &[T] -> &T:
     let mut largest = &list[0]
 
@@ -3301,7 +3301,7 @@ error[E0369]: binary operation `>` cannot be applied to type `&T`
 
 `fn largest<T> list: &[T] -> &T` — the `<T>` after the name declares a type parameter, and then `T` is used where the type would be. It does not compile, and the error is the chapter's first lesson: `>` is not defined for *every* type, so the compiler will not let a function that takes *any* `T` compare two of them. It has to be told which `T`s are allowed, and the help says how: restrict the type parameter.
 
-```
+```rust harsh
 fn largest<T: PartialOrd> list: &[T] -> &T:
     let mut largest = &list[0]
 
@@ -3327,7 +3327,7 @@ y
 
 A struct's fields can be generic too:
 
-```
+```rust harsh
 #[derive Debug]
 struct Point<T>
     x: T
@@ -3366,7 +3366,7 @@ Mixed { x: 5, y: 4.0 }
 
 Both fields of `Point<T>` are the same `T`, and the compiler holds you to it:
 
-```
+```rust harsh
 struct Point<T>
     x: T
     y: T
@@ -3388,7 +3388,7 @@ error[E0308]: mismatched types
 
 A trait is a set of methods a type may implement — an interface, a protocol, whichever word your last language used. It is defined with `trait`, and a type implements it with `impl … for`:
 
-```
+```rust harsh
 pub trait Summary
     fn summarize (&self) -> String
 
@@ -3441,7 +3441,7 @@ One rule to know: you may implement a trait for a type only if the trait or the 
 
 A trait method may have a body, used by any type that does not supply its own:
 
-```
+```rust harsh
 pub trait Summary
     fn summarize_author (&self) -> String
 
@@ -3474,7 +3474,7 @@ fn main$:
 
 A function that takes "anything summarizable" has four spellings, all in this example:
 
-```
+```rust harsh
 use std.fmt.Display
 
 pub trait Summary
@@ -3535,7 +3535,7 @@ tweet by horse_ebooks — @horse_ebooks
 
 `impl Trait` works in return position too:
 
-```
+```rust harsh
 pub trait Summary
     fn summarize (&self) -> String
 
@@ -3563,7 +3563,7 @@ fn main$:
 
 A method can exist only when the type parameter meets a bound:
 
-```
+```rust harsh
 use std.fmt.Display
 
 struct Pair<T>
@@ -3604,7 +3604,7 @@ The largest member is y = 7
 
 Every reference has a *lifetime*: the region of the program during which it is valid. Usually the compiler works it out and you write nothing — every `&` so far had a lifetime you never saw. It has to be written only when the compiler cannot tell how the lifetimes of several references relate, and the classic case is a function that returns one of two borrowed arguments:
 
-```
+```rust harsh
 fn longest (x: &str) (y: &str) -> &str:
     if x <- len$ > y <- len$: x else: y
 
@@ -3626,7 +3626,7 @@ error[E0106]: missing lifetime specifier
 
 Read the help: the return type is a borrowed value, and the signature does not say whether it is borrowed from `x` or from `y`. The compiler needs to know, because the caller's borrow checker needs to know how long the returned reference may be used — as long as `x` lives, as long as `y` lives, or only as long as both do. The signature has to say. The syntax for saying it is a *lifetime parameter*:
 
-```
+```rust harsh
 fn longest<'a> (x: &'a str) (y: &'a str) -> &'a str:
     if x <- len$ > y <- len$: x else: y
 
@@ -3645,7 +3645,7 @@ The longest string is abcd
 
 And it does verify:
 
-```
+```rust harsh
 fn longest<'a> (x: &'a str) (y: &'a str) -> &'a str:
     if x <- len$ > y <- len$: x else: y
 
@@ -3679,7 +3679,7 @@ error[E0597]: `string2` does not live long enough
 
 Chapter 5's `&str` field had this error. A struct that holds a reference declares a lifetime, and the struct cannot outlive what it borrows:
 
-```
+```rust harsh
 #[derive Debug]
 struct ImportantExcerpt<'a>
     part: &'a str
@@ -3716,7 +3716,7 @@ Call me Ishmael
 
 If every reference needed a written lifetime the language would be unusable, so three rules fill them in when they can, and you write one only when they cannot:
 
-```
+```rust harsh
 // One input lifetime: the output gets it. Written out, this is
 // fn first_word<'a> s: &'a str -> &'a str.
 fn first_word s: &str -> &str:
@@ -3749,7 +3749,7 @@ I have a static lifetime.
 
 ### All three at once
 
-```
+```rust harsh
 use std.fmt.Display
 
 fn longest_with_an_announcement<'a, T> (x: &'a str) (y: &'a str) (ann: T) -> &'a str
@@ -3782,7 +3782,7 @@ The compiler checks a great deal — types, ownership, exhaustive matches — an
 
 A test is a function with `#[test]` above it. It passes if it returns, and fails if it panics:
 
-```
+```rust harsh
 pub fn add (left: u64) (right: u64) -> u64:
     left + right
 
@@ -3807,7 +3807,7 @@ Everything after `#[cfg test]` is the conventional shape. `mod tests:` is an ord
 
 Here is what failure looks like:
 
-```
+```rust harsh
 #[cfg test]
 mod tests
     #[test]
@@ -3839,7 +3839,7 @@ test result: FAILED. 1 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out
 
 `assert!` takes something that must be true:
 
-```
+```rust harsh
 #[derive Debug]
 struct Rectangle
     width: u32
@@ -3878,7 +3878,7 @@ Both tests call a method and assert on the result: the first that it holds, the 
 
 `assert_eq!` and `assert_ne!` compare two values and, on failure, print both — which is why they beat `assert! (a == b)`, whose failure would only say "false":
 
-```
+```rust harsh
 pub fn add_two a: u64 -> u64:
     a + 3        // a bug
 
@@ -3913,7 +3913,7 @@ test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out
 
 Every assertion macro takes extra arguments after the required ones, and they are a format string and its values, printed on failure:
 
-```
+```rust harsh
 pub fn greeting name: &str -> String:
     String.from "Hello!"      // forgot the name
 
@@ -3948,7 +3948,7 @@ When a test fails a week after it was written, "assertion failed" is not enough;
 
 Sometimes the correct behaviour *is* a panic — chapter 9's `Guess.new` on a bad value — and a test asserts that it happens:
 
-```
+```rust harsh
 pub struct Guess
     value: i32
 
@@ -3985,7 +3985,7 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out
 
 A test may return a `Result` instead of panicking:
 
-```
+```rust harsh
 #[cfg test]
 mod tests
     #[test]
@@ -4014,7 +4014,7 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out
 
 A name after `cargo test` runs only the tests whose path contains it:
 
-```
+```rust harsh
 pub fn add_two a: u64 -> u64:
     a + 2
 
@@ -4057,7 +4057,7 @@ Rust distinguishes *unit* tests, which live in the file with the code and test i
 
 Unit tests are what this chapter has shown: a `#[cfg test] mod tests:` at the bottom of each file. Because it is a child module of the code it tests, it can see private items:
 
-```
+```rust harsh
 pub fn add_two a: u64 -> u64:
     internal_adder a 2
 
@@ -4113,7 +4113,7 @@ To an admiring bog!
 
 `src/main.hrs`
 
-```
+```rust harsh
 use std.env
 
 fn main$:
@@ -4137,7 +4137,7 @@ In file example-filename.txt
 
 `src/main.hrs`
 
-```
+```rust harsh
 use std.env
 use std.fs
 
@@ -4180,7 +4180,7 @@ Two things at once: give the configuration a type, and give errors a path that i
 
 `src/main.hrs`
 
-```
+```rust harsh
 use std.env
 use std.fs
 
@@ -4220,7 +4220,7 @@ not enough arguments
 
 `src/main.hrs`
 
-```
+```rust harsh
 use std.env
 use std.fs
 use std.process
@@ -4268,7 +4268,7 @@ The closure is a *trailing closure with a block body*: `<- unwrap_or_else |err|:
 
 The last refactoring moves the logic out of `main.hrs` into `lib.hrs`, so that it can be tested — a binary's `main` cannot be called from a test, but a library's functions can. Here is the library, tests first, in the shape the finished program will have:
 
-```
+```rust harsh
 use std.env
 use std.error.Error
 use std.fs
@@ -4369,7 +4369,7 @@ The tests were written before the search functions worked; that order — a fail
 
 `src/main.hrs`
 
-```
+```rust harsh
 use std.env
 use std.process
 
@@ -4389,7 +4389,7 @@ fn main$:
 
 `src/lib.hrs`
 
-```
+```rust harsh
 use std.env
 use std.error.Error
 use std.fs
@@ -4483,7 +4483,7 @@ How public, like a frog
 
 `src/main.hrs`
 
-```
+```rust harsh
 use std.env
 use std.process
 
@@ -4503,7 +4503,7 @@ fn main$:
 
 `src/lib.hrs`
 
-```
+```rust harsh
 use std.env
 use std.error.Error
 use std.fs
@@ -4599,7 +4599,7 @@ How dreary to be somebody!
 
 `src/main.hrs`
 
-```
+```rust harsh
 use std.env
 use std.process
 
@@ -4619,7 +4619,7 @@ fn main$:
 
 `src/lib.hrs`
 
-```
+```rust harsh
 use std.env
 use std.error.Error
 use std.fs
@@ -4718,7 +4718,7 @@ To an admiring bog!
 
 `src/main.hrs`
 
-```
+```rust harsh
 use std.env
 use std.process
 
@@ -4738,7 +4738,7 @@ fn main$:
 
 `src/lib.hrs`
 
-```
+```rust harsh
 use std.env
 use std.error.Error
 use std.fs
@@ -4844,7 +4844,7 @@ Two features Rust took from the functional languages, and the two that most chan
 
 A closure captures its environment. Here one reads a struct field it was not passed:
 
-```
+```rust harsh
 #[derive Debug PartialEq Copy Clone]
 enum ShirtColor
     Red
@@ -4896,7 +4896,7 @@ The user with preference None gets Blue
 
 A closure is `|parameters| body`, and the body is an expression or a block:
 
-```
+```rust harsh
 fn add_one_v1 x: u32 -> u32:
     x + 1
 
@@ -4923,7 +4923,7 @@ fn main$:
 
 Four spellings of `x + 1`. `add_one_v2` annotates everything and has a block body under a `:`; `v3` is the short form, inferred types and an expression; `v4` is inferred with a block. The `:` after the parameter list opens the body's block exactly as it does after a function signature, and the body indents from the closure. Annotations are optional because a closure is usually short and used once, close to where its types are obvious; the compiler infers them from the first use, and holds the closure to it:
 
-```
+```rust harsh
 fn main$:
     let example_closure = |x| x
     let s = example_closure (String.from "hello")
@@ -4949,7 +4949,7 @@ error[E0308]: mismatched types
 
 A closure captures each variable it uses in the least demanding way that works — by shared reference, by mutable reference, or by value — and the borrow checker treats the closure as holding that borrow from its creation to its last use:
 
-```
+```rust harsh
 fn main$:
     let list = vec! 1 2 3
     println! "Before defining closure: {list:?}"
@@ -4969,7 +4969,7 @@ After calling closure: [1, 2, 3]
 
 `only_borrows` reads `list`, so it holds `&list`, and `list` can still be printed before and after the call, since shared borrows coexist. Now a closure that writes:
 
-```
+```rust harsh
 fn main$:
     let mut list = vec! 1 2 3
     println! "Before defining closure: {list:?}"
@@ -4988,7 +4988,7 @@ After calling closure: [1, 2, 3, 7]
 
 To make a closure take ownership of what it uses — needed when it will outlive the current function, as a closure handed to a new thread will — write `move`:
 
-```
+```rust harsh
 use std.thread
 
 fn main$:
@@ -5017,7 +5017,7 @@ How a closure captures determines which of three traits it implements, and every
 
 The type of a closure is written as the trait applied to its parameter types, the return after `->`:
 
-```
+```rust harsh
 // A closure's type is written as the trait applied to its parameter types,
 // with `->` for the return: `Fn i32 -> i32` takes one i32 and returns one.
 
@@ -5059,7 +5059,7 @@ moved out
 
 `unwrap_or_else` takes `FnOnce`, the most permissive, because it calls the closure at most once. `sort_by_key` calls its closure once per comparison, so it asks for `FnMut`:
 
-```
+```rust harsh
 #[derive Debug]
 struct Rectangle
     width: u32
@@ -5096,7 +5096,7 @@ fn main$:
 
 `(|r| r <- width)` reads a field and returns it: it is `Fn`, which is also `FnMut`, so it qualifies. Here is one that does not:
 
-```
+```rust harsh
 #[derive Debug]
 struct Rectangle
     width: u32
@@ -5133,7 +5133,7 @@ error[E0507]: cannot move out of `value`, a captured variable in an `FnMut` clos
 
 The closure pushes `value` — a `String`, moved out of the capture — onto a vector. That can happen once, so the closure is `FnOnce` only, and `sort_by_key` needs to call it many times; the error names both facts. Mutating a capture *without* moving it is fine:
 
-```
+```rust harsh
 #[derive Debug]
 struct Rectangle
     width: u32
@@ -5179,7 +5179,7 @@ fn main$:
 
 An iterator produces a sequence of values, one at a time, on request. The whole of the `Iterator` trait that matters is one method:
 
-```
+```rust harsh
 pub trait Iterator
     type Item
     fn next (&mut self) -> Option<Self.Item>
@@ -5187,7 +5187,7 @@ pub trait Iterator
 
 `next` returns `Some item` until the sequence is finished and `None` after; `Item` is an *associated type* (chapter 23) naming what it yields. Everything else is built on `next`:
 
-```
+```rust harsh
 fn main$:
     let v1 = vec! 1 2 3
     let mut v1_iter = v1 <- iter$            // nothing happens yet
@@ -5212,7 +5212,7 @@ Got: 3
 
 Methods on iterators come in two kinds. A *consumer* calls `next` until the end and produces something:
 
-```
+```rust harsh
 fn main$:
     let v1 = vec! 1 2 3
     let total: i32 = v1 <- iter$ <- sum$     // a consumer: drives the iterator to the end
@@ -5225,7 +5225,7 @@ fn main$:
 
 `sum$` drives the iterator to exhaustion and adds. `collect$` gathers into a collection (the type must be written or inferable); `count$`, `max$`, `min$`, `last$`, `find`, `any`, `all` and `fold` are consumers too. An *adaptor* takes one iterator and returns another that transforms its items as they pass:
 
-```
+```rust harsh
 fn main$:
     let v1: Vec<i32> = vec! 1 2 3
     let v2: Vec<_> =
@@ -5241,7 +5241,7 @@ fn main$:
 
 `map (|x| x + 1)` yields each item plus one; `collect$` at the end consumes the result. That last step is not optional:
 
-```
+```rust harsh
 fn main$:
     let v1: Vec<i32> = vec! 1 2 3
     v1 <- iter$ <- map (|x| x + 1);         // an adaptor alone does nothing
@@ -5253,7 +5253,7 @@ An adaptor alone does nothing, because iterators are *lazy*: `map` builds an ite
 
 An adaptor's closure can use variables from outside, which is most of their power:
 
-```
+```rust harsh
 #[derive PartialEq Debug]
 struct Shoe
     size: u32
@@ -5294,7 +5294,7 @@ fn main$:
 
 Adaptors compose, and this is where the chain layout matters:
 
-```
+```rust harsh
 fn main$:
     let words = ["apple", "banana", "cherry", "date", "elderberry", "fig"]
 
@@ -5339,7 +5339,7 @@ Filter, map, collect; map then sum; `find` for the first match; `any` for a yes-
 
 The layout has one rule for chains, and the formatter applies it, so you rarely decide it yourself:
 
-```
+```rust harsh
 fn main$:
     let words = ["apple", "banana", "cherry", "date"]
 
@@ -5383,7 +5383,7 @@ Chapter 12's program used `clone` in `Config.build` and a `for` loop with a `pus
 
 `src/main.hrs`
 
-```
+```rust harsh
 use std.env
 use std.process
 
@@ -5401,7 +5401,7 @@ fn main$:
 
 `src/lib.hrs`
 
-```
+```rust harsh
 use std.env
 use std.error.Error
 use std.fs
@@ -5481,7 +5481,7 @@ Harsh adds three things to Rust that Rust has no syntax for, and this chapter an
 
 Everything so far has reached into a value with `<-`: a method on the left of the arrow's data. The pipes go the other way. `|>` takes the value on its left and hands it to the *function* on its right; `<|` does the same from the other side. Where a chain says *this value, then this method on it*, a pipe says *this value, into this function*:
 
-```
+```rust harsh
 fn tokenize text: &str -> Vec<String>:
     text <- split_whitespace$
          <- map (|w| w <- to_lowercase$)
@@ -5522,7 +5522,7 @@ THE CAT SAT ON THE MAT / THE CAT SAT ON THE MAT
 
 The pipes do one more thing, and it is the thing the arrow cannot do. A pipe may carry several values — `2.0 0.5 3.0 |> scale` — and when it carries *fewer* than the function takes, the missing ones are **deferred**: the result is a closure waiting for the rest.
 
-```
+```rust harsh
 fn scale (factor: f64) (offset: f64) (x: f64) -> f64:
     x * factor + offset
 
@@ -5560,7 +5560,7 @@ fn main$:
 
 > **Harsh —** `|>` fills a function's parameters from the left, `<|` from the right, and the two together leave a hole in the middle. The result is one flat closure over whatever was not filled — a value like any other: bind it, pass it to `map`, return it from a function. There is no placeholder token; the hole is what is left. Harsh knows how many parameters `scale` takes because `scale` is declared in your project; for a function it cannot see into — the standard library, a crate you depend on — a pipe is a plain call with the values you gave, and the compiler says so if the count was wrong. Give a project function *more* than it takes and Harsh itself refuses:
 
-```
+```rust harsh
 fn sub (a: i32) (b: i32) (c: i32) -> i32:
     a - b - c
 
@@ -5581,7 +5581,7 @@ error: `sub` takes 3 parameter(s) and 4 were piped in
 
 `|>` fills a function's parameters from the left; `<|` fills them from the right. Used together they fill both ends and leave the middle open:
 
-```
+```rust harsh
 fn label (prefix: &str) (name: &str) (suffix: &str) -> String:
     format! "{prefix}{name}{suffix}"
 
@@ -5610,7 +5610,7 @@ Dr. Grace.
 
 A pipe's result is a value, so pipes chain: each stage's output is the next stage's input, left to right, and a partial application makes a stage out of a function that needed more than one argument:
 
-```
+```rust harsh
 fn trim_ws s: String -> String:
     s <- trim$ <- to_string$
 
@@ -5644,7 +5644,7 @@ fn main$:
 
 A partial application is a value, so it goes wherever a function may go — above all, into an iterator's adaptors:
 
-```
+```rust harsh
 fn scale (factor: f64) (x: f64) -> f64:
     factor * x
 
@@ -5673,7 +5673,7 @@ fn main$:
 
 `2.0 |> scale` is "multiply by two", and `0.0 5.0 |> clamp` is "keep between 0 and 5", each built from a general function by fixing its first arguments. A predicate works the same way: in the next program `2.0 |> above` is "greater than two", passed to `filter` as it is:
 
-```
+```rust harsh
 fn parse (line: &str) -> Option<f64>:
     line <- trim$
          <- parse$
@@ -5708,7 +5708,7 @@ Parse, keep what parsed, keep what is large enough, summarise: the chain reads a
 
 A closure that only forwards its argument is a partial application spelled the long way:
 
-```
+```rust harsh
 fn discount (rate: f64) (price: f64) -> f64:
     price * (1.0 - rate)
 
@@ -5757,7 +5757,7 @@ All four are in Harsh's *prelude*: every file can use them with no `use`. They a
 
 ## 15.1 The shape
 
-```
+```rust harsh
 fn main$:
     // The value first, then where it comes from.
     let squares: Vec<i32> = (g~ x * x for x in 1..6) <- collect$
@@ -5780,7 +5780,7 @@ The whole call is in parentheses because the result is chained on: `(g~ …) <- 
 
 ## 15.2 Conditions
 
-```
+```rust harsh
 fn main$:
     // `if`s filter, and every `if` belongs to the `for` before it.
     let picked: Vec<i32> = (g~ x for x in 0..30 if x % 3 == 0 if x % 2 == 1) <- collect$
@@ -5802,7 +5802,7 @@ Each `if` belongs to the `for` it follows. That is the one rule of the syntax, a
 
 ## 15.3 Several `for`s
 
-```
+```rust harsh
 fn main$:
     // Three `for`s: every right triangle with sides under 30.
     let triangles: Vec<(u32, u32, u32)> =
@@ -5834,7 +5834,7 @@ Because an `if` belongs to its `for`, where you put it decides when it runs. In 
 
 The rule that each `if` belongs to the `for` before it has a consequence: every `for` makes one more name available, and a condition can use only the names bound up to its place.
 
-```
+```rust harsh
 fn main$:
     let triples =
         list~ (a, b, c)
@@ -5851,7 +5851,7 @@ fn main$:
 
 The test needs `a`, `b` and `c`, so it goes after the `for` that binds `c`. This, though it looks as if it says the same thing, does not compile:
 
-```
+```rust harsh
 fn main$:
     // The test needs b and c, but it is attached to `for a`,
     // where neither exists yet.
@@ -5897,7 +5897,7 @@ Attached to `for a`, the test runs once per `a`, before `b` and `c` have been ch
 
 ## 15.5 Lazy, and by value
 
-```
+```rust harsh
 fn main$:
     // `g~` is an iterator: nothing runs until something asks for values.
     // So an endless source is fine, as long as something stops asking.
@@ -5923,7 +5923,7 @@ fn main$:
 
 ## 15.6 Collecting: `list~`, `set~`, `dict~`
 
-```
+```rust harsh
 use std.collections.(HashMap, HashSet)
 
 fn main$:
@@ -5960,7 +5960,7 @@ two
 
 A generator comprehension is a chain written another way. Here is what `g~` writes for a two-level comprehension — the Harsh that `hrs expand` shows, laid out:
 
-```
+```rust harsh
 g~ x * 10 + y
     for x in (0..6) if x % 2 == 0 if x > 0
     for y in (0..6) if y > x if y % 2 == 1
@@ -5968,7 +5968,7 @@ g~ x * 10 + y
 
 becomes
 
-```
+```rust harsh
 (0..6) <- into_iter$
 <- flat_map (move |x|
     ((true && (x % 2 == 0) && (x > 0)) <- then (||
@@ -5984,7 +5984,7 @@ Two things are easy to misplace. **The `flatten$` is part of the generator.** Th
 
 The proof that the two are the same:
 
-```
+```rust harsh
 fn main$:
     let wanted: Vec<i32> =
         (g~ x * 10 + y
@@ -6012,7 +6012,7 @@ fn main$:
 
 And for a single level, the chain you would have written by hand:
 
-```
+```rust harsh
 fn main$:
     let scores = vec! 72 45 91 60 88
 
@@ -6069,7 +6069,7 @@ hrs_std = "0.1"
 
 `src/main.hrs`
 
-```
+```rust harsh
 fn main$:
     // Spaces between entries, `;` between rows.
     let a = m~ [1 2 3; 4 5 6]
@@ -6121,7 +6121,7 @@ hrs_std = "0.1"
 
 `src/main.hrs`
 
-```
+```rust harsh
 fn main$:
     let a = m~ [1.0 2.0; 3.0 4.0]
     let b = m~ [0.0 1.0; 1.0 0.0]
@@ -6166,7 +6166,7 @@ hrs_std = "0.1"
 
 `src/main.hrs`
 
-```
+```rust harsh
 use hrs_std.(UniformScaling, I)
 
 fn main$:
@@ -6203,7 +6203,7 @@ hrs_std = "0.1"
 
 `src/main.hrs`
 
-```
+```rust harsh
 fn main$:
     let a = m~ [1 2; 3 4]
     let z = m~ [0 0; 0 0]
@@ -6237,7 +6237,7 @@ hrs_std = "0.1"
 
 `src/main.hrs`
 
-```
+```rust harsh
 fn main$:
     // 2x + y = 5 and x + y = 3, as a matrix and a vector.
     let a = m~ [2.0 1.0; 1.0 1.0]
@@ -6278,7 +6278,7 @@ hrs_std = "0.1"
 
 `src/main.hrs`
 
-```
+```rust harsh
 use hrs_std.Matrix
 
 fn main$:
@@ -6321,7 +6321,7 @@ hrs_std = "0.1"
 
 `src/main.hrs`
 
-```
+```rust harsh
 fn main$:
     // Three days of readings from three sensors: a row a day.
     let mut readings = m~ [21 22 19; 22 24 21; 18 19 17]
@@ -6382,7 +6382,7 @@ hrs_std = "0.1"
 
 `src/main.hrs`
 
-```
+```rust harsh
 fn relu (x: f64) -> f64:
     x <- max 0.0
 
@@ -6449,7 +6449,7 @@ hrs_std = "0.1"
 
 `src/main.hrs`
 
-```
+```rust harsh
 fn main$:
     let a = m~ [1 2 3; 4 5 6]
     // A 2×3 matrix times a 2×3 matrix: the inner sizes, 3 and 2, differ.
@@ -6496,7 +6496,7 @@ Rust has a comment form that becomes documentation. `///` documents the item tha
 
 `src/lib.hrs`
 
-```
+```rust harsh
 //! # My Crate
 //!
 //! `my_crate` is a collection of utilities to make performing certain
@@ -6523,7 +6523,7 @@ $ hrs test
 running 1 test
 test target/hrs/lib.rs - add_one (line 10) ... ok
 
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.30s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.17s
 ```
 
 `cargo doc --open` renders every `///` and `//!` in the crate as HTML, with the Markdown inside them — headings, code blocks, links — laid out. The conventional sections are `# Examples`, `# Panics` (when the function can), `# Errors` (what `Err`s it returns) and `# Safety` (for `unsafe` functions). The example in the `///` is Harsh, like everything else in the file, and `cargo test` *runs it* — every code block in a doc comment is a test, so documentation cannot drift from the code without failing the build.
@@ -6534,7 +6534,7 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fini
 
 Chapter 7 mentioned `pub use` for presenting a different structure to users than the code has. In a library it is what makes the docs usable:
 
-```
+```rust harsh
 //! Art: a library for modelling artistic concepts.
 
 pub use self.kinds.PrimaryColor
@@ -6618,7 +6618,7 @@ A reference, `&T`, points at a value it does not own. A *smart pointer* is a str
 
 A `Box` is the simplest: one value, on the heap, owned by the box:
 
-```
+```rust harsh
 fn main$:
     let b = Box.new 5           // an i32 on the heap
     println! "b = {b}"
@@ -6630,7 +6630,7 @@ b = 5
 
 `Box.new 5` allocates and returns the box; `b` is used like the `i32` it holds, and freed when `b` goes out of scope. On its own that is pointless — an `i32` is happier on the stack — and boxes are for three situations: a type whose size is not known at compile time, a large value you want to move without copying, and a value you own but only care about the trait it implements (chapter 21). The first is the classic:
 
-```
+```rust harsh
 enum List
     Cons i32 List
     Nil
@@ -6653,7 +6653,7 @@ error[E0072]: recursive type `List` has infinite size
 
 A *cons list* — each element holds a value and the rest of the list — is the recursive structure of the functional languages. Written directly it is a type error: a `List` contains a `List` contains a `List`, so the compiler cannot say how many bytes one takes. The help says exactly what to do: put the recursion behind a pointer, whose size is known.
 
-```
+```rust harsh
 #[derive Debug]
 enum List
     Cons i32 (Box<List>)
@@ -6679,7 +6679,7 @@ Cons(1, Cons(2, Cons(3, Nil)))
 
 `*b` on a `Box` gives the value inside, as `*r` on a reference does. That works because `Box` implements the `Deref` trait, and you can implement it for a type of your own:
 
-```
+```rust harsh
 use std.ops.Deref
 
 struct MyBox<T> T
@@ -6721,7 +6721,7 @@ The second half is *deref coercion*: `hello` takes `&str`, and is passed `&m`, a
 
 A smart pointer's other half is what happens when it goes away. The `Drop` trait is a method the compiler calls when a value goes out of scope:
 
-```
+```rust harsh
 struct CustomSmartPointer
     data: String
 
@@ -6754,7 +6754,7 @@ Dropping CustomSmartPointer with data `other stuff`!
 
 Chapter 4 said a value has exactly one owner. Sometimes that is the wrong model — a node in a graph belongs to every edge that reaches it — and `Rc<T>`, the *reference-counted* pointer, is how Rust expresses it:
 
-```
+```rust harsh
 #[derive Debug]
 enum List
     Cons i32 (Rc<List>)
@@ -6798,7 +6798,7 @@ An `Rc<T>` only hands out *shared* references to its value. Several owners and o
 
 The borrow rules — one `&mut` or many `&`, never both — are enforced by the compiler, on what it can prove:
 
-```
+```rust harsh
 fn main$:
     let x = 5
     let y = &mut x
@@ -6817,7 +6817,7 @@ error[E0596]: cannot borrow `x` as mutable, as it is not declared as mutable
 
 `RefCell<T>` enforces the same rules *at run time*: `borrow$` gives a shared reference and `borrow_mut$` a mutable one, each counted while it lives, and a violation is a panic rather than a compile error. The value may then be mutated through something that is itself only shared — an `Rc`, say:
 
-```
+```rust harsh
 use std.cell.RefCell
 use std.rc.Rc
 
@@ -6850,7 +6850,7 @@ c after = Cons(RefCell { value: 4 }, Cons(RefCell { value: 15 }, Nil))
 
 And checked they are:
 
-```
+```rust harsh
 use std.cell.RefCell
 
 fn main$:
@@ -6871,7 +6871,7 @@ Two `borrow_mut$` guards alive at once is exactly what the compiler forbids for 
 
 `Rc` frees when the count reaches zero; two `Rc`s that point at each other never reach zero, and the memory leaks. Rust does not prevent this — a leak is safe, just wasteful — so structures with pointers in both directions use a `Weak<T>` for one direction. A weak pointer does not count toward ownership, and to use it you `upgrade$` it into an `Option<Rc<T>>` that is `None` if the value is gone:
 
-```
+```rust harsh
 use std.cell.RefCell
 use std.rc.(Rc, Weak)
 
@@ -6946,7 +6946,7 @@ Concurrent code — several things happening at once, on threads — is where mo
 
 `thread.spawn` runs a closure on a new thread and returns a handle:
 
-```
+```rust harsh
 use std.thread
 use std.time.Duration
 
@@ -6962,8 +6962,8 @@ fn main$:
 ```
 
 ```text
-hi number 1 from the spawned thread!
 main is waiting
+hi number 1 from the spawned thread!
 hi number 2 from the spawned thread!
 hi number 3 from the spawned thread!
 main is done
@@ -6973,7 +6973,7 @@ The spawned thread prints three lines while the main thread carries on — the t
 
 Usually it captures something, and this is where ownership meets threads:
 
-```
+```rust harsh
 use std.thread
 
 fn main$:
@@ -6999,7 +6999,7 @@ error[E0373]: closure may outlive the current function, but it borrows `v`, whic
 
 The closure borrows `v`, and the compiler asks a question the language forces: how long will the thread run? It cannot know — the thread might outlive `main`, and then the borrow would dangle. So a closure passed to `spawn` must own everything it uses, and the help says how:
 
-```
+```rust harsh
 use std.thread
 
 fn main$:
@@ -7021,7 +7021,7 @@ Here's a vector: [1, 2, 3]
 
 One way to share data between threads is not to share it: send it. A *channel* has a transmitter and a receiver, and a value sent down it is moved from one thread to the other:
 
-```
+```rust harsh
 use std.sync.mpsc
 use std.thread
 
@@ -7044,7 +7044,7 @@ Got: hi
 
 That "moved" is enforced:
 
-```
+```rust harsh
 use std.sync.mpsc
 use std.thread
 
@@ -7077,7 +7077,7 @@ error[E0382]: borrow of moved value: `val`
 
 Several producers, one consumer:
 
-```
+```rust harsh
 use std.sync.mpsc
 use std.thread
 use std.time.Duration
@@ -7111,7 +7111,7 @@ fn main$:
 
 The other way is to share the data and take turns. A `Mutex` — *mutual exclusion* — holds a value and gives out access to one thread at a time:
 
-```
+```rust harsh
 use std.sync.Mutex
 
 fn main$:
@@ -7133,7 +7133,7 @@ m = Mutex { data: 6, poisoned: false, .. }
 
 To share a mutex between threads, it needs several owners, and chapter 18's answer to that was `Rc`:
 
-```
+```rust harsh
 use std.rc.Rc
 use std.sync.Mutex
 use std.thread
@@ -7172,7 +7172,7 @@ error[E0277]: `Rc<Mutex<i32>>` cannot be sent between threads safely
 
 Refused. `Rc` counts references without any synchronisation — two threads incrementing the count at once would corrupt it — and so `Rc<T>` is not `Send`, and `spawn` requires `Send`. The type system knows which types are safe to move across threads, and this one is not. The thread-safe reference count is `Arc`, *atomic* `Rc`, with the same API:
 
-```
+```rust harsh
 use std.sync.(Arc, Mutex)
 use std.thread
 
@@ -7231,7 +7231,7 @@ tokio = { version = "1.40", features = ["rt", "macros", "time", "sync"] }
 
 `src/main.hrs`
 
-```
+```rust harsh
 use tokio.time.(sleep, Duration)
 
 async fn say_hello name: &str -> String:
@@ -7266,7 +7266,7 @@ tokio = { version = "1.40", features = ["rt", "macros", "time", "sync"] }
 
 `src/main.hrs`
 
-```
+```rust harsh
 use tokio.time.(sleep, Duration)
 
 #[tokio.main (flavor = "current_thread")]
@@ -7307,7 +7307,7 @@ tokio = { version = "1.40", features = ["rt", "macros", "time", "sync"] }
 
 `src/main.hrs`
 
-```
+```rust harsh
 use tokio.time.(sleep, Duration)
 
 #[tokio.main (flavor = "current_thread")]
@@ -7349,7 +7349,7 @@ tokio = { version = "1.40", features = ["rt", "macros", "time", "sync"] }
 
 `src/main.hrs`
 
-```
+```rust harsh
 use tokio.sync.mpsc
 use tokio.time.(sleep, Duration)
 
@@ -7402,7 +7402,7 @@ tokio = { version = "1.40", features = ["rt", "macros", "time", "sync"] }
 
 `src/main.hrs`
 
-```
+```rust harsh
 use tokio.time.(sleep, Duration)
 
 async fn slow name: &str -> &str:
@@ -7449,7 +7449,7 @@ tokio = { version = "1.40", features = ["rt", "macros", "time", "sync"] }
 
 `src/main.hrs`
 
-```
+```rust harsh
 use std.time.Duration
 
 #[tokio.main (flavor = "current_thread")]
@@ -7484,7 +7484,7 @@ Is Rust object-oriented? It has objects in the sense that matters — data with 
 
 A struct with private fields and public methods is an object in the classic sense:
 
-```
+```rust harsh
 pub struct AveragedCollection
     list: Vec<i32>
     average: f64
@@ -7536,7 +7536,7 @@ fn main$:
 
 Chapter 8 held several types in one `Vec` by wrapping them in an enum, which works when the set of types is known when you write the enum. A GUI library cannot know what components its users will define. It needs "a vector of anything that can draw itself":
 
-```
+```rust harsh
 pub trait Draw
     fn draw (&self)
 
@@ -7604,7 +7604,7 @@ button 50x10 'OK'
 
 The compiler still checks that every element can draw:
 
-```
+```rust harsh
 pub trait Draw
     fn draw (&self)
 
@@ -7634,7 +7634,7 @@ A `String` does not implement `Draw`, so it cannot become a `Box<dyn Draw>`, and
 
 The same screen could be written with a type parameter:
 
-```
+```rust harsh
 pub trait Draw
     fn draw (&self)
 
@@ -7676,7 +7676,7 @@ One limit: not every trait can be a trait object. The method signatures must not
 
 An object-oriented design pattern, done in Rust to see what fits and what does not. A blog post is a draft, then pending review, then published; its behaviour — what `content` returns, what `approve` does — depends on which. In the classic pattern each state is an object, and the post delegates to whichever it holds:
 
-```
+```rust harsh
 pub struct Post
     state: Option<Box<dyn State>>
     content: String
@@ -7759,7 +7759,7 @@ published: 'I ate a salad for lunch today'
 
 It works, and it has the pattern's usual costs: the states know about each other, a transition that is invalid for a state has to be written as "return `self`", and nothing stops a caller from asking a draft for its content. Rust offers a different shape — encode the states as *types*:
 
-```
+```rust harsh
 // The same workflow with the states as types: an invalid transition does not compile.
 pub struct Post
     content: String
@@ -7817,7 +7817,7 @@ You have been writing patterns since chapter 2: `Ok n`, `Some max`, `(key, value
 
 ## 22.1 Where patterns appear
 
-```
+```rust harsh
 fn main$:
     // match arms
     let x = Some 3
@@ -7882,7 +7882,7 @@ Six places. `match` arms, where every case must be covered. `if let`, for one ca
 
 A pattern that can fail to match is *refutable*; one that always matches is *irrefutable*. `Some x` is refutable, `x` and `(a, b)` are not. `let`, `for` and function parameters need an irrefutable pattern, because they have nothing to do when it fails; `if let`, `while let` and `match` arms accept a refutable one, because failing is what their `else`, their end, and their next arm are for:
 
-```
+```rust harsh
 fn main$:
     let some_option_value: Option<i32> = None
     let Some x = some_option_value
@@ -7907,7 +7907,7 @@ error[E0005]: refutable pattern in local binding
 
 ### Literals, names, ranges, alternatives
 
-```
+```rust harsh
 fn main$:
     let x = 1
 
@@ -7956,7 +7956,7 @@ A literal matches itself. A name matches anything and binds it — and inside an
 
 ### Destructuring
 
-```
+```rust harsh
 struct Point
     x: i32
     y: i32
@@ -8025,7 +8025,7 @@ A struct pattern is a field list like any other, marked with `\`: `Point\ x: a, 
 
 ### Ignoring
 
-```
+```rust harsh
 fn foo (_: i32) (y: i32):                // an unused parameter, by name
     println! "This code only uses the y parameter: {y}"
 
@@ -8085,7 +8085,7 @@ Some numbers: 2, 32
 
 ## 22.4 Guards and bindings
 
-```
+```rust harsh
 enum Message
     Hello\
         id: i32
@@ -8150,7 +8150,7 @@ Everything in this chapter is something a Rust program can go a long way without
 
 Every guarantee so far — no dangling references, no data races, no out-of-bounds reads — is enforced by the compiler *refusing programs it cannot prove safe*. Some correct programs cannot be proved safe: talking to the operating system, implementing a data structure with raw pointers, calling C. For those, `unsafe` marks a region where the programmer takes over the proof:
 
-```
+```rust harsh
 fn main$:
     let mut num = 5
     let r1 = &num as *const i32          // raw pointers can be made in safe code
@@ -8169,7 +8169,7 @@ r2 is: 6
 
 A *raw pointer* — `*const T` or `*mut T` — may be created anywhere; it is *dereferencing* one that is unsafe, since nothing guarantees it points at a live value, so that happens inside `unsafe:`. Five things need the keyword: dereferencing a raw pointer, calling an unsafe function, accessing a mutable static, implementing an unsafe trait, and accessing a union's fields. Everything else — the borrow checker, the type checker — stays on inside the block. `unsafe` does not turn Rust off; it turns off five checks, and marks where.
 
-```
+```rust harsh
 use std.slice
 
 unsafe fn dangerous$:
@@ -8205,7 +8205,7 @@ this function is unsafe to call
 
 `unsafe fn dangerous$` is a function whose *caller* must uphold some contract, and may only be called from an `unsafe:` block. `split_at_mut` is the pattern that matters: a *safe* function that uses unsafe code inside, after checking the contract itself. Two mutable slices into one vector cannot be expressed to the borrow checker, so the function takes a raw pointer, asserts that `mid` is in range, and builds the slices from raw parts inside `unsafe:` — and its callers never see the keyword, because the function has done the reasoning and stands behind it. This is how the standard library is written, and the discipline to copy: keep `unsafe` small, wrap it in a safe interface, and write down the invariant it depends on.
 
-```
+```rust harsh
 extern "C"                             // a foreign block: a layout block like any other
     fn abs (input: i32) -> i32           // a foreign function has no body; the `;` is supplied
 
@@ -8238,7 +8238,7 @@ COUNTER: 3
 
 Chapter 13 showed `Iterator`'s `type Item`. Here is a type implementing it:
 
-```
+```rust harsh
 struct Counter
     count: u32
 
@@ -8274,7 +8274,7 @@ fn main$:
 
 `+` is a trait, `Add`, and a type implements it to be addable:
 
-```
+```rust harsh
 use std.ops.Add
 
 #[derive Debug Copy Clone PartialEq]
@@ -8316,7 +8316,7 @@ Point { x: 3, y: 3 }
 
 Two traits may define a method with the same name, and a type may implement both, and have an inherent method of that name as well:
 
-```
+```rust harsh
 trait Pilot
     fn fly (&self)
 
@@ -8373,7 +8373,7 @@ A baby dog is called a puppy
 
 A trait may require another:
 
-```
+```rust harsh
 use std.fmt
 
 // A supertrait: OutlinePrint requires Display, and may use it.
@@ -8425,7 +8425,7 @@ The second half is the *newtype* pattern, the answer to chapter 10's orphan rule
 
 ## 23.3 Advanced types
 
-```
+```rust harsh
 use std.fmt
 
 // A type alias: a synonym, not a new type.
@@ -8479,7 +8479,7 @@ A *dynamically sized type* is one whose size is not known at compile time: `str`
 
 ## 23.4 Functions and closures as values
 
-```
+```rust harsh
 fn add_one x: i32 -> i32:
     x + 1
 
@@ -8548,7 +8548,7 @@ Harsh's own macros come in two families, as Rust's do. A **declarative** macro i
 
 A declarative Harsh macro is a set of patterns and what each expands to:
 
-```
+```rust harsh
 // A declarative macro: pattern-matched at compile time. Both sides are
 // written in Harsh. The matcher is a parameter list -- one group per fragment,
 // a repetition of groups for a list -- and the transcriber is a `do:` block.
@@ -8612,7 +8612,7 @@ proc-macro = true
 
 `hello_macro_derive/src/lib.hrs`
 
-```
+```rust harsh
 use hrs_proc_macro.TokenStream
 use hrs_quote.quote
 use hrs_syn.{parse_macro_input, DeriveInput}
@@ -8644,7 +8644,7 @@ proc-macros = ["../hello_macro_derive"]
 
 `app/src/main.hrs`
 
-```
+```rust harsh
 trait HelloMacro
     fn hello_macro$
 
@@ -8678,7 +8678,7 @@ proc-macro = true
 
 `describe/src/lib.hrs`
 
-```
+```rust harsh
 use hrs_proc_macro.TokenStream
 use hrs_quote.quote
 use hrs_syn.{parse_macro_input, Data, DeriveInput, Error}
@@ -8713,7 +8713,7 @@ proc-macros = ["../describe"]
 
 `app/src/main.hrs`
 
-```
+```rust harsh
 #[derive Debug]
 #[derive~ Describe]
 struct Point
@@ -8756,7 +8756,7 @@ proc-macro = true
 
 `web/src/lib.hrs`
 
-```
+```rust harsh
 use hrs_proc_macro.TokenStream
 use hrs_quote.quote
 use hrs_syn.{parse_macro_input, ItemFn}
@@ -8785,7 +8785,7 @@ proc-macros = ["../web"]
 
 `app/src/main.hrs`
 
-```
+```rust harsh
 #[route~ POST "/api/v1/submit"]
 fn handle_submit$:
     println! "Processing payload..."
@@ -8818,7 +8818,7 @@ proc-macro = true
 
 `hello/src/lib.hrs`
 
-```
+```rust harsh
 use hrs_proc_macro.TokenStream
 
 #[proc_macro~]
@@ -8837,7 +8837,7 @@ proc-macros = ["../hello"]
 
 `app/src/main.hrs`
 
-```
+```rust harsh
 fn main$:
     println! "{}" (hello_macro~ world)
     let greeting = hello_macro~ Harsh readers
@@ -8862,7 +8862,7 @@ The Rust Book: [*Declarative Macros for General Metaprogramming*](https://doc.ru
 
 In Harsh, a `macro_rules!` may be written inside a Harsh file. It is a zone of Rust there: `hrs` copies it out byte for byte, its braces delimit it, and its body is laid out as Rust, so nothing inside it is Harsh — `#[macro_export]` and the rest mean what they mean in Rust. Only the definition is Rust; its calls are Harsh calls, `square! n`, `square! (n + 1)`:
 
-```
+```rust harsh
 macro_rules! square {
     ($x:expr) => { $x * $x };
 }
@@ -8925,7 +8925,7 @@ hello_macro_derive = { path = "../hello_macro_derive" }
 
 `app/src/main.hrs`
 
-```
+```rust harsh
 use hello_macro_derive.HelloMacro
 
 trait HelloMacro
@@ -8972,7 +8972,7 @@ Most macros you call come from Rust libraries: `println!` and `vec!` from the st
 
 A Rust macro that takes a language of its own — the markup of a web framework's `view!`, the element tree of Dioxus's `rsx!`, a query — takes it in braces, and what is inside the braces is that language, written exactly as its documentation shows. Harsh reads none of it. The only Harsh inside is what you mark: a hole opens with `@:` and always closes with `:@`, and between the two is ordinary Harsh, transpiled in place:
 
-```
+```rust harsh
 // A stand-in for a UI framework's `view!`: it swallows the markup and yields
 // unit, so this file compiles without a dependency. Only the spelling of the
 // call is the point here.
@@ -9003,7 +9003,7 @@ rendered 3
 
 The markup's own `{count}` needs no mark — a name is the same in both languages — while the handler, written in Harsh, sits in a hole. A hole may span lines: `@:` on the line where it opens, the Harsh beneath at that line's indentation, `:@` where it ends. The same convention serves a tree of braces as it serves markup, because Harsh never learns either:
 
-```
+```rust harsh
 // A stand-in for Dioxus's `rsx!`, as `view!` above: it swallows the tree and
 // yields unit.
 macro_rules! rsx {
@@ -9045,7 +9045,7 @@ Holes follow a few conventions. A hole always closes, with `:@`, even at the end
 
 Every use of parentheses in this book has been one of a short list, and the list is worth stating now that all of it has been seen:
 
-```
+```rust harsh
 fn double x: i32 -> i32:
     x * 2
 
@@ -9099,7 +9099,7 @@ The last chapter builds a web server from the standard library alone: a TCP list
 
 `src/main.hrs`
 
-```
+```rust harsh
 use std.fs
 use std.io.(prelude.*, BufReader)
 use std.net.(TcpListener, TcpStream)
@@ -9173,7 +9173,7 @@ Spawning a thread per connection would fix that and open a denial-of-service hol
 
 `src/main.hrs`
 
-```
+```rust harsh
 use std.fs
 use std.io.(prelude.*, BufReader)
 use std.net.(TcpListener, TcpStream)
@@ -9254,7 +9254,7 @@ fn handle_connection (mut stream: TcpStream) (served: Arc<Mutex<Vec<String>>>):
 
 `src/lib.hrs`
 
-```
+```rust harsh
 use std.sync.(mpsc, Arc, Mutex)
 use std.thread
 
@@ -9353,7 +9353,7 @@ The Rust Book this one follows has a chapter of appendices — keywords, operato
 
 Everything of Harsh's own, in one place, each rule with the chapter that teaches it. There is little of it, because Harsh states rules only for what it changes; wherever this page is silent, what you learned of Rust in the chapters holds unchanged. One program first, with most of the page in it, built and run like every other in this book:
 
-```
+```rust harsh
 use std.collections.HashMap          // `.` walks a path
 
 #[derive Debug Clone PartialEq]      // an attribute applies inside its brackets
@@ -9580,7 +9580,7 @@ written by mistake while this book's companions were written:
 
 ## The rules at work
 
-```
+```rust harsh
 struct Switch<'a>
     flag: &'a mut bool
 

@@ -20,7 +20,7 @@ If you would rather not agree to point 3, say so in your pull request. Small fix
 
 ## Working on the code
 
-```
+```sh
 cargo build
 cargo test          # 24 tests; all must pass
 ./check.sh          # builds, transpiles, runs and round-trips everything

@@ -11,7 +11,7 @@ When a value has many optional parts, build it step by step through a
 *builder*: each method sets one part and returns the builder, and `build`
 makes the value. Rust has no named or default arguments; this is its answer.
 
-```
+```rust harsh
 #[derive Debug]
 pub struct Request
     url: String
@@ -81,7 +81,7 @@ structure: a *folder* has a method per kind of node, each returning the
 rebuilt node — the default rebuilding it unchanged, so a folder overrides only
 what it changes.
 
-```
+```rust harsh
 // A small tree of names and calls.
 #[derive Debug]
 enum Node

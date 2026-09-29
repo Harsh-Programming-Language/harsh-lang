@@ -51,7 +51,7 @@ them. On a trait, it says implementers must uphold an invariant; on an
 behaviour, however it calls a safe function — that is the safe function's
 author's job.
 
-```
+```rust harsh
 // A safe function around an unsafe operation: the check makes it sound.
 fn get (xs: &[i32]) (i: usize) -> Option<i32>:
     if i < xs <- len$:
@@ -92,7 +92,7 @@ dangling or unaligned dereference, breaking the aliasing rules, a data race,
 producing an invalid value (a `bool` that is not 0 or 1, an enum with no
 such variant), among others.
 
-```
+```rust harsh
 static mut COUNTER: u32 = 0
 
 union IntOrFloat
@@ -139,7 +139,7 @@ read that trusts it. So the boundary of safety is the **module**: keep the
 fields that unsafe code relies on private, and let only the module's own
 code touch them.
 
-```
+```rust harsh
 mod stack
     // `len` is private: only this module's code can change it, so the
     // unsafe read below can trust it.
@@ -195,7 +195,7 @@ Every type has a size and an alignment. By default, Rust may reorder a
 struct's fields to reduce padding, and promises nothing else about their
 order: two structs with the same fields may be laid out differently.
 
-```
+```rust harsh
 use std.mem
 
 // Written loosely: a byte, a u32, a byte.
@@ -234,7 +234,7 @@ Not every type has a known, non-zero size. *Dynamically sized* types — `[T]`,
 so those pointers are twice as wide. *Zero-sized* types take no space at all;
 *empty* types, like an enum with no variants, cannot even be built.
 
-```
+```rust harsh
 use std.mem
 
 struct Nothing
@@ -278,7 +278,7 @@ declaration with nothing beneath.
 field. `#[repr(packed)]` (or `packed(n)`) removes padding, at the cost of
 unaligned fields; `#[repr(align(n))]` raises a type's alignment.
 
-```
+```rust harsh
 use std.mem
 
 // A fixed discriminant, one byte.
@@ -329,7 +329,7 @@ govern them: a reference cannot outlive what it refers to, and a mutable
 reference cannot be aliased — while it is alive, nothing else reaches the
 same value. The compiler refuses a second `&mut`:
 
-```
+```rust harsh
 fn main$:
     let mut total = 0
     let a = &mut total
@@ -368,7 +368,7 @@ sees a value that cannot change underneath it — and optimise accordingly.
 Unsafe code that creates two live `&mut` to one place breaks that assumption:
 undefined behaviour, whether or not it ever writes through both.
 
-```
+```rust harsh
 fn main$:
     let mut xs = [1, 2, 3, 4, 5, 6]
     // Two `&mut` into one array -- to disjoint halves, so sound.
@@ -393,7 +393,7 @@ A lifetime is the region of code for which a reference must stay valid.
 Within a function the compiler infers them; across a function's signature you
 name them, saying which inputs an output borrows from.
 
-```
+```rust harsh
 // The output borrows from both inputs: it lives as long as the shorter.
 fn longest<'a> (x: &'a str) (y: &'a str) -> &'a str:
     if x <- len$ >= y <- len$: x else: y
@@ -422,7 +422,7 @@ because it reasons about a borrow's whole scope rather than every path. The
 classic case: a borrow returned on one path of a function stays alive on the
 others.
 
-```
+```rust harsh
 use std.collections.HashMap
 
 // Correct, yet refused: the borrow returned on the first path is taken to
@@ -484,7 +484,7 @@ For more information about this error, try `rustc --explain E0499`.
 **In Harsh:** rustc's refusal points at the `.hrs` lines; the usual way
 around it is to look up twice, as the next program does.
 
-```
+```rust harsh
 use std.collections.HashMap
 
 // Looking up twice: no borrow outlives a path.
@@ -511,7 +511,7 @@ borrows from it; with `&self`, the output borrows from `self`. The compiler
 fills them in by these rules; you write them only when the rules do not
 decide.
 
-```
+```rust harsh
 struct Doc
     text: String
 
@@ -543,7 +543,7 @@ Dereferencing a raw pointer produces a reference whose lifetime nothing
 constrains — it becomes whatever the context asks for, even `'static`. Bound it
 at once, by returning it from a function whose signature ties it to an input.
 
-```
+```rust harsh
 struct Owner
     value: i32
 
@@ -573,7 +573,7 @@ A closure taking a reference must work for *every* lifetime its caller might
 pass, not one chosen in advance: `for<'a> Fn(&'a T) -> &'a U`. Usually this is
 implied by the `Fn(&T) -> &U` sugar, which is why it is rarely written.
 
-```
+```rust harsh
 // The closure must work for every lifetime of the references it is given:
 // a `for<'a>` bound, implied by the sugar.
 fn apply_all (f: impl Fn (&str) -> usize) (words: &[String]) -> Vec<usize>:
@@ -601,7 +601,7 @@ wherever a `&'a str` is expected. How that extends through a type is its
 `T`; `fn(T)` is contravariant in `T`. Getting variance wrong in unsafe code —
 through a raw-pointer field, say — lets a short lifetime be stretched.
 
-```
+```rust harsh
 // Expects references that live for some `'a`...
 fn pick<'a> (a: &'a str) (b: &'a str) (first: bool) -> &'a str:
     if first: a else: b
@@ -630,7 +630,7 @@ standard library escapes this check for its collections with an unstable
 attribute, `#[may_dangle]`, promising their destructors only drop what they
 hold.
 
-```
+```rust harsh
 struct Inspector<'a>
     seen: &'a String
 
@@ -682,7 +682,7 @@ owns or borrows. `PhantomData<T>` — a zero-sized field — says "act as if thi
 struct held a `T`", restoring the right variance, drop checking and auto
 traits.
 
-```
+```rust harsh
 use std.marker.PhantomData
 
 // Only a raw pointer inside: PhantomData says "this borrows a T for 'a".
@@ -722,7 +722,7 @@ The borrow checker understands a struct's fields as separate places — two
 `&mut` to two fields are fine — but not a slice's halves, which is why
 `split_at_mut` exists, with a little unsafe code inside.
 
-```
+```rust harsh
 struct Point
     x: i32
     y: i32
@@ -759,7 +759,7 @@ Some conversions happen on their own, at specific places: `&mut T` to `&T`,
 `&String` to `&str` through `Deref`, an array to a slice, a concrete type to
 `dyn Trait`. They are never applied to satisfy a trait bound.
 
-```
+```rust harsh
 use std.fmt.Display
 
 fn count (s: &str) -> usize:
@@ -796,7 +796,7 @@ then `&mut receiver`, then dereferencing and trying again. This is
 convenient and occasionally surprising: `x.clone()` on a `&T` where `T` is not
 `Clone` clones the *reference*.
 
-```
+```rust harsh
 #[derive Clone Debug]
 struct Named
     name: String
@@ -834,7 +834,7 @@ sign-extend; a float to an integer saturates (and NaN becomes 0); pointer
 casts change the type the pointer claims. None of them is undefined
 behaviour — but a pointer cast is only as good as what it points to.
 
-```
+```rust harsh
 fn main$:
     // Integer to a smaller integer: truncates. (A literal that does not fit
     // is refused outright, by the `overflowing_literals` lint.)
@@ -868,7 +868,7 @@ size. It is the most dangerous tool there is: almost every use has a safer
 alternative (`f32::to_bits`, `from_ne_bytes`, pointer casts), which the next
 program compares it with.
 
-```
+```rust harsh
 fn main$:
     let x = 1.5f32
     // The dangerous tool...
@@ -905,7 +905,7 @@ keep it so. The original chapter:
 A variable may be declared before it is given a value, but the compiler
 tracks every path and refuses a read that might come first.
 
-```
+```rust harsh
 fn main$:
     let x: i32
     let ready = std.env.args$ <- count$ > 5
@@ -944,7 +944,7 @@ For more information about this error, try `rustc --explain E0381`.
 When a value is initialised on some paths only, or moved out on some, the
 compiler keeps a hidden *drop flag* to know at run time whether to drop it.
 
-```
+```rust harsh
 struct Loud
     name: &'static str
 
@@ -983,7 +983,7 @@ To initialise memory piece by piece — an array element by element, a buffer
 from C — use `MaybeUninit<T>`: it holds possibly-uninitialised memory, and
 `assume_init` is your promise that every part is now valid.
 
-```
+```rust harsh
 use std.mem.MaybeUninit
 
 fn main$:
@@ -1030,7 +1030,7 @@ There is no program on this page: there is nothing hidden to show.
 in declaration order; local variables are dropped in reverse order of
 declaration. `mem::forget` and `ManuallyDrop` stop a destructor from running.
 
-```
+```rust harsh
 use std.mem.ManuallyDrop
 
 struct Loud
@@ -1076,7 +1076,7 @@ forgotten `Drain` leaks rather than exposes moved-out elements; and the early
 `thread::scoped` API was removed because a forgotten guard let a thread
 outlive what it borrowed — which `thread::scope`, used in this book, avoids.
 
-```
+```rust harsh
 use std.cell.RefCell
 use std.rc.( Rc, Weak)
 
@@ -1120,7 +1120,7 @@ hold. The usual tool is a guard whose destructor restores the invariant — as
 the standard `BinaryHeap::sift_up` does with a *hole* that is always filled
 back in, even if a comparison panics.
 
-```
+```rust harsh
 use std.panic
 
 struct Restore<'a>
@@ -1161,7 +1161,7 @@ A `Mutex` whose holder panicked is *poisoned*: its data may be half-updated,
 so the next `lock` returns an error. The data is still reachable, for code
 that knows how to check it.
 
-```
+```rust harsh
 use std.sync.( Arc, Mutex)
 use std.thread
 
@@ -1207,7 +1207,7 @@ one writing — is undefined behaviour, and safe Rust prevents it. A *race
 condition* — a result depending on timing — is only a bug, and safe Rust
 allows it. Atomics and locks are how threads share memory without a data race.
 
-```
+```rust harsh
 use std.sync.atomic.( AtomicUsize, Ordering)
 use std.thread
 
@@ -1240,7 +1240,7 @@ shared between threads. The compiler derives both from a type's fields; raw
 pointers are neither, so a type built on them states its own, with an
 `unsafe impl` — a promise.
 
-```
+```rust harsh
 use std.thread
 
 // A raw pointer is neither Send nor Sync: the wrapper promises it is safe to
@@ -1276,7 +1276,7 @@ Atomics carry an *ordering*: `Relaxed` orders nothing but the atomic itself;
 written before the store visible after the load; `SeqCst` adds a single total
 order. Most synchronisation is a Release/Acquire pair.
 
-```
+```rust harsh
 use std.sync.atomic.( AtomicBool, AtomicU64, Ordering)
 use std.thread
 
@@ -1395,7 +1395,7 @@ the original handles it throughout. This program refuses it, with an
 
 *Original: [Final Code](https://doc.rust-lang.org/nomicon/vec/vec-final.html)*
 
-```
+```rust harsh
 use std.alloc.( self, Layout)
 use std.mem
 use std.ops.( Deref, DerefMut)
@@ -1552,7 +1552,7 @@ the allocation.
 
 *Original: [Final Code](https://doc.rust-lang.org/nomicon/arc-mutex/arc-final.html)*
 
-```
+```rust harsh
 use std.marker.PhantomData
 use std.ops.Deref
 use std.ptr.NonNull
@@ -1645,7 +1645,7 @@ calling them in `unsafe` — the compiler cannot check C. Strings cross as
 original's examples link to the `snappy` library; these use the C standard
 library, which every program is linked with already.
 
-```
+```rust harsh
 use std.ffi.( CStr, CString)
 use std.os.raw.( c_char, c_int)
 
@@ -1678,7 +1678,7 @@ terminated.
 
 A callback: C's `qsort` sorting an array with a comparison written in Harsh.
 
-```
+```rust harsh
 use std.ffi.c_void
 use std.os.raw.c_int
 

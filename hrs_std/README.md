@@ -5,7 +5,7 @@ Harsh's standard library: the types behind the matrix and vector literals of
 *Rust without braces, with pipes, partial application, comprehensions and
 linear algebra*.
 
-```
+```rust harsh
 let x = m~ [1.0 1.0; 1.0 2.0; 1.0 3.0]
 let y = v~ [1.0, 2.0, 2.9]
 let beta = x <- solve (&y)          // Julia's X \ y: the least-squares fit

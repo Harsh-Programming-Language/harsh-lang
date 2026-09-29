@@ -44,7 +44,7 @@ The user's ruling, 2026-09-25:
 3. **A specifier gives its capture meaning.** `:expr` means an expression, and in an expression parentheses are grouping, so `(1+2)`, `((1+2))` and `(((1+2)))` are one expression to `($v:expr)`. `:ident`, `:lifetime` and `:literal` are single tokens, as in Rust: `(adding)` is no `:ident`.
 4. **The transcriber stays bare**: `$v $( $x )*`, parentheses only where the output needs them.
 
-```
+```rust harsh
 macro_rules~ apply
     (($v:ident) $( ($x:expr) )*) => do:
         $v $( $x )*
@@ -65,7 +65,7 @@ The arm's own parentheses come first, so an arm whose whole matcher is one metav
 
 A pair in a repetition, each in literal parentheses of its own:
 
-```
+```rust harsh
 macro_rules~ hashmap
     ( $( (($k:expr) => ($v:expr)) )* ) => do:
         …
@@ -76,7 +76,7 @@ let m = hashmap~ ("a" => 1) ("b" => 2)
 
 A matcher in `[ … ]` or `{ … }` is Rust's syntax, as the stream of a `~` call is: `filled~ [0u8; 4]` reaches the macro as written, so `([ ($elem:expr) ; ($n:expr) ])` is how a macro takes a `;`-separated pair -- the arm's own parentheses, then the bracket, whose tokens are literal, the metavariables written in theirs (rule 4).
 
-```
+```rust harsh
 macro_rules~ filled
     ([ ($elem:expr) ; ($n:expr) ]) => do:
         vec! { @: $elem :@; @: $n :@ }
@@ -92,7 +92,7 @@ A procedural macro is a program: a function from tokens to the code that replace
 A derive mirrors Rust's. It is registered with its name, and may declare
 helper attributes it reads:
 
-```
+```rust harsh
 #[proc_macro_derive~ Describe (attributes describe)]
 pub fn describe (input: TokenStream) -> TokenStream:
     …
@@ -101,7 +101,7 @@ pub fn describe (input: TokenStream) -> TokenStream:
 and is called above a `struct`, an `enum` or a `union`, beside Rust's own
 derives if you like:
 
-```
+```rust harsh
 #[derive Debug]
 #[derive~ Describe]
 struct Point
@@ -167,7 +167,7 @@ hrs_proc_macro = "0.2"
 proc-macro = true
 ```
 
-```
+```rust harsh
 // hello/src/lib.hrs
 use hrs_proc_macro.TokenStream
 
@@ -186,7 +186,7 @@ The crate that uses it lists it by path:
 proc-macros = ["../hello"]
 ```
 
-```
+```rust harsh
 // app/src/main.hrs
 fn main$:
     println! "{}" (hello_macro~ world)        // prints Hello, world!
@@ -221,7 +221,7 @@ fn main$:
 As in Rust, a library can hand its users a macro from its proc-macro crate, so
 they depend on the library alone (the user's ruling, 2026-09-24, option (a)):
 
-```
+```toml
 # hello_macro/Cargo.toml
 [package.metadata.harsh]
 proc-macros = ["../hello_macro_derive"]
@@ -267,7 +267,7 @@ it, so the transpiler reads none of it and rewrites none of it: the
 definition goes out byte for byte as it came in, and `hrs-from` copies a Rust
 one into a Harsh file the same way, which makes the round trip exact.
 
-```
+```rust harsh
 macro_rules! my_vec {                      // copied verbatim, both directions
     ( $( $x:expr ),* ) => {
         { let mut v = Vec::new(); $( v.push($x); )* v }
@@ -312,7 +312,7 @@ Macros imported from Harsh libraries: Harsh throughout, each call following the 
 
 Four macros need no definition and no `use`. `g~` is a comprehension:
 
-```
+```rust harsh
 let pairs: Vec<(i32, i32)> =
     (g~ (x, y)
         for x in 1..4 if x > 1
@@ -342,7 +342,7 @@ Nothing here is special to macros. A call is a header, and what follows it is
 a block of the kind the header's mark names — the same kit as everywhere else
 in the language, which is why the forms can be guessed rather than recalled.
 
-```
+```rust harsh
 m! x y z                             m!(x, y, z)          juxtaposed arguments
 m! (x) (y) (z)                       m!(x, y, z)          the same, isolated
 
@@ -362,7 +362,7 @@ to the close of the group the call sits in, whichever comes first. Nothing in th
 `(…)` is a group, one token, so a tuple is written once. A call inside a larger
 expression is isolated as any application is: `((twice~ 4), 0)`.
 
-```
+```rust harsh
 let v =
     lst~ 1 2                 the stream is `1 2 3 4`: the deeper line is the call's
         3 4
@@ -378,7 +378,7 @@ in braces, as Rust writes it: `hm! { 1 => "a", 2 => "b" }`. (`hm!\` with the
 entries beneath was the spelling until 2026-09-22; it is retired, and refused
 with the braces named.)
 
-```
+```rust harsh
 macro_rules~ pair
     (($a:expr) ($b:expr)) => do:             juxtaposed arguments -- the Harsh way
         ($a, $b)                         the comma is the tuple's, in the output
@@ -428,7 +428,7 @@ puts it back byte for byte into the generated Rust. The only Harsh inside is
 what the author marks: a **hole** opens at `@:` and **always closes** at
 `:@`, and holds ordinary Harsh, transpiled in place.
 
-```
+```rust harsh
 view! {                                   view! {
     <p>{count}</p>                            <p>{count}</p>
     <button on:click={@: move |_|             <button on:click={move |_|

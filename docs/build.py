@@ -114,6 +114,9 @@ def render(SRC, IPYNB, HTML, TITLE, TAG):
   blocks = []
   def fence(m):
       lang, body = m.group(1).strip(), m.group(2)
+      # `rust harsh` and `rust fragment` are Harsh: the first word is for
+      # GitLab and GitHub, which colour it as Rust; here Harsh's own
+      # highlighter runs. Plain `rust` is Rust.
       if lang == "rust":
           h = f'<pre class="code rust"><code>{hl(body)}</code></pre>'
       elif lang in ("text", "toml", "sh"):
@@ -183,7 +186,7 @@ def render(SRC, IPYNB, HTML, TITLE, TAG):
 
 if __name__ == "__main__":
   # The guide's code blocks are verified before anything is rendered: every
-  # untagged block transpiles, and a Rust column is what the transpiler
+  # `rust harsh` block transpiles, and a Rust column is what the transpiler
   # writes (docs/check-guide.py). A guide that lies does not render.
   import subprocess
   r = subprocess.run([sys.executable, os.path.join(DOCS, "check-guide.py")], capture_output=True, text=True)

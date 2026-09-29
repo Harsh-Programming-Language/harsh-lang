@@ -179,14 +179,14 @@ pre.code:hover .copy,.copy:focus-visible{opacity:1}
 <p>That single decision is why generics, lifetimes, <code>impl Trait</code>, <code>async</code>/<code>.await</code>, macros, closures, const generics, and every future Rust syntax addition work without the transpiler knowing they exist. It never has to keep up with Rust, because it never had to catch up in the first place.</p>
 <p>The cost is that it cannot do anything requiring semantics. That turned out to constrain almost nothing worth having.</p>
 <h3 id="the-pipeline">The pipeline</h3>
-<pre class="code harsh"><code>lex<span class="p">.</span>rs      tokens with byte spans<span class="p">;</span> two modes differing only <span class="k">in</span> what `<span class="p">.</span>` means
-layout<span class="p">.</span>rs   physical lines <span class="op">-&gt;</span> logical lines <span class="op">-&gt;</span> a tree of blocks<span class="p">;</span> validation
-juxt<span class="p">.</span>rs     expression regions<span class="p">;</span> juxtaposed application<span class="p">;</span> the pipe rewrite <span class="p">(</span>which is also partial application<span class="p">)</span>
-rules<span class="p">.</span>rs    keyword tables shared by both directions
-emit<span class="p">.</span>rs     <span class="t">Harsh</span> <span class="op">-&gt;</span> <span class="t">Rust</span><span class="p">,</span> plus the source map
-unbrace<span class="p">.</span>rs  <span class="t">Rust</span> <span class="op">-&gt;</span> <span class="t">Harsh</span>
-remap<span class="p">.</span>rs    rustc<span class="p">/</span>clippy diagnostics <span class="op">-&gt;</span> <span class="t">Harsh</span> source positions
-driver<span class="p">.</span>rs   project walk<span class="p">,</span> incremental build<span class="p">,</span> cargo invocation<span class="p">,</span> watch mode</code></pre>
+<pre class="code"><code>lex.rs      tokens with byte spans; two modes differing only in what `.` means
+layout.rs   physical lines -&gt; logical lines -&gt; a tree of blocks; validation
+juxt.rs     expression regions; juxtaposed application; the pipe rewrite (which is also partial application)
+rules.rs    keyword tables shared by both directions
+emit.rs     Harsh -&gt; Rust, plus the source map
+unbrace.rs  Rust -&gt; Harsh
+remap.rs    rustc/clippy diagnostics -&gt; Harsh source positions
+driver.rs   project walk, incremental build, cargo invocation, watch mode</code></pre>
 <p>Both directions live in one crate deliberately. They must agree on the carve-out list and the block-kind table, and separate crates would let those drift. That is not hypothetical: a duplicated <code>ALWAYS_SEMI</code> constant in <code>emit.rs</code> once shadowed the shared one in <code>rules.rs</code>, so edits to the shared table silently did nothing. The round-trip test found it; nothing else would have.</p>
 <h3 id="two-layout-rules-do-all-the-work">Two layout rules do all the work</h3>
 <ul>

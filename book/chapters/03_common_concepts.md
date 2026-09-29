@@ -6,7 +6,7 @@ Variables, types, functions, control flow: every language has them, and Rust's v
 
 A variable is immutable unless declared otherwise. This is the first Rust decision that surprises people, so here is the compiler enforcing it:
 
-```
+```rust harsh
 fn main$:
     let x = 5
     println! "x is {}" x
@@ -27,7 +27,7 @@ error[E0384]: cannot assign twice to immutable variable `x`
 
 Read the error the way Rust means it. It is not "you cannot change variables"; it is "you did not say this one would change". The fix is one word:
 
-```
+```rust harsh
 fn main$:
     let mut x = 5
     println! "x is {}" x
@@ -46,7 +46,7 @@ Why the default? Because most values in most programs are never reassigned, and 
 
 You may declare a new variable with the name of an old one. The new one *shadows* the old for the rest of its scope:
 
-```
+```rust harsh
 fn main$:
     let x = 5
     let x = x + 1
@@ -77,7 +77,7 @@ Shadowing is not mutation. Each `let x` is a fresh variable; the earlier one is 
 
 Rust is statically typed: every value has a type known at compile time. Usually the compiler infers it and you write nothing; when it cannot, or when you want a specific size, you annotate.
 
-```
+```rust harsh
 fn main$:
     let a: i32 = -7            // signed 32-bit, the default integer
     let b: u8 = 255            // unsigned 8-bit: 0 to 255
@@ -108,7 +108,7 @@ Integers come in signed (`i8`, `i16`, `i32`, `i64`, `i128`) and unsigned (`u8` �
 
 Adding one to a `u8` holding 255 cannot fit. In a debug build Rust *panics* — stops the program with a message — rather than silently wrapping, which is what most languages do. In a release build it wraps. When you mean wrapping, say so; when you want to know, ask:
 
-```
+```rust harsh
 fn main$:
     let big: u8 = 255
     let bigger = big <- wrapping_add 1
@@ -124,7 +124,7 @@ fn main$:
 
 ## 3.3 Compound types
 
-```
+```rust harsh
 fn main$:
     // A tuple holds a fixed number of values of any types.
     let pair: (i32, &str) = (1, "one")
@@ -148,7 +148,7 @@ A tuple is fixed-length and heterogeneous; you take it apart by destructuring or
 
 ## 3.4 Functions
 
-```
+```rust harsh
 fn greet name: &str:
     println! "hello, {}" name
 
@@ -183,7 +183,7 @@ That last point has a sharp edge. A *statement* does something and produces no v
 
 Here is what a stray one does to a function that meant to return a value:
 
-```
+```rust harsh
 fn plus_one x: i32 -> i32:
     x + 1;
 
@@ -207,7 +207,7 @@ The error is Rust's most-quoted: the signature promises an `i32`, the body ends 
 
 ### `if`
 
-```
+```rust harsh
 fn main$:
     let n = 7
 
@@ -241,7 +241,7 @@ big
 
 The condition must be a `bool` — `if n:` with an integer `n` is a type error, not a truthiness test. And `if` is an expression, so it can sit on the right of a `let`; when it does, every arm must produce the same type, because `kind` has to be *some* one type:
 
-```
+```rust harsh
 fn main$:
     let n = 7
     let kind = if n > 5: "big" else: 0
@@ -260,7 +260,7 @@ error[E0308]: `if` and `else` have incompatible types
 
 Notice the shape of the multi-line `if` in the previous example: the `if` begins its own line after `let sign =`, so its arms indent from *it*. That is the rule everywhere a construct opens in the middle of a line: a block's lines are indented past the column of the construct that opened it, not merely past the statement, and when that would push the block too far right, `=` ends its line instead and the opener starts its own. Every control-flow construct also has the inline shape chapter 2 showed for blocks:
 
-```
+```rust harsh
 fn main$:
     let n = 7
 
@@ -305,7 +305,7 @@ odd many 1 small small 3
 
 ### Loops
 
-```
+```rust harsh
 fn main$:
     // `loop` repeats until `break`, and `break` can carry the loop's value.
     let mut counter = 0

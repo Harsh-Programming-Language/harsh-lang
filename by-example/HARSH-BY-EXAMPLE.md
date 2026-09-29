@@ -31,7 +31,7 @@ rewritten in Harsh. `ATTRIBUTION.md` has the licence and the details.
 
 The whole program:
 
-```
+```rust harsh
 fn main$:
     println! "Hello, world!"
 ```
@@ -50,7 +50,7 @@ how every call in Harsh is written, macro or function.
 
 ## 1.2 Comments
 
-```
+```rust harsh
 fn main$:
     // A line comment runs from the slashes to the end of the line.
     let x = 5
@@ -72,7 +72,7 @@ including in the middle of an expression. Block comments nest.
 
 The string comes first, then the values that fill its holes:
 
-```
+```rust harsh
 fn main$:
     // Each `{}` is filled by the next argument, juxtaposed after the string.
     println! "{} days" 31
@@ -118,7 +118,7 @@ it is an operator, so it needs the parentheses when used as an argument.
 Most types cannot be printed until you say how. The quickest way is to derive
 the programmer's spelling:
 
-```
+```rust harsh
 // `Debug` is derived: it prints a value the way a programmer reads it.
 #[derive Debug]
 struct Point\ x: i32, y: i32
@@ -159,7 +159,7 @@ Written over several lines, the fields simply go beneath:
 `Display` is the spelling meant for whoever reads the output, and you write it
 yourself:
 
-```
+```rust harsh
 use std.fmt
 
 struct Point\ x: i32, y: i32
@@ -190,7 +190,7 @@ Once a type has `Display`, `{}` works on it, and `to_string$` comes free.
 
 ## 2.1 Literals and operators
 
-```
+```rust harsh
 fn main$:
     // A suffix names the type; an underscore is a spacer.
     let big = 1_000_000u64
@@ -227,7 +227,7 @@ isolated, so it is `println! "{}" (1 + 2 * 3)`.
 
 ## 2.2 Tuples
 
-```
+```rust harsh
 // A tuple struct: its fields juxtapose, like any application.
 // (Parens would hold *one* payload: `struct Wrapped (i32, i32)` has a
 // single field that is a pair.)
@@ -274,7 +274,7 @@ and reaching a field by number is `m <- 0`.
 
 ## 2.3 Arrays and slices
 
-```
+```rust harsh
 fn main$:
     // An array: fixed length, all one type.
     let xs: [i32; 5] = [1, 2, 3, 4, 5]
@@ -314,7 +314,7 @@ A slice borrows a run of it: `&xs[1..4]`.
 Reading past the end is a panic, which is to say it stops rather than
 returning something wrong:
 
-```
+```rust harsh
 fn main$:
     let xs = [1, 2, 3]
     let n = 5
@@ -332,7 +332,7 @@ thread 'main' panicked at out_of_range.hrs:5:20:
 
 ## 3.1 Structures
 
-```
+```rust harsh
 #[derive Debug]
 struct Person
     name: String
@@ -388,7 +388,7 @@ constructing**, read backwards.
 
 ## 3.2 Enums
 
-```
+```rust harsh
 // A variant can carry nothing, a payload, or named fields.
 #[derive Debug]
 enum Event
@@ -440,7 +440,7 @@ arms then go beneath, or inline after the `\`:
 
 ## 3.3 Constants
 
-```
+```rust harsh
 // A `const` is inlined wherever it is used; a `static` has one address.
 const THRESHOLD: i32 = 10
 static LANGUAGE: &str = "Harsh"
@@ -466,7 +466,7 @@ their type, and both are written at the top level or inside a function.
 
 ## 4.1 Bindings
 
-```
+```rust harsh
 fn main$:
     // A binding is immutable unless it says otherwise.
     let x = 1
@@ -515,7 +515,7 @@ so: as a scope of its own, as a closure's body, as a value.
 Assigning to a binding that never said `mut` is refused before the program
 runs:
 
-```
+```rust harsh
 fn main$:
     let x = 1
     x = 2
@@ -541,7 +541,7 @@ For more information about this error, try `rustc --explain E0384`.
 
 ## 4.2 Types
 
-```
+```rust harsh
 fn main$:
     // An annotation names the type; otherwise it is inferred.
     let n: u8 = 200
@@ -581,7 +581,7 @@ uses it. Items are not statements, and their order does not matter.
 
 ## 5.1 if and else
 
-```
+```rust harsh
 fn main$:
     let n = 7
 
@@ -613,7 +613,7 @@ Each `else` answers the nearest open `if`.
 
 ## 5.2 Loops
 
-```
+```rust harsh
 fn main$:
     // `loop` runs until something breaks out of it -- and `break` may
     // carry a value, which makes the loop an expression.
@@ -664,7 +664,7 @@ can leave an outer loop rather than the one it stands in.
 
 ## 5.3 match
 
-```
+```rust harsh
 fn describe (n: i32) -> String:
     match n\
         0 => String.from "zero"
@@ -707,7 +707,7 @@ backwards. A guard is an `if` after the pattern, and `_` catches the rest.
 
 ## 5.4 if let, let else, while let
 
-```
+```rust harsh
 fn main$:
     let some: Option<i32> = Some 7
     let none: Option<i32> = None
@@ -753,7 +753,7 @@ is simply there.
 
 ## 6.1 Declaring and calling
 
-```
+```rust harsh
 // One group per parameter. A single parameter may drop its parentheses.
 fn double n: i32 -> i32:
     n * 2
@@ -805,7 +805,7 @@ looks like.
 
 ## 6.2 Methods
 
-```
+```rust harsh
 struct Rect
     w: f64
     h: f64
@@ -846,7 +846,7 @@ value is `r <- area$`. An associated function is reached through the type,
 
 ## 6.3 Closures
 
-```
+```rust harsh
 fn apply (f: impl Fn i32 -> i32) (to: i32) -> i32:
     f to
 
@@ -907,7 +907,7 @@ part that is Harsh's own.
 
 ## 7.1 The pipes
 
-```
+```rust harsh
 fn sub (a: i32) (b: i32) (c: i32) -> i32:
     a - b - c
 
@@ -958,7 +958,7 @@ an application, isolate it: `(f a) |> g`.
 
 ## 7.2 Partial application
 
-```
+```rust harsh
 fn label (prefix: &str) (name: &str) (suffix: &str) -> String:
     format! "{prefix}{name}{suffix}"
 
@@ -1000,7 +1000,7 @@ Your own, written in Harsh.
 
 #### Declarative macros
 
-```
+```rust harsh
 // A Harsh macro is matched and expanded by `hrs`, in Harsh, before anything
 // is transpiled. The mark is `~`.
 macro_rules~ greet
@@ -1113,7 +1113,7 @@ before calling. Rust's operators follow in Rust's order, then the pipes. A
 negative or dereferenced argument is parenthesised: `f (-1)`, `f (*x)`. The
 full table is the Book's appendix *Precedence*.
 
-```
+```rust harsh
 struct Switch<'a>
     flag: &'a mut bool
 
@@ -1178,7 +1178,7 @@ idea; the only thing to learn is how the spellings look.
 
 ## 8.1 Moving
 
-```
+```rust harsh
 fn consume (s: String) -> usize:
     s <- len$
 
@@ -1213,7 +1213,7 @@ and small copyable values such as integers are copied rather than moved.
 
 Using a name after it has been moved is refused before the program runs:
 
-```
+```rust harsh
 fn consume (s: String):
     println! "{s}"
 
@@ -1256,7 +1256,7 @@ The error arrives on the Harsh line that caused it, not on the generated Rust.
 
 ## 8.2 Borrowing
 
-```
+```rust harsh
 // A borrow reads without taking ownership.
 fn length (s: &String) -> usize:
     s <- len$
@@ -1299,7 +1299,7 @@ argument is isolated — `length (&greeting)`, `shout (&mut greeting)`.
 
 ## 8.3 Slices
 
-```
+```rust harsh
 // A slice borrows a run of something rather than the whole of it.
 fn first_word (s: &str) -> &str:
     let bytes = s <- as_bytes$
@@ -1331,7 +1331,7 @@ value, but would as an argument, by the same operator rule.
 
 ## 9.1 Generics
 
-```
+```rust harsh
 // A generic function: one definition, many types.
 fn largest<T: PartialOrd + Copy> (items: &[T]) -> T:
     let mut best = items[0]
@@ -1367,7 +1367,7 @@ Generic parameters sit in `<>` after the name, with their bounds, exactly as
 in Rust. A bound long enough to be awkward goes in a bracketed `where` clause, which is
 Harsh's own spelling:
 
-```
+```rust harsh
 // A bound long enough to be awkward goes in a bracketed `where` clause.
 // Brackets suppress layout, so the clause may span lines and its own `:`
 // cannot be mistaken for a block opener.
@@ -1391,7 +1391,7 @@ and its colons cannot be mistaken for openers.
 
 ## 9.2 Traits
 
-```
+```rust harsh
 trait Greet
     // A method with no body: whoever implements the trait writes it.
     fn name (&self) -> String
@@ -1438,7 +1438,7 @@ compile time.
 
 ## 9.3 Operators are traits
 
-```
+```rust harsh
 use std.ops.Add
 
 #[derive Debug Clone Copy]
@@ -1478,7 +1478,7 @@ so in its return type, and the caller has to deal with it.
 
 ## 10.1 Option
 
-```
+```rust harsh
 fn first_even (xs: &[i32]) -> Option<i32>:
     for &x in xs <- iter$:
         if x % 2 == 0:
@@ -1523,7 +1523,7 @@ like any other, so the payload is juxtaposed and an expression is isolated.
 
 ## 10.2 Result
 
-```
+```rust harsh
 fn parse_age (text: &str) -> Result<u32, String>:
     // `map_err` turns one error into another.
     let n: u32 =
@@ -1558,7 +1558,7 @@ error out of it.
 
 ## 10.3 An error type of your own
 
-```
+```rust harsh
 use std.fmt
 
 // An error of one's own is a type with a `Display`.
@@ -1612,7 +1612,7 @@ declared with: `ConfigError.Bad\ key, value`.
 
 ## 11.1 Vectors
 
-```
+```rust harsh
 fn main$:
     // `vec!` builds one; brackets are Rust's and pass through.
     let mut v = vec! 1 2 3
@@ -1652,7 +1652,7 @@ list of values, so it goes in braces and reaches the macro as written.
 
 ## 11.2 Maps
 
-```
+```rust harsh
 use std.collections.HashMap
 
 fn main$:
@@ -1686,7 +1686,7 @@ collect into a `Vec` and sort it.
 
 ## 11.3 Strings
 
-```
+```rust harsh
 fn main$:
     // `&str` borrows; `String` owns.
     let borrowed = "hello"
@@ -1725,7 +1725,7 @@ character boundary, so counting characters is `chars$ <- count$` rather than
 
 # 12. Modules
 
-```
+```rust harsh
 // A module groups items. Its body follows the header, with no mark.
 mod shapes
     // Items are private to the module unless they say `pub`.
@@ -1765,7 +1765,7 @@ import is written with parentheses: `use std.io.(Read, Write)`.
 
 Privacy is checked, so reaching a field that is not `pub` is refused:
 
-```
+```rust harsh
 mod counter
     pub struct Counter
         // Not `pub`: only this module may touch it.
@@ -1799,7 +1799,7 @@ transpiles the tree and cargo compiles it.
 
 # 13. Threads and channels
 
-```
+```rust harsh
 use std.thread
 use std.sync.mpsc
 
@@ -1854,7 +1854,7 @@ return a `JoinHandle`, and rustc would say so.
 
 # 14. Tests
 
-```
+```rust harsh
 fn add (a: i32) (b: i32) -> i32:
     a + b
 
@@ -1933,7 +1933,7 @@ A project keeps its Harsh in `src/**.hrs`. The generated Rust goes to
 One manifest, ordinary dependencies, nothing extra to ignore — cargo already
 ignores `/target`.
 
-```
+```rust harsh
 // This is what `hrs new` writes for you, and what `hrs run` builds.
 fn main$:
     let args: Vec<String> = std.env.args$ <- collect$
@@ -1962,7 +1962,7 @@ existing crate is brought across.
 
 ## 16.1 g~
 
-```
+```rust harsh
 fn main$:
     // A comprehension: the value, then where it comes from.
     let squares: Vec<i32> = (g~ x * x for x in 1..6) <- collect$
@@ -1997,7 +1997,7 @@ it takes the iterable by value; write `xs <- iter$` to borrow instead.
 
 ## 16.2 Conditions, and several `for`s
 
-```
+```rust harsh
 fn main$:
     // `if`s filter, and every `if` belongs to the `for` before it.
     let picked: Vec<i32> = (g~ x for x in 0..30 if x % 3 == 0 if x % 2 == 1) <- collect$
@@ -2018,7 +2018,7 @@ bound up to that point — `y > x` uses both — and runs as early as it can.
 
 ## 16.3 Where a condition may go
 
-```
+```rust harsh
 fn main$:
     let triples =
         list~ (a, b, c)
@@ -2037,7 +2037,7 @@ Every `for` makes one more name available, and a condition can use only the
 names bound up to its place — so a test goes after the last `for` whose name it
 uses. Attached to `for a`, the same test cannot see `b`:
 
-```
+```rust harsh
 fn main$:
     // The test needs b and c, but it is attached to `for a`,
     // where neither exists yet.
@@ -2081,7 +2081,7 @@ For more information about this error, try `rustc --explain E0425`.
 
 ## 16.4 Collecting: list~, set~, dict~
 
-```
+```rust harsh
 use std.collections.HashMap
 use std.collections.HashSet
 
@@ -2115,7 +2115,7 @@ written out.
 
 ## 16.5 Laying one out
 
-```
+```rust harsh
 fn main$:
     // Every line indented beneath the call belongs to it, so a long one is
     // laid out one clause per line. Pythagorean triples:
@@ -2140,7 +2140,7 @@ wins in that file. The prelude's is still there as `hrs_std.g~`.
 
 ## 16.6 Lazy, and by value
 
-```
+```rust harsh
 fn main$:
     // `g~` is an iterator: nothing runs until something asks for values.
     // So an endless source is fine, as long as something stops asking.
@@ -2166,7 +2166,7 @@ value; give it a borrow, `(words <- iter$)`, to keep the collection.
 
 ## 16.7 What it stands for
 
-```
+```rust harsh
 fn main$:
     let wanted: Vec<i32> =
         (g~ x * 10 + y
@@ -2198,7 +2198,7 @@ the innermost flattened. The `flatten$` is part of the generator, so it is
 never written by hand; the `collect$` is not, because a generator is lazy —
 write it, or use `list~`. Chapter 15 of the Book shows the whole expansion.
 
-```
+```rust harsh
 fn main$:
     let scores = vec! 72 45 91 60 88
 
@@ -2232,7 +2232,7 @@ themselves, `m~` and `v~`, need no `use`: they are part of the language.
 hrs_std = "0.1"
 ```
 
-```
+```rust harsh
 fn main$:
     // A matrix: spaces between entries, `;` between rows.
     let a = m~ [1 2 3; 4 5 6]
@@ -2282,7 +2282,7 @@ A matrix prints its shape and its element type, as Julia does.
 hrs_std = "0.1"
 ```
 
-```
+```rust harsh
 fn main$:
     let a = m~ [1.0 2.0; 3.0 4.0]
     let b = m~ [0.0 1.0; 1.0 0.0]
@@ -2325,7 +2325,7 @@ still there on the next line. Without it, the product would consume them.
 hrs_std = "0.1"
 ```
 
-```
+```rust harsh
 use hrs_std.(UniformScaling, I)
 
 fn main$:
@@ -2359,7 +2359,7 @@ needs, and `I` is the identity itself — Julia's own names.
 hrs_std = "0.1"
 ```
 
-```
+```rust harsh
 fn main$:
     let a = m~ [1 2; 3 4]
     // Any matrix is a block, so the literal joins matrices as it joins numbers.
@@ -2389,7 +2389,7 @@ is isolated in parentheses, `(&a)`, as any argument with an operator is.
 hrs_std = "0.1"
 ```
 
-```
+```rust harsh
 fn main$:
     // 2x + y = 5 and x + y = 3, as a matrix and a vector.
     let a = m~ [2.0 1.0; 1.0 1.0]
@@ -2425,7 +2425,7 @@ every collection in Harsh.
 hrs_std = "0.1"
 ```
 
-```
+```rust harsh
 use hrs_std.Matrix
 
 fn main$:
@@ -2463,7 +2463,7 @@ a comprehension. Chapter 16 of the Book explains each step.
 hrs_std = "0.1"
 ```
 
-```
+```rust harsh
 fn main$:
     let mut a = m~ [1 2 3; 4 5 6; 7 8 9]
     // The method copies, as Julia's `a[1:2, :]` does. `..` alone is Julia's `:`.
@@ -2522,7 +2522,7 @@ part of a matrix is a `slice` or a `view`.
 hrs_std = "0.1"
 ```
 
-```
+```rust harsh
 fn relu (x: f64) -> f64:
     x <- max 0.0
 
@@ -2587,7 +2587,7 @@ method, `a <- map f`, as `slice` is beneath the index.
 hrs_std = "0.1"
 ```
 
-```
+```rust harsh
 use hrs_std.UniformScaling
 
 fn main$:

@@ -8,7 +8,7 @@ calling them in `unsafe` — the compiler cannot check C. Strings cross as
 original's examples link to the `snappy` library; these use the C standard
 library, which every program is linked with already.
 
-```
+```rust harsh
 use std.ffi.( CStr, CString)
 use std.os.raw.( c_char, c_int)
 
@@ -41,7 +41,7 @@ terminated.
 
 A callback: C's `qsort` sorting an array with a comparison written in Harsh.
 
-```
+```rust harsh
 use std.ffi.c_void
 use std.os.raw.c_int
 

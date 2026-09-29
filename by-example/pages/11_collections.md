@@ -2,7 +2,7 @@
 
 ## 11.1 Vectors
 
-```
+```rust harsh
 fn main$:
     // `vec!` builds one; brackets are Rust's and pass through.
     let mut v = vec! 1 2 3
@@ -42,7 +42,7 @@ list of values, so it goes in braces and reaches the macro as written.
 
 ## 11.2 Maps
 
-```
+```rust harsh
 use std.collections.HashMap
 
 fn main$:
@@ -76,7 +76,7 @@ collect into a `Vec` and sort it.
 
 ## 11.3 Strings
 
-```
+```rust harsh
 fn main$:
     // `&str` borrows; `String` owns.
     let borrowed = "hello"

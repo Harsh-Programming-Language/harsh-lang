@@ -14,7 +14,7 @@ than `&String`, `&[T]` rather than `&Vec<T>`, `&T` rather than `&Box<T>`. The
 caller's `&String` coerces to `&str` on its own, so the function accepts more
 — a string literal, a slice of another string — at no cost.
 
-```
+```rust harsh
 // `&str`, not `&String`: every string the caller has will do.
 fn three_vowels (word: &str) -> bool:
     let mut count = 0
@@ -52,7 +52,7 @@ To build a string from pieces, `format!` is usually clearer than a series of
 built in a loop, or where every allocation counts, pushing into one `String`
 remains the faster choice.
 
-```
+```rust harsh
 fn greet (name: &str) -> String:
     // The shape of the result, at a glance.
     format! "Hello {name}!"
@@ -82,7 +82,7 @@ Rust has no constructors in the language: by convention, an associated
 function `new` builds a value. When a type has an obvious default, implement
 `Default` too, and let `new` call it or be it.
 
-```
+```rust harsh
 #[derive Debug]
 pub struct Second
     value: u64
@@ -122,7 +122,7 @@ every field with its own default; with struct-update syntax, a caller names
 only the fields that differ. Containers and generic code rely on it
 (`unwrap_or_default`, `mem::take`).
 
-```
+```rust harsh
 #[derive Debug Default]
 struct Config
     name: String
@@ -160,7 +160,7 @@ of it — `Vec<T>` to `[T]`, `String` to `str`. Every method of the borrowed vie
 is then available on the owner, and a function written for the view accepts
 the owner too.
 
-```
+```rust harsh
 // Written for the borrowed view: a slice.
 fn total (xs: &[i32]) -> i32:
     xs <- iter$ <- sum$
@@ -190,7 +190,7 @@ early, with `?`, or panicking — goes into the `Drop` of a value created at the
 start: when the function ends, the value goes out of scope, and its destructor
 runs.
 
-```
+```rust harsh
 struct Cleanup
     what: &'static str
 
@@ -231,7 +231,7 @@ without cloning it — take the field out with `std.mem.take` (which leaves the
 type's default in its place) or `std.mem.replace` (which leaves what you give
 it), then build the new variant from it.
 
-```
+```rust harsh
 #[derive Debug]
 enum State
     Draft
@@ -269,7 +269,7 @@ only the one the condition picks — *deferred conditional initialisation* —
 and take a `&dyn Trait` to it. The value lives on the stack; only the reference
 is dynamic.
 
-```
+```rust harsh
 use std.fmt.Display
 
 fn main$:
@@ -311,7 +311,7 @@ carry data, is mapped to one code per variant; a **custom error type** can give
 C a code and, separately, a message as a C string the caller frees. Never let
 a panic cross the boundary.
 
-```
+```rust harsh
 // A flat enum: its discriminant is the code.
 #[repr C]
 #[derive Clone Copy Debug]
@@ -362,7 +362,7 @@ A string that comes from C stays C's: borrow it as `&CStr` with
 `CStr::from_ptr`, for no longer than the call, and keep the `unsafe` to that one
 line — check the pointer, borrow, then work in safe code.
 
-```
+```rust harsh
 use std.ffi.CStr
 use std.os.raw.c_char
 
@@ -401,7 +401,7 @@ keep the unsafe code to the call; if C writes into the buffer, pass a
 `Vec<u8>` instead; and, unless the API says otherwise, keep ownership on the
 Rust side.
 
-```
+```rust harsh
 use std.ffi.CString
 use std.os.raw.c_char
 
@@ -430,7 +430,7 @@ block's, visible in the indentation.
 `IntoIterator`. It can extend a collection, be chained onto an iterator, or be
 looped over — no `if let` needed.
 
-```
+```rust harsh
 fn main$:
     let mut names = vec! "Ada" "Grace"
     let extra: Option<&str> = Some "Barbara"
@@ -462,7 +462,7 @@ A `move` closure takes ownership of everything it uses. To decide variable by
 variable — clone this one, borrow that one — prepare them in a block just
 before the closure, and let the closure be the block's value.
 
-```
+```rust harsh
 use std.rc.Rc
 
 fn main$:
@@ -496,7 +496,7 @@ breaking everyone who builds it with a literal. Mark it `#[non_exhaustive]`
 (or give it one private field) and provide a constructor: fields can then be
 added in a later version.
 
-```
+```rust harsh
 mod shapes
     // Fields may be added later without breaking anyone: no literal outside.
     #[non_exhaustive]
@@ -530,7 +530,7 @@ test compiles the function but never calls it, so the setup is never written,
 and the example shows only what it documents. A helper that builds the value
 is the alternative when the example must run.
 
-```
+```rust harsh
 pub struct Connection
     pub name: String
 
@@ -567,7 +567,7 @@ When data must be prepared mutably and then only read, shadow it: build it
 in a nested block (or a mutable binding) and rebind it immutable. The
 compiler then refuses any later change.
 
-```
+```rust harsh
 fn main$:
     // Prepared mutably in a block, then bound immutable.
     let data = do:
@@ -599,7 +599,7 @@ A function that takes ownership of an argument and may fail should hand the
 argument back in its error, so the caller can try again without having cloned
 it first — as `String::from_utf8` returns the bytes in its `FromUtf8Error`.
 
-```
+```rust harsh
 // The argument, handed back in the error.
 #[derive Debug]
 pub struct SendError String

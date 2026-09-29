@@ -1,6 +1,6 @@
 # 13. Threads and channels
 
-```
+```rust harsh
 use std.thread
 use std.sync.mpsc
 

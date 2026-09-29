@@ -46,7 +46,7 @@ the allocation.
 
 *Original: [Final Code](https://doc.rust-lang.org/nomicon/arc-mutex/arc-final.html)*
 
-```
+```rust harsh
 use std.marker.PhantomData
 use std.ops.Deref
 use std.ptr.NonNull

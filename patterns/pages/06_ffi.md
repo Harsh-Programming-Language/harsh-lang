@@ -12,7 +12,7 @@ inside, and every operation is a function taking that pointer. Ownership is
 explicit — one function creates the object (`Box::into_raw`), one destroys it
 (`Box::from_raw`).
 
-```
+```rust harsh
 // An opaque object for C: C holds the pointer, never the inside.
 pub struct Counter
     count: u64
@@ -55,7 +55,7 @@ Rust types with lifetimes do not cross into C. Wrap the owner and the state
 that borrows from it into one owned type — here, a collection and a cursor
 over it — and expose that single type instead.
 
-```
+```rust harsh
 // For C: one owned type, where Rust would have a collection and an iterator
 // borrowing from it -- a lifetime C cannot express.
 pub struct Words

@@ -87,7 +87,7 @@ written by mistake while this book's companions were written:
 
 ## The rules at work
 
-```
+```rust harsh
 struct Switch<'a>
     flag: &'a mut bool
 

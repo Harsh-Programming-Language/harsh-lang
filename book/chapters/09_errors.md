@@ -6,7 +6,7 @@ Rust has two kinds of error and refuses to blur them. An *unrecoverable* error i
 
 You can panic on purpose:
 
-```
+```rust harsh
 fn main$:
     println! "about to fail"
     panic! "crash and burn"
@@ -22,7 +22,7 @@ The program printed its first line, reached `panic!`, printed the message with t
 
 Most panics are not written; they are hit:
 
-```
+```rust harsh
 fn main$:
     let v = vec! 1 2 3
     v[99];                          // the `;` discards the value; the index still runs
@@ -39,7 +39,7 @@ Chapter 8's index rule, seen from the other side. In C this reads whatever happe
 
 Opening a file can fail for reasons that are nobody's bug. So `File.open` returns a `Result`:
 
-```
+```rust harsh
 enum Result<T, E>
     Ok T
     Err E
@@ -47,7 +47,7 @@ enum Result<T, E>
 
 `Ok` carries the value when the operation worked, `Err` the error when it did not, and the caller takes it apart with `match`, exactly as it would an `Option`:
 
-```
+```rust harsh
 use std.fs.File
 
 fn main$:
@@ -72,7 +72,7 @@ There is no `hello.txt`, so the `Err` arm ran and the program panicked with the 
 
 An `io.Error` says what went wrong, and a program can act on that:
 
-```
+```rust harsh
 use std.fs.File
 use std.io.ErrorKind
 
@@ -102,7 +102,7 @@ Ok(true)
 
 `match` on every `Result` is verbose, and there are two shortcuts for "give me the value or panic":
 
-```
+```rust harsh
 use std.fs.File
 
 fn main$:
@@ -117,7 +117,7 @@ called `Result::unwrap()` on an `Err` value: Os { code: 2, kind: NotFound, messa
 
 `unwrap$` is the `match` above with a generic message. `expect` is the same with *your* message:
 
-```
+```rust harsh
 use std.fs.File
 
 fn main$:
@@ -139,7 +139,7 @@ Prefer `expect`: when it fires, the message says what you were assuming, and tha
 
 The usual answer is that the function that hit the error is not the one that knows what to do about it; it should hand the error up. That is *propagating*, and written by hand it looks like this:
 
-```
+```rust harsh
 use std.fs.File
 use std.io.(self, Read)
 
@@ -173,7 +173,7 @@ The function returns `Result<String, io.Error>`; each step that can fail is matc
 
 `?` after a `Result` means: if it is `Ok`, give me the value; if it is `Err`, return it from this function right now.
 
-```
+```rust harsh
 use std.fs.File
 use std.io.(self, Read)
 
@@ -196,7 +196,7 @@ The same function in three lines. `File.open "hello.txt"?` is the file or an ear
 
 `?` works on `Option` too, returning `None` early:
 
-```
+```rust harsh
 fn last_char_of_first_line text: &str -> Option<char>:
     text <- lines$
          <- next$?
@@ -221,7 +221,7 @@ None
 
 `?` can only be used in a function whose return type it fits — which means not in a `main` that returns nothing:
 
-```
+```rust harsh
 use std.fs.File
 
 fn main$:
@@ -242,7 +242,7 @@ error[E0277]: the `?` operator can only be used in a function that returns `Resu
 
 The compiler says exactly what is missing: `main` returns `()`, and `?` needs somewhere to send the error. `main` may return a `Result`:
 
-```
+```rust harsh
 use std.error.Error
 use std.fs.File
 
@@ -273,7 +273,7 @@ The rule of thumb: panic when the program has reached a state it was not written
 
 That last point is what types are for, and a type can carry a check so that no caller has to repeat it:
 
-```
+```rust harsh
 pub struct Guess
     value: i32
 

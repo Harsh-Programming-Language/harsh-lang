@@ -20,7 +20,7 @@ To an admiring bog!
 
 `src/main.hrs`
 
-```
+```rust harsh
 use std.env
 
 fn main$:
@@ -44,7 +44,7 @@ In file example-filename.txt
 
 `src/main.hrs`
 
-```
+```rust harsh
 use std.env
 use std.fs
 
@@ -87,7 +87,7 @@ Two things at once: give the configuration a type, and give errors a path that i
 
 `src/main.hrs`
 
-```
+```rust harsh
 use std.env
 use std.fs
 
@@ -127,7 +127,7 @@ not enough arguments
 
 `src/main.hrs`
 
-```
+```rust harsh
 use std.env
 use std.fs
 use std.process
@@ -175,7 +175,7 @@ The closure is a *trailing closure with a block body*: `<- unwrap_or_else |err|:
 
 The last refactoring moves the logic out of `main.hrs` into `lib.hrs`, so that it can be tested — a binary's `main` cannot be called from a test, but a library's functions can. Here is the library, tests first, in the shape the finished program will have:
 
-```
+```rust harsh
 use std.env
 use std.error.Error
 use std.fs
@@ -276,7 +276,7 @@ The tests were written before the search functions worked; that order — a fail
 
 `src/main.hrs`
 
-```
+```rust harsh
 use std.env
 use std.process
 
@@ -296,7 +296,7 @@ fn main$:
 
 `src/lib.hrs`
 
-```
+```rust harsh
 use std.env
 use std.error.Error
 use std.fs
@@ -390,7 +390,7 @@ How public, like a frog
 
 `src/main.hrs`
 
-```
+```rust harsh
 use std.env
 use std.process
 
@@ -410,7 +410,7 @@ fn main$:
 
 `src/lib.hrs`
 
-```
+```rust harsh
 use std.env
 use std.error.Error
 use std.fs
@@ -506,7 +506,7 @@ How dreary to be somebody!
 
 `src/main.hrs`
 
-```
+```rust harsh
 use std.env
 use std.process
 
@@ -526,7 +526,7 @@ fn main$:
 
 `src/lib.hrs`
 
-```
+```rust harsh
 use std.env
 use std.error.Error
 use std.fs
@@ -625,7 +625,7 @@ To an admiring bog!
 
 `src/main.hrs`
 
-```
+```rust harsh
 use std.env
 use std.process
 
@@ -645,7 +645,7 @@ fn main$:
 
 `src/lib.hrs`
 
-```
+```rust harsh
 use std.env
 use std.error.Error
 use std.fs

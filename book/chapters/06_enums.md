@@ -6,7 +6,7 @@ A struct says "all of these, together". An *enum* says "exactly one of these". A
 
 An IP address is version four or version six — never both, never neither. That is an enum:
 
-```
+```rust harsh
 #[derive Debug]
 enum IpAddrKind
     V4
@@ -33,7 +33,7 @@ routing V6
 
 The kind alone is not much use; an address has a value. A variant can carry one:
 
-```
+```rust harsh
 #[derive Debug]
 enum IpAddr
     V4 u8 u8 u8 u8
@@ -53,7 +53,7 @@ V4(127, 0, 0, 1) V6("::1")
 
 Variants can take any shape a struct can — and that sentence is the whole of what an enum is. An enum is a *union* of variants, and each variant is one of chapter 5's three forms: a unit-like struct, a record struct, or a tuple struct, spelled exactly as the struct of that form is spelled, with the word `struct` and the name's own line taken away. (A type built this way — a choice among bundles — is what Haskell and its relatives call an *algebraic data type*; Rust's enums are that, with the word left out.)
 
-```
+```rust harsh
 #[derive Debug]
 enum Message
     Quit                          // a unit-like struct
@@ -91,7 +91,7 @@ calling ChangeColor(0, 160, 255)
 
 > **Harsh —** `Quit` is a unit-like struct; `Move` with `x` and `y` beneath it is a record struct; `Write String` and `ChangeColor i32 i32 i32` are tuple structs, the name applied to the payload's types. Each is written as chapter 5 wrote it, and each has the inline form chapter 5 had too — `Move\ x: i32, y: i32` on one line — so the same enum reads either way, and which to use is the same judgement as for a struct: what the names and their lengths make clearest.
 
-```
+```rust harsh
 enum Message
     Quit
     Move\ x: i32, y: i32
@@ -114,7 +114,7 @@ moved to 1,2
 
 Rust has no null. Where another language returns a value that might be null, Rust returns a value that might be *absent*, and says so in the type:
 
-```
+```rust harsh
 fn main$:
     let some_number = Some 5
     let some_char = Some 'e'
@@ -130,7 +130,7 @@ Some(5) Some('e') None
 
 What `Option` buys you is that an `Option<i8>` is *not* an `i8`, and the compiler will not let you treat it as one:
 
-```
+```rust harsh
 fn main$:
     let x: i8 = 5
     let y: Option<i8> = Some 5
@@ -158,7 +158,7 @@ In a language with null, `x + y` compiles and fails at runtime when `y` happens 
 
 `match` takes a value and a list of *arms*, each a pattern and the code to run when the pattern fits. The first arm whose pattern matches wins:
 
-```
+```rust harsh
 enum Coin
     Penny
     Nickel
@@ -193,7 +193,7 @@ Lucky penny!
 
 When a variant carries data, the pattern names it and the arm can use it:
 
-```
+```rust harsh
 #[derive Debug]
 enum UsState
     Alabama
@@ -229,7 +229,7 @@ State quarter from Alaska!
 
 Now the `Option` from the previous section can be used:
 
-```
+```rust harsh
 fn plus_one x: Option<i32> -> Option<i32>:
     match x\
         None => None
@@ -252,7 +252,7 @@ Some(6) None
 
 Leave a case out and the compiler stops you:
 
-```
+```rust harsh
 fn plus_one x: Option<i32> -> Option<i32>:
     match x\
         Some i => Some (i + 1)
@@ -278,7 +278,7 @@ Every possible value must be covered by some arm. This is what makes `Option` sa
 
 When only some values matter, the last arm can catch the rest:
 
-```
+```rust harsh
 fn add_fancy_hat$:
     println! "fancy hat"
 fn remove_fancy_hat$:
@@ -315,7 +315,7 @@ move 4 spaces
 
 A `match` with one arm that matters and a `_ => ()` is a lot of lines for "if this is a `Some`, do this":
 
-```
+```rust harsh
 fn main$:
     let config_max = Some 3u8
 
@@ -339,7 +339,7 @@ The maximum is configured to be 3
 
 `if let` takes an `else`, which runs for everything the pattern did not match:
 
-```
+```rust harsh
 #[derive Debug]
 enum UsState
     Alabama
@@ -370,7 +370,7 @@ State quarter from Alabama!
 
 Sometimes the pattern is a guard at the top of a function: if the value has the right shape, carry on with its contents; otherwise leave. `let … else` is that, without nesting the rest of the function inside an `if`:
 
-```
+```rust harsh
 #[derive Debug]
 enum UsState
     Alabama

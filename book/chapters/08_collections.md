@@ -6,7 +6,7 @@ The standard library's collections hold many values on the heap, so they can gro
 
 A `Vec<T>` is a list of values of one type, stored next to each other, growable:
 
-```
+```rust harsh
 fn main$:
     let v: Vec<i32> = Vec.new$          // empty: the type must be written
     let w = vec! 1 2 3              // from values: the type is inferred
@@ -27,7 +27,7 @@ fn main$:
 
 There are two ways to read an element, and the difference is what happens when it is not there:
 
-```
+```rust harsh
 fn main$:
     let v = vec! 1 2 3 4 5
     let third: &i32 = &v[2]             // index: panics if out of range
@@ -50,7 +50,7 @@ None Some(1)
 
 `&v[2]` is indexing: a reference to the third element, and a *panic* if there is no third element. `v <- get 2` returns an `Option<&i32>`: `Some` with the reference, or `None`. Which to use is a decision about the program, not about the vector. Index when an out-of-range access is a bug in your logic and should stop the program loudly; `get` when it is an ordinary event — user input, say — that the code should handle. Here is the loud version:
 
-```
+```rust harsh
 fn main$:
     let v = vec! 1 2 3 4 5
     let does_not_exist = v <- get 100
@@ -72,7 +72,7 @@ The program printed `None` for `get 100`, then reached `&v[100]` and stopped, wi
 
 Chapter 4's rule applies, and the vector is where it first surprises people:
 
-```
+```rust harsh
 fn main$:
     let mut v = vec! 1 2 3 4 5
     let first = &v[0]
@@ -98,7 +98,7 @@ Holding a reference to the first element and then pushing looks harmless — the
 
 To visit every element, borrow the vector and loop:
 
-```
+```rust harsh
 fn main$:
     let v = vec! 100 32 57
 
@@ -126,7 +126,7 @@ fn main$:
 
 A vector holds one type. When you need several, make the one type an enum:
 
-```
+```rust harsh
 #[derive Debug]
 enum SpreadsheetCell
     Int i32
@@ -159,7 +159,7 @@ float 10.12
 
 You have used `String` since chapter 1. Here is what it is: a `Vec<u8>` that is guaranteed to hold valid UTF-8, with methods that know it. That guarantee is the source of everything that seems awkward about strings in Rust, and also of everything that is not a bug.
 
-```
+```rust harsh
 fn main$:
     let mut s = String.new$
     let data = "initial contents"
@@ -186,7 +186,7 @@ bar! initial contents initial contents initial contents
 
 `+` joins strings, with a rule that is easy to misread:
 
-```
+```rust harsh
 fn main$:
     let s1 = String.from "Hello, "
     let s2 = String.from "world!"
@@ -209,7 +209,7 @@ tic-tac-toe tic tac toe
 
 ### Why you cannot index a string
 
-```
+```rust harsh
 fn main$:
     let s1 = String.from "hello"
     let h = s1[0]
@@ -238,7 +238,7 @@ error[E0277]: the type `String` cannot be indexed by `{integer}`
 
 What there is: a *byte range* slice, and iterators over characters or bytes:
 
-```
+```rust harsh
 fn main$:
     let hello = "Здравствуйте"
     let s = &hello[0..4]          // four bytes: two Cyrillic characters
@@ -267,7 +267,7 @@ fn main$:
 
 A `HashMap<K, V>` stores values under keys and finds a value by hashing its key:
 
-```
+```rust harsh
 use std.collections.HashMap
 
 fn main$:
@@ -301,7 +301,7 @@ Yellow: 50
 
 Insert moves what it is given:
 
-```
+```rust harsh
 use std.collections.HashMap
 
 fn main$:
@@ -333,7 +333,7 @@ error[E0382]: borrow of moved value: `field_name`
 
 Inserting under an existing key overwrites; sometimes that is not what you want:
 
-```
+```rust harsh
 use std.collections.HashMap
 
 fn main$:
@@ -353,7 +353,7 @@ Some(25) Some(50)
 
 `entry` is the answer: `scores <- entry key` is a handle to the slot for that key, filled or not, and `or_insert 50` fills it if it is empty and returns a mutable reference to whatever is there either way. So the `Yellow` line inserts and the `Blue` line does nothing, and the `25` survives. That returned reference is what makes `entry` the idiom for counting:
 
-```
+```rust harsh
 use std.collections.HashMap
 
 fn main$:

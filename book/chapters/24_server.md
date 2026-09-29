@@ -26,7 +26,7 @@ The last chapter builds a web server from the standard library alone: a TCP list
 
 `src/main.hrs`
 
-```
+```rust harsh
 use std.fs
 use std.io.(prelude.*, BufReader)
 use std.net.(TcpListener, TcpStream)
@@ -100,7 +100,7 @@ Spawning a thread per connection would fix that and open a denial-of-service hol
 
 `src/main.hrs`
 
-```
+```rust harsh
 use std.fs
 use std.io.(prelude.*, BufReader)
 use std.net.(TcpListener, TcpStream)
@@ -181,7 +181,7 @@ fn handle_connection (mut stream: TcpStream) (served: Arc<Mutex<Vec<String>>>):
 
 `src/lib.hrs`
 
-```
+```rust harsh
 use std.sync.(mpsc, Arc, Mutex)
 use std.thread
 

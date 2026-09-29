@@ -6,7 +6,7 @@ Before the language is taken apart piece by piece, here is one whole program: a 
 
 Reading input from the keyboard is where most languages' toy programs cheat, so this one does not. Run with the guesses `50`, `25`, `37`:
 
-```
+```rust harsh
 use std.io
 use std.cmp.Ordering
 
@@ -40,7 +40,7 @@ Now the same program, walked through.
 
 ## 2.2 Bringing a name into scope
 
-```
+```rust harsh
 use std.io
 ```
 
@@ -48,7 +48,7 @@ The standard library is large and nothing in it is in scope by default except a 
 
 ## 2.3 The secret
 
-```
+```rust harsh
 let secret = 37
 ```
 
@@ -58,7 +58,7 @@ Two things about this `let` will feel strange coming from most languages. First,
 
 ## 2.4 Loop, read, trim, parse
 
-```
+```rust harsh
 loop:
     let mut line = String.new$
     io.stdin$ <- read_line (&mut line) <- expect "read failed"
@@ -74,7 +74,7 @@ The next line is a **method chain**, and it is worth reading slowly because you 
 - `<- read_line (&mut line)` calls `read_line` on that handle, passing `&mut line` — a *mutable reference* to the string, which is how a function is allowed to change a value that belongs to you. The `&mut` is not decoration; without it the call does not compile. That is chapter 4 again.
 - `read_line` does not return the line. It returns a `Result` — a value that is either `Ok(bytes_read)` or `Err(some_error)` — because reading can fail. `<- expect "read failed"` says: if it is `Ok`, give me what is inside; if it is `Err`, stop the program and print this message. It is the bluntest way to handle a `Result`, fine for a toy, and chapter 9 replaces it.
 
-```
+```rust harsh
     let guess: u32 = match line <- trim$ <- parse$:
         Ok n => n
         Err _ => continue
@@ -89,7 +89,7 @@ The line the user typed ends in a newline, so `<- trim$` removes it. `<- parse$`
 
 ## 2.5 Compare and decide
 
-```
+```rust harsh
     match guess <- cmp (&secret)\
         Ordering.Less => println! "higher"
         Ordering.Greater => println! "lower"
@@ -108,7 +108,7 @@ Three arms, one per alternative, and the compiler checks that there are three. T
 
 You have now read a whole program, so this is the moment to say what the shape of it means. There is not much to say, and all of it is one idea: **where a line starts is what it belongs to.**
 
-```
+```rust harsh
 // The same function three times: one block, three spellings.
 
 fn indented (t: bool) -> i32:
@@ -146,7 +146,7 @@ fn main$:
 
 There is one more shape on that page, and it is the one that looks least like other languages:
 
-```
+```rust harsh
 fn greet name: &str -> String:
     format! "hello, {name}"
 

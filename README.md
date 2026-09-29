@@ -2,7 +2,7 @@
 
 Development, issues and merge requests live at [gitlab.com/bahiminin.benoit.dah.opensource/harsh-lang](https://gitlab.com/bahiminin.benoit.dah.opensource/harsh-lang); [github.com/Harsh-Programming-Language/harsh-lang](https://github.com/Harsh-Programming-Language/harsh-lang) is a read-only mirror; the website, written in Harsh, is `site/` and is published from the mirror to [harsh-lang.com](https://harsh-lang.com/).
 
-```
+```text
 #[Ha<rs>.h]
      │  │
      │  └── .h
@@ -21,7 +21,7 @@ Braces are where Harsh starts, not where it stops. It adds four things Rust has 
 
 **Pipes and partial application.** Give a function fewer arguments than it takes, and you get a function waiting for the rest:
 
-```
+```rust harsh
 let double = 2.0 |> scale
 let doubled: Vec<f64> = readings <- iter$ <- map (|&x| double x) <- collect$
 ```
@@ -33,7 +33,7 @@ let doubled: Vec<f64> = readings.iter().map(|&x| double(x)).collect();
 
 **Generator comprehensions.** Say what a collection holds, not how to fill it:
 
-```
+```rust harsh
 let triples =
     list~ (a, b, c)
         for a in 1..20
@@ -50,7 +50,7 @@ let triples: Vec<_> = (1..20)
 
 **Linear algebra, as in Julia.** Julia's matrix literal, Julia's `*`, and Julia's `X \ y`, here fitting a line by least squares:
 
-```
+```rust harsh
 let x = m~ [1.0 1.0; 1.0 2.0; 1.0 3.0]
 let y = v~ [1.0, 2.0, 2.9]
 let beta = x <- solve (&y)
@@ -64,7 +64,7 @@ let beta = x.svd(true, true).solve(&y, 1e-12).unwrap();
 
 The Book teaches all four in chapters 14 to 16; the Language Guide has a section on each; *Harsh by Example* has a page on each; Harshlings has exercises.
 
-```
+```sh
 cargo install harsh-lang            # hrs, hrs-from, hrs-remap, hrs-lsp
 hrs new hello && cd hello && hrs run
 ```
@@ -81,7 +81,7 @@ The transpiler understands block structure and nothing else. There is no semanti
 
 ## Build
 
-```
+```sh
 cargo build --release
 ```
 
@@ -91,19 +91,19 @@ Produces a library plus four binaries: `hrs` (the transpiler), `hrs-from` (the R
 
 Transpile a file, writing both the Rust output and a source map:
 
-```
+```sh
 hrs src/main.hrs -o generated/main.rs --map generated/main.map.json
 ```
 
 Build the generated crate and remap rustc's diagnostics back to your `.hrs` source:
 
-```
+```sh
 cargo build --message-format=json | hrs-remap --map generated/main.map.json
 ```
 
 The same works for clippy, which is where most lint value comes from without writing any lints:
 
-```
+```sh
 cargo clippy --message-format=json | hrs-remap --map generated/main.map.json
 ```
 
@@ -111,7 +111,7 @@ Diagnostics report the correct line *and column* in the original file, because t
 
 ## Working on a project
 
-```
+```sh
 hrs new myapp          scaffold a project laid out for Harsh
 cd myapp
 hrs run                transpile, then cargo run
@@ -143,7 +143,7 @@ Transpiling is incremental by modification time. Every diagnostic — from rustc
 
 ## Bringing existing Rust in
 
-```
+```sh
 hrs-from existing.rs -o existing.hrs
 ```
 
@@ -173,7 +173,7 @@ Each `.hrs` file has its generated Rust alongside it.
 
 To run one:
 
-```
+```sh
 cargo new --bin demo
 hrs examples/general.hrs -o demo/src/main.rs --map demo/target/hrs.map.json
 cd demo && cargo run

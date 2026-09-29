@@ -5,7 +5,7 @@ idea; the only thing to learn is how the spellings look.
 
 ## 8.1 Moving
 
-```
+```rust harsh
 fn consume (s: String) -> usize:
     s <- len$
 
@@ -40,7 +40,7 @@ and small copyable values such as integers are copied rather than moved.
 
 Using a name after it has been moved is refused before the program runs:
 
-```
+```rust harsh
 fn consume (s: String):
     println! "{s}"
 
@@ -83,7 +83,7 @@ The error arrives on the Harsh line that caused it, not on the generated Rust.
 
 ## 8.2 Borrowing
 
-```
+```rust harsh
 // A borrow reads without taking ownership.
 fn length (s: &String) -> usize:
     s <- len$
@@ -126,7 +126,7 @@ argument is isolated — `length (&greeting)`, `shout (&mut greeting)`.
 
 ## 8.3 Slices
 
-```
+```rust harsh
 // A slice borrows a run of something rather than the whole of it.
 fn first_word (s: &str) -> &str:
     let bytes = s <- as_bytes$

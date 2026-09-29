@@ -6,7 +6,7 @@ Harsh adds three things to Rust that Rust has no syntax for, and this chapter an
 
 Everything so far has reached into a value with `<-`: a method on the left of the arrow's data. The pipes go the other way. `|>` takes the value on its left and hands it to the *function* on its right; `<|` does the same from the other side. Where a chain says *this value, then this method on it*, a pipe says *this value, into this function*:
 
-```
+```rust harsh
 fn tokenize text: &str -> Vec<String>:
     text <- split_whitespace$
          <- map (|w| w <- to_lowercase$)
@@ -47,7 +47,7 @@ THE CAT SAT ON THE MAT / THE CAT SAT ON THE MAT
 
 The pipes do one more thing, and it is the thing the arrow cannot do. A pipe may carry several values — `2.0 0.5 3.0 |> scale` — and when it carries *fewer* than the function takes, the missing ones are **deferred**: the result is a closure waiting for the rest.
 
-```
+```rust harsh
 fn scale (factor: f64) (offset: f64) (x: f64) -> f64:
     x * factor + offset
 
@@ -85,7 +85,7 @@ fn main$:
 
 > **Harsh —** `|>` fills a function's parameters from the left, `<|` from the right, and the two together leave a hole in the middle. The result is one flat closure over whatever was not filled — a value like any other: bind it, pass it to `map`, return it from a function. There is no placeholder token; the hole is what is left. Harsh knows how many parameters `scale` takes because `scale` is declared in your project; for a function it cannot see into — the standard library, a crate you depend on — a pipe is a plain call with the values you gave, and the compiler says so if the count was wrong. Give a project function *more* than it takes and Harsh itself refuses:
 
-```
+```rust harsh
 fn sub (a: i32) (b: i32) (c: i32) -> i32:
     a - b - c
 
@@ -106,7 +106,7 @@ error: `sub` takes 3 parameter(s) and 4 were piped in
 
 `|>` fills a function's parameters from the left; `<|` fills them from the right. Used together they fill both ends and leave the middle open:
 
-```
+```rust harsh
 fn label (prefix: &str) (name: &str) (suffix: &str) -> String:
     format! "{prefix}{name}{suffix}"
 
@@ -135,7 +135,7 @@ Dr. Grace.
 
 A pipe's result is a value, so pipes chain: each stage's output is the next stage's input, left to right, and a partial application makes a stage out of a function that needed more than one argument:
 
-```
+```rust harsh
 fn trim_ws s: String -> String:
     s <- trim$ <- to_string$
 
@@ -169,7 +169,7 @@ fn main$:
 
 A partial application is a value, so it goes wherever a function may go — above all, into an iterator's adaptors:
 
-```
+```rust harsh
 fn scale (factor: f64) (x: f64) -> f64:
     factor * x
 
@@ -198,7 +198,7 @@ fn main$:
 
 `2.0 |> scale` is "multiply by two", and `0.0 5.0 |> clamp` is "keep between 0 and 5", each built from a general function by fixing its first arguments. A predicate works the same way: in the next program `2.0 |> above` is "greater than two", passed to `filter` as it is:
 
-```
+```rust harsh
 fn parse (line: &str) -> Option<f64>:
     line <- trim$
          <- parse$
@@ -233,7 +233,7 @@ Parse, keep what parsed, keep what is large enough, summarise: the chain reads a
 
 A closure that only forwards its argument is a partial application spelled the long way:
 
-```
+```rust harsh
 fn discount (rate: f64) (price: f64) -> f64:
     price * (1.0 - rate)
 

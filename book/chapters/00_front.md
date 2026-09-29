@@ -41,14 +41,14 @@ Braces are where Harsh starts, not where it stops. It adds four things Rust has 
 
 **Pipes and partial application.** Give a function fewer arguments than it takes, and you get a function waiting for the rest:
 
-```
+```rust harsh
 let double = 2.0 |> scale
 let doubled: Vec<f64> = readings <- iter$ <- map (|&x| double x) <- collect$
 ```
 
 **Generator comprehensions.** Say what a collection holds, not how to fill it:
 
-```
+```rust harsh
 let triples =
     list~ (a, b, c)
         for a in 1..20
@@ -58,7 +58,7 @@ let triples =
 
 **Linear algebra, as in Julia.** Julia's matrix literal, Julia's `*`, and Julia's `X \ y`, here fitting a line by least squares:
 
-```
+```rust harsh
 let x = m~ [1.0 1.0; 1.0 2.0; 1.0 3.0]
 let y = v~ [1.0, 2.0, 2.9]
 let beta = x <- solve (&y)

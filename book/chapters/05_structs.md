@@ -8,7 +8,7 @@ This is also the first chapter where Harsh has a shape of its own to show. A rec
 
 ## 5.1 The three forms
 
-```
+```rust harsh
 // A record struct: named fields, one per line...
 struct Point
     x: f64
@@ -43,7 +43,7 @@ fn main$:
 
 ### Record structs
 
-```
+```rust harsh
 struct User
     active: bool
     username: String
@@ -78,7 +78,7 @@ Notice the parentheses around `(user1 <- username)` when it is handed to `printl
 
 A function that returns a struct is the ordinary way to construct one with defaults:
 
-```
+```rust harsh
 struct User
     active: bool
     username: String
@@ -110,7 +110,7 @@ someusername123 <someone@example.com>
 
 Often a new instance is an old one with a few fields changed. The *struct update syntax*, `..user1`, says "and every field I did not mention comes from `user1`":
 
-```
+```rust harsh
 struct User
     active: bool
     username: String
@@ -143,7 +143,7 @@ true
 
 It must be last in the literal. And it moves: `..user1` copies the `Copy` fields (`active`, `sign_in_count`) and *moves* the rest (`username`), exactly as `let x = user1.username` would. After it, `user1` is partly gone — `user1 <- active` is still usable, `user1 <- username` is not:
 
-```
+```rust harsh
 struct User
     active: bool
     username: String
@@ -182,7 +182,7 @@ The compiler tracks moves per field. That is the chapter 4 rule at a finer grain
 
 A tuple struct has a name and positional fields with no names of their own — a tuple with a type:
 
-```
+```rust harsh
 struct Color i32 i32 i32
 struct Point i32 i32 i32
 
@@ -206,7 +206,7 @@ fn main$:
 
 A struct can have no fields at all:
 
-```
+```rust harsh
 struct AlwaysEqual
 
 fn main$:
@@ -225,7 +225,7 @@ made one
 
 Every `String` in `User` is owned by the instance: when the instance is dropped, its strings are. That is why the fields were `String` and not `&str`. Try the reference:
 
-```
+```rust harsh
 struct User
     username: &str
     email: &str
@@ -260,7 +260,7 @@ A struct holding a reference must say how long the referenced data lives — the
 
 Here is a small program built three times, to show what a struct does for readability. Compute the area of a rectangle, first with two separate variables:
 
-```
+```rust harsh
 fn area (width: u32) (height: u32) -> u32:
     width * height
 
@@ -278,7 +278,7 @@ The area of the rectangle is 1500 square pixels.
 
 It works, and `area` takes two parameters that are related — they are one rectangle's width and height — without saying so. Group them in a tuple:
 
-```
+```rust harsh
 fn area dimensions: (u32, u32) -> u32:
     dimensions.0 * dimensions.1
 
@@ -295,7 +295,7 @@ The area of the rectangle is 1500 square pixels.
 
 Now one argument, but `dimensions.0` and `dimensions.1` are worse than `width` and `height`: the reader has to know which is which, and so does the next person who edits it. Name them:
 
-```
+```rust harsh
 struct Rectangle
     width: u32
     height: u32
@@ -320,7 +320,7 @@ The area of the rectangle is 1500 square pixels.
 
 `println!` with `{}` knows how to print numbers and strings; it does not know how to print a `Rectangle`, and it says so:
 
-```
+```rust harsh
 struct Rectangle
     width: u32
     height: u32
@@ -343,7 +343,7 @@ error[E0277]: `Rectangle` doesn't implement `Debug`
 
 `{}` uses the `Display` trait, which is for user-facing output, and Rust will not guess what a user-facing rectangle looks like. The `{:?}` in the message is the *debug* format, which can be derived automatically — read the compiler's note, which tells you exactly what to add:
 
-```
+```rust harsh
 #[derive Debug]
 struct Rectangle
     width: u32
@@ -369,7 +369,7 @@ rect1 is Rectangle {
 
 A *method* is a function that belongs to a type. It is defined inside an `impl` block and its first parameter is `self`, the instance it is called on:
 
-```
+```rust harsh
 #[derive Debug]
 struct Rectangle
     width: u32
@@ -409,7 +409,7 @@ A method may have the same name as a field. `rect1 <- width$` is the method, `re
 
 After `self`, a method's parameters are groups like any function's:
 
-```
+```rust harsh
 #[derive Debug]
 struct Rectangle
     width: u32
@@ -442,7 +442,7 @@ Can rect1 hold rect3? false
 
 A function in an `impl` block that does *not* take `self` is an *associated function*: it belongs to the type but not to an instance. Constructors are the classic case:
 
-```
+```rust harsh
 #[derive Debug]
 struct Rectangle
     width: u32

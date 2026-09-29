@@ -2,7 +2,7 @@
 
 ## 2.1 Literals and operators
 
-```
+```rust harsh
 fn main$:
     // A suffix names the type; an underscore is a spacer.
     let big = 1_000_000u64
@@ -39,7 +39,7 @@ isolated, so it is `println! "{}" (1 + 2 * 3)`.
 
 ## 2.2 Tuples
 
-```
+```rust harsh
 // A tuple struct: its fields juxtapose, like any application.
 // (Parens would hold *one* payload: `struct Wrapped (i32, i32)` has a
 // single field that is a pair.)
@@ -86,7 +86,7 @@ and reaching a field by number is `m <- 0`.
 
 ## 2.3 Arrays and slices
 
-```
+```rust harsh
 fn main$:
     // An array: fixed length, all one type.
     let xs: [i32; 5] = [1, 2, 3, 4, 5]
@@ -126,7 +126,7 @@ A slice borrows a run of it: `&xs[1..4]`.
 Reading past the end is a panic, which is to say it stops rather than
 returning something wrong:
 
-```
+```rust harsh
 fn main$:
     let xs = [1, 2, 3]
     let n = 5

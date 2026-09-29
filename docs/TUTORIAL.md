@@ -20,7 +20,7 @@ The cost is that it cannot do anything requiring semantics. That turned out to c
 
 ### The pipeline
 
-```
+```text
 lex.rs      tokens with byte spans; two modes differing only in what `.` means
 layout.rs   physical lines -> logical lines -> a tree of blocks; validation
 juxt.rs     expression regions; juxtaposed application; the pipe rewrite (which is also partial application)
@@ -201,7 +201,7 @@ Each was stated with more confidence than the evidence supported. The tell, in r
 
 The `$` deferred-argument marker is the clearest example. The first design tried to enumerate arities and needed a symbol table. The rule that shipped is one sentence — *each `$` is one currying split* — and needs no arity knowledge at all:
 
-```
+```rust harsh
 sub3$ 100 20   ->  move |p1| sub3(100, 20, p1)
 sub3$$ 100     ->  move |p1| move |p2| sub3(100, p1, p2)
 ```

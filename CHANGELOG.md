@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.50 — 2026-09-29  (no change to the transpiler)
+
+- **Harsh in colour on GitLab and GitHub.** Neither knows a language called Harsh, and our Harsh blocks were untagged, so both showed them plain (the user's screenshot of the README). Every Harsh block in the Markdown they display -- the README, the guide, the tutorial, the macros guide, the other docs, the four books -- is now fenced ```` ```rust harsh ````: they colour it as Rust by the first word, and Harsh's own tools read the second and treat it as Harsh, highlighting it as before in the books, the notebooks and the website. Real Rust stays ```` ```rust ````; the guide's fragments are ```` ```rust fragment ````; shell commands, which were untagged too, are ```` ```sh ````; the wordmark and file listings ```` ```text ````. The four books' builders write the new tag; the guide's checker refuses an untagged fence, and `check.sh` any in the repository's Markdown. All four books rebuilt: 386 programs.
+- Real Harsh colours on GitLab would need a Harsh lexer in Rouge, GitLab's highlighter (a contribution upstream); GitHub's needs a language used in 200 repositories. Recorded on the roadmap.
+
 ## 0.1.49 — 2026-09-28  (`hrs_std` 0.1.3 and the Jupyter kernel 0.1.3, unchanged)
 
 - **Precedence, documented** (the user's request). *The Harsh Programming Language* gains an appendix, *Precedence*: the eighteen levels from atoms to assignment, dereference case by case, the pipes' rules, the traps (`f -1` and `f *x` are arithmetic, `f x |> g` pipes two values, `f a.b` is a path, `*p <- field` dereferences the field), and a program showing each rule with its output -- in words, as the Book shows no Rust. *The Harsh Language Guide* gains a *Precedence* section with the same rules beside the Rust they become, every line matched against the transpiler by `check.sh`. *Harsh by Example* gains a *Precedence* page in chapter 7; *The Harshonomicon* states the dereference rule where raw pointers are dereferenced; chapter 2 and *Harsh at a glance* point to the appendix.

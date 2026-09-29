@@ -6,7 +6,7 @@ Concurrent code — several things happening at once, on threads — is where mo
 
 `thread.spawn` runs a closure on a new thread and returns a handle:
 
-```
+```rust harsh
 use std.thread
 use std.time.Duration
 
@@ -22,8 +22,8 @@ fn main$:
 ```
 
 ```text
-hi number 1 from the spawned thread!
 main is waiting
+hi number 1 from the spawned thread!
 hi number 2 from the spawned thread!
 hi number 3 from the spawned thread!
 main is done
@@ -33,7 +33,7 @@ The spawned thread prints three lines while the main thread carries on — the t
 
 Usually it captures something, and this is where ownership meets threads:
 
-```
+```rust harsh
 use std.thread
 
 fn main$:
@@ -59,7 +59,7 @@ error[E0373]: closure may outlive the current function, but it borrows `v`, whic
 
 The closure borrows `v`, and the compiler asks a question the language forces: how long will the thread run? It cannot know — the thread might outlive `main`, and then the borrow would dangle. So a closure passed to `spawn` must own everything it uses, and the help says how:
 
-```
+```rust harsh
 use std.thread
 
 fn main$:
@@ -81,7 +81,7 @@ Here's a vector: [1, 2, 3]
 
 One way to share data between threads is not to share it: send it. A *channel* has a transmitter and a receiver, and a value sent down it is moved from one thread to the other:
 
-```
+```rust harsh
 use std.sync.mpsc
 use std.thread
 
@@ -104,7 +104,7 @@ Got: hi
 
 That "moved" is enforced:
 
-```
+```rust harsh
 use std.sync.mpsc
 use std.thread
 
@@ -137,7 +137,7 @@ error[E0382]: borrow of moved value: `val`
 
 Several producers, one consumer:
 
-```
+```rust harsh
 use std.sync.mpsc
 use std.thread
 use std.time.Duration
@@ -171,7 +171,7 @@ fn main$:
 
 The other way is to share the data and take turns. A `Mutex` — *mutual exclusion* — holds a value and gives out access to one thread at a time:
 
-```
+```rust harsh
 use std.sync.Mutex
 
 fn main$:
@@ -193,7 +193,7 @@ m = Mutex { data: 6, poisoned: false, .. }
 
 To share a mutex between threads, it needs several owners, and chapter 18's answer to that was `Rc`:
 
-```
+```rust harsh
 use std.rc.Rc
 use std.sync.Mutex
 use std.thread
@@ -232,7 +232,7 @@ error[E0277]: `Rc<Mutex<i32>>` cannot be sent between threads safely
 
 Refused. `Rc` counts references without any synchronisation — two threads incrementing the count at once would corrupt it — and so `Rc<T>` is not `Send`, and `spawn` requires `Send`. The type system knows which types are safe to move across threads, and this one is not. The thread-safe reference count is `Arc`, *atomic* `Rc`, with the same API:
 
-```
+```rust harsh
 use std.sync.(Arc, Mutex)
 use std.thread
 

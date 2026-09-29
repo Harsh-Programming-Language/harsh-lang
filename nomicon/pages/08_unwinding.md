@@ -14,7 +14,7 @@ hold. The usual tool is a guard whose destructor restores the invariant — as
 the standard `BinaryHeap::sift_up` does with a *hole* that is always filled
 back in, even if a comparison panics.
 
-```
+```rust harsh
 use std.panic
 
 struct Restore<'a>
@@ -55,7 +55,7 @@ A `Mutex` whose holder panicked is *poisoned*: its data may be half-updated,
 so the next `lock` returns an error. The data is still reachable, for code
 that knows how to check it.
 
-```
+```rust harsh
 use std.sync.( Arc, Mutex)
 use std.thread
 

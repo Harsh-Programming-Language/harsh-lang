@@ -147,6 +147,25 @@ say "The guide: every code block transpiles"
 PATH="$ROOT/target/release:$PATH" python3 "$ROOT/docs/check-guide.py" > "$WORK/guide.log" 2>&1 || { cat "$WORK/guide.log"; exit 1; }
 echo "  $(tail -1 "$WORK/guide.log" | sed 's|^docs/LANGUAGE.md: ||')"
 
+say "Markdown: every code block is tagged"
+# GitLab and GitHub know no Harsh: a Harsh block is fenced `rust harsh`, so
+# they colour it as Rust by the first word (2026-09-29); an untagged fence
+# shows plain there.
+python3 - "$ROOT" <<'PYEOF' || exit 1
+import glob, os, re, sys
+root = sys.argv[1]; bad = []
+for f in glob.glob(os.path.join(root, "**/*.md"), recursive=True):
+    if re.search(r"/(target|node_modules|pub|dev)/", f):
+        continue
+    s = open(f, encoding="utf-8").read()
+    for m in re.finditer(r"^([ \t]*)```([^\n]*)\n(.*?)^\1```", s, re.M | re.S):
+        if not m.group(2).strip() and "@@" not in m.group(3):
+            bad.append(f"{os.path.relpath(f, root)}:{s[:m.start()].count(chr(10)) + 1}")
+if bad:
+    print("  untagged fences (Harsh is ```rust harsh):", *bad[:20], sep="\n    "); sys.exit(1)
+print("  all tagged")
+PYEOF
+
 say "Site: every link is absolute"
 # Each page is pre-rendered in a folder of its own (`/learn/`), so a relative
 # `book/` resolves to `/learn/book/`, which does not exist. It did exactly

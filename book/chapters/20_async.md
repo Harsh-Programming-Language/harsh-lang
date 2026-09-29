@@ -13,7 +13,7 @@ tokio = { version = "1.40", features = ["rt", "macros", "time", "sync"] }
 
 `src/main.hrs`
 
-```
+```rust harsh
 use tokio.time.(sleep, Duration)
 
 async fn say_hello name: &str -> String:
@@ -48,7 +48,7 @@ tokio = { version = "1.40", features = ["rt", "macros", "time", "sync"] }
 
 `src/main.hrs`
 
-```
+```rust harsh
 use tokio.time.(sleep, Duration)
 
 #[tokio.main (flavor = "current_thread")]
@@ -89,7 +89,7 @@ tokio = { version = "1.40", features = ["rt", "macros", "time", "sync"] }
 
 `src/main.hrs`
 
-```
+```rust harsh
 use tokio.time.(sleep, Duration)
 
 #[tokio.main (flavor = "current_thread")]
@@ -131,7 +131,7 @@ tokio = { version = "1.40", features = ["rt", "macros", "time", "sync"] }
 
 `src/main.hrs`
 
-```
+```rust harsh
 use tokio.sync.mpsc
 use tokio.time.(sleep, Duration)
 
@@ -184,7 +184,7 @@ tokio = { version = "1.40", features = ["rt", "macros", "time", "sync"] }
 
 `src/main.hrs`
 
-```
+```rust harsh
 use tokio.time.(sleep, Duration)
 
 async fn slow name: &str -> &str:
@@ -231,7 +231,7 @@ tokio = { version = "1.40", features = ["rt", "macros", "time", "sync"] }
 
 `src/main.hrs`
 
-```
+```rust harsh
 use std.time.Duration
 
 #[tokio.main (flavor = "current_thread")]

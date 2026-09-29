@@ -53,7 +53,7 @@ than `&String`, `&[T]` rather than `&Vec<T>`, `&T` rather than `&Box<T>`. The
 caller's `&String` coerces to `&str` on its own, so the function accepts more
 — a string literal, a slice of another string — at no cost.
 
-```
+```rust harsh
 // `&str`, not `&String`: every string the caller has will do.
 fn three_vowels (word: &str) -> bool:
     let mut count = 0
@@ -91,7 +91,7 @@ To build a string from pieces, `format!` is usually clearer than a series of
 built in a loop, or where every allocation counts, pushing into one `String`
 remains the faster choice.
 
-```
+```rust harsh
 fn greet (name: &str) -> String:
     // The shape of the result, at a glance.
     format! "Hello {name}!"
@@ -121,7 +121,7 @@ Rust has no constructors in the language: by convention, an associated
 function `new` builds a value. When a type has an obvious default, implement
 `Default` too, and let `new` call it or be it.
 
-```
+```rust harsh
 #[derive Debug]
 pub struct Second
     value: u64
@@ -161,7 +161,7 @@ every field with its own default; with struct-update syntax, a caller names
 only the fields that differ. Containers and generic code rely on it
 (`unwrap_or_default`, `mem::take`).
 
-```
+```rust harsh
 #[derive Debug Default]
 struct Config
     name: String
@@ -199,7 +199,7 @@ of it — `Vec<T>` to `[T]`, `String` to `str`. Every method of the borrowed vie
 is then available on the owner, and a function written for the view accepts
 the owner too.
 
-```
+```rust harsh
 // Written for the borrowed view: a slice.
 fn total (xs: &[i32]) -> i32:
     xs <- iter$ <- sum$
@@ -229,7 +229,7 @@ early, with `?`, or panicking — goes into the `Drop` of a value created at the
 start: when the function ends, the value goes out of scope, and its destructor
 runs.
 
-```
+```rust harsh
 struct Cleanup
     what: &'static str
 
@@ -270,7 +270,7 @@ without cloning it — take the field out with `std.mem.take` (which leaves the
 type's default in its place) or `std.mem.replace` (which leaves what you give
 it), then build the new variant from it.
 
-```
+```rust harsh
 #[derive Debug]
 enum State
     Draft
@@ -308,7 +308,7 @@ only the one the condition picks — *deferred conditional initialisation* —
 and take a `&dyn Trait` to it. The value lives on the stack; only the reference
 is dynamic.
 
-```
+```rust harsh
 use std.fmt.Display
 
 fn main$:
@@ -350,7 +350,7 @@ carry data, is mapped to one code per variant; a **custom error type** can give
 C a code and, separately, a message as a C string the caller frees. Never let
 a panic cross the boundary.
 
-```
+```rust harsh
 // A flat enum: its discriminant is the code.
 #[repr C]
 #[derive Clone Copy Debug]
@@ -401,7 +401,7 @@ A string that comes from C stays C's: borrow it as `&CStr` with
 `CStr::from_ptr`, for no longer than the call, and keep the `unsafe` to that one
 line — check the pointer, borrow, then work in safe code.
 
-```
+```rust harsh
 use std.ffi.CStr
 use std.os.raw.c_char
 
@@ -440,7 +440,7 @@ keep the unsafe code to the call; if C writes into the buffer, pass a
 `Vec<u8>` instead; and, unless the API says otherwise, keep ownership on the
 Rust side.
 
-```
+```rust harsh
 use std.ffi.CString
 use std.os.raw.c_char
 
@@ -469,7 +469,7 @@ block's, visible in the indentation.
 `IntoIterator`. It can extend a collection, be chained onto an iterator, or be
 looped over — no `if let` needed.
 
-```
+```rust harsh
 fn main$:
     let mut names = vec! "Ada" "Grace"
     let extra: Option<&str> = Some "Barbara"
@@ -501,7 +501,7 @@ A `move` closure takes ownership of everything it uses. To decide variable by
 variable — clone this one, borrow that one — prepare them in a block just
 before the closure, and let the closure be the block's value.
 
-```
+```rust harsh
 use std.rc.Rc
 
 fn main$:
@@ -535,7 +535,7 @@ breaking everyone who builds it with a literal. Mark it `#[non_exhaustive]`
 (or give it one private field) and provide a constructor: fields can then be
 added in a later version.
 
-```
+```rust harsh
 mod shapes
     // Fields may be added later without breaking anyone: no literal outside.
     #[non_exhaustive]
@@ -569,7 +569,7 @@ test compiles the function but never calls it, so the setup is never written,
 and the example shows only what it documents. A helper that builds the value
 is the alternative when the example must run.
 
-```
+```rust harsh
 pub struct Connection
     pub name: String
 
@@ -606,7 +606,7 @@ When data must be prepared mutably and then only read, shadow it: build it
 in a nested block (or a mutable binding) and rebind it immutable. The
 compiler then refuses any later change.
 
-```
+```rust harsh
 fn main$:
     // Prepared mutably in a block, then bound immutable.
     let data = do:
@@ -638,7 +638,7 @@ A function that takes ownership of an argument and may fail should hand the
 argument back in its error, so the caller can try again without having cloned
 it first — as `String::from_utf8` returns the bytes in its `FromUtf8Error`.
 
-```
+```rust harsh
 // The argument, handed back in the error.
 #[derive Debug]
 pub struct SendError String
@@ -685,7 +685,7 @@ Turn actions into values, so they can be stored, queued, logged, or undone.
 In Rust there are three ways: trait objects (one type per command), function
 pointers, or closures — the last the most flexible when commands carry data.
 
-```
+```rust harsh
 // Commands as values: a trait object each.
 trait Migration
     fn execute (&self) -> String
@@ -738,7 +738,7 @@ For a problem that recurs in many forms, define a small language for it and
 interpret sentences of that language — here, arithmetic expressions turned
 from infix into postfix by a recursive-descent parser.
 
-```
+```rust harsh
 // Infix to postfix: `2+3-4` becomes `23+4-`.
 struct Interpreter<'a>
     it: std.str.Chars<'a>
@@ -792,7 +792,7 @@ Wrap a type in a tuple struct of one field to give it a new identity: its own
 traits, its own rules, and no mixing with the type it wraps. It costs nothing
 at run time.
 
-```
+```rust harsh
 use std.fmt
 
 // A String with its own identity: never printed in clear.
@@ -825,7 +825,7 @@ Tie a resource to a value's lifetime: acquiring it returns a *guard*, and
 dropping the guard releases it. The borrow checker then guarantees nothing
 uses the resource after release — `MutexGuard` is the standard example.
 
-```
+```rust harsh
 use std.sync.Mutex
 
 struct Noisy
@@ -862,7 +862,7 @@ long the lock is held.
 Separate an algorithm's skeleton from its details, so the details can vary:
 the skeleton takes a strategy, as a trait object, a generic, or a closure.
 
-```
+```rust harsh
 // The skeleton: a report, with the joining left to a strategy.
 // The lifetime is named: a closure made by partial application works for
 // these items, not for every lifetime at once.
@@ -905,7 +905,7 @@ Walk a heterogeneous structure — an abstract syntax tree, say — with an
 operation that is defined apart from it. The visitor has a method per kind of
 node; the structure only knows how to hand each node to it.
 
-```
+```rust harsh
 // A tiny language: numbers and additions.
 enum Expr
     Num i64
@@ -956,7 +956,7 @@ When a value has many optional parts, build it step by step through a
 *builder*: each method sets one part and returns the builder, and `build`
 makes the value. Rust has no named or default arguments; this is its answer.
 
-```
+```rust harsh
 #[derive Debug]
 pub struct Request
     url: String
@@ -1026,7 +1026,7 @@ structure: a *folder* has a method per kind of node, each returning the
 rebuilt node — the default rebuilding it unchanged, so a folder overrides only
 what it changes.
 
-```
+```rust harsh
 // A small tree of names and calls.
 #[derive Debug]
 enum Node
@@ -1077,7 +1077,7 @@ A large struct borrowed as a whole cannot lend two of its parts at once to
 different functions. Split it into smaller structs, and each function borrows
 only the part it needs — the borrow checker then sees they do not overlap.
 
-```
+```rust harsh
 struct Connection
     url: String
 struct Users
@@ -1134,7 +1134,7 @@ Keep `unsafe` code in the smallest module that can hold it, with a safe
 interface around it: the module's invariants are then checked in one place,
 and the rest of the program cannot break them.
 
-```
+```rust harsh
 mod ascii
     // The invariant, kept in this module alone: the bytes are ASCII.
     pub struct AsciiString
@@ -1175,7 +1175,7 @@ A struct generic over closures carries their whole signatures as bounds —
 for the output, implemented for every closure of that shape. The struct then
 asks for `G: Getter`, and `T` disappears from its parameters.
 
-```
+```rust harsh
 use std.fmt.Display
 
 #[derive Debug]
@@ -1232,7 +1232,7 @@ A related variant, for a list of bounds rather than a closure's shape: a trait
 with those bounds as supertraits, and a blanket implementation for every type
 that meets them.
 
-```
+```rust harsh
 use std.fmt.( Debug, Display)
 
 // The long list of bounds, named once.
@@ -1277,7 +1277,7 @@ inside, and every operation is a function taking that pointer. Ownership is
 explicit — one function creates the object (`Box::into_raw`), one destroys it
 (`Box::from_raw`).
 
-```
+```rust harsh
 // An opaque object for C: C holds the pointer, never the inside.
 pub struct Counter
     count: u64
@@ -1320,7 +1320,7 @@ Rust types with lifetimes do not cross into C. Wrap the owner and the state
 that borrows from it into one owned type — here, a collection and a cursor
 over it — and expose that single type instead.
 
-```
+```rust harsh
 // For C: one owned type, where Rust would have a collection and an iterator
 // borrowing from it -- a lifetime C cannot express.
 pub struct Words
@@ -1366,7 +1366,7 @@ When the borrow checker refuses code, cloning the value makes the error go
 away — and often hides the real mistake: two copies now drift apart, and the
 change made to one is missing from the other. First the refusal:
 
-```
+```rust harsh
 fn main$:
     let mut names = vec! (String.from "Ada")
     let first = &names[0]
@@ -1395,7 +1395,7 @@ For more information about this error, try `rustc --explain E0502`.
 then the fix that keeps one value, by ending the first borrow before the
 second begins, instead of cloning:
 
-```
+```rust harsh
 fn main$:
     let mut names = vec! (String.from "Ada")
     // The first borrow ends before the second begins: one value, no clone.
@@ -1421,7 +1421,7 @@ that adds a warning — breaking code that did nothing wrong, and every crate
 that depends on it. Deny specific lints you care about, or deny warnings in
 continuous integration only (`RUSTFLAGS="-D warnings"`), never in the crate.
 
-```
+```rust harsh
 // Deny the specific lints you mean, not every warning a future compiler adds.
 #![deny unused_must_use]
 
@@ -1451,7 +1451,7 @@ inheritance, and misleads: `Deref` is for smart pointers, the target's traits
 are not inherited, and generic code does not see through it. Compose instead,
 and forward the few methods that should be shared.
 
-```
+```rust harsh
 struct Animal
     name: String
 
@@ -1498,7 +1498,7 @@ Declarative code says *what*: the result as a composition of operations. Rust
 supports both; iterators make the declarative form idiomatic. Harsh adds two
 more declarative forms — the pipe and the comprehension.
 
-```
+```rust harsh
 fn square (n: u32) -> u32:
     n * n
 
@@ -1543,7 +1543,7 @@ instantiation gives methods to that instantiation only — the way type classes
 work in functional languages. The compiler then refuses, at compile time, a
 method on the wrong kind of value.
 
-```
+```rust harsh
 use std.marker.PhantomData
 
 struct Http
@@ -1597,7 +1597,7 @@ other way only sometimes — a parse that may fail, and the rendering that
 always succeeds. The original uses them to explain the design of Serde's API,
 whose deserializer drives a visitor that may fail — a prism in all but name.
 
-```
+```rust harsh
 use std.collections.VecDeque
 
 // An iso: two conversions that undo each other.

@@ -23,7 +23,7 @@ A project keeps its Harsh in `src/**.hrs`. The generated Rust goes to
 One manifest, ordinary dependencies, nothing extra to ignore — cargo already
 ignores `/target`.
 
-```
+```rust harsh
 // This is what `hrs new` writes for you, and what `hrs run` builds.
 fn main$:
     let args: Vec<String> = std.env.args$ <- collect$

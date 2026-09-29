@@ -78,7 +78,7 @@ callee itself, not in `:` or `do:`, so nothing can mistake it for one.
 Combined with the chain rule: a link goes vertical, and if its arguments
 still pass the width, they go vertical under it.
 
-```
+```rust harsh
 let app =
     Router.new$
         <- leptos_routes
@@ -100,7 +100,7 @@ When the argument is a paren block, the callee ends its line, the block's
 `(||:` sits one unit in beneath it, its body and `)` under that, and the
 chain resumes under the first arrow:
 
-```
+```rust harsh
 pub fn tips$ -> &'static [Tip]:
     TIPS <- get_or_init
                 (||:
@@ -122,7 +122,7 @@ its own** (the author, 2026-09-07 evening). Three links are vertical by the
 count rule already; this is the two-link case that fits on a line but
 reads badly because the inner arrows compete with the outer ones:
 
-```
+```rust harsh
 tips$ <- iter$                                 rather than
       <- find (|t| t <- slug == slug)          tips$ <- iter$ <- find (|t| t <- slug == slug)
 ```

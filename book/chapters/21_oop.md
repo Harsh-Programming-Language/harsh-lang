@@ -6,7 +6,7 @@ Is Rust object-oriented? It has objects in the sense that matters — data with 
 
 A struct with private fields and public methods is an object in the classic sense:
 
-```
+```rust harsh
 pub struct AveragedCollection
     list: Vec<i32>
     average: f64
@@ -58,7 +58,7 @@ fn main$:
 
 Chapter 8 held several types in one `Vec` by wrapping them in an enum, which works when the set of types is known when you write the enum. A GUI library cannot know what components its users will define. It needs "a vector of anything that can draw itself":
 
-```
+```rust harsh
 pub trait Draw
     fn draw (&self)
 
@@ -126,7 +126,7 @@ button 50x10 'OK'
 
 The compiler still checks that every element can draw:
 
-```
+```rust harsh
 pub trait Draw
     fn draw (&self)
 
@@ -156,7 +156,7 @@ A `String` does not implement `Draw`, so it cannot become a `Box<dyn Draw>`, and
 
 The same screen could be written with a type parameter:
 
-```
+```rust harsh
 pub trait Draw
     fn draw (&self)
 
@@ -198,7 +198,7 @@ One limit: not every trait can be a trait object. The method signatures must not
 
 An object-oriented design pattern, done in Rust to see what fits and what does not. A blog post is a draft, then pending review, then published; its behaviour — what `content` returns, what `approve` does — depends on which. In the classic pattern each state is an object, and the post delegates to whichever it holds:
 
-```
+```rust harsh
 pub struct Post
     state: Option<Box<dyn State>>
     content: String
@@ -281,7 +281,7 @@ published: 'I ate a salad for lunch today'
 
 It works, and it has the pattern's usual costs: the states know about each other, a transition that is invalid for a state has to be written as "return `self`", and nothing stops a caller from asking a draft for its content. Rust offers a different shape — encode the states as *types*:
 
-```
+```rust harsh
 // The same workflow with the states as types: an invalid transition does not compile.
 pub struct Post
     content: String

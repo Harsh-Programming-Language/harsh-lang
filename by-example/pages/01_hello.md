@@ -31,7 +31,7 @@ rewritten in Harsh. `ATTRIBUTION.md` has the licence and the details.
 
 The whole program:
 
-```
+```rust harsh
 fn main$:
     println! "Hello, world!"
 ```
@@ -50,7 +50,7 @@ how every call in Harsh is written, macro or function.
 
 ## 1.2 Comments
 
-```
+```rust harsh
 fn main$:
     // A line comment runs from the slashes to the end of the line.
     let x = 5
@@ -72,7 +72,7 @@ including in the middle of an expression. Block comments nest.
 
 The string comes first, then the values that fill its holes:
 
-```
+```rust harsh
 fn main$:
     // Each `{}` is filled by the next argument, juxtaposed after the string.
     println! "{} days" 31
@@ -118,7 +118,7 @@ it is an operator, so it needs the parentheses when used as an argument.
 Most types cannot be printed until you say how. The quickest way is to derive
 the programmer's spelling:
 
-```
+```rust harsh
 // `Debug` is derived: it prints a value the way a programmer reads it.
 #[derive Debug]
 struct Point\ x: i32, y: i32
@@ -159,7 +159,7 @@ Written over several lines, the fields simply go beneath:
 `Display` is the spelling meant for whoever reads the output, and you write it
 yourself:
 
-```
+```rust harsh
 use std.fmt
 
 struct Point\ x: i32, y: i32

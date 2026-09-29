@@ -22,7 +22,7 @@ Rust has a comment form that becomes documentation. `///` documents the item tha
 
 `src/lib.hrs`
 
-```
+```rust harsh
 //! # My Crate
 //!
 //! `my_crate` is a collection of utilities to make performing certain
@@ -49,7 +49,7 @@ $ hrs test
 running 1 test
 test target/hrs/lib.rs - add_one (line 10) ... ok
 
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.30s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.17s
 ```
 
 `cargo doc --open` renders every `///` and `//!` in the crate as HTML, with the Markdown inside them — headings, code blocks, links — laid out. The conventional sections are `# Examples`, `# Panics` (when the function can), `# Errors` (what `Err`s it returns) and `# Safety` (for `unsafe` functions). The example in the `///` is Harsh, like everything else in the file, and `cargo test` *runs it* — every code block in a doc comment is a test, so documentation cannot drift from the code without failing the build.
@@ -60,7 +60,7 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fini
 
 Chapter 7 mentioned `pub use` for presenting a different structure to users than the code has. In a library it is what makes the docs usable:
 
-```
+```rust harsh
 //! Art: a library for modelling artistic concepts.
 
 pub use self.kinds.PrimaryColor

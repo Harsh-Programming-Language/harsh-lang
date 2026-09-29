@@ -294,8 +294,8 @@ pre.code:hover .copy,.copy:focus-visible{opacity:1}
 </tbody>
 </table>
 <h2 id="quick-start">Quick start</h2>
-<pre class="code harsh"><code>cargo build <span class="p">-</span><span class="p">-</span>release
-<span class="p">.</span><span class="p">/</span>check<span class="p">.</span>sh</code></pre>
+<pre class="code"><code>cargo build --release
+./check.sh</code></pre>
 <p><code>check.sh</code> builds the toolchain, transpiles every example, compiles and runs each one, round-trips them back through the converter, rebuilds the transpiler from its own converted source, and demonstrates diagnostic remapping. It needs network access on first run for <code>serde_json</code>.</p>
 <h2 id="the-three-binaries">The three binaries</h2>
 <table>
@@ -324,18 +324,18 @@ pre.code:hover .copy,.copy:focus-visible{opacity:1}
 </tr>
 </tbody>
 </table>
-<pre class="code harsh"><code>hrs src<span class="p">/</span>main<span class="p">.</span>hrs <span class="p">-</span>o generated<span class="p">/</span>main<span class="p">.</span>rs <span class="p">-</span><span class="p">-</span>map generated<span class="p">/</span>main<span class="p">.</span>map<span class="p">.</span>json
-cargo build <span class="p">-</span><span class="p">-</span>message<span class="p">-</span>format<span class="p">=</span>json <span class="p">|</span> hrs<span class="p">-</span>remap <span class="p">-</span><span class="p">-</span>map generated<span class="p">/</span>main<span class="p">.</span>map<span class="p">.</span>json
-hrs<span class="p">-</span>from existing<span class="p">.</span>rs <span class="p">-</span>o existing<span class="p">.</span>hrs</code></pre>
+<pre class="code"><code>hrs src/main.hrs -o generated/main.rs --map generated/main.map.json
+cargo build --message-format=json | hrs-remap --map generated/main.map.json
+hrs-from existing.rs -o existing.hrs</code></pre>
 <h2 id="source-layout">Source layout</h2>
-<pre class="code harsh"><code>src<span class="p">/</span>lex<span class="p">.</span>rs        tokens with byte spans<span class="p">;</span> knows nothing about blocks
-src<span class="p">/</span>layout<span class="p">.</span>rs     logical lines<span class="p">,</span> then a tree of blocks
-src<span class="p">/</span>rules<span class="p">.</span>rs      keyword tables shared by both directions
-src<span class="p">/</span>emit<span class="p">.</span>rs       <span class="t">Harsh</span> <span class="op">-&gt;</span> <span class="t">Rust</span><span class="p">,</span> plus the source map
-src<span class="p">/</span>unbrace<span class="p">.</span>rs    <span class="t">Rust</span> <span class="op">-&gt;</span> <span class="t">Harsh</span>
-src<span class="p">/</span>lib<span class="p">.</span>rs        exposes the above to the binaries
-src<span class="p">/</span>main<span class="p">.</span>rs       the `hrs` binary
-src<span class="p">/</span>bin<span class="p">/</span>          `hrs<span class="p">-</span>from` and `hrs<span class="p">-</span>remap`</code></pre>
+<pre class="code"><code>src/lex.rs        tokens with byte spans; knows nothing about blocks
+src/layout.rs     logical lines, then a tree of blocks
+src/rules.rs      keyword tables shared by both directions
+src/emit.rs       Harsh -&gt; Rust, plus the source map
+src/unbrace.rs    Rust -&gt; Harsh
+src/lib.rs        exposes the above to the binaries
+src/main.rs       the `hrs` binary
+src/bin/          `hrs-from` and `hrs-remap`</code></pre>
 <p>Both directions live in one crate deliberately: they must agree on the carve-out list and the block-kind table, and separate crates would let those drift apart silently.</p>
 <h2 id="examples">Examples</h2>
 <p>Each <code>.hrs</code> file has its generated Rust beside it.</p>

@@ -24,7 +24,7 @@ There is no program on this page: there is nothing hidden to show.
 in declaration order; local variables are dropped in reverse order of
 declaration. `mem::forget` and `ManuallyDrop` stop a destructor from running.
 
-```
+```rust harsh
 use std.mem.ManuallyDrop
 
 struct Loud
@@ -70,7 +70,7 @@ forgotten `Drain` leaks rather than exposes moved-out elements; and the early
 `thread::scoped` API was removed because a forgotten guard let a thread
 outlive what it borrowed — which `thread::scope`, used in this book, avoids.
 
-```
+```rust harsh
 use std.cell.RefCell
 use std.rc.( Rc, Weak)
 

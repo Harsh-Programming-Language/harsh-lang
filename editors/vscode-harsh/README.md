@@ -2,7 +2,7 @@
 
 **Rust without the braces.** Harsh is Rust spelled with indentation for structure, `f a b` for applying a function and `<-` for reaching into a value; everything else — ownership, traits, lifetimes, every crate — is Rust, unchanged, because `hrs` is a layout transformation and not a new compiler. This extension makes `.hrs` files first-class in VSCode.
 
-```
+```rust harsh
 use std.collections.HashMap
 
 fn word_counts text: &str -> Vec<(String, usize)>:
@@ -27,7 +27,7 @@ fn word_counts text: &str -> Vec<(String, usize)>:
 
 The editing features come from a language server, `hrs-lsp`, which is part of the Harsh toolchain:
 
-```
+```sh
 cargo install harsh-lang
 ```
 
@@ -35,7 +35,7 @@ That installs `hrs` (transpiler and build driver), `hrs-from` (Rust to Harsh), `
 
 On macOS, a freshly built binary can be refused by Gatekeeper when a sandboxed app spawns it, while your terminal runs it happily. If the server will not start and the channel shows the path was found, clear the flag and sign it ad hoc:
 
-```
+```rust harsh
 xattr -d com.apple.quarantine ~/.cargo/bin/hrs-lsp 2>/dev/null
 codesign --force --sign - ~/.cargo/bin/hrs-lsp
 ```
@@ -80,7 +80,7 @@ Without `hrs-lsp` installed the extension still loads; you get highlighting and 
 
 ## Building from source
 
-```
+```sh
 npm install
 npx @vscode/vsce package
 code --install-extension harsh-lang-0.1.1.vsix

@@ -2548,3 +2548,27 @@ fn the_converter_parenthesises_a_nested_literal() {
     assert!(h.contains("D\\ inner = (A\\ n = 1), good = true"), "{h}");
 }
 
+/// `hrs add`: Harsh's crates into `[dependencies]`, a Rust crate pointed to
+/// `cargo add` (the user's rule, 2026-09-29).
+#[test]
+fn hrs_add_takes_harsh_crates_and_points_rust_ones_to_cargo_add() {
+    use harsh_lang::driver::add_dependency;
+    let m = "[package]\nname = \"p\"\n\n[dependencies]\nserde = \"1\"\n\n[profile.release]\nlto = true\n";
+    let (t, msg) = add_dependency(m, "hrs_std").unwrap();
+    assert!(t.contains("[dependencies]\nserde = \"1\"\nhrs_std = \"0.1\"\n\n[profile.release]"), "{t}");
+    assert!(msg.contains("added `hrs_std = \"0.1\"`"), "{msg}");
+    // Already there: unchanged.
+    let (again, msg) = add_dependency(&t, "hrs_std").unwrap();
+    assert_eq!(again, t);
+    assert!(msg.contains("already"), "{msg}");
+    // No [dependencies] yet: the table is made.
+    let (t, _) = add_dependency("[package]\nname = \"p\"\n", "hrs_std").unwrap();
+    assert!(t.ends_with("\n\n[dependencies]\nhrs_std = \"0.1\"\n"), "{t}");
+    // A Rust crate: cargo add's.
+    let e = add_dependency(m, "serde_json").unwrap_err();
+    assert!(e.contains("cargo add serde_json"), "{e}");
+    // hrs_proc_macro carries its own version.
+    let (t, _) = add_dependency(m, "hrs_proc_macro").unwrap();
+    assert!(t.contains("hrs_proc_macro = \"0.2\""), "{t}");
+}
+

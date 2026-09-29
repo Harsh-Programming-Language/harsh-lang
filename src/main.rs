@@ -18,6 +18,9 @@ usage:
   hrs cargo <sub> [args]     transpile, then any cargo subcommand (cargo leptos build, ..)
   hrs watch [subcommand]     rebuild on every save (default: check)
   hrs new   <name>           create a project laid out for Harsh
+  hrs add   <crate>..        add Harsh crates to Cargo.toml -- hrs_std and the
+                             rest of Harsh's distribution; a Rust crate is
+                             added with cargo add
   hrs export [dir]           write the project as a plain Rust crate,
                              formatted with cargo fmt (default: target/export)
   hrs fmt   [--check] [files] reformat .hrs files in place (default: src/**.hrs);
@@ -56,12 +59,51 @@ fn main() -> ExitCode {
         "cargo" if !rest.is_empty() => cargo_cmd(&rest[0], &rest[1..]),
         "watch" => watch(&rest),
         "new" => new_project(&rest),
+        "add" => add(&rest),
         "export" => export(&rest),
         "fmt" => fmt(&rest),
         "expand" => expand(&rest),
         "dist" => dist(&rest),
         _ => single_file(&args),
     }
+}
+
+/// `hrs add <crate>..`: Harsh crates into the project's Cargo.toml.
+fn add(args: &[String]) -> ExitCode {
+    if args.is_empty() {
+        eprintln!("hrs add <crate>..  (Harsh's crates: {})", driver::DISTRIBUTION.join(", "));
+        return ExitCode::from(2);
+    }
+    let p = match Project::find() {
+        Ok(p) => p,
+        Err(e) => {
+            eprintln!("hrs: {}", e);
+            return ExitCode::FAILURE;
+        }
+    };
+    let path = p.root.join("Cargo.toml");
+    let Ok(mut manifest) = std::fs::read_to_string(&path) else {
+        eprintln!("hrs: cannot read {}", path.display());
+        return ExitCode::FAILURE;
+    };
+    let mut ok = true;
+    for name in args {
+        match driver::add_dependency(&manifest, name) {
+            Ok((text, msg)) => {
+                manifest = text;
+                eprintln!("hrs: {msg}");
+            }
+            Err(e) => {
+                eprintln!("hrs: {e}");
+                ok = false;
+            }
+        }
+    }
+    if std::fs::write(&path, &manifest).is_err() {
+        eprintln!("hrs: cannot write {}", path.display());
+        return ExitCode::FAILURE;
+    }
+    if ok { ExitCode::SUCCESS } else { ExitCode::FAILURE }
 }
 
 /// `hrs dist <dir>`: Harsh's standard distribution, written into `dir` --
@@ -273,6 +315,10 @@ fn cargo_cmd(sub: &str, args: &[String]) -> ExitCode {
             return ExitCode::FAILURE;
         }
     };
+    if let Some(msg) = driver::missing_std(&p.root) {
+        eprintln!("hrs: {msg}");
+        return ExitCode::FAILURE;
+    }
     match p.cargo(sub, args, &maps) {
         Ok(0) => ExitCode::SUCCESS,
         Ok(_) => ExitCode::FAILURE,

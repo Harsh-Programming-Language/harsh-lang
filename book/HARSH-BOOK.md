@@ -6068,14 +6068,14 @@ Next: matrices, and the linear algebra that makes Harsh a language for data.
 
 The third thing Harsh adds is linear algebra that reads like Julia's. A matrix literal with the same grammar, `*` meaning the matrix product, `A \ b` solving a system, and the same errors when sizes do not fit. If you have written Julia, nothing here will surprise you; if you have not, it is the notation of the textbooks, which is why Julia chose it.
 
-The literals, `m~` and `v~`, are part of the language — they are in the prelude, like `g~`. The types they build, `Matrix` and `Vector`, live in `hrs_std`, Harsh's standard library, a crate you add to a project once:
+The literals, `m~` and `v~`, are part of the language — they are in the prelude, like `g~`. The types they build, `Matrix` and `Vector`, live in `hrs_std`, Harsh's standard library, a crate you add to a project once — `hrs add hrs_std`, which writes this line into `Cargo.toml`:
 
 ```toml
 [dependencies]
 hrs_std = "0.1"
 ```
 
-A project that uses `m~` without it is stopped by `hrs`, with that line to add.
+A project that uses `m~` without it is stopped by `hrs`, which tells you to run `hrs add hrs_std`.
 
 ## 16.1 Writing a matrix
 
@@ -6582,7 +6582,7 @@ $ hrs test
 running 1 test
 test target/hrs/lib.rs - add_one (line 10) ... ok
 
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.20s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.19s
 ```
 
 `cargo doc --open` renders every `///` and `//!` in the crate as HTML, with the Markdown inside them — headings, code blocks, links — laid out. The conventional sections are `# Examples`, `# Panics` (when the function can), `# Errors` (what `Err`s it returns) and `# Safety` (for `unsafe` functions). The example in the `///` is Harsh, like everything else in the file, and `cargo test` *runs it* — every code block in a doc comment is a test, so documentation cannot drift from the code without failing the build.
@@ -6647,6 +6647,8 @@ Inside, `PrimaryColor` lives in `kinds` and `mix` in `utils`, which is a sensibl
 That is the way to share Harsh code *with Rust users*: they get readable Rust, formatted by `cargo fmt`, with no Harsh anywhere — the parts of `hrs_std` you use become the crate's own `matrix` module — and they never need `hrs`. It is not the way to share it with Harsh users, because of what a Rust crate cannot carry: Harsh's own macros. A `~` macro unfolds in Harsh, before anything is transpiled, and leaves nothing in the Rust; so the exported crate has no `macro_rules~` in it, and a Harsh program that depends on it cannot call them. (Rust's `!` macros, which are Rust, survive the export.)
 
 To share a library *as Harsh*, macros and all, share its Harsh: another project depends on it by path, as the next section shows, and `hrs` transpiles it first — its `~` macros, and those it re-exports with `pub use`, reach the program that uses it. A registry of Harsh's own is planned, so that a Harsh library can be published and added by name as a Rust crate is; until it exists, a path is how Harsh travels as Harsh.
+
+**Adding dependencies.** A Harsh project's `Cargo.toml` is Cargo's, so a Rust crate is added as in Rust: `cargo add serde`. Harsh's own crates are added with `hrs add` — `hrs add hrs_std` today, the other crates of Harsh's distribution likewise, and the crates of Harsh's registry when it opens. Each command speaks to one registry, so a name is never looked up in the wrong one; `hrs add serde` answers that `serde` is a Rust crate, for `cargo add`. In the rare project that wants a Harsh crate and a Rust crate of the same name, Cargo's rename keeps both: `foo_rs = { version = "1", package = "foo" }`, and the Rust one is `foo_rs` in your code.
 
 ## 17.4 Workspaces
 

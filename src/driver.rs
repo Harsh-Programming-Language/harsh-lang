@@ -808,7 +808,7 @@ pub fn check_hrs_std(root: &Path, units: &[Unit], sources: &[String]) -> Result<
         if let Some((name, line)) = uses_hrs_std(src) {
             return Err(format!(
                 "{}:{}: `{name}` needs the `hrs_std` crate, which this project does not depend on.\n\
-                 Add it to Cargo.toml:\n\n    [dependencies]\n    hrs_std = \"0.1\"\n",
+                 Add it with `hrs add hrs_std`, or by hand in Cargo.toml:\n\n    [dependencies]\n    hrs_std = \"0.1\"\n",
                 u.source.display(),
                 line
             ));
@@ -935,6 +935,82 @@ fn reexports_of(src: &str, lib: &str) -> Vec<String> {
 /// under `target/hrs/dist/` and patches them in.
 #[cfg(feature = "remap")]
 pub const DISTRIBUTION: [&str; 4] = ["hrs_std", "hrs_proc_macro", "hrs_quote", "hrs_syn"];
+
+/// A distribution crate's version as a dependency line gives it, `"0.1"`:
+/// major and minor, from its manifest embedded in `hrs`.
+#[cfg(feature = "remap")]
+pub fn dist_version(name: &str) -> Option<String> {
+    let path = format!("{name}/Cargo.toml");
+    let (_, text) = crate::dist::FILES.iter().find(|(p, _)| *p == path)?;
+    let v = text.lines().find_map(|l| l.trim().strip_prefix("version = \""))?.split('"').next()?;
+    let mut parts = v.split('.');
+    Some(format!("{}.{}", parts.next()?, parts.next()?))
+}
+
+/// `hrs add name`: `manifest` with the Harsh crate `name` added to its
+/// `[dependencies]`, and what to tell the user. Only Harsh's own crates --
+/// the four of the distribution now, the registry's when it is built; a Rust
+/// crate is `cargo add`'s (the user's rule, 2026-09-29: one command per
+/// registry, so a name is never resolved against the wrong one).
+#[cfg(feature = "remap")]
+pub fn add_dependency(manifest: &str, name: &str) -> Result<(String, String), String> {
+    if !DISTRIBUTION.contains(&name) {
+        return Err(format!("`{name}` is not a Harsh crate; a Rust crate is added with `cargo add {name}`"));
+    }
+    let version = dist_version(name).ok_or_else(|| format!("no version for `{name}` in this hrs"))?;
+    let line = format!("{name} = \"{version}\"");
+    let lines: Vec<&str> = manifest.lines().collect();
+    let key = |l: &str| l.split(['=', '.']).next().unwrap_or("").trim().to_string();
+    let table = lines.iter().position(|l| l.trim() == "[dependencies]");
+    let text = match table {
+        Some(s) => {
+            let end = (s + 1..lines.len()).find(|&k| lines[k].trim_start().starts_with('[')).unwrap_or(lines.len());
+            if lines[s + 1..end].iter().any(|l| key(l) == name) {
+                return Ok((manifest.to_string(), format!("`{name}` is already in Cargo.toml")));
+            }
+            let mut at = end;
+            while at > s + 1 && lines[at - 1].trim().is_empty() {
+                at -= 1;
+            }
+            let mut out: Vec<String> = lines.iter().map(|l| l.to_string()).collect();
+            out.insert(at, line.clone());
+            out.join("\n") + "\n"
+        }
+        None => format!("{}\n\n[dependencies]\n{line}\n", manifest.trim_end()),
+    };
+    Ok((text, format!("added `{line}` to Cargo.toml")))
+}
+
+/// A project whose Rust names `hrs_std` -- `m~`, `v~`, the matrices -- but
+/// whose manifest does not list it: the message to print instead of rustc's
+/// "use of undeclared crate `hrs_std`".
+#[cfg(feature = "remap")]
+pub fn missing_std(root: &Path) -> Option<String> {
+    let manifest = std::fs::read_to_string(root.join("Cargo.toml")).ok()?;
+    let listed = manifest.lines().any(|l| {
+        let t = l.trim_start();
+        t.starts_with("hrs_std") && t[7..].trim_start().starts_with(['=', '.'])
+    });
+    if listed {
+        return None;
+    }
+    let mut stack = vec![root.join("target").join("hrs")];
+    while let Some(dir) = stack.pop() {
+        for e in std::fs::read_dir(&dir).ok()?.flatten() {
+            let p = e.path();
+            if p.is_dir() {
+                if p.file_name().map_or(true, |n| n != "dist" && n != ".complete") {
+                    stack.push(p);
+                }
+            } else if p.extension().map_or(false, |x| x == "rs")
+                && std::fs::read_to_string(&p).map_or(false, |t| t.contains("hrs_std::"))
+            {
+                return Some("this project uses `hrs_std` (`m~`, `v~`, the matrices), which Cargo.toml does not list: run `hrs add hrs_std`".into());
+            }
+        }
+    }
+    None
+}
 
 /// Write the standard distribution under `root/target/hrs/dist/` (a file
 /// only when its text differs, so cargo rebuilds nothing needlessly), and

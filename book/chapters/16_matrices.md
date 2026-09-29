@@ -2,14 +2,14 @@
 
 The third thing Harsh adds is linear algebra that reads like Julia's. A matrix literal with the same grammar, `*` meaning the matrix product, `A \ b` solving a system, and the same errors when sizes do not fit. If you have written Julia, nothing here will surprise you; if you have not, it is the notation of the textbooks, which is why Julia chose it.
 
-The literals, `m~` and `v~`, are part of the language — they are in the prelude, like `g~`. The types they build, `Matrix` and `Vector`, live in `hrs_std`, Harsh's standard library, a crate you add to a project once:
+The literals, `m~` and `v~`, are part of the language — they are in the prelude, like `g~`. The types they build, `Matrix` and `Vector`, live in `hrs_std`, Harsh's standard library, a crate you add to a project once — `hrs add hrs_std`, which writes this line into `Cargo.toml`:
 
 ```toml
 [dependencies]
 hrs_std = "0.1"
 ```
 
-A project that uses `m~` without it is stopped by `hrs`, with that line to add.
+A project that uses `m~` without it is stopped by `hrs`, which tells you to run `hrs add hrs_std`.
 
 ## 16.1 Writing a matrix
 

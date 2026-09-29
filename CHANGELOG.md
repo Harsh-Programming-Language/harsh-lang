@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.55 — 2026-09-29  (`hrs_std` 0.1.4 and the Jupyter kernel 0.1.3, unchanged)
+
+- **`hrs add`** (the user's design): `hrs add hrs_std` writes `hrs_std = "0.1"` into the project's `[dependencies]` -- making the table if there is none, saying so, and doing nothing when the crate is listed already. It adds Harsh's crates only: the four of the distribution now, the registry's when it is built; a Rust crate is `cargo add`'s, and `hrs add serde` says so. One command per registry, so a name is never looked up in the wrong one.
+- The message for a project using `m~` without `hrs_std` now leads with `hrs add hrs_std`; code that names `hrs_std` without `m~` or `v~` gets the same advice instead of rustc's "undeclared crate".
+- Taught: the Book (chapter 16's opening; chapter 17, *Adding dependencies*, with Cargo's rename for a name in both worlds), the guide, `hrs_std`'s README, `hrs --help`. The registry design updated; `RELEASE.md` gains reserving the four names on crates.io.
+
 ## 0.1.54 — 2026-09-29  (**`hrs_std` 0.1.4**; the Jupyter kernel 0.1.3, unchanged)
 
 - **`try_solve` and `try_inv`** (the user's request): `solve` and `inv` stay Julia's -- an answer, or a panic with Julia's `DimensionMismatch` or `SingularException` -- and their `try_` twins return a `Result<_, LinAlgError>`, the error saying which failure it was, for a matrix from data the caller has not checked. Rust's own pairs are the precedent: `RefCell`'s `borrow` and `try_borrow`, `Vec`'s `reserve` and `try_reserve`. `solve` and `inv` are now built on their twins, their messages unchanged word for word. Taught in the Book (16.5) and *By Example* (17.5), with a program using both forms; `hrs_std`'s README. Tests: the failures as values, the panics as before.

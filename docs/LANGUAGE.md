@@ -192,6 +192,8 @@ hrs check [cargo args]     transpile, then cargo check
 hrs lint  [cargo args]     transpile, then cargo clippy
 hrs watch [subcommand]     rebuild on every save (default: check)
 hrs new   <name>           create a project laid out for Harsh
+hrs add   <crate>..         add Harsh crates to Cargo.toml (hrs_std, ...);
+                           a Rust crate is added with cargo add
 hrs export [dir]           write the project as a plain Rust crate,
                            formatted with cargo fmt (default: target/export)
 hrs dist  <dir>            write Harsh's standard distribution (hrs_std and
@@ -2266,6 +2268,8 @@ fn main$:
 ## Matrices and linear algebra
 
 Julia's notation, for Julia's operations. The literals `m~` and `v~` are in the prelude; the types they build, `hrs_std::Matrix<T>` and `hrs_std::Vector<T>`, are in the `hrs_std` crate, which a project lists once. `hrs` stops a project that calls `m~` without it, and names the line to add.
+
+`hrs add hrs_std` writes it:
 
 ```toml
 [dependencies]

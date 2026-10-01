@@ -179,13 +179,14 @@ Three things to notice.
 
 ### Statements and expressions
 
-That last point has a sharp edge. A *statement* does something and produces no value; an *expression* produces a value. `let y = x * x` is a statement. `y` alone is an expression. A block's value is its final expression — **unless that expression has a semicolon after it**, which turns it into a statement, and then the block is worth `()`. A line ending is normally the end of a statement and you never write `;`, so you rarely think about this. But you may write one, and the rule is: a `;` at the end of a block's last line means *discard this value*.
+That last point has a sharp edge. A *statement* does something and produces no value; an *expression* produces a value. `let y = x * x` is a statement. `y` alone is an expression. A block's value is its final expression. To make a block worth nothing instead — `()`, the unit value — its last line is `()` itself: the line says, where the value goes, that there is none.
 
-Here is what a stray one does to a function that meant to return a value:
+Here is what such a line does to a function that meant to return a value:
 
 ```rust harsh
 fn plus_one x: i32 -> i32:
-    x + 1;
+    x + 1
+    ()
 
 fn main$:
     println! "{}" (plus_one 5)
@@ -201,7 +202,24 @@ error[E0308]: mismatched types
    = help: remove this semicolon to return this value (hrs 2:10)
 ```
 
-The error is Rust's most-quoted: the signature promises an `i32`, the body ends in a statement, and so the body is worth `()`. Remove the `;` and it is correct. You will meet this error on purpose exactly once, and then you will know what it means forever.
+The error is Rust's most-quoted: the signature promises an `i32`, and the body is worth `()`. Remove the `()` and it is correct — rustc's own hint speaks of a `;`, which is how the Rust ends that statement. You will meet this error on purpose exactly once, and then you will know what it means forever.
+
+And here is the `()` on purpose. A `for` body is worth `()`, so when its last line is a call whose value you do not want — `insert` answers with a `bool`, *was it new?* — the `()` beneath it says so:
+
+```rust harsh
+use std.collections.HashSet
+
+fn main$:
+    let mut seen = HashSet.new$
+    for word in ["a", "b", "a"]:
+        seen <- insert word
+        ()
+    println! "{} distinct" (seen <- len$)
+```
+
+```text
+2 distinct
+```
 
 ## 3.5 Control flow
 

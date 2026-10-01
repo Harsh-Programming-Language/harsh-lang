@@ -22,8 +22,9 @@ fn main$:
         let tx = tx <- clone$
         // Bound to `_`: the block's last expression is its value, and here
         // the handle is not wanted, so the binding discards it.
-        let _ = thread.spawn move ||:
+        thread.spawn move ||:
             tx <- send (id * id) <- unwrap$
+        ()
     drop tx
 
     let mut got: Vec<i32> = rx <- iter$ <- collect$
@@ -47,7 +48,10 @@ A channel is a pair: `tx` to send, `rx` to receive. Every thread gets its own
 clone of `tx`, and the original is dropped so the receiver knows when the last
 one is gone.
 
-One Harsh detail worth the line it costs: `let _ = thread.spawn …`. A block's
-last expression is its value, and here the handle is not wanted, so binding it
-to `_` discards it. Without the binding the loop body would be trying to
-return a `JoinHandle`, and rustc would say so.
+One Harsh detail worth the line it costs: the `()` after `thread.spawn …`.
+A block's value is its last line, and without the `()` the loop body would
+be trying to return a `JoinHandle`, and rustc would say so. The `()` says
+the body is worth nothing; it goes on the line after the closure's body, at
+the call's own column. (`let _ = thread.spawn …` compiles too, but means
+something else: binding to `_` drops the value at once — what you want for a
+guard you mean to release, not for a value you merely ignore.)

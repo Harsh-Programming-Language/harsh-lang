@@ -4,7 +4,8 @@ fn tail$ -> i32:
 
 fn discard$ -> ():
     let a = 1
-    a;
+    a
+    ()
 
 fn stmts$ -> i32:
     let mut t = 0

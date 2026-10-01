@@ -546,13 +546,14 @@ Three things to notice.
 
 ### Statements and expressions
 
-That last point has a sharp edge. A *statement* does something and produces no value; an *expression* produces a value. `let y = x * x` is a statement. `y` alone is an expression. A block's value is its final expression — **unless that expression has a semicolon after it**, which turns it into a statement, and then the block is worth `()`. A line ending is normally the end of a statement and you never write `;`, so you rarely think about this. But you may write one, and the rule is: a `;` at the end of a block's last line means *discard this value*.
+That last point has a sharp edge. A *statement* does something and produces no value; an *expression* produces a value. `let y = x * x` is a statement. `y` alone is an expression. A block's value is its final expression. To make a block worth nothing instead — `()`, the unit value — its last line is `()` itself: the line says, where the value goes, that there is none.
 
-Here is what a stray one does to a function that meant to return a value:
+Here is what such a line does to a function that meant to return a value:
 
 ```rust harsh
 fn plus_one x: i32 -> i32:
-    x + 1;
+    x + 1
+    ()
 
 fn main$:
     println! "{}" (plus_one 5)
@@ -568,7 +569,24 @@ error[E0308]: mismatched types
    = help: remove this semicolon to return this value (hrs 2:10)
 ```
 
-The error is Rust's most-quoted: the signature promises an `i32`, the body ends in a statement, and so the body is worth `()`. Remove the `;` and it is correct. You will meet this error on purpose exactly once, and then you will know what it means forever.
+The error is Rust's most-quoted: the signature promises an `i32`, and the body is worth `()`. Remove the `()` and it is correct — rustc's own hint speaks of a `;`, which is how the Rust ends that statement. You will meet this error on purpose exactly once, and then you will know what it means forever.
+
+And here is the `()` on purpose. A `for` body is worth `()`, so when its last line is a call whose value you do not want — `insert` answers with a `bool`, *was it new?* — the `()` beneath it says so:
+
+```rust harsh
+use std.collections.HashSet
+
+fn main$:
+    let mut seen = HashSet.new$
+    for word in ["a", "b", "a"]:
+        seen <- insert word
+        ()
+    println! "{} distinct" (seen <- len$)
+```
+
+```text
+2 distinct
+```
 
 ## 3.5 Control flow
 
@@ -2947,7 +2965,8 @@ Most panics are not written; they are hit:
 ```rust harsh
 fn main$:
     let v = vec! 1 2 3
-    v[99];                          // the `;` discards the value; the index still runs
+    v[99]                           // the value is discarded; the index still runs
+    ()
 ```
 
 ```text
@@ -3965,7 +3984,8 @@ mod tests
     #[test]
     #[should_panic (expected = "less than or equal to 100")]
     fn greater_than_100$:
-        Guess.new 200;
+        Guess.new 200
+        ()
 ```
 
 ```text
@@ -5259,7 +5279,8 @@ fn main$:
 ```rust harsh
 fn main$:
     let v1: Vec<i32> = vec! 1 2 3
-    v1 <- iter$ <- map (|x| x + 1);         // an adaptor alone does nothing
+    v1 <- iter$ <- map (|x| x + 1)  // an adaptor alone does nothing
+    ()
 ```
 
 An adaptor alone does nothing, because iterators are *lazy*: `map` builds an iterator that will add one *when asked*, and nothing asks. The compiler warns that the value is unused ("iterators are lazy and do nothing unless consumed" — the warnings are off in the book's build, but you will see it). Every chain therefore ends in a consumer, or a `for`.
@@ -6582,7 +6603,7 @@ $ hrs test
 running 1 test
 test target/hrs/lib.rs - add_one (line 10) ... ok
 
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.19s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.18s
 ```
 
 `cargo doc --open` renders every `///` and `//!` in the crate as HTML, with the Markdown inside them — headings, code blocks, links — laid out. The conventional sections are `# Examples`, `# Panics` (when the function can), `# Errors` (what `Err`s it returns) and `# Safety` (for `unsafe` functions). The example in the `///` is Harsh, like everything else in the file, and `cargo test` *runs it* — every code block in a doc comment is a test, so documentation cannot drift from the code without failing the build.
@@ -7383,7 +7404,8 @@ async fn main$:
             println! "hi number {i} from the second task!"
             sleep (Duration.from_millis 1) <- await
 
-    tokio.join! fut1 fut2;             // run both to completion, alternating at each await
+    tokio.join! fut1 fut2  // run both to completion, alternating at each await
+    ()
 ```
 
 ```text
@@ -7433,7 +7455,8 @@ async fn main$:
             tx <- send (String.from val) <- unwrap$
             sleep (Duration.from_millis 5) <- await
 
-    tokio.join! tx1_fut tx_fut rx_fut;
+    tokio.join! tx1_fut tx_fut rx_fut
+    ()
 ```
 
 ```text

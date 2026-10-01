@@ -20,6 +20,21 @@ pub const MODIFIERS: [&str; 7] =
 /// line of a block, because they are statements rather than tail expressions.
 /// `return` is deliberately absent: `{ return x }` is valid Rust, so forcing a
 /// semicolon there would make the round trip inexact for no benefit.
+/// Macros whose call is a statement -- they produce `()` or never return:
+/// the converter writes no `()` after them as a block's last line, and a
+/// round trip treats them with and without their final `;` as one
+/// statement (2026-09-30).
+pub const UNIT_MACROS: [&str; 14] = [
+    "println", "print", "eprintln", "eprint", "assert", "assert_eq", "assert_ne", "debug_assert",
+    "debug_assert_eq", "debug_assert_ne", "panic", "todo", "unimplemented", "unreachable",
+];
+
+/// Is `toks` a call of one of `UNIT_MACROS`: `println! ..`, `println!(..)`?
+pub fn unit_macro_call(toks: &[crate::lex::Token]) -> bool {
+    let sig: Vec<&crate::lex::Token> = toks.iter().filter(|t| !t.is_comment()).collect();
+    sig.len() >= 2 && UNIT_MACROS.contains(&sig[0].text.as_str()) && sig[1].text == "!"
+}
+
 pub const ALWAYS_SEMI: [&str; 7] =
     ["let", "use", "const", "static", "type", "mod", "extern"];
 

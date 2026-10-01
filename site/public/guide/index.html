@@ -1098,11 +1098,11 @@ xs <span class="op">&lt;-</span> iter<span class="defer">$</span> <span class="o
 <li>The bare form and the isolated form emit the same Rust for the closure; the isolated form additionally lets the statement carry on.</li>
 </ul>
 <h3 id="statements-and-semicolons">Statements and semicolons</h3>
-<p>Semicolons are optional. The transpiler inserts them from the layout, and an explicit semicolon is always honoured.</p>
+<p>Harsh writes no semicolons. The transpiler inserts them from the layout, and a <code>;</code> ending a line is refused (since 0.1.56).</p>
 <ul>
 <li>Every logical line in a statement block gets a semicolon except the last, so the last line is a tail expression exactly as in Rust.</li>
 <li>A line beginning with <code>let</code>, <code>use</code>, <code>const</code>, <code>static</code>, <code>type</code>, <code>mod</code>, <code>extern</code>, or <code>return</code> always gets a semicolon, including when it is last, because those are statements rather than tail values.</li>
-<li>An explicit semicolon you write is preserved and suppresses the last-line exemption. This is the escape hatch when you want to discard a tail value.</li>
+<li>To discard a block's last value, end the block with a line <code>()</code>: the block is then worth <code>()</code>, as Rust's <code>expr;</code> makes it. The Rust is written as Rust is written — <code>expr;</code>, with no <code>()</code>.</li>
 <li>A nested block gets a semicolon after its closing brace only when its header began with <code>let</code>, <code>const</code>, <code>static</code>, <code>type</code>, or <code>use</code>. An <code>if</code> or <code>match</code> used as a statement does not.</li>
 <li>Attribute lines never take a separator and never count as a block's tail.</li>
 </ul>
@@ -1121,8 +1121,8 @@ xs <span class="op">&lt;-</span> iter<span class="defer">$</span> <span class="o
 <h4 id="the-three-rules">The three rules</h4>
 <ul>
 <li>A statement ends at a newline, unless an unclosed bracket or a deeper-indented next line carries it on. <code>let xs = [1,</code> followed by <code>2]</code> on the next line is one statement.</li>
-<li>A <code>;</code> is written in Harsh in exactly one place: at the end of a block's last statement, where it means <em>emit one</em>. That discards the tail value, as it does in Rust. A <code>;</code> anywhere else is rejected, since the newline already ended that statement.</li>
-<li>In the Rust, every statement ends with <code>;</code> except the last in its block, which gets one only if the Harsh had one. This applies at every nesting level independently — a closure body is a block and is governed by the same rule at its own level.</li>
+<li>A block whose last value is to be discarded ends with a line <code>()</code>, which says so where the block's value goes — as a Jupyter cell is silent when its value is <code>()</code>. A <code>;</code> ending a line is refused, with that fix in the message.</li>
+<li>In the Rust, every statement ends with <code>;</code> except the last in its block, which gets one only when a <code>()</code> line follows it. This applies at every nesting level independently — a closure body is a block and is governed by the same rule at its own level.</li>
 </ul>
 <pre class="code harsh"><code>parent_statement                 parent_statement<span class="p">;</span>
 my_func                          my_func<span class="p">(</span><span class="op">||</span> <span class="p">{</span>
@@ -1135,12 +1135,17 @@ last_parent_statement            last_parent_statement</code></pre>
 my_func                          my_func<span class="p">(</span><span class="op">||</span> <span class="p">{</span>
     <span class="op">||</span> <span class="k">do</span><span class="p">:</span>                           closure_statement<span class="p">;</span>
         closure_statement            last_closure_statement<span class="p">;</span>
-        last_closure_statement<span class="p">;</span>  <span class="p">}</span><span class="p">)</span><span class="p">;</span>
-parent_statement                 parent_statement<span class="p">;</span>
-last_parent_statement<span class="p">;</span>
-                                 last_parent_statement<span class="p">;</span></code></pre>
+        last_closure_statement   <span class="p">}</span><span class="p">)</span><span class="p">;</span>
+        <span class="p">(</span><span class="p">)</span>                       parent_statement<span class="p">;</span>
+parent_statement                 last_parent_statement<span class="p">;</span>
+last_parent_statement
+<span class="p">(</span><span class="p">)</span></code></pre>
+<p>A call whose last argument is an indented block — a closure, an <code>async move:</code> body — is one statement, and its <code>()</code> goes on the line after the block, at the call's own column:</p>
+<pre class="code harsh"><code>spawn <span class="k">async</span> <span class="k">move</span><span class="p">:</span>                spawn<span class="p">(</span><span class="k">async</span> <span class="k">move</span> <span class="p">{</span>
+    work<span class="defer">$</span>                            work<span class="p">(</span><span class="p">)</span>
+<span class="p">(</span><span class="p">)</span>                               <span class="p">}</span><span class="p">)</span><span class="p">;</span></code></pre>
 <ul>
-<li>Going the other way, <code>hrs-from</code> removes every <code>;</code> except one ending a block's last statement, which is why the round trip is exact.</li>
+<li>Going the other way, <code>hrs-from</code> removes every <code>;</code>, and writes a <code>()</code> line where a block's last statement discarded its value — except after a <code>let</code>, which Harsh terminates itself, and after a macro that produces no value (<code>println!</code>, <code>assert!</code>, <code>panic!</code> and the like), whose <code>;</code> changes nothing. That is why the round trip is exact.</li>
 </ul>
 <h4 id="worked-forms">Worked forms</h4>
 <pre class="code harsh"><code><span class="k">fn</span> tail<span class="defer">$</span> <span class="op">-&gt;</span> i32<span class="p">:</span>            <span class="k">fn</span> tail<span class="p">(</span><span class="p">)</span> <span class="op">-&gt;</span> i32 <span class="p">{</span>
@@ -1150,8 +1155,8 @@ last_parent_statement<span class="p">;</span>
 
 <span class="k">fn</span> discard<span class="defer">$</span> <span class="op">-&gt;</span> <span class="p">(</span><span class="p">)</span><span class="p">:</span>          <span class="k">fn</span> discard<span class="p">(</span><span class="p">)</span> <span class="op">-&gt;</span> <span class="p">(</span><span class="p">)</span> <span class="p">{</span>
     <span class="k">let</span> a <span class="p">=</span> <span class="num">1</span>                     <span class="k">let</span> a <span class="p">=</span> <span class="num">1</span><span class="p">;</span>
-    a<span class="p">;</span>                            a<span class="p">;</span>
-                              <span class="p">}</span>
+    a                             a<span class="p">;</span>
+    <span class="p">(</span><span class="p">)</span>                        <span class="p">}</span>
 
 <span class="k">fn</span> ret<span class="defer">$</span> <span class="op">-&gt;</span> i32<span class="p">:</span>             <span class="k">fn</span> ret<span class="p">(</span><span class="p">)</span> <span class="op">-&gt;</span> i32 <span class="p">{</span>
     <span class="k">if</span> <span class="k">true</span><span class="p">:</span>                      <span class="k">if</span> <span class="k">true</span> <span class="p">{</span>

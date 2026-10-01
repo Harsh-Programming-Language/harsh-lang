@@ -104,7 +104,8 @@ async fn main$:
             println! "hi number {i} from the second task!"
             sleep (Duration.from_millis 1) <- await
 
-    tokio.join! fut1 fut2;             // run both to completion, alternating at each await
+    tokio.join! fut1 fut2  // run both to completion, alternating at each await
+    ()
 ```
 
 ```text
@@ -154,7 +155,8 @@ async fn main$:
             tx <- send (String.from val) <- unwrap$
             sleep (Duration.from_millis 5) <- await
 
-    tokio.join! tx1_fut tx_fut rx_fut;
+    tokio.join! tx1_fut tx_fut rx_fut
+    ()
 ```
 
 ```text

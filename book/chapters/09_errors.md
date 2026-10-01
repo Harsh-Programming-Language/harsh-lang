@@ -25,7 +25,8 @@ Most panics are not written; they are hit:
 ```rust harsh
 fn main$:
     let v = vec! 1 2 3
-    v[99];                          // the `;` discards the value; the index still runs
+    v[99]                           // the value is discarded; the index still runs
+    ()
 ```
 
 ```text

@@ -13,6 +13,8 @@ fn main$:
     parent_statement$
     my_func || do:
         closure_statement$
-        last_closure_statement$;
+        last_closure_statement$
+        ()
     parent_statement$
-    last_parent_statement$;
+    last_parent_statement$
+    ()

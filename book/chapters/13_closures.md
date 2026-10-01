@@ -406,7 +406,8 @@ fn main$:
 ```rust harsh
 fn main$:
     let v1: Vec<i32> = vec! 1 2 3
-    v1 <- iter$ <- map (|x| x + 1);         // an adaptor alone does nothing
+    v1 <- iter$ <- map (|x| x + 1)  // an adaptor alone does nothing
+    ()
 ```
 
 An adaptor alone does nothing, because iterators are *lazy*: `map` builds an iterator that will add one *when asked*, and nothing asks. The compiler warns that the value is unused ("iterators are lazy and do nothing unless consumed" — the warnings are off in the book's build, but you will see it). Every chain therefore ends in a consumer, or a `for`.

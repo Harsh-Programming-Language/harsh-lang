@@ -197,7 +197,14 @@ fn to_rust(ex: &Example) -> Result<String, (Span, String)> {
     // Unwrap: drop `fn main() {` and the closing `}`, dedent by four.
     let rust = em.out;
     let inner: Vec<&str> = rust.lines().collect();
-    let body: String = inner[1..inner.len().saturating_sub(2)]
+    // The closing `}`, and the wrapper's `()` when it was written: since
+    // 2026-09-30 a last line `()` after a statement is folded into that
+    // statement's `;`, and is not in the Rust at all.
+    let mut end = inner.len().saturating_sub(1);
+    if end > 1 && inner[end - 1].trim() == "()" {
+        end -= 1;
+    }
+    let body: String = inner[1..end]
         .iter()
         .map(|l| l.strip_prefix("    ").unwrap_or(l))
         .collect::<Vec<_>>()
@@ -266,13 +273,13 @@ pub fn to_harsh_in(text: &mut String) {
             .map(|l| l.strip_prefix("    ").unwrap_or(l))
             .collect::<Vec<_>>()
             .join("\n");
-        // The wrapper's last statement carried a `;`, which in Harsh means
-        // *discard this value* at the end of a block. An example is a list of
+        // The wrapper's last statement discarded its value, which Harsh
+        // writes as a last line `()` (2026-09-30). An example is a list of
         // statements, not a block with a tail, so the mark goes: `to_rust`
-        // adds a statement after the last line for the same reason.
-        let body = match body.trim_end().strip_suffix(';') {
-            Some(cut) => cut.to_string(),
-            None => body,
+        // adds the `()` back after the last line for the same reason.
+        let body = match body.trim_end().rsplit_once('\n') {
+            Some((head, last)) if last.trim() == "()" => head.to_string(),
+            _ => body,
         };
         let dressed = ex.dress(&body, &back);
         let old = {

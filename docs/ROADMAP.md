@@ -27,6 +27,15 @@ after a few days with it. What needs no decision is done, or listed last below.
 
 ### Waiting on the user, after his testing
 
+- **H2 (from Docreview): isolating parentheses around an inline pattern
+  survive** -- `if let (D.Email\ messages, ..) = &k:` keeps `( … )` in the
+  Rust, and rustc warns `unused_parens`. Harmless (the program is right; the
+  app writes the pattern unparenthesised). The emitter's optional-grouping
+  rule (`whole_group` in `emit::block`) drops parentheses around a *block*;
+  an inline `\` list in parentheses on a header line goes another way
+  (inline expansion), which that rule never sees. Adding `let` to its
+  `not_call` list was tried and is in place, but does not reach this case.
+
 - **`hrs fmt` applies the countable rules -- built 2026-09-29 (0.1.52).** Remaining from the list below: (1) and (3).
 - **Three layout bugs found applying the handwriting rule (2026-09-29).**
   (1) `let x =` then, on the next line, `if c: a` with its `else:` beneath:

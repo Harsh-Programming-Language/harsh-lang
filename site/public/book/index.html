@@ -772,10 +772,11 @@ mon 3 4</code></pre>
 <li><strong>The last expression is the return value.</strong> <code>square</code> computes <code>y</code> and then has <code>y</code> as its final line, with no <code>return</code>. That last line is an <em>expression</em>, and a function's body is worth its final expression. <code>return</code> exists for leaving early; it is not needed at the end.</li>
 </ul>
 <h4 id="statements-and-expressions">Statements and expressions</h4>
-<p>That last point has a sharp edge. A <em>statement</em> does something and produces no value; an <em>expression</em> produces a value. <code>let y = x * x</code> is a statement. <code>y</code> alone is an expression. A block's value is its final expression — <strong>unless that expression has a semicolon after it</strong>, which turns it into a statement, and then the block is worth <code>()</code>. A line ending is normally the end of a statement and you never write <code>;</code>, so you rarely think about this. But you may write one, and the rule is: a <code>;</code> at the end of a block's last line means <em>discard this value</em>.</p>
-<p>Here is what a stray one does to a function that meant to return a value:</p>
+<p>That last point has a sharp edge. A <em>statement</em> does something and produces no value; an <em>expression</em> produces a value. <code>let y = x * x</code> is a statement. <code>y</code> alone is an expression. A block's value is its final expression. To make a block worth nothing instead — <code>()</code>, the unit value — its last line is <code>()</code> itself: the line says, where the value goes, that there is none.</p>
+<p>Here is what such a line does to a function that meant to return a value:</p>
 <pre class="code harsh"><code><span class="k">fn</span> plus_one x<span class="p">:</span> i32 <span class="op">-&gt;</span> i32<span class="p">:</span>
-    x <span class="p">+</span> <span class="num">1</span><span class="p">;</span>
+    x <span class="p">+</span> <span class="num">1</span>
+    <span class="p">(</span><span class="p">)</span>
 
 <span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
     <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span>plus_one <span class="num">5</span><span class="p">)</span></code></pre>
@@ -786,7 +787,17 @@ mon 3 4</code></pre>
    |    -------- implicitly returns `()` as its body has no tail or `return` expression
    |                       ^^^ expected `i32`, found `()`
    = help: remove this semicolon to return this value (hrs 2:10)</code></pre>
-<p>The error is Rust's most-quoted: the signature promises an <code>i32</code>, the body ends in a statement, and so the body is worth <code>()</code>. Remove the <code>;</code> and it is correct. You will meet this error on purpose exactly once, and then you will know what it means forever.</p>
+<p>The error is Rust's most-quoted: the signature promises an <code>i32</code>, and the body is worth <code>()</code>. Remove the <code>()</code> and it is correct — rustc's own hint speaks of a <code>;</code>, which is how the Rust ends that statement. You will meet this error on purpose exactly once, and then you will know what it means forever.</p>
+<p>And here is the <code>()</code> on purpose. A <code>for</code> body is worth <code>()</code>, so when its last line is a call whose value you do not want — <code>insert</code> answers with a <code>bool</code>, <em>was it new?</em> — the <code>()</code> beneath it says so:</p>
+<pre class="code harsh"><code><span class="k">use</span> std<span class="p">.</span>collections<span class="p">.</span><span class="t">HashSet</span>
+
+<span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="k">let</span> <span class="k">mut</span> seen <span class="p">=</span> <span class="t">HashSet</span><span class="p">.</span>new<span class="defer">$</span>
+    <span class="k">for</span> word <span class="k">in</span> <span class="p">[</span><span class="str">"a"</span><span class="p">,</span> <span class="str">"b"</span><span class="p">,</span> <span class="str">"a"</span><span class="p">]</span><span class="p">:</span>
+        seen <span class="op">&lt;-</span> insert word
+        <span class="p">(</span><span class="p">)</span>
+    <span class="mac">println!</span> <span class="str">"{} distinct"</span> <span class="p">(</span>seen <span class="op">&lt;-</span> len<span class="defer">$</span><span class="p">)</span></code></pre>
+<pre class="code"><code>2 distinct</code></pre>
 <h3 id="3-5-control-flow">3.5 Control flow</h3>
 <h4 id="if"><code>if</code></h4>
 <pre class="code harsh"><code><span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
@@ -2406,7 +2417,8 @@ crash and burn</code></pre>
 <p>Most panics are not written; they are hit:</p>
 <pre class="code harsh"><code><span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
     <span class="k">let</span> v <span class="p">=</span> <span class="mac">vec!</span> <span class="num">1</span> <span class="num">2</span> <span class="num">3</span>
-    v<span class="p">[</span><span class="num">99</span><span class="p">]</span><span class="p">;</span>                          <span class="com">// the `;` discards the value; the index still runs</span></code></pre>
+    v<span class="p">[</span><span class="num">99</span><span class="p">]</span>                           <span class="com">// the value is discarded; the index still runs</span>
+    <span class="p">(</span><span class="p">)</span></code></pre>
 <pre class="code"><code>thread 'main' panicked at panic_index.hrs:3:
 index out of bounds: the len is 3 but the index is 99</code></pre>
 <p>Chapter 8's index rule, seen from the other side. In C this reads whatever happens to be at that address — a <em>buffer over-read</em>, the root of a large fraction of security holes. Rust checks, and panics, and the panic is not the bug: the index was. The panic is the report.</p>
@@ -3138,7 +3150,8 @@ test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out</
     <span class="attr">#[test]</span>
     <span class="attr">#[should_panic (expected = "less than or equal to 100")]</span>
     <span class="k">fn</span> greater_than_100<span class="defer">$</span><span class="p">:</span>
-        <span class="t">Guess</span><span class="p">.</span>new <span class="num">200</span><span class="p">;</span></code></pre>
+        <span class="t">Guess</span><span class="p">.</span>new <span class="num">200</span>
+        <span class="p">(</span><span class="p">)</span></code></pre>
 <pre class="code"><code>$ cargo test
 running 1 test
 test tests::greater_than_100 - should panic ... ok
@@ -4177,7 +4190,8 @@ Got: 3</code></pre>
 <p><code>map (|x| x + 1)</code> yields each item plus one; <code>collect$</code> at the end consumes the result. That last step is not optional:</p>
 <pre class="code harsh"><code><span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
     <span class="k">let</span> v1<span class="p">:</span> <span class="t">Vec</span><span class="p">&lt;</span>i32<span class="p">&gt;</span> <span class="p">=</span> <span class="mac">vec!</span> <span class="num">1</span> <span class="num">2</span> <span class="num">3</span>
-    v1 <span class="op">&lt;-</span> iter<span class="defer">$</span> <span class="op">&lt;-</span> map <span class="p">(</span><span class="p">|</span>x<span class="p">|</span> x <span class="p">+</span> <span class="num">1</span><span class="p">)</span><span class="p">;</span>         <span class="com">// an adaptor alone does nothing</span></code></pre>
+    v1 <span class="op">&lt;-</span> iter<span class="defer">$</span> <span class="op">&lt;-</span> map <span class="p">(</span><span class="p">|</span>x<span class="p">|</span> x <span class="p">+</span> <span class="num">1</span><span class="p">)</span>  <span class="com">// an adaptor alone does nothing</span>
+    <span class="p">(</span><span class="p">)</span></code></pre>
 <p>An adaptor alone does nothing, because iterators are <em>lazy</em>: <code>map</code> builds an iterator that will add one <em>when asked</em>, and nothing asks. The compiler warns that the value is unused ("iterators are lazy and do nothing unless consumed" — the warnings are off in the book's build, but you will see it). Every chain therefore ends in a consumer, or a <code>for</code>.</p>
 <h4 id="closures-that-capture-their-environment">Closures that capture their environment</h4>
 <p>An adaptor's closure can use variables from outside, which is most of their power:</p>
@@ -5120,7 +5134,7 @@ opt-level = 3</code></pre>
 running 1 test
 test target/hrs/lib.rs - add_one (line 10) ... ok
 
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.19s</code></pre>
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.18s</code></pre>
 <p><code>cargo doc --open</code> renders every <code>///</code> and <code>//!</code> in the crate as HTML, with the Markdown inside them — headings, code blocks, links — laid out. The conventional sections are <code># Examples</code>, <code># Panics</code> (when the function can), <code># Errors</code> (what <code>Err</code>s it returns) and <code># Safety</code> (for <code>unsafe</code> functions). The example in the <code>///</code> is Harsh, like everything else in the file, and <code>cargo test</code> <em>runs it</em> — every code block in a doc comment is a test, so documentation cannot drift from the code without failing the build.</p>
 <blockquote>
 <p><strong>Harsh —</strong> A fenced block in a doc comment is the one kind of comment the transpiler reads. The documentation tool lifts such a block out, compiles it and runs it — it is code, not prose — so it is written in Harsh and the transpiler writes out the Rust that tool expects, the same translation it does everywhere else. A fence tagged with another language — <code>text</code>, <code>toml</code> — is prose and is left exactly as you wrote it. A line beginning <code>#</code> inside the fence is the documentation tool's own mark for <em>compile this but do not show it</em>, and it survives the translation.</p>
@@ -5686,7 +5700,8 @@ tokio = { version = "1.40", features = ["rt", "macros", "time", "sync"] }</code>
             <span class="mac">println!</span> <span class="str">"hi number {i} from the second task!"</span>
             sleep <span class="p">(</span><span class="t">Duration</span><span class="p">.</span>from_millis <span class="num">1</span><span class="p">)</span> <span class="op">&lt;-</span> <span class="k">await</span>
 
-    tokio<span class="p">.</span><span class="mac">join!</span> fut1 fut2<span class="p">;</span>             <span class="com">// run both to completion, alternating at each await</span></code></pre>
+    tokio<span class="p">.</span><span class="mac">join!</span> fut1 fut2  <span class="com">// run both to completion, alternating at each await</span>
+    <span class="p">(</span><span class="p">)</span></code></pre>
 <pre class="code"><code>$ hrs run
 hi number 1 from the first task!
 hi number 1 from the second task!
@@ -5722,7 +5737,8 @@ tokio = { version = "1.40", features = ["rt", "macros", "time", "sync"] }</code>
             tx <span class="op">&lt;-</span> send <span class="p">(</span><span class="t">String</span><span class="p">.</span>from val<span class="p">)</span> <span class="op">&lt;-</span> unwrap<span class="defer">$</span>
             sleep <span class="p">(</span><span class="t">Duration</span><span class="p">.</span>from_millis <span class="num">5</span><span class="p">)</span> <span class="op">&lt;-</span> <span class="k">await</span>
 
-    tokio<span class="p">.</span><span class="mac">join!</span> tx1_fut tx_fut rx_fut<span class="p">;</span></code></pre>
+    tokio<span class="p">.</span><span class="mac">join!</span> tx1_fut tx_fut rx_fut
+    <span class="p">(</span><span class="p">)</span></code></pre>
 <pre class="code"><code>$ hrs run
 received 'hi'
 received 'more'

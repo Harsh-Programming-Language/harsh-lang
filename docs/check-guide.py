@@ -74,8 +74,14 @@ def transpile(harsh):
         except OSError:
             pass
     if out is not None and wrapped:
-        lines = out.split("\n")
-        out = "\n".join(l[4:] if l.startswith("    ") else l for l in lines[1:-3])
+        lines = out.rstrip("\n").split("\n")
+        # The closing `}`, and the wrapper's `()` when it was written: since
+        # 0.1.56 a last line `()` after a statement is folded into that
+        # statement's `;`, and is not in the Rust at all.
+        end = len(lines) - 1
+        if end > 1 and lines[end - 1].strip() == "()":
+            end -= 1
+        out = "\n".join(l[4:] if l.startswith("    ") else l for l in lines[1:end])
     elif out is not None and impl:
         out = "\n".join(out.split("\n")[1:-2])
     return out, r.stderr.strip()

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.56 — 2026-09-30  (`hrs_std` 0.1.4 and the Jupyter kernel 0.1.3, unchanged)
+
+- **A block's discarded value is written `()`, not `;`** (the user's rule, from building Docreview): a block whose last value is to be thrown away ends with a line `()` -- `seen <- insert word`, and `()` beneath it -- which says so where the block's value goes. The Rust is written as Rust is: `seen.insert(word);`, no `()`. **A `;` ending a line is now refused**, with that fix in the message; `;` inside brackets (`[u8; 4]`, `m~ [1 2; 3 4]`) and in `macro_rules!` arms is untouched. A call whose last argument is an indented block takes its `()` on the line after the block. The converter writes the `()` -- except after a `let` and after a macro that produces no value (`println!`, `assert!`, `panic!` …), whose `;` changes nothing. Taught in the guide (*Statements and semicolons*), the Book (chapter 3: the lesson rewritten, a positive example added), *By Example* 13 (`()` instead of `let _ =`, and what `let _` really means).
+- **Fixed, found building Docreview:** H5, a generic bound closing with `>>` left a signature's parameter groups unjoined; H6, a `const` whose value is a multi-line block lost its `;`; H7, a closure written `|a: A| (b: B)|` became broken Rust -- now an error saying a closure's parameters are separated by commas. Tests for each.
+- **Breaking:** code using the `;` is refused, the error pointing at each `;`.
+
 ## 0.1.55 — 2026-09-29  (`hrs_std` 0.1.4 and the Jupyter kernel 0.1.3, unchanged)
 
 - **`hrs add`** (the user's design): `hrs add hrs_std` writes `hrs_std = "0.1"` into the project's `[dependencies]` -- making the table if there is none, saying so, and doing nothing when the crate is listed already. It adds Harsh's crates only: the four of the distribution now, the registry's when it is built; a Rust crate is `cargo add`'s, and `hrs add serde` says so. One command per registry, so a name is never looked up in the wrong one.

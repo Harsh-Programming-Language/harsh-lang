@@ -908,6 +908,77 @@ fn check_inline_old_marks(sig: &[&Token]) -> Result<(), LayoutError> {
     Ok(())
 }
 
+/// A `;` ending a line (the user's rule, 2026-09-30): Harsh writes no
+/// semicolons; a block whose last value is to be discarded ends with a line
+/// `()`, which says so where the block's value goes. A macro's body and a
+/// `macro_rules!` arm are Rust's own syntax and keep theirs; a `;` inside
+/// brackets (`[u8; 4]`, a Rust block in braces) is not at a line's end.
+/// A closure's parameters are one list, separated by commas, `|a: A, b: B|`:
+/// `|a: A| (b: B)|` -- function-style groups after the closing `|` -- was
+/// transpiled into broken Rust (H7, found building Docreview, 2026-09-30).
+fn check_closure_params(sig: &[&Token]) -> Result<(), LayoutError> {
+    let bar = |t: &Token| t.kind == Tk::Punct && t.text == "|";
+    let mut open_bar: Option<usize> = None;
+    let mut k = 0;
+    while k < sig.len() {
+        if bar(sig[k]) {
+            match open_bar {
+                None => open_bar = Some(k),
+                Some(_) => {
+                    // The closing `|`: is it followed by a group, then `|`?
+                    if sig.get(k + 1).map_or(false, |t| t.kind == Tk::Open('(')) {
+                        let mut d = 0i32;
+                        let mut j = k + 1;
+                        while j < sig.len() {
+                            match sig[j].kind {
+                                Tk::Open(_) => d += 1,
+                                Tk::Close(_) => {
+                                    d -= 1;
+                                    if d == 0 {
+                                        break;
+                                    }
+                                }
+                                _ => {}
+                            }
+                            j += 1;
+                        }
+                        if sig.get(j + 1).map_or(false, |t| bar(t)) {
+                            return Err(LayoutError {
+                                msg: "a closure's parameters are one list, separated by commas: `|a: A, b: B|`".into(),
+                                span: sig[k + 1].span,
+                            });
+                        }
+                    }
+                    open_bar = None;
+                }
+            }
+        } else if sig[k].text == "||" {
+            open_bar = None;
+        }
+        k += 1;
+    }
+    Ok(())
+}
+
+fn check_trailing_semi(sig: &[&Token], outer: BlockKind) -> Result<(), LayoutError> {
+    let Some(last) = sig.last() else { return Ok(()) };
+    if last.kind != Tk::Semi || matches!(outer, BlockKind::Macro | BlockKind::MacroRules) {
+        return Ok(());
+    }
+    let depth: i32 = sig.iter().map(|t| match t.kind {
+        Tk::Open(_) => 1,
+        Tk::Close(_) => -1,
+        _ => 0,
+    }).sum();
+    if depth != 0 {
+        return Ok(());
+    }
+    Err(LayoutError {
+        msg: "Harsh writes no `;`: a block whose last value is to be discarded ends with a line `()` -- `set <- insert x`, and `()` beneath it".into(),
+        span: last.span,
+    })
+}
+
 /// The spellings this language does not have, each named with its
 /// replacement: a declaration header ending in `:` (its body follows the
 /// name, no mark), a record variant `Name:` (bare `Name`), and a literal
@@ -915,6 +986,8 @@ fn check_inline_old_marks(sig: &[&Token]) -> Result<(), LayoutError> {
 fn check_old_marks(ln: &Line, outer: BlockKind) -> Result<(), LayoutError> {
     let sig: Vec<&Token> = ln.toks.iter().filter(|t| !t.is_comment()).collect();
     let Some(last) = sig.last() else { return Ok(()) };
+    check_trailing_semi(&sig, outer)?;
+    check_closure_params(&sig)?;
     check_inline_old_marks(&sig)?;
     check_backslash_head(&sig)?;
     // A declaration or item header may end in neither `:` nor `do` (nor
@@ -2335,6 +2408,8 @@ fn build_block(lines: &[Line], idx: &mut usize, min_indent: usize, outer: BlockK
                     }
                     check_inline_old_marks(&sig)?;
                     check_backslash_head(&sig)?;
+                    check_trailing_semi(&sig, outer)?;
+                    check_closure_params(&sig)?;
                 }
                 if inline_colon(&ln.toks, 0, ln.toks.len(), outer).is_some() {
                     let mut nodes = expand_item(&ln.toks, 0, ln.toks.len(), outer, ln)?;

@@ -67,6 +67,32 @@ fn norm_tokens(s: &str) -> Vec<String> {
             i += 1;
         }
     }
+    // A unit macro's call ending a block is one statement with or without
+    // its `;` -- `{ println!(..); }` and `{ println!(..) }`: the converter
+    // writes no `()` after it (2026-09-30), so the `;` does not come back.
+    let mut i = 0;
+    while i < out.len() {
+        if out[i] == ";" && i > 0 && out[i - 1] == ")" && out.get(i + 1).map(String::as_str) == Some("}") {
+            let mut d = 0i32;
+            let mut j = i - 1;
+            loop {
+                match out[j].as_str() {
+                    ")" | "]" | "}" => d += 1,
+                    "(" | "[" | "{" => d -= 1,
+                    _ => {}
+                }
+                if d == 0 || j == 0 {
+                    break;
+                }
+                j -= 1;
+            }
+            if j >= 2 && out[j - 1] == "!" && harsh_lang::rules::UNIT_MACROS.contains(&out[j - 2].as_str()) {
+                out.remove(i);
+                continue;
+            }
+        }
+        i += 1;
+    }
     out
 }
 
@@ -248,37 +274,41 @@ fn tight_index_is_an_atom_and_spaced_index_in_an_application_is_refused() {
 /// arm `Some ex => do: run_one (&ex);` came out returning a `bool`.
 #[test]
 fn inline_block_keeps_its_written_semicolon() {
+    // A discarded value is a block's last line `()` (2026-09-30): an inline
+    // block has room for one line, so a discarding one takes the block form.
     check(&[
-        ("fn f$:\n    let x = 1\n    if x == 1: g$;\n", "if x == 1 {\n        g();\n    }"),
-        ("fn f$:\n    let y = do: g$;\n", "let y = {\n        g();\n    };"),
-        ("fn f$:\n    match 1\\\n        1 => do: g$;\n        _ => ()\n", "1 => {\n            g();\n        },"),
+        ("fn f$:\n    let x = 1\n    if x == 1:\n        g$\n        ()\n", "if x == 1 {\n        g();\n    }"),
+        ("fn f$:\n    let y = do:\n        g$\n        ()\n", "let y = {\n        g();\n    };"),
+        ("fn f$:\n    match 1\\\n        1 =>\n            g$\n            ()\n        _ => ()\n", "1 => {\n            g();\n        }"),
     ]);
-    // And the converter writes it back, so the trip is stable.
+    // The old spelling, a `;` ending the line, is refused with the fix.
+    let e = harsh_lang::driver::transpile_str("fn f$:\n    let x = 1\n    if x == 1: g$;\n").unwrap_err();
+    assert!(e.to_string().contains("`()`"), "{e}");
+    // And the converter writes the `()`, so the trip is stable.
     let rust = "fn f() {\n    if true {\n        g();\n    }\n}\n";
     let harsh = convert(rust);
-    assert!(harsh.contains("g$;"), "{harsh}");
+    assert!(harsh.contains("g$\n        ()"), "{harsh}");
     assert!(transpile(&harsh).contains("g();"), "{}", transpile(&harsh));
 }
 
-/// `;` marks a discarded tail value. It is legal only in statement blocks, and
-/// must never double up with an inserted separator.
+/// A last line `()` marks a discarded tail value (2026-09-30; the `;` of
+/// before is refused). No separator may ever double up.
 #[test]
 fn semicolon_discipline() {
     // Tail expression kept, or discarded when written explicitly.
     check(&[
         ("fn f$ -> i32:\n    let a = 1\n    a\n", "    a\n}"),
-        ("fn f$:\n    let a = 1\n    a;\n", "    a;\n}"),
+        ("fn f$:\n    let a = 1\n    a\n    ()\n", "    a;\n}"),
         ("fn f$:\n    g$\n    h$\n", "g();"),
     ]);
 
-    // No output anywhere may contain a doubled or mixed separator. A `;` is
-    // legal only on a block's last statement, so these place it only there.
+    // No output anywhere may contain a doubled or mixed separator.
     let sources = [
-        "fn a$:\n    let x = 1\n    let y = 2;\n",
-        "fn b$:\n    f$\n    g$;\n",
-        "fn c$ -> i32:\n    let v = do:\n        1;\n    2\n",
+        "fn a$:\n    let x = 1\n    let y = 2\n",
+        "fn b$:\n    f$\n    g$\n    ()\n",
+        "fn c$ -> i32:\n    let v = do:\n        1\n        ()\n    2\n",
         "fn d$:\n    let z = vec! { 0; 4 }\n    let w = vec! { 0; 4 }\n    q z w\n",
-        "fn e$:\n    if c:\n        f$;\n    g$;\n",
+        "fn e$:\n    if c:\n        f$\n        ()\n    g$\n    ()\n",
         "use std.fmt\nfn f$:\n    ()\n",
         "struct P\n    x: i32\n    y: i32\n",
         "fn g$ -> i32:\n    match x\\\n        A => 1\n        B => 2\n",
@@ -795,8 +825,8 @@ fn closure_statement_semicolons() {
     let got = transpile(src);
     assert!(got.contains("    a();\n    f(|| {\n        b();\n        c()\n    });\n    d();\n    e()\n"), "{got}");
 
-    // An explicit `;` on a last statement is kept, at both levels.
-    let src = "fn main$:\n    a$\n    f || do:\n        b$\n        c$;\n    d$\n    e$;\n";
+    // A last line `()` discards the value before it, at both levels.
+    let src = "fn main$:\n    a$\n    f || do:\n        b$\n        c$\n        ()\n    d$\n    e$\n    ()\n";
     let got = transpile(src);
     assert!(got.contains("        c();\n    });\n    d();\n    e();\n"), "{got}");
 
@@ -940,8 +970,8 @@ fn accepts_aligned_continuations() {
         // `if` and `<-` continue an expression; `let` chains may break before `let`.
         ("fn m$:\n    let n = v <- iter$\n              <- count$\n", ".count();"),
         ("fn m$:\n    if a\n        && let Some x = y:\n        1\n", "&& let Some(x) = y {"),
-        // A `;` ending the line discards the tail; braces hold several statements.
-        ("fn m$:\n    if c: g$;\n    h$\n", "h()"),
+        // A last line `()` discards the tail; braces hold several statements.
+        ("fn m$:\n    if c:\n        g$\n        ()\n    h$\n", "h()"),
         ("fn f x: i32 -> i32:\n    match x\\ 1 => { g$; h$ }, _ => 0\n", "1 => { g(); h() },"),
         ("fn f c: bool -> i32:\n    if c { f$; g$ } else { h$ }\n", "if c { f(); g() } else { h() }"),
         ("fn f$ -> i32:\n    { let a = 1; a * 2 }\n", "{ let a = 1; a * 2 }"),
@@ -1326,7 +1356,7 @@ fn converter_leptos_shapes() {
         "<- map (|item|:\n            let y = item\n            view! { <li aria-label=\"x\">{@: y :@}</li> }\n    ) <- collect_view$\n",
         "<- then (||:\n            view! { <li>{@: extra :@}</li> }\n    )\n",
         "    let b = (\n        if c:\n            vec! 1\n        else:\n            y <- clone$\n    ) <- into_iter$ <- count$\n",
-        "    do:\n        let z = 1\n        f z;\n",
+        "    do:\n        let z = 1\n        f z\n        ()\n",
         "    leptos_routes (&opts) routes (do:\n        let o = o <- clone$\n        move || shell (o <- clone$)\n    )\n",
     ] {
         assert!(harsh.contains(want), "\n  expected: {want:?}\n  got:\n{harsh}");
@@ -2570,5 +2600,20 @@ fn hrs_add_takes_harsh_crates_and_points_rust_ones_to_cargo_add() {
     // hrs_proc_macro carries its own version.
     let (t, _) = add_dependency(m, "hrs_proc_macro").unwrap();
     assert!(t.contains("hrs_proc_macro = \"0.2\""), "{t}");
+}
+
+/// Found building Docreview (2026-09-30): H5, a `>>` closing two generic
+/// lists in a signature; H6, a `const` whose value is a block; H7, a
+/// malformed closure parameter list.
+#[test]
+fn docreview_issues_h5_h6_h7() {
+    let t = |src: &str| harsh_lang::driver::transpile_str(src);
+    let rust = t("fn f<S: Into<Vec<Option<E>>> + Clone, E> (a: String) (b: S) -> usize:\n    a <- len$\n").unwrap();
+    assert!(rust.contains("fn f<S: Into<Vec<Option<E>>> + Clone, E>(a: String, b: S) -> usize"), "{rust}");
+    let rust = t("struct R\n    a: u8\n    b: u8\n\nconst X: R =\n    R\\\n        a = 1\n        b = 2\n\nconst Y: u8 = 3\n").unwrap();
+    assert!(rust.contains("};\n\nconst Y: u8 = 3;"), "{rust}");
+    let e = t("fn main$:\n    let f = |a: u16| (b: u16)|:\n        a + b\n").unwrap_err();
+    assert!(e.to_string().contains("separated by commas"), "{e}");
+    assert!(t("fn main$:\n    let k = |x| (x + 1)\n").is_ok());
 }
 

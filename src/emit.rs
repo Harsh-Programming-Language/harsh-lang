@@ -444,16 +444,21 @@ impl<'a> Emitter<'a> {
         if toks.get(i).map(|t| t.kind == Tk::Lt).unwrap_or(false) {
             let mut gd = 0i32;
             while i < toks.len() {
-                match toks[i].kind {
-                    Tk::Lt => gd += 1,
-                    Tk::Gt => {
-                        gd -= 1;
-                        if gd == 0 {
-                            i += 1;
-                            break;
-                        }
+                // `>>` is one token and closes two lists: `<S: Into<Vec<E>>>`
+                // (H5, found building Docreview, 2026-09-30).
+                let closes = match toks[i].kind {
+                    Tk::Gt => 1,
+                    _ if toks[i].text == ">>" => 2,
+                    _ => 0,
+                };
+                if toks[i].kind == Tk::Lt {
+                    gd += 1;
+                } else if closes > 0 {
+                    gd -= closes;
+                    if gd <= 0 {
+                        i += 1;
+                        break;
                     }
-                    _ => {}
                 }
                 i += 1;
             }
@@ -1107,6 +1112,15 @@ impl<'a> Emitter<'a> {
                     self.group(g);
                     self.out.push('\n');
                 }
+                // A block's last line `()` after a statement (the user's rule,
+                // 2026-09-30): the statement already ends in `;`, which is
+                // how Rust says the block is worth `()`; the `()` is not
+                // written, so the Rust reads as Rust is written.
+                Node::Line(l)
+                    if is_last
+                        && kind == BlockKind::Stmts
+                        && is_unit_line(&l.toks)
+                        && self.out.trim_end().ends_with(';') => {}
                 Node::Line(l) => {
                     self.blanks(l.blank_before);
                     self.comments(l);
@@ -1415,6 +1429,9 @@ impl<'a> Emitter<'a> {
                 Some(t) => {
                     matches!(t.kind, Tk::Eq | Tk::Comma | Tk::Open('[') | Tk::Open('(') | Tk::FatArrow)
                         || t.is_kw("return")
+                        // A pattern after `let`, `if let`, `let .. else`
+                        // (H2, 2026-09-30): `let (P\ x, ..) = v`.
+                        || t.is_kw("let")
                         || (t.kind == Tk::Punct && !matches!(t.text.as_str(), "!" | "$" | "?"))
                 }
             };
@@ -1630,6 +1647,12 @@ impl<'a> Emitter<'a> {
                 if !already_semi && !is_block && (force || !ends_brace) {
                     self.out.push(';');
                 }
+                // A `const` or `static` whose value is a block -- a literal on
+                // the lines beneath its `=` -- ends in `;` after the brace
+                // (H6, found building Docreview, 2026-09-30).
+                if is_block && assigns && !already_semi && !self.out.trim_end().ends_with(';') {
+                    self.out.push(';');
+                }
             }
             BlockKind::Fields | BlockKind::Arms => {
                 self.out.push(',');
@@ -1841,3 +1864,10 @@ fn header_ends_in_closure(toks: &[Token]) -> bool {
     }
     i > 0 && sig[i - 1].kind == Tk::Punct && (sig[i - 1].text == "|" || sig[i - 1].text == "||")
 }
+
+/// A line that is `()` alone, comments aside.
+fn is_unit_line(toks: &[Token]) -> bool {
+    let sig: Vec<&Token> = toks.iter().filter(|t| !t.is_comment()).collect();
+    sig.len() == 2 && matches!(sig[0].kind, Tk::Open('(')) && matches!(sig[1].kind, Tk::Close(')'))
+}
+

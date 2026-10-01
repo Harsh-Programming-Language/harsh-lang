@@ -959,8 +959,17 @@ impl<'a> Writer<'a> {
             // direction re-derives that `;` from the `=` in the header, and
             // appending one here would land it on its own line.
             let ended_with_block = self.at_line_start;
-            if *had_semi && n == last && kind == Kind::Stmts && !ended_with_block {
-                self.out.push(';');
+            // Harsh writes no `;` (the user's rule, 2026-09-30): a block whose
+            // last statement discards its value ends with a line `()` --
+            // except after a `let` (Harsh terminates it) or a unit macro,
+            // `println!` and the like, whose `;` the forward direction
+            // restores.
+            let lead = toks[*a..*b].iter().find(|t| !t.is_comment());
+            let terminated = lead.map_or(false, |t| crate::rules::ALWAYS_SEMI.contains(&t.text.as_str()))
+                || crate::rules::unit_macro_call(&toks[*a..*b]);
+            if *had_semi && n == last && kind == Kind::Stmts && !ended_with_block && !terminated {
+                self.newline();
+                self.word("()", false);
             }
             self.newline();
         }

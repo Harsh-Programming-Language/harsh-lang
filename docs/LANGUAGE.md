@@ -1106,11 +1106,11 @@ let f = |x|: x + 1                                                let f = |x| { 
 
 ## Statements and semicolons
 
-Semicolons are optional. The transpiler inserts them from the layout, and an explicit semicolon is always honoured.
+Harsh writes no semicolons. The transpiler inserts them from the layout, and a `;` ending a line is refused (since 0.1.56).
 
 - Every logical line in a statement block gets a semicolon except the last, so the last line is a tail expression exactly as in Rust.
 - A line beginning with `let`, `use`, `const`, `static`, `type`, `mod`, `extern`, or `return` always gets a semicolon, including when it is last, because those are statements rather than tail values.
-- An explicit semicolon you write is preserved and suppresses the last-line exemption. This is the escape hatch when you want to discard a tail value.
+- To discard a block's last value, end the block with a line `()`: the block is then worth `()`, as Rust's `expr;` makes it. The Rust is written as Rust is written — `expr;`, with no `()`.
 - A nested block gets a semicolon after its closing brace only when its header began with `let`, `const`, `static`, `type`, or `use`. An `if` or `match` used as a statement does not.
 - Attribute lines never take a separator and never count as a block's tail.
 
@@ -1135,8 +1135,8 @@ fn total(xs: &[i64]) -> i64 {
 ### The three rules
 
 - A statement ends at a newline, unless an unclosed bracket or a deeper-indented next line carries it on. `let xs = [1,` followed by `2]` on the next line is one statement.
-- A `;` is written in Harsh in exactly one place: at the end of a block's last statement, where it means *emit one*. That discards the tail value, as it does in Rust. A `;` anywhere else is rejected, since the newline already ended that statement.
-- In the Rust, every statement ends with `;` except the last in its block, which gets one only if the Harsh had one. This applies at every nesting level independently — a closure body is a block and is governed by the same rule at its own level.
+- A block whose last value is to be discarded ends with a line `()`, which says so where the block's value goes — as a Jupyter cell is silent when its value is `()`. A `;` ending a line is refused, with that fix in the message.
+- In the Rust, every statement ends with `;` except the last in its block, which gets one only when a `()` line follows it. This applies at every nesting level independently — a closure body is a block and is governed by the same rule at its own level.
 
 ```rust fragment
 parent_statement                 parent_statement;
@@ -1153,13 +1153,22 @@ parent_statement                 parent_statement;
 my_func                          my_func(|| {
     || do:                           closure_statement;
         closure_statement            last_closure_statement;
-        last_closure_statement;  });
-parent_statement                 parent_statement;
-last_parent_statement;
-                                 last_parent_statement;
+        last_closure_statement   });
+        ()                       parent_statement;
+parent_statement                 last_parent_statement;
+last_parent_statement
+()
 ```
 
-- Going the other way, `hrs-from` removes every `;` except one ending a block's last statement, which is why the round trip is exact.
+A call whose last argument is an indented block — a closure, an `async move:` body — is one statement, and its `()` goes on the line after the block, at the call's own column:
+
+```rust fragment
+spawn async move:                spawn(async move {
+    work$                            work()
+()                               });
+```
+
+- Going the other way, `hrs-from` removes every `;`, and writes a `()` line where a block's last statement discarded its value — except after a `let`, which Harsh terminates itself, and after a macro that produces no value (`println!`, `assert!`, `panic!` and the like), whose `;` changes nothing. That is why the round trip is exact.
 
 ### Worked forms
 
@@ -1171,8 +1180,8 @@ fn tail$ -> i32:            fn tail() -> i32 {
 
 fn discard$ -> ():          fn discard() -> () {
     let a = 1                     let a = 1;
-    a;                            a;
-                              }
+    a                             a;
+    ()                        }
 
 fn ret$ -> i32:             fn ret() -> i32 {
     if true:                      if true {

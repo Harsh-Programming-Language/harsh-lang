@@ -1106,7 +1106,7 @@ let f = |x|: x + 1                                                let f = |x| { 
 
 ## Statements and semicolons
 
-Harsh writes no semicolons. The transpiler inserts them from the layout, and a `;` ending a line is refused (since 0.1.56).
+Harsh writes no semicolons. The transpiler inserts them from the layout, and a `;` ending a line is refused (since 0.2.0).
 
 - Every logical line in a statement block gets a semicolon except the last, so the last line is a tail expression exactly as in Rust.
 - A line beginning with `let`, `use`, `const`, `static`, `type`, `mod`, `extern`, or `return` always gets a semicolon, including when it is last, because those are statements rather than tail values.

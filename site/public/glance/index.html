@@ -1,0 +1,336 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Harsh at a glance</title>
+<!-- The Harsh logo as the tab's icon, embedded so it shows wherever the page is opened: on harsh-lang.com, from the repository, offline. -->
+<link rel="icon" type="image/png" href="data:image/png;base64,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">
+<style>
+:root{
+  --bg:#0e1418; --panel:#141c21; --line:#233039;
+  --fg:#d7e1e8; --dim:#7d919e; --faint:#5b6d79;
+  --rust:#e08b5a; --acc:#6fb3d2; --kw:#c99bdd; --str:#8fbf7f; --num:#e0c07a;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0; background:var(--bg); color:var(--fg);
+  font:16px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,
+       "Helvetica Neue",Arial,sans-serif;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1180px;margin:0 auto;padding:0 28px}
+header{padding:64px 0 40px;border-bottom:1px solid var(--line);margin-bottom:40px}
+/* The way back to the website, above every page's header. */
+.home{display:inline-block;margin:24px 0 0;font-size:14px;color:var(--dim);text-decoration:none}
+.home:hover{color:var(--acc)}
+header{padding-top:28px}
+.logo{
+  font-family:"SF Mono",SFMono-Regular,ui-monospace,"JetBrains Mono",
+              "Cascadia Code",Menlo,Consolas,monospace;
+  font-size:clamp(38px,7vw,68px); font-weight:600; letter-spacing:-.02em;
+  line-height:1; margin:0; user-select:all;
+}
+.lg-b{color:var(--faint)}
+.lg-n{color:var(--fg)}
+.lg-a{color:var(--acc)}
+.lg-r{color:var(--rust)}
+.lg-i{display:inline-block;transform:skewX(-11deg);transform-origin:50% 70%}
+.title{margin:22px 0 6px;font-size:26px;font-weight:600;letter-spacing:-.01em}
+.tag{margin:0;color:var(--dim);font-size:16px}
+.tag em{color:var(--rust);font-style:normal}
+.cols{display:grid;grid-template-columns:250px minmax(0,1fr);gap:56px;
+      align-items:start;padding-bottom:120px}
+body.nav-hidden .cols{grid-template-columns:minmax(0,1fr)}
+body.nav-hidden .toc{display:none}
+.toggle{
+  position:fixed;left:10px;top:10px;z-index:10;
+  background:transparent;color:var(--faint);border:0;
+  padding:4px 6px;font:12px/1 inherit;cursor:pointer;opacity:.5;
+}
+.toggle:hover{opacity:1;color:var(--dim)}
+.toc{position:sticky;top:24px;max-height:calc(100vh - 48px);overflow:auto;
+     font-size:14px;border-left:1px solid var(--line);padding-left:18px}
+.toc-h{margin:0 0 10px;color:var(--dim);text-transform:uppercase;
+       letter-spacing:.09em;font-size:11px}
+.toc ul{list-style:none;margin:0;padding:0}
+.toc li{margin:.22em 0}
+.toc a{color:var(--fg);text-decoration:none;display:block;padding:1px 0}
+.toc a:hover{color:var(--acc)}
+/* depth from the document's top level: a book's chapters, then sections,
+   subsections, and theirs */
+.toc .d0{font-weight:600;margin-top:.7em}
+.toc .d0:first-child{margin-top:0}
+.toc .d1{padding-left:14px;font-size:13.5px}
+.toc .d1 a{color:#c5d2db}
+.toc .d2{padding-left:28px;font-size:13px}
+.toc .d2 a{color:var(--dim)}
+.toc .d3{padding-left:42px;font-size:12.5px}
+.toc .d3 a{color:var(--dim)}
+main{min-width:0}
+h2{font-size:25px;margin:52px 0 14px;padding-top:8px;letter-spacing:-.01em;
+   border-top:1px solid var(--line)}
+h2:first-child{border-top:0;margin-top:0}
+h3{font-size:18.5px;margin:32px 0 10px;color:#eaf1f6}
+h4{font-size:15.5px;margin:24px 0 8px;color:var(--dim);
+   text-transform:uppercase;letter-spacing:.06em}
+p{margin:.75em 0}
+ul,ol{padding-left:22px}
+li{margin:.3em 0}
+li>ul,li>ol{margin:.3em 0}
+strong{color:#fff;font-weight:600}
+a{color:var(--acc)}
+code{
+  font-family:"SF Mono",SFMono-Regular,ui-monospace,"JetBrains Mono",
+              "Cascadia Code",Menlo,Consolas,monospace;
+  font-size:.9em; background:#1b252b; border:1px solid var(--line);
+  padding:.08em .34em; border-radius:4px; color:#cfe0ea;
+}
+pre.code{
+  background:var(--panel); border:1px solid var(--line); border-radius:8px;
+  padding:14px 16px; overflow:auto; margin:14px 0; line-height:1.55;
+}
+pre.code code{background:none;border:0;padding:0;font-size:13.5px;color:var(--fg)}
+pre.code.rust{border-left:3px solid var(--rust)}
+pre.code.harsh{border-left:3px solid var(--acc)}
+pre.code.diagram{border-left:3px solid var(--faint);color:var(--dim)}
+.k{color:var(--kw)} .t{color:var(--acc)} .str{color:var(--str)}
+.num{color:var(--num)} .com{color:var(--faint);font-style:italic}
+.op{color:var(--rust);font-weight:600} .mac{color:var(--num)}
+.defer{color:var(--rust);font-weight:600} .attr{color:var(--faint)}
+.p{color:var(--dim)} .blk{color:var(--rust)}
+table{border-collapse:collapse;margin:16px 0;font-size:14.5px;width:100%}
+th,td{border:1px solid var(--line);padding:7px 11px;text-align:left;
+      vertical-align:top}
+th{background:#18222a;color:#eaf1f6;font-weight:600}
+td code{font-size:.88em}
+blockquote{border-left:3px solid var(--line);margin:1em 0;padding:.1em 1em;
+           color:var(--dim)}
+footer{border-top:1px solid var(--line);padding:26px 0 60px;color:var(--faint);
+       font-size:13.5px}
+@media(max-width:900px){
+  .cols,body.nav-hidden .cols{grid-template-columns:1fr;gap:0}
+  .toc{position:static;max-height:none;border-left:0;border-bottom:1px solid
+       var(--line);padding:0 0 20px;margin-bottom:28px}
+}
+/* The back-to-top arrow (added by page-tail.html): discreet, in the corner, only after some scrolling. */
+.to-top{position:fixed;right:20px;bottom:20px;z-index:40;width:40px;height:40px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;background:var(--panel);color:var(--dim);
+  border:1px solid var(--line);font:18px/1 sans-serif;cursor:pointer;opacity:0;pointer-events:none;
+  transition:opacity .2s,color .2s,border-color .2s}
+.to-top.shown{opacity:.75;pointer-events:auto}
+.to-top:hover,.to-top:focus-visible{opacity:1;color:var(--acc);border-color:var(--acc);outline:none}
+/* The copy button on code blocks (added by page-tail.html). */
+pre.code{position:relative}
+.copy{position:absolute;top:8px;right:8px;padding:3px 9px;font:12px sans-serif;color:var(--dim);cursor:pointer;
+  background:var(--panel);border:1px solid var(--line);border-radius:6px;opacity:0;transition:opacity .15s,color .15s,border-color .15s}
+pre.code:hover .copy,.copy:focus-visible{opacity:1}
+.copy:hover{color:var(--acc);border-color:var(--acc)}
+@media (hover:none){.copy{opacity:.8}}
+</style>
+</head>
+<body>
+  <button class="toggle" id="nav-toggle" title="Show or hide the contents">☰</button>
+  <div class="wrap">
+    <a class="home" href="https://harsh-lang.com/learn">&larr; Learn &middot; harsh-lang.com</a>
+    <header>
+      <p class="logo"><span class="lg-b">#[</span><span class="lg-n">Ha</span><span class="lg-a">&lt;</span><span class="lg-r">rs</span><span class="lg-a">&gt;</span><span class="lg-a">.</span><span class="lg-n lg-i">h</span><span class="lg-b">]</span></p>
+      <h1 class="title">Harsh</h1>
+      <p class="tag"><em>Rust without the braces.</em> &nbsp;Every rule of Harsh's own, from the Book.</p>
+    </header>
+    <div class="cols">
+      <nav class="toc"><p class="toc-h">Contents</p><ul>
+<li class="d0"><a href="#layout-chapter-2">Layout — chapter 2</a></li>
+<li class="d0"><a href="#applying-chapter-2">Applying — chapter 2</a></li>
+<li class="d0"><a href="#declaring-chapters-3-5-6-10">Declaring — chapters 3, 5, 6, 10</a></li>
+<li class="d0"><a href="#patterns-chapters-6-19">Patterns — chapters 6, 19</a></li>
+<li class="d0"><a href="#closures-chains-and-pipes-chapter-13">Closures, chains and pipes — chapter 13</a></li>
+<li class="d0"><a href="#macros-and-markup-chapter-23">Macros and markup — chapter 23</a></li>
+<li class="d0"><a href="#the-tools-chapters-1-14">The tools — chapters 1, 14</a></li>
+<li class="d0"><a href="#precedence-appendix">Precedence — appendix</a></li>
+</ul></nav>
+      <main>
+  <p>Everything of Harsh's own, in one place, each rule with the chapter that teaches it. There is little of it, because Harsh states rules only for what it changes; wherever this page is silent, what you learned of Rust in the chapters holds unchanged. One program first, with most of the page in it, built and run like every other in this book:</p>
+<pre class="code harsh"><code><span class="k">use</span> std<span class="p">.</span>collections<span class="p">.</span><span class="t">HashMap</span>          <span class="com">// `.` walks a path</span>
+
+<span class="attr">#[derive Debug Clone PartialEq]</span>      <span class="com">// an attribute applies inside its brackets</span>
+<span class="k">struct</span> <span class="t">Point</span>                         <span class="com">// a record struct: fields beneath...</span>
+    x<span class="p">:</span> f64
+    y<span class="p">:</span> f64
+<span class="attr">#[derive Debug]</span>
+<span class="k">struct</span> <span class="t">Size</span>\ w<span class="p">:</span> f64<span class="p">,</span> h<span class="p">:</span> f64          <span class="com">// ...or inline after `\`</span>
+<span class="k">struct</span> <span class="t">Meters</span> f64                    <span class="com">// a tuple struct: the name applied to its types</span>
+<span class="k">struct</span> <span class="t">Origin</span>                        <span class="com">// a unit-like struct</span>
+
+<span class="k">enum</span> <span class="t">Shape</span>                           <span class="com">// a union of the three forms</span>
+    <span class="t">Empty</span>                            <span class="com">// unit-like</span>
+    <span class="t">Circle</span> f64                       <span class="com">// tuple</span>
+    <span class="t">Rect</span>\ w<span class="p">:</span> f64<span class="p">,</span> h<span class="p">:</span> f64             <span class="com">// record, inline (or with the fields beneath)</span>
+
+<span class="k">trait</span> <span class="t">Area</span>                          <span class="com">// a trait is a block</span>
+    <span class="k">fn</span> area <span class="p">(</span><span class="p">&amp;</span><span class="k">self</span><span class="p">)</span> <span class="op">-&gt;</span> f64
+
+<span class="k">impl</span> <span class="t">Area</span> <span class="k">for</span> <span class="t">Shape</span>
+    <span class="k">fn</span> area <span class="p">(</span><span class="p">&amp;</span><span class="k">self</span><span class="p">)</span> <span class="op">-&gt;</span> f64<span class="p">:</span>
+        <span class="k">match</span> <span class="k">self</span>\                  <span class="com">// arms: one per line, no commas</span>
+            <span class="t">Shape</span><span class="p">.</span><span class="t">Empty</span> <span class="op">=&gt;</span> <span class="num">0.0</span>
+            <span class="t">Shape</span><span class="p">.</span><span class="t">Circle</span> r <span class="op">=&gt;</span> <span class="num">3.14159</span> <span class="p">*</span> r <span class="p">*</span> r
+            <span class="t">Shape</span><span class="p">.</span><span class="t">Rect</span>\ w<span class="p">,</span> h <span class="op">=&gt;</span> w <span class="p">*</span> h
+
+<span class="k">fn</span> add <span class="p">(</span>a<span class="p">:</span> i32<span class="p">)</span> <span class="p">(</span>b<span class="p">:</span> i32<span class="p">)</span> <span class="op">-&gt;</span> i32<span class="p">:</span>     <span class="com">// one group per parameter</span>
+    a <span class="p">+</span> b
+
+<span class="k">fn</span> twice <span class="p">(</span>f<span class="p">:</span> <span class="k">impl</span> <span class="t">Fn</span> i32 <span class="op">-&gt;</span> i32<span class="p">)</span> <span class="op">-&gt;</span> <span class="k">impl</span> <span class="t">Fn</span> i32 <span class="op">-&gt;</span> i32<span class="p">:</span>  <span class="com">// a closure type; a bare parameter ends at `-&gt;`, so this one is grouped</span>
+    <span class="k">move</span> <span class="p">|</span>x<span class="p">|</span> f <span class="p">(</span>f x<span class="p">)</span>
+
+<span class="k">fn</span> describe<span class="p">&lt;</span><span class="t">T</span><span class="p">&gt;</span> <span class="p">(</span>label<span class="p">:</span> <span class="p">&amp;</span>str<span class="p">)</span> <span class="p">(</span>item<span class="p">:</span> <span class="t">T</span><span class="p">)</span> <span class="op">-&gt;</span> <span class="t">String</span>
+    <span class="p">[</span><span class="k">where</span> <span class="t">T</span><span class="p">:</span> std<span class="p">.</span>fmt<span class="p">.</span><span class="t">Debug</span><span class="p">]</span><span class="p">:</span>        <span class="com">// a multi-line where clause is bracketed</span>
+    <span class="mac">format!</span> <span class="str">"{label}: {item:?}"</span>
+
+<span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>                            <span class="com">// applied to nothing: `$`</span>
+    <span class="k">let</span> p <span class="p">=</span> <span class="t">Point</span>\ x <span class="p">=</span> <span class="num">1.0</span><span class="p">,</span> y <span class="p">=</span> <span class="num">2.0</span>  <span class="com">// a literal: `\`, then `field = value`</span>
+    <span class="k">let</span> s <span class="p">=</span>
+        <span class="t">Size</span>\
+            w <span class="p">=</span> <span class="num">3.0</span>
+            h <span class="p">=</span> <span class="num">4.0</span>
+    <span class="k">let</span> shapes <span class="p">=</span> <span class="p">[</span><span class="t">Shape</span><span class="p">.</span><span class="t">Empty</span><span class="p">,</span> <span class="p">(</span><span class="t">Shape</span><span class="p">.</span><span class="t">Circle</span> <span class="num">1.0</span><span class="p">)</span><span class="p">,</span> <span class="p">(</span><span class="t">Shape</span><span class="p">.</span><span class="t">Rect</span>\ w <span class="p">=</span> <span class="num">2.0</span><span class="p">,</span> h <span class="p">=</span> <span class="num">3.0</span><span class="p">)</span><span class="p">]</span>
+
+    <span class="k">let</span> total<span class="p">:</span> f64 <span class="p">=</span>                 <span class="com">// a chain of three or more links: vertical</span>
+        shapes <span class="op">&lt;-</span> iter<span class="defer">$</span>
+               <span class="op">&lt;-</span> map <span class="p">(</span><span class="p">|</span>s<span class="p">|</span> s <span class="op">&lt;-</span> area<span class="defer">$</span><span class="p">)</span>
+               <span class="op">&lt;-</span> sum<span class="defer">$</span>
+
+    <span class="k">let</span> n <span class="p">=</span> add <span class="num">2</span> <span class="num">3</span>                  <span class="com">// application by juxtaposition</span>
+    <span class="k">let</span> m <span class="p">=</span> add <span class="p">(</span>n <span class="p">*</span> <span class="num">2</span><span class="p">)</span> <span class="p">(</span>add <span class="num">1</span> <span class="num">1</span><span class="p">)</span>    <span class="com">// an expression is one argument in parens</span>
+    <span class="k">let</span> inc <span class="p">=</span> <span class="num">1</span> <span class="op">|&gt;</span> add               <span class="com">// a partial: one parameter left</span>
+    <span class="k">let</span> k <span class="p">=</span> <span class="num">5</span> <span class="op">|&gt;</span> inc <span class="op">|&gt;</span> <span class="p">(</span>twice inc<span class="p">)</span>  <span class="com">// pipes: a value into a function, then the next</span>
+
+    <span class="k">let</span> kind <span class="p">=</span> <span class="k">if</span> n <span class="p">&gt;</span> <span class="num">4</span><span class="p">:</span> <span class="str">"big"</span> <span class="k">else</span><span class="p">:</span> <span class="str">"small"</span>     <span class="com">// inline blocks</span>
+    <span class="k">let</span> <span class="k">mut</span> counts <span class="p">=</span> <span class="t">HashMap</span><span class="p">.</span>new<span class="defer">$</span>
+    <span class="k">for</span> w <span class="k">in</span> <span class="p">[</span><span class="str">"a"</span><span class="p">,</span> <span class="str">"b"</span><span class="p">,</span> <span class="str">"a"</span><span class="p">]</span><span class="p">:</span>
+        <span class="p">*</span>counts <span class="op">&lt;-</span> entry w <span class="op">&lt;-</span> or_insert <span class="num">0</span> <span class="op">+=</span> <span class="num">1</span>
+
+    <span class="k">let</span> z <span class="p">=</span> <span class="k">do</span><span class="p">:</span>                      <span class="com">// a bare block as a value</span>
+        <span class="k">let</span> t <span class="p">=</span> <span class="num">2</span>
+        t <span class="p">*</span> t
+    <span class="k">let</span> d <span class="p">=</span> <span class="t">Meters</span> <span class="num">1.5</span>               <span class="com">// a tuple index keeps its dot and is part of the name</span>
+
+    <span class="mac">println!</span>
+        <span class="str">"{p:?} {s:?} {} {total:.2} {n} {m} {k} {kind} {} {z} {}"</span>
+        d<span class="p">.</span><span class="num">0</span>
+        <span class="p">(</span>describe <span class="str">"counts"</span> <span class="p">(</span>counts <span class="op">&lt;-</span> len<span class="defer">$</span><span class="p">)</span><span class="p">)</span>
+        <span class="p">(</span><span class="mac">matches!</span> <span class="t">Origin</span> <span class="t">Origin</span><span class="p">)</span></code></pre>
+<pre class="code"><code>Point { x: 1.0, y: 2.0 } Size { w: 3.0, h: 4.0 } 1.5 9.14 5 12 8 big counts: 2 4 true</code></pre>
+<h2 id="layout-chapter-2">Layout — chapter 2</h2>
+<ul>
+<li>A block opens at a <code>:</code> that ends its line; its body is the lines indented beneath it, and ends where the indentation does. (§2.6)</li>
+<li>The same block may be written inline, the body after the colon on the same line when it is one expression; or in braces on one line only, <code>{ let u = 3; u * u }</code>, when several statements must share a line. A <code>{</code> and its <code>}</code> on different lines is an error. (§2.6)</li>
+<li><code>do:</code> opens a block that belongs to nothing — a scope of its own, a value, an operand in parentheses. (§2.6, §3.1)</li>
+<li>A line ending ends a statement. Harsh writes no <code>;</code>: a block whose last value is to be discarded ends with a line <code>()</code>, and a <code>;</code> ending a line is refused. A call whose last argument is an indented block takes its <code>()</code> on the line after the block. (§2.6, §3.4)</li>
+<li>A line indented deeper than the one above it, with no <code>:</code> to open a block, continues it. (§2.6)</li>
+<li>A construct that opens mid-line indents its body from its own column; when that reaches too far right, <code>=</code> ends its line and the opener starts the next. (§3.5)</li>
+<li>Every line is aligned with an open block or a continuation; a column that matches nothing is an error, never a silent move between scopes. (§3.5)</li>
+</ul>
+<h2 id="applying-chapter-2">Applying — chapter 2</h2>
+<ul>
+<li>A function is applied by writing its arguments after it: <code>add 2 3</code>. Parentheses around an argument mean <em>one argument</em>, never <em>the arguments</em>: <code>add (n * 2) (add 1 1)</code>. A single token needs none. (§2.6)</li>
+<li>Applied to nothing: <code>f$</code>, <code>fn main$:</code>, <code>s &lt;- len$</code>. <code>()</code> is the unit value and only ever that. (§2.6)</li>
+<li>An application binds tighter than <code>&lt;-</code>: <code>greet "a" &lt;- to_uppercase$</code> applies <code>greet</code> first, and the next arrow or an operator ends the arguments; parentheses go round an argument that holds an arrow, <code>f (x &lt;- g$)</code>, never round the application. A pipe is the exception: its sides are atoms, so <code>(f x) |&gt; g</code>. (§2.6, §13.3)</li>
+<li>A name written tight against a <code>(</code> is an error. (§20.5)</li>
+<li>Parentheses make a tuple (the comma does it), set precedence, or group — and nothing else. (§20.5)</li>
+<li>A block's opener says how its entries end: <strong>no mark</strong> after a header that ends itself (<code>struct</code>, <code>enum</code>, <code>union</code>, <code>impl</code>, <code>trait</code>, <code>mod</code>, <code>extern</code>, <code>macro_rules!</code>), <strong><code>\</code></strong> for a comma-separated list, <strong><code>:</code></strong> or <strong><code>do:</code></strong> for statements. A grammar of its author's own is a macro's, written in its braces, <code>m! { … }</code>. A construct that already has a spelling keeps it — <code>impl Point:</code> is refused. (§2.6, §5.1, §20)</li>
+<li>Brackets index, never apply: <code>arr[1]</code> is part of its atom (<code>f arr[1]</code> passes the element); <code>arr [1]</code> is the same index but is refused inside an application; an array argument is isolated, <code>f ([1, 2])</code>. (§2.6)</li>
+<li><code>&lt;-</code> reaches into a value: a field, a method. <code>.</code> walks a path: a module, a type, an item. A tuple index keeps its dot, <code>d.0</code>. (§2.6, §5.1)</li>
+<li>A macro applies like a function, its <code>!</code> glued to its name: <code>vec! 1 2</code>, <code>println! "{x}"</code>. (§2.6)</li>
+</ul>
+<h2 id="declaring-chapters-3-5-6-10">Declaring — chapters 3, 5, 6, 10</h2>
+<ul>
+<li><code>fn add (a: i32) (b: i32) -&gt; i32:</code> — one group per parameter; a lone parameter may be bare, <code>fn greet name: &amp;str</code>. A bare parameter ends at <code>-&gt;</code> or <code>[where …]</code>, so a parameter whose type carries an arrow is grouped. (§3.4)</li>
+<li>Three struct forms, three equals: a <strong>record struct</strong>, <code>struct Point</code> with <code>x: f64</code> beneath or <code>struct Size\ w: f64, h: f64</code>; a <strong>tuple struct</strong>, <code>struct Meters f64</code>; a <strong>unit-like struct</strong>, <code>struct Origin</code>. Nothing marks a declaration's body. (§5.1)</li>
+<li>An enum is a union of variants, each one of the three forms spelled as that struct is: <code>Empty</code>, <code>Circle f64</code>, <code>Rect</code> with fields beneath or <code>Rect\ w: f64, h: f64</code>. (§6.1)</li>
+<li>A literal is the name, <code>\</code>, and <code>field = value</code> — inline to the end of its line or its group's <code>)</code>, or a field per line beneath. <code>..base</code> last. A literal that is one element of a tuple has its own parentheses. (§5.1)</li>
+<li>A literal inside a literal on one line is parenthesised, so the reader sees where it ends: <code>inner = (Animal\ name = n), good = true</code>; or the outer literal goes one field per line, where the line ends the inner one. A comma ending a field line is refused. (§5.1)</li>
+<li><code>impl Point</code>, <code>trait Area</code>, <code>mod geometry</code>, <code>extern "C"</code> — headers with no mark, their items beneath. (§5.3, §10.2, §7.2, §20.1)</li>
+<li>A <code>where</code> clause on one line needs nothing; over several lines it is bracketed, <code>[where T: Debug]</code>, on its own line under the signature. (§10.2)</li>
+<li>Attributes apply inside their brackets: <code>#[derive Debug Clone]</code>, <code>#[cfg (feature = "x")]</code>. (§5.2)</li>
+</ul>
+<h2 id="patterns-chapters-6-19">Patterns — chapters 6, 19</h2>
+<ul>
+<li>A pattern is an application: <code>Some n</code>, <code>Ok value</code>, <code>Circle r</code>, <code>Coin.Quarter state</code>. (§6.2)</li>
+<li>A record is taken apart with the mark that builds it: <code>Point\ x, y</code>, <code>Point\ x: a, y: b</code>, <code>Point\ x, ..</code>. (§19.1)</li>
+<li><code>match x\</code> with one arm per line, <code>pattern =&gt; body</code>, no commas; several arms on one line are comma-separated. An arm with several statements is <code>=&gt; do:</code>. (§6.2, §3.5)</li>
+</ul>
+<h2 id="closures-chains-and-pipes-chapter-13">Closures, chains and pipes — chapter 13</h2>
+<ul>
+<li><code>|x| x + 1</code> inline; <code>|x|:</code> with the body beneath; <code>|x: i32| -&gt; i32:</code> fully annotated; <code>move ||:</code> capturing by value. (§13.1)</li>
+<li>A closure's type is the trait applied to its parameter types: <code>Fn i32 -&gt; i32</code>, <code>Fn (i32) (i32) -&gt; i32</code>, <code>FnOnce$</code>. (§13.1)</li>
+<li>A chain of one or two links stays on its line within 72 columns; three or more go vertical, every <code>&lt;-</code> under the first, and <code>=</code> ends its line before one begins. A block-bodied closure in a chain is a paren block: <code>(</code>, the parameters, the body, <code>)</code> on its own line. (§13.2)</li>
+<li><code>x |&gt; f</code> hands <code>x</code> to <code>f</code>; <code>f &lt;| x</code> the same from the right; both sides are atoms, and a chain or a closure is isolated first. Fewer values than the function takes defer the rest as one flat closure — <code>|&gt;</code> fills from the left, <code>&lt;|</code> from the right, both leave a hole in the middle — and the result is a value. A project function given too many is an error. (§13.3)</li>
+</ul>
+<h2 id="macros-and-markup-chapter-23">Macros and markup — chapter 23</h2>
+<ul>
+<li><code>macro_rules! twice</code> holds its arms beneath, no mark; a matcher is a parameter list, <code>( ($x:expr) )</code>; a transcriber is a block, <code>=&gt; do:</code>. Harsh's own macros are written <code>macro_rules~</code>, called with <code>~</code>, and expanded by <code>hrs</code>: they are gone from the Rust. (§20.5, chapter 23)</li>
+<li>A macro's own language — <code>select!</code>'s arms, <code>view!</code> markup, an <code>rsx!</code> tree — goes in braces, as Rust, byte for byte; the Harsh inside is a hole, <code>@: … :@</code>, always closed. (chapter 23)</li>
+<li>A fenced block in a <code>///</code> comment is Harsh, and the tool that runs it gets the Rust it expects. (§14.2)</li>
+</ul>
+<h2 id="the-tools-chapters-1-14">The tools — chapters 1, 14</h2>
+<ul>
+<li><code>hrs new</code>, <code>hrs run</code>, <code>hrs build</code>, <code>hrs test</code>, <code>hrs check</code>, <code>hrs lint</code>, <code>hrs watch</code>; <code>hrs add hrs_std</code> adds Harsh's crates to a project, and Rust's are <code>cargo add</code>'s; <code>hrs fmt</code> lays a file out by these rules and is a no-op on one already laid out; <code>hrs export</code> writes the project as a plain Rust crate; <code>hrs-from</code> brings Rust in. (§1.2, §14.1)</li>
+<li>Errors point at your <code>.hrs</code> line, whether Harsh raised them or the compiler did. (§1.2, §3.4)</li>
+</ul>
+<h2 id="precedence-appendix">Precedence — appendix</h2>
+<ul>
+<li>Tightest first: atoms (<code>f$</code>, <code>v[i]</code>, <code>( … )</code>), then application <code>f a b</code>, then the chain <code>&lt;-</code>, then <code>?</code>, then the prefix operators, then Rust's operators in Rust's order, then the pipes, then assignment.</li>
+<li><code>*p &lt;- field</code> dereferences the field; <code>(*p) &lt;- field</code> dereferences <code>p</code>.</li>
+<li><code>f -1</code> and <code>f *x</code> are arithmetic, not calls: <code>f (-1)</code>, <code>f (*x)</code>.</li>
+</ul>
+    </main>
+  </div>
+</div>
+<script>
+(function(){
+  var b=document.body, t=document.getElementById('nav-toggle');
+  try{ if(localStorage.getItem('harsh-nav')==='hidden') b.classList.add('nav-hidden'); }catch(e){}
+  t.addEventListener('click',function(){
+    b.classList.toggle('nav-hidden');
+    try{ localStorage.setItem('harsh-nav', b.classList.contains('nav-hidden')?'hidden':'shown'); }catch(e){}
+  });
+  // The back-to-top arrow: shown once the page has scrolled a screen or so.
+  var up=document.createElement('button');
+  up.className='to-top'; up.textContent='\u2191';
+  up.title='Back to the top'; up.setAttribute('aria-label','Back to the top');
+  up.addEventListener('click',function(){
+    var still=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    window.scrollTo({top:0,behavior:still?'auto':'smooth'});
+  });
+  b.appendChild(up);
+  var show=function(){ up.classList.toggle('shown', window.scrollY>400); };
+  window.addEventListener('scroll',show,{passive:true}); show();
+})();
+</script>
+<script>
+// A discreet copy button on every code block (the user's, 2026-09-27): shown
+// on hovering the block; copies the block's text; says so for a moment.
+// Editors are left alone -- their text is the textarea's.
+(function(){
+  function add(pre){
+    if (pre.dataset.copy || pre.classList.contains('editor-view')) return;
+    pre.dataset.copy = '1';
+    var b = document.createElement('button');
+    b.className = 'copy'; b.type = 'button'; b.textContent = 'Copy';
+    b.title = 'Copy the code'; b.setAttribute('aria-label', 'Copy the code');
+    b.addEventListener('click', function(){
+      var text = pre.innerText.replace(/Copy(ied)?$/, '').replace(/\n$/, '');
+      var done = function(){ b.textContent = 'Copied'; setTimeout(function(){ b.textContent = 'Copy'; }, 1400); };
+      if (navigator.clipboard) navigator.clipboard.writeText(text).then(done, function(){});
+    });
+    pre.appendChild(b);
+  }
+  function all(){ document.querySelectorAll('pre.code').forEach(add); }
+  all();
+  new MutationObserver(all).observe(document.body, { childList: true, subtree: true });
+})();
+</script>
+</body>
+</html>

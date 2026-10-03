@@ -83,7 +83,7 @@ Point { x: 1.0, y: 2.0 } Size { w: 3.0, h: 4.0 } 1.5 9.14 5 12 8 big counts: 2 4
 - A block opens at a `:` that ends its line; its body is the lines indented beneath it, and ends where the indentation does. (§2.6)
 - The same block may be written inline, the body after the colon on the same line when it is one expression; or in braces on one line only, `{ let u = 3; u * u }`, when several statements must share a line. A `{` and its `}` on different lines is an error. (§2.6)
 - `do:` opens a block that belongs to nothing — a scope of its own, a value, an operand in parentheses. (§2.6, §3.1)
-- A line ending ends a statement; `;` is written only at the end of a block's last line, to discard its value. (§2.6, §3.4)
+- A line ending ends a statement. Harsh writes no `;`: a block whose last value is to be discarded ends with a line `()`, and a `;` ending a line is refused. A call whose last argument is an indented block takes its `()` on the line after the block. (§2.6, §3.4)
 - A line indented deeper than the one above it, with no `:` to open a block, continues it. (§2.6)
 - A construct that opens mid-line indents its body from its own column; when that reaches too far right, `=` ends its line and the opener starts the next. (§3.5)
 - Every line is aligned with an open block or a continuation; a column that matches nothing is an error, never a silent move between scopes. (§3.5)
@@ -95,7 +95,7 @@ Point { x: 1.0, y: 2.0 } Size { w: 3.0, h: 4.0 } 1.5 9.14 5 12 8 big counts: 2 4
 - An application binds tighter than `<-`: `greet "a" <- to_uppercase$` applies `greet` first, and the next arrow or an operator ends the arguments; parentheses go round an argument that holds an arrow, `f (x <- g$)`, never round the application. A pipe is the exception: its sides are atoms, so `(f x) |> g`. (§2.6, §13.3)
 - A name written tight against a `(` is an error. (§20.5)
 - Parentheses make a tuple (the comma does it), set precedence, or group — and nothing else. (§20.5)
-- A block's opener says how its entries end: **no mark** after a header that ends itself (`struct`, `enum`, `union`, `impl`, `trait`, `mod`, `extern`), **`\`** for a comma-separated list, **`:`** or **`do:`** for statements, **`#:`** for a grouping whose grammar is its author's. A construct that already has a spelling keeps it — `struct Point #:` is refused. (§2.6, §5.1, §20)
+- A block's opener says how its entries end: **no mark** after a header that ends itself (`struct`, `enum`, `union`, `impl`, `trait`, `mod`, `extern`, `macro_rules!`), **`\`** for a comma-separated list, **`:`** or **`do:`** for statements. A grammar of its author's own is a macro's, written in its braces, `m! { … }`. A construct that already has a spelling keeps it — `impl Point:` is refused. (§2.6, §5.1, §20)
 - Brackets index, never apply: `arr[1]` is part of its atom (`f arr[1]` passes the element); `arr [1]` is the same index but is refused inside an application; an array argument is isolated, `f ([1, 2])`. (§2.6)
 - `<-` reaches into a value: a field, a method. `.` walks a path: a module, a type, an item. A tuple index keeps its dot, `d.0`. (§2.6, §5.1)
 - A macro applies like a function, its `!` glued to its name: `vec! 1 2`, `println! "{x}"`. (§2.6)
@@ -106,7 +106,8 @@ Point { x: 1.0, y: 2.0 } Size { w: 3.0, h: 4.0 } 1.5 9.14 5 12 8 big counts: 2 4
 - Three struct forms, three equals: a **record struct**, `struct Point` with `x: f64` beneath or `struct Size\ w: f64, h: f64`; a **tuple struct**, `struct Meters f64`; a **unit-like struct**, `struct Origin`. Nothing marks a declaration's body. (§5.1)
 - An enum is a union of variants, each one of the three forms spelled as that struct is: `Empty`, `Circle f64`, `Rect` with fields beneath or `Rect\ w: f64, h: f64`. (§6.1)
 - A literal is the name, `\`, and `field = value` — inline to the end of its line or its group's `)`, or a field per line beneath. `..base` last. A literal that is one element of a tuple has its own parentheses. (§5.1)
-- `impl Point:`, `trait Area:`, `mod geometry:`, `extern "C":` — all blocks. (§5.3, §10.2, §7.2, §20.1)
+- A literal inside a literal on one line is parenthesised, so the reader sees where it ends: `inner = (Animal\ name = n), good = true`; or the outer literal goes one field per line, where the line ends the inner one. A comma ending a field line is refused. (§5.1)
+- `impl Point`, `trait Area`, `mod geometry`, `extern "C"` — headers with no mark, their items beneath. (§5.3, §10.2, §7.2, §20.1)
 - A `where` clause on one line needs nothing; over several lines it is bracketed, `[where T: Debug]`, on its own line under the signature. (§10.2)
 - Attributes apply inside their brackets: `#[derive Debug Clone]`, `#[cfg (feature = "x")]`. (§5.2)
 
@@ -125,13 +126,13 @@ Point { x: 1.0, y: 2.0 } Size { w: 3.0, h: 4.0 } 1.5 9.14 5 12 8 big counts: 2 4
 
 ## Macros and markup — chapter 23
 
-- `macro_rules! twice:` holds arms; a matcher is a parameter list, `( ($x:expr) )`; a transcriber is a block, `=> do:`. (§20.5)
+- `macro_rules! twice` holds its arms beneath, no mark; a matcher is a parameter list, `( ($x:expr) )`; a transcriber is a block, `=> do:`. Harsh's own macros are written `macro_rules~`, called with `~`, and expanded by `hrs`: they are gone from the Rust. (§20.5, chapter 23)
 - A macro's own language — `select!`'s arms, `view!` markup, an `rsx!` tree — goes in braces, as Rust, byte for byte; the Harsh inside is a hole, `@: … :@`, always closed. (chapter 23)
 - A fenced block in a `///` comment is Harsh, and the tool that runs it gets the Rust it expects. (§14.2)
 
 ## The tools — chapters 1, 14
 
-- `hrs new`, `hrs run`, `hrs build`, `hrs test`, `hrs check`, `hrs lint`, `hrs watch`; `hrs fmt` lays a file out by these rules and is a no-op on one already laid out; `hrs export` writes the project as a plain Rust crate; `hrs-from` brings Rust in. (§1.2, §14.1)
+- `hrs new`, `hrs run`, `hrs build`, `hrs test`, `hrs check`, `hrs lint`, `hrs watch`; `hrs add hrs_std` adds Harsh's crates to a project, and Rust's are `cargo add`'s; `hrs fmt` lays a file out by these rules and is a no-op on one already laid out; `hrs export` writes the project as a plain Rust crate; `hrs-from` brings Rust in. (§1.2, §14.1)
 - Errors point at your `.hrs` line, whether Harsh raised them or the compiler did. (§1.2, §3.4)
 
 ## Precedence — appendix

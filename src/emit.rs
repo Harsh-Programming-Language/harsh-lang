@@ -1236,6 +1236,49 @@ impl<'a> Emitter<'a> {
                 continue;
             }
             let is_pattern = crate::layout::pattern_backslash(toks, 0, end, i);
+            // A pattern isolated in parentheses right after `let` -- `if let
+            // (P\ x, ..) = v`, `let (P\ x, ..) = v else:` -- loses them: they
+            // only isolate it, and rustc warns `unused_parens` (H2, found
+            // building Docreview, 2026-10-03).
+            if is_pattern {
+                let mut d = 0i32;
+                let mut open = None;
+                for j in (0..i).rev() {
+                    match toks[j].kind {
+                        Tk::Close(_) => d += 1,
+                        Tk::Open(c) => {
+                            if d == 0 {
+                                if c == '(' {
+                                    open = Some(j);
+                                }
+                                break;
+                            }
+                            d -= 1;
+                        }
+                        Tk::Comma if d == 0 => break,
+                        _ => {}
+                    }
+                }
+                if let Some(o) = open {
+                    if o > 0 && toks[o - 1].is_kw("let") {
+                        let mut d = 0i32;
+                        let close = (o..end).find(|&k| {
+                            match toks[k].kind {
+                                Tk::Open(_) => d += 1,
+                                Tk::Close(_) => d -= 1,
+                                _ => {}
+                            }
+                            d == 0
+                        });
+                        if let Some(c) = close {
+                            if toks.get(c + 1).map_or(false, |t| t.kind == Tk::Eq) {
+                                fixes.insert(o, Fix::Skip);
+                                fixes.insert(c, Fix::Skip);
+                            }
+                        }
+                    }
+                }
+            }
             // `match v\ p => e, q => f` inline: the `\` opens the arms, which
             // run to the end of the line (or the group). Arms hold `=>` and
             // `=`, so neither bounds the run here.

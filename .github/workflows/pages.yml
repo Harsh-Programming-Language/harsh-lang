@@ -103,7 +103,7 @@ jobs:
           grep -q "rust-analyzer" dist/install/index.html
           # The books and the guide come from public/ (`public_dir`), copied
           # by dx itself; fail here rather than publish dead links.
-          test -f dist/book/index.html && test -f dist/by-example/index.html && test -f dist/patterns/index.html && test -f dist/nomicon/index.html && test -f dist/guide/index.html
+          test -f dist/book/index.html && test -f dist/by-example/index.html && test -f dist/cheatsheet/index.html && test -f dist/glance/index.html && test -f dist/patterns/index.html && test -f dist/nomicon/index.html && test -f dist/guide/index.html
           # An unknown path: the app loads and its router shows the
           # not-found page.
           # Every internal link on the app's pre-rendered pages leads to a

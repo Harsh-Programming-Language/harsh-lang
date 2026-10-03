@@ -1,7 +1,7 @@
 use dioxus.prelude.*
 
 /// The books and the guide are shipped with the site, as the HTML the
-/// project already renders, under `/book/`, `/by-example/`, `/patterns/`, `/nomicon/` and `/guide/`.
+/// project already renders, under `/book/`, `/by-example/`, `/patterns/`, `/nomicon/`, `/guide/`, `/glance/` and `/cheatsheet/`.
 /// The workflow copies them from `static/` beside the built app.
 #[component]
 pub fn Learn$ -> Element:
@@ -49,6 +49,20 @@ pub fn Learn$ -> Element:
                     p {
                         "The reference: every construct, every form, every error message, "
                         "and the reasoning behind each rule."
+                    }
+                }
+                a { class: "card", href: "/glance/",
+                    h3 { "Harsh at a glance" }
+                    p {
+                        "Every rule Harsh adds to Rust, on one page, each with the section of "
+                        "the Book that teaches it."
+                    }
+                }
+                a { class: "card", href: "/cheatsheet/",
+                    h3 { "The Fast Track to Harsh" }
+                    p {
+                        "The cheat sheet: everything you write daily, by task, spelled in Harsh -- "
+                        "every example checked against the transpiler."
                     }
                 }
                 a { class: "card", href: "https://gitlab.com/bahiminin.benoit.dah.opensource/harshlings", target: "_blank", rel: "noopener",

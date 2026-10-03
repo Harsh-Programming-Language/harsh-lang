@@ -144,8 +144,25 @@ pub struct LexError {
 
 /// Lex Harsh source.
 pub fn lex(src: &str) -> Result<Vec<Token>, LexError> {
-    Lexer::new(src, Mode::Harsh).run()
+    let mut toks = Lexer::new(src, Mode::Harsh).run()?;
+    // A name that Rust reserves for its future -- `become`, `yield` -- is
+    // written as a raw identifier, `r#become`, as rustc's own hint says (H8,
+    // found building Docreview; the user's choice, 2026-10-03). `do` is
+    // Harsh's, and never a name.
+    for t in toks.iter_mut() {
+        if t.kind == Tk::Ident && RESERVED.contains(&t.text.as_str()) {
+            t.text = format!("r#{}", t.text);
+        }
+    }
+    Ok(toks)
 }
+
+/// Rust 2021's reserved words with no meaning in Rust 2021 or in Harsh.
+/// (`gen` is reserved only from Rust 2024, and stays a plain name: the
+/// transpiler's own source uses it.)
+pub const RESERVED: [&str; 12] = [
+    "abstract", "become", "box", "final", "macro", "override", "priv", "try", "typeof", "unsized", "virtual", "yield",
+];
 
 /// Lex Rust source, for the Rust -> Harsh direction.
 pub fn lex_rust(src: &str) -> Result<Vec<Token>, LexError> {

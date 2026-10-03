@@ -2617,3 +2617,25 @@ fn docreview_issues_h5_h6_h7() {
     assert!(t("fn main$:\n    let k = |x| (x + 1)\n").is_ok());
 }
 
+/// Found building Docreview and by the cheat sheet's check (2026-10-03): H2,
+/// isolating parentheses around a pattern after `let`; H7's second case, a
+/// line starting with `<-` at its statement's column; H8, a name Rust
+/// reserves; and an inline body after a bare parameter or a bounded generic.
+#[test]
+fn docreview_issues_h2_h7b_h8_and_inline_bodies() {
+    let t = |src: &str| harsh_lang::driver::transpile_str(src);
+    let decl = "enum D\n    E\n        m: u32\n    O\n\n";
+    let rust = t(&format!("{decl}fn main$:\n    let k = D.E\\ m = 1\n    if let (D.E\\ m, ..) = &k: println! \"{{m}}\"\n")).unwrap();
+    assert!(rust.contains("if let D::E { m, .. } = &k"), "{rust}");
+    let rust = t(&format!("{decl}fn f (k: &D):\n    let (D.E\\ m, ..) = k else:\n        return\n    println! \"{{m}}\"\n")).unwrap();
+    assert!(rust.contains("let D::E { m, .. } = k else"), "{rust}");
+    let e = t("fn main$:\n    let n = v <- iter$\n    <- count$\n").unwrap_err();
+    assert!(e.to_string().contains("continues a chain"), "{e}");
+    let rust = t("fn become x: i32 -> i32:\n    x\n").unwrap();
+    assert!(rust.contains("fn r#become(x: i32)"), "{rust}");
+    let rust = t("fn double n: i32 -> i32: n * 2\n").unwrap();
+    assert!(rust.contains("fn double(n: i32) -> i32 {"), "{rust}");
+    let rust = t("fn apply<F: Fn (i32) -> i32> (f: F) (x: i32) -> i32: f x\n").unwrap();
+    assert!(rust.contains("fn apply<F: Fn(i32) -> i32>(f: F, x: i32) -> i32 {"), "{rust}");
+}
+

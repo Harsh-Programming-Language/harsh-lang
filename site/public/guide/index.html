@@ -1098,7 +1098,7 @@ xs <span class="op">&lt;-</span> iter<span class="defer">$</span> <span class="o
 <li>The bare form and the isolated form emit the same Rust for the closure; the isolated form additionally lets the statement carry on.</li>
 </ul>
 <h3 id="statements-and-semicolons">Statements and semicolons</h3>
-<p>Harsh writes no semicolons. The transpiler inserts them from the layout, and a <code>;</code> ending a line is refused (since 0.1.56).</p>
+<p>Harsh writes no semicolons. The transpiler inserts them from the layout, and a <code>;</code> ending a line is refused (since 0.2.0).</p>
 <ul>
 <li>Every logical line in a statement block gets a semicolon except the last, so the last line is a tail expression exactly as in Rust.</li>
 <li>A line beginning with <code>let</code>, <code>use</code>, <code>const</code>, <code>static</code>, <code>type</code>, <code>mod</code>, <code>extern</code>, or <code>return</code> always gets a semicolon, including when it is last, because those are statements rather than tail values.</li>

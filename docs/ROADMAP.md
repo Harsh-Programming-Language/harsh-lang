@@ -25,16 +25,47 @@ user's. 0.1.30 and 0.1.31 were handed over and are spent. The design questions
 are gathered in the development notes and wait on his use of what exists -- he decides
 after a few days with it. What needs no decision is done, or listed last below.
 
+### First: Harsh's two modes (the user, 2026-10-01 -- his strategy to come)
+
+He frames Harsh as two modes, distinguished by who drives the build. **He will
+devise the strategy and bring it; nothing is built until then.** The
+discussion so far, for that session:
+
+- **Mode 1 -- pure Harsh projects; `hrs` drives.** `hrs build` / `hrs run`;
+  Harsh crates by path today, Harsh's registry later; Rust crates through
+  `cargo add`. Gap found (BenView, 2026-10-01): `hrs build` follows a nested
+  Harsh crate only when it is a one-line `name = { path = ".." }` directly
+  under `[dependencies]` (`driver::path_dependencies`, line matching). Missed:
+  `[target.'cfg(..)'.dependencies]` (Dioxus projects use them constantly),
+  `[dev-dependencies]`, `[build-dependencies]`, the long `[dependencies.name]`
+  form, workspace `members`, and `workspace = true` dependencies. Proposed: read
+  every dependency table with a real TOML parser (the `toml` crate), follow
+  workspace members; tests per form; chapter 17 lists what is followed. An
+  addition, so a patch release. The other session's workaround -- BenView
+  committing its nested crate's generated Rust, with a drift check -- goes
+  away with it.
+- **Mode 2 -- Harsh inside a Rust project; Cargo drives.** A Rust project
+  writes one module, some files, or a whole workspace crate in Harsh, and
+  builds with `cargo build` alone. Proposed: code generation in `build.rs`, as
+  `prost` and `lalrpop` do -- `harsh-lang` as a build-dependency (nothing to
+  install), `harsh_lang::build` transpiling `.hrs` into `OUT_DIR`, the Rust
+  including it (`mod parser { include!(concat!(env!("OUT_DIR"),
+  "/parser.rs")); }`; a whole crate: a one-line `src/lib.rs`). It also covers
+  a Harsh crate published for Rust users without committing generated Rust;
+  `hrs export` stays for plain Rust with no `harsh-lang` dependency at all.
+  Honest cost: rustc's type errors would cite the generated file in `OUT_DIR`
+  (Rust has no `#line`); `hrs`'s own transpile errors would still point at
+  the `.hrs`. A remapping `cargo hrs` wrapper could come later. Also
+  proposed: an `hrs new` template for it, a chapter-17 section beside
+  `hrs export`, tests building a Rust project that embeds a Harsh module and
+  a Harsh crate with `cargo build` only.
+- Open questions he was asked: is mode 2 "Cargo drives, `build.rs`
+  generates, nothing generated committed"? Mode 1's fix and mode 2
+  separately, or one batch?
+
 ### Waiting on the user, after his testing
 
-- **H2 (from Docreview): isolating parentheses around an inline pattern
-  survive** -- `if let (D.Email\ messages, ..) = &k:` keeps `( … )` in the
-  Rust, and rustc warns `unused_parens`. Harmless (the program is right; the
-  app writes the pattern unparenthesised). The emitter's optional-grouping
-  rule (`whole_group` in `emit::block`) drops parentheses around a *block*;
-  an inline `\` list in parentheses on a header line goes another way
-  (inline expansion), which that rule never sees. Adding `let` to its
-  `not_call` list was tried and is in place, but does not reach this case.
+
 
 - **`hrs fmt` applies the countable rules -- built 2026-09-29 (0.1.52).** Remaining from the list below: (1) and (3).
 - **Three layout bugs found applying the handwriting rule (2026-09-29).**

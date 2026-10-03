@@ -1,10 +1,32 @@
 # Changelog
 
-## 0.1.56 — 2026-09-30  (`hrs_std` 0.1.4 and the Jupyter kernel 0.1.3, unchanged)
+## 0.2.3 — 2026-10-03  (`hrs_std` 0.1.4 and the Jupyter kernel 0.1.3, unchanged)
+
+Fixes from Docreview's issues file and the cheat sheet's check. Each turned broken Rust into working Rust or into a clear Harsh error; none of the code they touch ever compiled, so nothing working breaks.
+
+- **H2:** parentheses isolating a pattern after `let` -- `if let (P\ x, ..) = v`, `let (P\ x, ..) = v else:` -- are dropped in the Rust; rustc warned `unused_parens`.
+- **H7, second case:** a line starting with `<-` at its statement's own column became a Rust statement starting with `.`; now an error: indent it under the statement it continues.
+- **H8:** a name Rust 2021 reserves for its future (`become`, `yield`, `try`, `box`, …) is written as a raw identifier, `r#become`, as rustc's hint says (the user's choice over refusing it).
+- **An inline body after a bare parameter or a bounded generic** -- `fn double n: i32 -> i32: n * 2`, `fn apply<F: Fn (i32) -> i32> (f: F) -> i32: f 1` -- took the header's own `:` for the opener and became broken Rust; now right. The cheat sheet shows the bare-parameter form again.
+
+## 0.2.2 — 2026-10-03  (`hrs_std` 0.1.4 and the Jupyter kernel 0.1.3, unchanged)
+
+- **The Book's *Harsh at a glance* brought up to the language** (the user's request): it still taught the `;` that 0.2.0 replaced with `()`, wrote `impl Point:`, `mod geometry:` and `macro_rules! twice:` with a colon (all refused since declarations and macro headers take no mark), and named the `#:` retired on 2026-09-23. Rewritten, each checked against the transpiler; added: the `()` line, the parenthesised literal inside a literal, `hrs add`, Harsh's `macro_rules~`.
+- **Harsh at a glance on the website**, at `/glance/`, with a card on the Learn page: rendered from the chapter the Book's build writes, so page and chapter never disagree. The deploy checks the page exists.
+
+## 0.2.1 — 2026-10-03  (`hrs_std` 0.1.4 and the Jupyter kernel 0.1.3, unchanged)
+
+- **The Fast Track to Harsh** (the user's request): a cheat sheet in the manner of Julia's, by task -- basics, operators, strings, numbers, collections, comprehensions, control flow, patterns, functions and closures, structs and enums, methods and traits, ownership, errors, iterators, modules, testing, concurrency and async, linear algebra, macros, the tools, the three ways to use Harsh, layout style. `docs/CHEATSHEET.md`, rendered like the guide, published at `/cheatsheet/` with a card on the Learn page. **Every example is checked** by `docs/check-cheatsheet.py`, run by `check.sh`: transpiled, and the Rust parsed by `rustfmt` -- so an example the transpiler mangles is caught, not only one it refuses (214 examples, 9 blocks).
+- Found by that check, on the roadmap: an inline function body (`fn f …: body` on one line) after a bare parameter or a bounded generic is mis-read -- the parameter's `:` is taken for the opener -- and becomes broken Rust without an error.
+
+## 0.2.0 — 2026-09-30  (`hrs_std` 0.1.4 and the Jupyter kernel 0.1.3, unchanged)
+
+**A breaking release, numbered as one** (the user's decision): code that 0.1.x accepted -- a `;` ending a line -- is now refused, and Harsh is public, on its website, the Book and crates.io. Under Cargo's rules for versions below 1.0 the middle number is the breaking one, so a dependency on `harsh-lang = "0.1"` stays on 0.1.55 until its owner moves. (This release was first built as 0.1.56, never pushed or published.)
+
 
 - **A block's discarded value is written `()`, not `;`** (the user's rule, from building Docreview): a block whose last value is to be thrown away ends with a line `()` -- `seen <- insert word`, and `()` beneath it -- which says so where the block's value goes. The Rust is written as Rust is: `seen.insert(word);`, no `()`. **A `;` ending a line is now refused**, with that fix in the message; `;` inside brackets (`[u8; 4]`, `m~ [1 2; 3 4]`) and in `macro_rules!` arms is untouched. A call whose last argument is an indented block takes its `()` on the line after the block. The converter writes the `()` -- except after a `let` and after a macro that produces no value (`println!`, `assert!`, `panic!` …), whose `;` changes nothing. Taught in the guide (*Statements and semicolons*), the Book (chapter 3: the lesson rewritten, a positive example added), *By Example* 13 (`()` instead of `let _ =`, and what `let _` really means).
 - **Fixed, found building Docreview:** H5, a generic bound closing with `>>` left a signature's parameter groups unjoined; H6, a `const` whose value is a multi-line block lost its `;`; H7, a closure written `|a: A| (b: B)|` became broken Rust -- now an error saying a closure's parameters are separated by commas. Tests for each.
-- **Breaking:** code using the `;` is refused, the error pointing at each `;`.
+- **Breaking:** code using the `;` is refused, the error pointing at each `;` with the fix.
 
 ## 0.1.55 — 2026-09-29  (`hrs_std` 0.1.4 and the Jupyter kernel 0.1.3, unchanged)
 

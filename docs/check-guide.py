@@ -76,7 +76,7 @@ def transpile(harsh):
     if out is not None and wrapped:
         lines = out.rstrip("\n").split("\n")
         # The closing `}`, and the wrapper's `()` when it was written: since
-        # 0.1.56 a last line `()` after a statement is folded into that
+        # 0.2.0 a last line `()` after a statement is folded into that
         # statement's `;`, and is not in the Rust at all.
         end = len(lines) - 1
         if end > 1 and lines[end - 1].strip() == "()":

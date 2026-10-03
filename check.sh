@@ -147,6 +147,12 @@ say "The guide: every code block transpiles"
 PATH="$ROOT/target/release:$PATH" python3 "$ROOT/docs/check-guide.py" > "$WORK/guide.log" 2>&1 || { cat "$WORK/guide.log"; exit 1; }
 echo "  $(tail -1 "$WORK/guide.log" | sed 's|^docs/LANGUAGE.md: ||')"
 
+say "The cheat sheet: every example transpiles into Rust that parses"
+# docs/check-cheatsheet.py (2026-10-03): transpiled, then parsed by rustfmt,
+# so an example the transpiler mangles is caught, not only one it refuses.
+PATH="$ROOT/target/release:$PATH" python3 "$ROOT/docs/check-cheatsheet.py" > "$WORK/cheatsheet.log" 2>&1 || { cat "$WORK/cheatsheet.log"; exit 1; }
+echo "  $(tail -1 "$WORK/cheatsheet.log" | sed 's|^docs/CHEATSHEET.md: ||')"
+
 say "Markdown: every code block is tagged"
 # GitLab and GitHub know no Harsh: a Harsh block is fenced `rust harsh`, so
 # they colour it as Rust by the first word (2026-09-29); an untagged fence

@@ -199,6 +199,14 @@ if __name__ == "__main__":
   # The guide first: its page supplies the chrome every other page reuses.
   render(d("LANGUAGE.md"), d("language.ipynb"), d("language.html"), "The Harsh Language Guide",
          "<em>Rust without the braces.</em> &nbsp;Language guide.")
+  # The Book's *Harsh at a glance*, as a page of its own (2026-10-03): rendered
+  # from the chapter the Book's build writes, so the two never disagree;
+  # published at /glance/.
+  render(b("chapters/25_at_a_glance.md"), b("glance.ipynb"), b("glance.html"), "Harsh at a glance",
+         "<em>Rust without the braces.</em> &nbsp;Every rule of Harsh's own, from the Book.")
+  # The cheat sheet (2026-10-03): the same chrome, published at /cheatsheet/.
+  render(d("CHEATSHEET.md"), d("cheatsheet.ipynb"), d("cheatsheet.html"), "The Fast Track to Harsh",
+         "<em>Rust without the braces.</em> &nbsp;The cheat sheet.")
   # Every other document in docs/ and docs/dev/, same three forms, same theme.
   others = {
     "START-HERE.md": ("Harsh — start here", "The map of the project."),

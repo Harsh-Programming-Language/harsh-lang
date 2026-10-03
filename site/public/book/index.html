@@ -5134,7 +5134,7 @@ opt-level = 3</code></pre>
 running 1 test
 test target/hrs/lib.rs - add_one (line 10) ... ok
 
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.18s</code></pre>
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.17s</code></pre>
 <p><code>cargo doc --open</code> renders every <code>///</code> and <code>//!</code> in the crate as HTML, with the Markdown inside them — headings, code blocks, links — laid out. The conventional sections are <code># Examples</code>, <code># Panics</code> (when the function can), <code># Errors</code> (what <code>Err</code>s it returns) and <code># Safety</code> (for <code>unsafe</code> functions). The example in the <code>///</code> is Harsh, like everything else in the file, and <code>cargo test</code> <em>runs it</em> — every code block in a doc comment is a test, so documentation cannot drift from the code without failing the build.</p>
 <blockquote>
 <p><strong>Harsh —</strong> A fenced block in a doc comment is the one kind of comment the transpiler reads. The documentation tool lifts such a block out, compiles it and runs it — it is code, not prose — so it is written in Harsh and the transpiler writes out the Rust that tool expects, the same translation it does everywhere else. A fence tagged with another language — <code>text</code>, <code>toml</code> — is prose and is left exactly as you wrote it. A line beginning <code>#</code> inside the fence is the documentation tool's own mark for <em>compile this but do not show it</em>, and it survives the translation.</p>
@@ -7362,7 +7362,7 @@ worker 3 shut down
 <li>A block opens at a <code>:</code> that ends its line; its body is the lines indented beneath it, and ends where the indentation does. (§2.6)</li>
 <li>The same block may be written inline, the body after the colon on the same line when it is one expression; or in braces on one line only, <code>{ let u = 3; u * u }</code>, when several statements must share a line. A <code>{</code> and its <code>}</code> on different lines is an error. (§2.6)</li>
 <li><code>do:</code> opens a block that belongs to nothing — a scope of its own, a value, an operand in parentheses. (§2.6, §3.1)</li>
-<li>A line ending ends a statement; <code>;</code> is written only at the end of a block's last line, to discard its value. (§2.6, §3.4)</li>
+<li>A line ending ends a statement. Harsh writes no <code>;</code>: a block whose last value is to be discarded ends with a line <code>()</code>, and a <code>;</code> ending a line is refused. A call whose last argument is an indented block takes its <code>()</code> on the line after the block. (§2.6, §3.4)</li>
 <li>A line indented deeper than the one above it, with no <code>:</code> to open a block, continues it. (§2.6)</li>
 <li>A construct that opens mid-line indents its body from its own column; when that reaches too far right, <code>=</code> ends its line and the opener starts the next. (§3.5)</li>
 <li>Every line is aligned with an open block or a continuation; a column that matches nothing is an error, never a silent move between scopes. (§3.5)</li>
@@ -7374,7 +7374,7 @@ worker 3 shut down
 <li>An application binds tighter than <code>&lt;-</code>: <code>greet "a" &lt;- to_uppercase$</code> applies <code>greet</code> first, and the next arrow or an operator ends the arguments; parentheses go round an argument that holds an arrow, <code>f (x &lt;- g$)</code>, never round the application. A pipe is the exception: its sides are atoms, so <code>(f x) |&gt; g</code>. (§2.6, §13.3)</li>
 <li>A name written tight against a <code>(</code> is an error. (§20.5)</li>
 <li>Parentheses make a tuple (the comma does it), set precedence, or group — and nothing else. (§20.5)</li>
-<li>A block's opener says how its entries end: <strong>no mark</strong> after a header that ends itself (<code>struct</code>, <code>enum</code>, <code>union</code>, <code>impl</code>, <code>trait</code>, <code>mod</code>, <code>extern</code>), <strong><code>\</code></strong> for a comma-separated list, <strong><code>:</code></strong> or <strong><code>do:</code></strong> for statements, <strong><code>#:</code></strong> for a grouping whose grammar is its author's. A construct that already has a spelling keeps it — <code>struct Point #:</code> is refused. (§2.6, §5.1, §20)</li>
+<li>A block's opener says how its entries end: <strong>no mark</strong> after a header that ends itself (<code>struct</code>, <code>enum</code>, <code>union</code>, <code>impl</code>, <code>trait</code>, <code>mod</code>, <code>extern</code>, <code>macro_rules!</code>), <strong><code>\</code></strong> for a comma-separated list, <strong><code>:</code></strong> or <strong><code>do:</code></strong> for statements. A grammar of its author's own is a macro's, written in its braces, <code>m! { … }</code>. A construct that already has a spelling keeps it — <code>impl Point:</code> is refused. (§2.6, §5.1, §20)</li>
 <li>Brackets index, never apply: <code>arr[1]</code> is part of its atom (<code>f arr[1]</code> passes the element); <code>arr [1]</code> is the same index but is refused inside an application; an array argument is isolated, <code>f ([1, 2])</code>. (§2.6)</li>
 <li><code>&lt;-</code> reaches into a value: a field, a method. <code>.</code> walks a path: a module, a type, an item. A tuple index keeps its dot, <code>d.0</code>. (§2.6, §5.1)</li>
 <li>A macro applies like a function, its <code>!</code> glued to its name: <code>vec! 1 2</code>, <code>println! "{x}"</code>. (§2.6)</li>
@@ -7385,7 +7385,8 @@ worker 3 shut down
 <li>Three struct forms, three equals: a <strong>record struct</strong>, <code>struct Point</code> with <code>x: f64</code> beneath or <code>struct Size\ w: f64, h: f64</code>; a <strong>tuple struct</strong>, <code>struct Meters f64</code>; a <strong>unit-like struct</strong>, <code>struct Origin</code>. Nothing marks a declaration's body. (§5.1)</li>
 <li>An enum is a union of variants, each one of the three forms spelled as that struct is: <code>Empty</code>, <code>Circle f64</code>, <code>Rect</code> with fields beneath or <code>Rect\ w: f64, h: f64</code>. (§6.1)</li>
 <li>A literal is the name, <code>\</code>, and <code>field = value</code> — inline to the end of its line or its group's <code>)</code>, or a field per line beneath. <code>..base</code> last. A literal that is one element of a tuple has its own parentheses. (§5.1)</li>
-<li><code>impl Point:</code>, <code>trait Area:</code>, <code>mod geometry:</code>, <code>extern "C":</code> — all blocks. (§5.3, §10.2, §7.2, §20.1)</li>
+<li>A literal inside a literal on one line is parenthesised, so the reader sees where it ends: <code>inner = (Animal\ name = n), good = true</code>; or the outer literal goes one field per line, where the line ends the inner one. A comma ending a field line is refused. (§5.1)</li>
+<li><code>impl Point</code>, <code>trait Area</code>, <code>mod geometry</code>, <code>extern "C"</code> — headers with no mark, their items beneath. (§5.3, §10.2, §7.2, §20.1)</li>
 <li>A <code>where</code> clause on one line needs nothing; over several lines it is bracketed, <code>[where T: Debug]</code>, on its own line under the signature. (§10.2)</li>
 <li>Attributes apply inside their brackets: <code>#[derive Debug Clone]</code>, <code>#[cfg (feature = "x")]</code>. (§5.2)</li>
 </ul>
@@ -7404,13 +7405,13 @@ worker 3 shut down
 </ul>
 <h3 id="macros-and-markup-chapter-23">Macros and markup — chapter 23</h3>
 <ul>
-<li><code>macro_rules! twice:</code> holds arms; a matcher is a parameter list, <code>( ($x:expr) )</code>; a transcriber is a block, <code>=&gt; do:</code>. (§20.5)</li>
+<li><code>macro_rules! twice</code> holds its arms beneath, no mark; a matcher is a parameter list, <code>( ($x:expr) )</code>; a transcriber is a block, <code>=&gt; do:</code>. Harsh's own macros are written <code>macro_rules~</code>, called with <code>~</code>, and expanded by <code>hrs</code>: they are gone from the Rust. (§20.5, chapter 23)</li>
 <li>A macro's own language — <code>select!</code>'s arms, <code>view!</code> markup, an <code>rsx!</code> tree — goes in braces, as Rust, byte for byte; the Harsh inside is a hole, <code>@: … :@</code>, always closed. (chapter 23)</li>
 <li>A fenced block in a <code>///</code> comment is Harsh, and the tool that runs it gets the Rust it expects. (§14.2)</li>
 </ul>
 <h3 id="the-tools-chapters-1-14">The tools — chapters 1, 14</h3>
 <ul>
-<li><code>hrs new</code>, <code>hrs run</code>, <code>hrs build</code>, <code>hrs test</code>, <code>hrs check</code>, <code>hrs lint</code>, <code>hrs watch</code>; <code>hrs fmt</code> lays a file out by these rules and is a no-op on one already laid out; <code>hrs export</code> writes the project as a plain Rust crate; <code>hrs-from</code> brings Rust in. (§1.2, §14.1)</li>
+<li><code>hrs new</code>, <code>hrs run</code>, <code>hrs build</code>, <code>hrs test</code>, <code>hrs check</code>, <code>hrs lint</code>, <code>hrs watch</code>; <code>hrs add hrs_std</code> adds Harsh's crates to a project, and Rust's are <code>cargo add</code>'s; <code>hrs fmt</code> lays a file out by these rules and is a no-op on one already laid out; <code>hrs export</code> writes the project as a plain Rust crate; <code>hrs-from</code> brings Rust in. (§1.2, §14.1)</li>
 <li>Errors point at your <code>.hrs</code> line, whether Harsh raised them or the compiler did. (§1.2, §3.4)</li>
 </ul>
 <h3 id="precedence-appendix">Precedence — appendix</h3>

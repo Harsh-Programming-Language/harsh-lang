@@ -1263,7 +1263,9 @@ fn opener_kw(toks: &[Token], from: usize, colon: usize, _outer: BlockKind) -> Op
         match toks[i].kind {
             Tk::Close(_) => d += 1,
             Tk::Open(_) => d -= 1,
-            Tk::Colon if d == 0 => return None,
+            // A function header's own colon (a bound, a bare parameter's)
+            // does not end the search for the keyword.
+            Tk::Colon if d == 0 && !fn_header_colon(toks, from, i) => return None,
             Tk::Ident if d == 0 => {
                 if crate::rules::BLOCK_KEYWORDS.contains(&toks[i].text.as_str())
                     || toks[i].text == "do"
@@ -1283,6 +1285,34 @@ fn opener_kw(toks: &[Token], from: usize, colon: usize, _outer: BlockKind) -> Op
 /// it sits at bracket depth zero or inside parens only. Parens isolate; they
 /// neither open nor close a block, so a block may be written inside one and
 /// ends where the group ends. `[ .. ]` and `{ .. }` are Rust's.
+/// Is the `:` at `i` part of a function's header -- inside its generic list,
+/// or a bare parameter's own (`fn double n: i32`)?
+fn fn_header_colon(toks: &[Token], from: usize, i: usize) -> bool {
+    let Some(f) = (from..i).find(|&k| toks[k].is_kw("fn")) else { return false };
+    let mut p = f + 2; // past `fn` and the name
+    if toks.get(p).map_or(false, |t| t.kind == Tk::Lt) {
+        let mut d = 0i32;
+        while p < toks.len() {
+            match toks[p].kind {
+                Tk::Lt => d += 1,
+                Tk::Gt => d -= 1,
+                _ if toks[p].text == ">>" => d -= 2,
+                _ => {}
+            }
+            p += 1;
+            if d <= 0 {
+                break;
+            }
+        }
+        if i < p {
+            return true;
+        }
+    }
+    // A bare parameter: a name right after the name (or the generics), then
+    // this colon.
+    toks.get(p).map_or(false, |t| t.kind == Tk::Ident) && p + 1 == i
+}
+
 fn inline_colon(toks: &[Token], from: usize, to: usize, outer: BlockKind) -> Option<(usize, &str)> {
     let last = (from..to).rev().find(|&i| !toks[i].is_comment());
     let mut stack: Vec<char> = Vec::new();
@@ -1308,6 +1338,14 @@ fn inline_colon(toks: &[Token], from: usize, to: usize, outer: BlockKind) -> Opt
                     // empty-bodied marker trait or blanket impl could not be
                     // written (found 2026-09-27 writing Harsh Design Patterns).
                     if matches!(kw, "struct" | "enum" | "union" | "impl" | "trait" | "mod") {
+                        continue;
+                    }
+                    // A function header's own colons: a bound in its generic
+                    // list, `fn apply<F: Fn (i32) -> i32> ..`, and a bare
+                    // parameter's, `fn double n: i32 -> i32: n * 2` -- read as
+                    // the opener, they made broken Rust (found by the cheat
+                    // sheet's check, 2026-10-03).
+                    if kw == "fn" && fn_header_colon(toks, from, i) {
                         continue;
                     }
                     return Some((i, kw));
@@ -2013,6 +2051,16 @@ fn check_bare_closure_chain(nodes: &[Node]) -> Result<(), LayoutError> {
                               isolate the closure in parens, `f (|x|: ..) <- ..`, \
                               so the `)` says where it ends"
                             .into(),
+                        span: first.unwrap().span,
+                    });
+                }
+                // Anywhere else, a line that begins with `<-` stands at its
+                // statement's own column and continues nothing (H7, second
+                // case, found building Docreview: it became a Rust
+                // statement starting with `.`).
+                if first.map(|t| t.kind == Tk::LArrow).unwrap_or(false) {
+                    return Err(LayoutError {
+                        msg: "a line starting with `<-` continues a chain: indent it under the statement it continues".into(),
                         span: first.unwrap().span,
                     });
                 }

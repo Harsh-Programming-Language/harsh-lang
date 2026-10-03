@@ -106,11 +106,14 @@ jobs:
           test -f dist/book/index.html && test -f dist/by-example/index.html && test -f dist/cheatsheet/index.html && test -f dist/glance/index.html && test -f dist/patterns/index.html && test -f dist/nomicon/index.html && test -f dist/guide/index.html
           # An unknown path: the app loads and its router shows the
           # not-found page.
+          # (The documents -- books, guide, cheat sheet, glance -- are the
+          # renderer's, checked by check.sh; a `data:` URL is an inline image,
+          # not a link: 2026-10-03, the cheat sheet's logo failed the deploy.)
           # Every internal link on the app's pre-rendered pages leads to a
           # file that is published (2026-09-28: the Learn cards pointed at
           # /learn/book/ -- the books were there, the links were not).
-          for f in $(find dist -name index.html -not -path 'dist/book/*' -not -path 'dist/by-example/*' -not -path 'dist/patterns/*' -not -path 'dist/nomicon/*' -not -path 'dist/guide/*'); do
-            for h in $(grep -o 'href="[^"#]*"' "$f" | sed 's/^href="//; s/"$//' | grep -v '^http\|^mailto:' | sort -u); do
+          for f in $(find dist -name index.html -not -path 'dist/book/*' -not -path 'dist/by-example/*' -not -path 'dist/patterns/*' -not -path 'dist/nomicon/*' -not -path 'dist/guide/*' -not -path 'dist/cheatsheet/*' -not -path 'dist/glance/*'); do
+            for h in $(grep -o 'href="[^"#]*"' "$f" | sed 's/^href="//; s/"$//' | grep -v '^http\|^mailto:\|^data:' | sort -u); do
               case "$h" in
                 /*) p="dist$h" ;;
                 *) echo "relative link $h in $f"; exit 1 ;;

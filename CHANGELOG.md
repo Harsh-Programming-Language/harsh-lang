@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.5 — 2026-10-03  (`hrs_std` 0.1.4 and the Jupyter kernel 0.1.3, unchanged)
+
+- **The deploy's link check** (the user's report: 0.2.4's site built, then the check failed): it read the cheat sheet's inline logo, a `data:image/png;base64,…` URL, as a relative link. `data:` URLs are no longer taken for links, and the new document pages, `/cheatsheet/` and `/glance/`, join the guide and the books among the pages the check leaves to `check.sh`. No change to `hrs` itself.
+
 ## 0.2.4 — 2026-10-03  (`hrs_std` 0.1.4 and the Jupyter kernel 0.1.3, unchanged)
 
 - **The website's deploy, fixed** (the user's report from the GitHub mirror): a toolchain update made the linker's strip remove every custom section of the WebAssembly, `__wasm_bindgen_unstable` included, and wasm-bindgen failed. `site/Cargo.toml` gains a `wasm-release` profile, inheriting `release`, with `strip = false`; `wasm-opt` shrinks the file after wasm-bindgen instead.

@@ -444,11 +444,14 @@ fn innermost_open_is_tuple(toks: &[Token], i: usize) -> bool {
     let Some(&('(', open)) = stack.last() else { return false };
     // Not a call's argument list: there each argument is isolated already,
     // and a second pair of parens would only be noise.
+    // (A keyword before the paren -- `let (..)`, `in (..)`, `return (..)` --
+    // is not a call: the paren is a tuple's, 2026-10-03.)
     if open > 0
         && matches!(
             toks[open - 1].kind,
             Tk::Ident | Tk::Close(')') | Tk::Close(']') | Tk::Gt
         )
+        && !(toks[open - 1].kind == Tk::Ident && crate::rules::is_keyword(&toks[open - 1].text))
     {
         return false;
     }
@@ -1932,6 +1935,8 @@ impl<'a> Writer<'a> {
                 }
                 Tk::Eq if d == 0 => break,
                 Tk::Semi | Tk::FatArrow if d == 0 => break,
+                // A `for`'s pattern ends at `in` (2026-10-03).
+                Tk::Ident if d == 0 && toks[k].is_kw("in") => break,
                 Tk::Ident if d == 0 && toks[k].is_kw("let") => return false,
                 Tk::Ident if d == 0 && toks[k].is_kw("for") => return false,
                 _ => {}
@@ -2003,6 +2008,9 @@ impl<'a> Writer<'a> {
                 }
                 Tk::Eq if d == 0 => break,
                 Tk::Semi | Tk::FatArrow if d == 0 => break,
+                // A `for`'s pattern ends at `in`: after it is an expression
+                // (`for (P { a }, n) in [(P { a: 1 }, 2)]`, 2026-10-03).
+                Tk::Ident if d == 0 && toks[j].is_kw("in") => break,
                 Tk::Ident if d == 0 && (toks[j].is_kw("let") || toks[j].is_kw("for")) => {
                     binder = true;
                     break;
@@ -2011,6 +2019,34 @@ impl<'a> Writer<'a> {
             }
         }
         if !binder {
+            // The groups around the brace -- `Some(..)`, a tuple `(.., x)`,
+            // a call `g(..)`: a comma inside one of them belongs to it; a
+            // comma outside them all ends the arm, and a `=>` after that is
+            // the next arm's. Without this, a literal in an arm's body,
+            // `Some(s) => E { a: s }, _ => ..`, found the next arm's `=>` and
+            // was read as a pattern (found 2026-10-03).
+            let mut outer = 0i32;
+            {
+                let mut d = 0i32;
+                for j in (0..open).rev() {
+                    match toks[j].kind {
+                        Tk::Close(_) => d += 1,
+                        Tk::Open(c) => {
+                            if d == 0 {
+                                if c == '(' || c == '[' {
+                                    outer += 1;
+                                    continue;
+                                }
+                                break;
+                            }
+                            d -= 1;
+                        }
+                        Tk::FatArrow | Tk::Semi | Tk::Eq if d == 0 => break,
+                        Tk::Comma if d == 0 && outer == 0 => break,
+                        _ => {}
+                    }
+                }
+            }
             let mut d = 0i32;
             let mut arm = false;
             for x in &toks[close + 1..] {
@@ -2021,10 +2057,12 @@ impl<'a> Writer<'a> {
                     Tk::Close('}') if d == 0 => break,
                     Tk::Close(_) => {
                         if d == 0 {
+                            outer -= 1;
                             continue;
                         }
                         d -= 1;
                     }
+                    Tk::Comma if d == 0 && outer <= 0 => break,
                     Tk::FatArrow if d == 0 => {
                         arm = true;
                         break;
@@ -2932,6 +2970,25 @@ impl<'a> Writer<'a> {
                             while self.out.ends_with(' ') {
                                 self.out.pop();
                             }
+                            // One element of a tuple pattern, `(P { a }, x)`:
+                            // isolated, `((P\ a), x)` -- unparenthesised, its
+                            // list would take the tuple's other elements as
+                            // fields (as for a literal; found 2026-10-03).
+                            let isolate = innermost_open_is_tuple(toks, i);
+                            if isolate {
+                                let mut first = i;
+                                while first > 0 && matches!(toks[first - 1].kind, Tk::Ident | Tk::PathSep) {
+                                    first -= 1;
+                                }
+                                let path: String = toks[first..i]
+                                    .iter()
+                                    .map(|t| if t.kind == Tk::PathSep { ".".to_string() } else { t.text.clone() })
+                                    .collect();
+                                if self.out.ends_with(&path) {
+                                    let at = self.out.len() - path.len();
+                                    self.out.insert(at, '(');
+                                }
+                            }
                             self.out.push_str("\\ ");
                             self.at_line_start = false;
                             let mut pp: Option<&Token> = None;
@@ -2952,6 +3009,9 @@ impl<'a> Writer<'a> {
                             }
                             while self.out.ends_with(' ') {
                                 self.out.pop();
+                            }
+                            if isolate {
+                                self.out.push(')');
                             }
                             self.out.push(' ');
                             i = close + 1;

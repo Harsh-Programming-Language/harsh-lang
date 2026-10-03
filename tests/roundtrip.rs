@@ -2639,3 +2639,18 @@ fn docreview_issues_h2_h7b_h8_and_inline_bodies() {
     assert!(rust.contains("fn apply<F: Fn(i32) -> i32>(f: F, x: i32) -> i32 {"), "{rust}");
 }
 
+/// The converter tells a struct literal in a `match` arm from a pattern, and
+/// isolates a struct pattern inside a tuple (2026-10-03): `Some(s) => E { a:
+/// s }, _ => ..` was read as a pattern -- the scan found the next arm's `=>`
+/// -- and copied through raw.
+#[test]
+fn the_converter_tells_arm_literals_from_patterns() {
+    let h = convert("struct E { a: u32 }\nfn f(t: Option<u32>) -> E {\n    match t {\n        Some(s) => E { a: s },\n        _ => E { a: 0 },\n    }\n}\n");
+    assert!(h.contains("Some s => E\\ a = s"), "{h}");
+    let h = convert("struct P { a: u32 }\nfn f(t: (P, u32)) -> u32 {\n    match t {\n        (P { a }, x) => a + x,\n    }\n}\n");
+    assert!(h.contains("((P\\ a)"), "{h}");
+    let h = convert("struct P { a: u32 }\nfn main() {\n    for (P { a: w }, n) in [(P { a: 1 }, 2)] {}\n    let (P { a }, b) = (P { a: 3 }, 4);\n}\n");
+    assert!(h.contains("[((P\\ a = 1)"), "{h}");
+    assert!(h.contains("let ((P\\ a)"), "{h}");
+}
+

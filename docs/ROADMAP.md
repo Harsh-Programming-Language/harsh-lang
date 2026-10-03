@@ -67,6 +67,7 @@ discussion so far, for that session:
 
 
 
+
 - **`hrs fmt` applies the countable rules -- built 2026-09-29 (0.1.52).** Remaining from the list below: (1) and (3).
 - **Three layout bugs found applying the handwriting rule (2026-09-29).**
   (1) `let x =` then, on the next line, `if c: a` with its `else:` beneath:

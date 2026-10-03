@@ -34,3 +34,13 @@ opt-level = "z"
 lto = true
 codegen-units = 1
 strip = true
+
+# The web build's profile (dx builds the WebAssembly with `wasm-release`,
+# inheriting `release`). Not stripped at link time: since LLVM 23 the linker's
+# strip removes every custom section, `__wasm_bindgen_unstable` included, and
+# wasm-bindgen then fails ("the `__wasm_bindgen_unstable` custom section is
+# missing"; the deploy broke on a toolchain update, 2026-10-03). wasm-opt,
+# which dx runs after wasm-bindgen, shrinks the file instead.
+[profile.wasm-release]
+inherits = "release"
+strip = false

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.4 — 2026-10-03  (`hrs_std` 0.1.4 and the Jupyter kernel 0.1.3, unchanged)
+
+- **The website's deploy, fixed** (the user's report from the GitHub mirror): a toolchain update made the linker's strip remove every custom section of the WebAssembly, `__wasm_bindgen_unstable` included, and wasm-bindgen failed. `site/Cargo.toml` gains a `wasm-release` profile, inheriting `release`, with `strip = false`; `wasm-opt` shrinks the file after wasm-bindgen instead.
+- **The converter tells a struct literal in a `match` arm from a pattern.** In `Some(s) => E { a: s }, _ => ..`, its scan for a `=>` ran past the arm's ending comma to the next arm's arrow and read the literal as a pattern -- copied through raw, `E\ a: s` with Rust's `:` and `.into()` (found converting our own layout.rs). The scan now stops at a comma outside the groups around the brace.
+- **The converter isolates a struct pattern inside a tuple** -- `(P { a }, x) =>` becomes `((P\ a), x)`, as a literal there already was; unparenthesised, the list took `x` as a field. A keyword before a paren (`let (..)`) no longer counts as a call. And a `for` pattern ends at `in`: the literal after it (`in [(P { a: 1 }, 2)]`) is a literal. A test covers each.
+
 ## 0.2.3 — 2026-10-03  (`hrs_std` 0.1.4 and the Jupyter kernel 0.1.3, unchanged)
 
 Fixes from Docreview's issues file and the cheat sheet's check. Each turned broken Rust into working Rust or into a clear Harsh error; none of the code they touch ever compiled, so nothing working breaks.

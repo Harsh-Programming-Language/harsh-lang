@@ -49,7 +49,7 @@ $ hrs test
 running 1 test
 test target/hrs/lib.rs - add_one (line 10) ... ok
 
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.17s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.18s
 ```
 
 `cargo doc --open` renders every `///` and `//!` in the crate as HTML, with the Markdown inside them — headings, code blocks, links — laid out. The conventional sections are `# Examples`, `# Panics` (when the function can), `# Errors` (what `Err`s it returns) and `# Safety` (for `unsafe` functions). The example in the `///` is Harsh, like everything else in the file, and `cargo test` *runs it* — every code block in a doc comment is a test, so documentation cannot drift from the code without failing the build.
@@ -115,7 +115,19 @@ That is the way to share Harsh code *with Rust users*: they get readable Rust, f
 
 To share a library *as Harsh*, macros and all, share its Harsh: another project depends on it by path, as the next section shows, and `hrs` transpiles it first — its `~` macros, and those it re-exports with `pub use`, reach the program that uses it. A registry of Harsh's own is planned, so that a Harsh library can be published and added by name as a Rust crate is; until it exists, a path is how Harsh travels as Harsh.
 
-**Adding dependencies.** A Harsh project's `Cargo.toml` is Cargo's, so a Rust crate is added as in Rust: `cargo add serde`. Harsh's own crates are added with `hrs add` — `hrs add hrs_std` today, the other crates of Harsh's distribution likewise, and the crates of Harsh's registry when it opens. Each command speaks to one registry, so a name is never looked up in the wrong one; `hrs add serde` answers that `serde` is a Rust crate, for `cargo add`. In the rare project that wants a Harsh crate and a Rust crate of the same name, Cargo's rename keeps both: `foo_rs = { version = "1", package = "foo" }`, and the Rust one is `foo_rs` in your code.
+**Adding dependencies.** A Harsh project has two manifests side by side. `Cargo.toml` is Cargo's, and lists Rust's crates: `cargo add serde` writes there, as in Rust. `Hrs.toml` is Harsh's, and lists Harsh's dependencies — `hrs_std`, and Harsh crates — which `hrs` handles before Cargo runs: it reads each one's Harsh macros and signatures, transpiles it, and builds the project from a `Cargo.toml` it generates in `target/hrs/`, yours plus them. `hrs add hrs_std` writes to `Hrs.toml`. A Harsh crate of your own, in a folder beside the project, is one line:
+
+```toml
+# Hrs.toml
+[package]
+cargo = "Cargo.toml"        # optional: the Cargo.toml beside this file is the default
+
+[dependencies]
+hrs_std = "0.1"
+mylib = { path = "../mylib" }
+```
+
+Paths in `Hrs.toml` are relative to its own folder. Each command speaks to one registry, so a name is never looked up in the wrong one: `hrs add serde` answers that `serde` is a Rust crate, for `cargo add`. The crates for writing procedural macros — `hrs_proc_macro`, `hrs_quote`, `hrs_syn` — are compile-time tools, as `syn` and `quote` are Rust's, and stay in `Cargo.toml`. A project from before 0.3.0, with `hrs_std` in its `Cargo.toml`, is stopped with a message; `hrs migrate` moves it. In the rare project that wants a Harsh crate and a Rust crate of the same name, Cargo's rename keeps both: `foo_rs = { version = "1", package = "foo" }`, and the Rust one is `foo_rs` in your code.
 
 ## 17.4 Workspaces
 

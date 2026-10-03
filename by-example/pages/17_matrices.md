@@ -8,6 +8,7 @@ themselves, `m~` and `v~`, need no `use`: they are part of the language.
 ## 17.1 Writing them
 
 ```toml
+# Hrs.toml
 [dependencies]
 hrs_std = "0.1"
 ```
@@ -58,6 +59,7 @@ A matrix prints its shape and its element type, as Julia does.
 ## 17.2 Arithmetic
 
 ```toml
+# Hrs.toml
 [dependencies]
 hrs_std = "0.1"
 ```
@@ -101,6 +103,7 @@ still there on the next line. Without it, the product would consume them.
 ## 17.3 The identity
 
 ```toml
+# Hrs.toml
 [dependencies]
 hrs_std = "0.1"
 ```
@@ -135,6 +138,7 @@ needs, and `I` is the identity itself — Julia's own names.
 ## 17.4 Joining matrices
 
 ```toml
+# Hrs.toml
 [dependencies]
 hrs_std = "0.1"
 ```
@@ -165,6 +169,7 @@ is isolated in parentheses, `(&a)`, as any argument with an operator is.
 ## 17.5 Solving
 
 ```toml
+# Hrs.toml
 [dependencies]
 hrs_std = "0.1"
 ```
@@ -205,6 +210,7 @@ When the matrix comes from data you have not checked, `try_solve` and
 pairs with `borrow`:
 
 ```toml
+# Hrs.toml
 [dependencies]
 hrs_std = "0.1"
 ```
@@ -240,6 +246,7 @@ DimensionMismatch: matrix has 2 rows, right-hand side has length 3
 ## 17.6 Fitting a line
 
 ```toml
+# Hrs.toml
 [dependencies]
 hrs_std = "0.1"
 ```
@@ -278,6 +285,7 @@ a comprehension. Chapter 16 of the Book explains each step.
 ## 17.7 Slicing
 
 ```toml
+# Hrs.toml
 [dependencies]
 hrs_std = "0.1"
 ```
@@ -337,6 +345,7 @@ part of a matrix is a `slice` or a `view`.
 ## 17.8 Broadcasting
 
 ```toml
+# Hrs.toml
 [dependencies]
 hrs_std = "0.1"
 ```
@@ -402,6 +411,7 @@ method, `a <- map f`, as `slice` is beneath the index.
 ## 17.9 When sizes do not fit
 
 ```toml
+# Hrs.toml
 [dependencies]
 hrs_std = "0.1"
 ```

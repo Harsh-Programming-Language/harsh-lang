@@ -33,9 +33,10 @@ The crate has no `unsafe` (since 0.1.3: views were once references forged
 over a zero-sized slice, which Miri found undefined behaviour).
 
 The literals `m~` and `v~` are part of the language; a Harsh project that uses
-them adds one line -- `hrs add hrs_std` writes it:
+them adds one line to its `Hrs.toml` -- `hrs add hrs_std` writes it:
 
 ```toml
+# Hrs.toml
 [dependencies]
 hrs_std = "0.1"
 ```

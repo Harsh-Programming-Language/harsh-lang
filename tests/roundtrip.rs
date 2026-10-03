@@ -2654,3 +2654,28 @@ fn the_converter_tells_arm_literals_from_patterns() {
     assert!(h.contains("let ((P\\ a)"), "{h}");
 }
 
+/// `Hrs.toml` (0.3.0, the user's design): Harsh's dependencies beside
+/// Cargo.toml; `hrs_std` is refused in Cargo.toml and moved by `migrate`;
+/// the generated manifest makes paths absolute and is its own workspace.
+#[test]
+fn hrs_toml_reads_migrates_and_generates() {
+    use harsh_lang::driver::*;
+    let dir = std::env::temp_dir().join(format!("hrs-toml-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    std::fs::write(dir.join("Hrs.toml"), "# Harsh's\n[package]\ncargo = \"Cargo.toml\"   # optional\n\n[dependencies]\nhrs_std = \"0.1\"\nmylib = { path = \"../mylib\" }\n").unwrap();
+    let m = read_hrs_manifest(&dir).unwrap().unwrap();
+    assert_eq!(m.cargo, dir.join("Cargo.toml"));
+    assert_eq!(m.deps, vec![("hrs_std".to_string(), "\"0.1\"".to_string()), ("mylib".to_string(), "{ path = \"../mylib\" }".to_string())]);
+    std::fs::remove_dir_all(&dir).unwrap();
+    let cargo = "[package]\nname = \"a\"\n\n[dependencies]\nserde = \"1\"\nhrs_std = \"0.1\"\nhrs_proc_macro = \"0.2\"\n";
+    assert_eq!(harsh_crates_in_cargo(cargo), vec!["hrs_std".to_string()]);
+    let (c, h, moved) = migrate(cargo, None);
+    assert_eq!(moved, vec!["hrs_std".to_string()]);
+    assert!(!c.contains("hrs_std") && c.contains("serde") && c.contains("hrs_proc_macro"), "{c}");
+    assert!(h.contains("[dependencies]\nhrs_std = \"0.1\""), "{h}");
+    let g = generated_manifest("[package]\nname = \"a\"\n\n[[bin]]\nname = \"a\"\npath = \"target/hrs/main.rs\"\n\n[dependencies]\nserde = \"1\"\n", std::path::Path::new("/p"), &["hrs_std = \"0.1\"".to_string()]);
+    assert!(g.contains("path = \"/p/target/hrs/main.rs\""), "{g}");
+    assert!(g.contains("[dependencies]\nhrs_std = \"0.1\"\nserde = \"1\""), "{g}");
+    assert!(g.trim_end().ends_with("[workspace]"), "{g}");
+}
+

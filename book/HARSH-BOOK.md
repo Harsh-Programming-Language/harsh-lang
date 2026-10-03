@@ -6089,9 +6089,10 @@ Next: matrices, and the linear algebra that makes Harsh a language for data.
 
 The third thing Harsh adds is linear algebra that reads like Julia's. A matrix literal with the same grammar, `*` meaning the matrix product, `A \ b` solving a system, and the same errors when sizes do not fit. If you have written Julia, nothing here will surprise you; if you have not, it is the notation of the textbooks, which is why Julia chose it.
 
-The literals, `m~` and `v~`, are part of the language — they are in the prelude, like `g~`. The types they build, `Matrix` and `Vector`, live in `hrs_std`, Harsh's standard library, a crate you add to a project once — `hrs add hrs_std`, which writes this line into `Cargo.toml`:
+The literals, `m~` and `v~`, are part of the language — they are in the prelude, like `g~`. The types they build, `Matrix` and `Vector`, live in `hrs_std`, Harsh's standard library, a crate you add to a project once — `hrs add hrs_std`, which writes this line into `Hrs.toml`, Harsh's manifest beside `Cargo.toml`:
 
 ```toml
+# Hrs.toml
 [dependencies]
 hrs_std = "0.1"
 ```
@@ -6100,7 +6101,7 @@ A project that uses `m~` without it is stopped by `hrs`, which tells you to run 
 
 ## 16.1 Writing a matrix
 
-`Cargo.toml`
+`Hrs.toml`
 
 ```text
 [dependencies]
@@ -6152,7 +6153,7 @@ A matrix prints its size and the type of its entries, as Julia's do. Sizes are v
 
 ## 16.2 Arithmetic
 
-`Cargo.toml`
+`Hrs.toml`
 
 ```text
 [dependencies]
@@ -6197,7 +6198,7 @@ $ hrs run
 
 ## 16.3 The identity
 
-`Cargo.toml`
+`Hrs.toml`
 
 ```text
 [dependencies]
@@ -6234,7 +6235,7 @@ $ hrs run
 
 ## 16.4 Joining matrices
 
-`Cargo.toml`
+`Hrs.toml`
 
 ```text
 [dependencies]
@@ -6268,7 +6269,7 @@ A block can be any matrix, not only a number, so the literal that builds a matri
 
 ## 16.5 Solving
 
-`Cargo.toml`
+`Hrs.toml`
 
 ```text
 [dependencies]
@@ -6307,7 +6308,7 @@ length 5, dot 25
 
 That is right when a singular matrix would be a bug — you built the matrix and know it is sound. When the matrix comes from data you have not checked, a singular one is a fact about the data, and the program should decide what to do, not stop. `try_solve` and `try_inv` do the same work and return a `Result`: `Ok` with the answer, or `Err` with a `LinAlgError` saying which failure it was — `Singular`, or `DimensionMismatch` with Julia's message. Rust's standard library pairs methods the same way: `RefCell`'s `borrow` stops the program where `try_borrow` returns a `Result`, and `Vec`'s `reserve` where `try_reserve` does. Use `solve` when you know the matrix is sound; `try_solve` when you do not — and `?` to hand the error to your caller.
 
-`Cargo.toml`
+`Hrs.toml`
 
 ```text
 [dependencies]
@@ -6349,7 +6350,7 @@ A vector has a length, `norm$`, and a dot product, `dot`. Entries are read by in
 
 ## 16.6 Fitting a line
 
-`Cargo.toml`
+`Hrs.toml`
 
 ```text
 [dependencies]
@@ -6392,7 +6393,7 @@ Each student is a row of the *design matrix*: a 1, which will be multiplied by t
 
 ## 16.7 Taking a part
 
-`Cargo.toml`
+`Hrs.toml`
 
 ```text
 [dependencies]
@@ -6453,7 +6454,7 @@ Julia writes a part `readings[2:3, 1:2]`, counting from 1 and including the end.
 
 ## 16.8 Element by element
 
-`Cargo.toml`
+`Hrs.toml`
 
 ```text
 [dependencies]
@@ -6520,7 +6521,7 @@ A dotted operator keeps the rank of the operator it is made from: `x + a .* b` m
 
 ## 16.9 When the sizes do not fit
 
-`Cargo.toml`
+`Hrs.toml`
 
 ```text
 [dependencies]
@@ -6538,7 +6539,7 @@ fn main$:
 
 ```text
 $ hrs run
-thread 'main' panicked at src/main.hrs:4:20:
+thread 'main' panicked at main.rs:4:20:
 DimensionMismatch: matrix A has dimensions (2, 3), matrix B has dimensions (2, 3)
 ```
 
@@ -6603,7 +6604,7 @@ $ hrs test
 running 1 test
 test target/hrs/lib.rs - add_one (line 10) ... ok
 
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.17s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.18s
 ```
 
 `cargo doc --open` renders every `///` and `//!` in the crate as HTML, with the Markdown inside them — headings, code blocks, links — laid out. The conventional sections are `# Examples`, `# Panics` (when the function can), `# Errors` (what `Err`s it returns) and `# Safety` (for `unsafe` functions). The example in the `///` is Harsh, like everything else in the file, and `cargo test` *runs it* — every code block in a doc comment is a test, so documentation cannot drift from the code without failing the build.
@@ -6669,7 +6670,19 @@ That is the way to share Harsh code *with Rust users*: they get readable Rust, f
 
 To share a library *as Harsh*, macros and all, share its Harsh: another project depends on it by path, as the next section shows, and `hrs` transpiles it first — its `~` macros, and those it re-exports with `pub use`, reach the program that uses it. A registry of Harsh's own is planned, so that a Harsh library can be published and added by name as a Rust crate is; until it exists, a path is how Harsh travels as Harsh.
 
-**Adding dependencies.** A Harsh project's `Cargo.toml` is Cargo's, so a Rust crate is added as in Rust: `cargo add serde`. Harsh's own crates are added with `hrs add` — `hrs add hrs_std` today, the other crates of Harsh's distribution likewise, and the crates of Harsh's registry when it opens. Each command speaks to one registry, so a name is never looked up in the wrong one; `hrs add serde` answers that `serde` is a Rust crate, for `cargo add`. In the rare project that wants a Harsh crate and a Rust crate of the same name, Cargo's rename keeps both: `foo_rs = { version = "1", package = "foo" }`, and the Rust one is `foo_rs` in your code.
+**Adding dependencies.** A Harsh project has two manifests side by side. `Cargo.toml` is Cargo's, and lists Rust's crates: `cargo add serde` writes there, as in Rust. `Hrs.toml` is Harsh's, and lists Harsh's dependencies — `hrs_std`, and Harsh crates — which `hrs` handles before Cargo runs: it reads each one's Harsh macros and signatures, transpiles it, and builds the project from a `Cargo.toml` it generates in `target/hrs/`, yours plus them. `hrs add hrs_std` writes to `Hrs.toml`. A Harsh crate of your own, in a folder beside the project, is one line:
+
+```toml
+# Hrs.toml
+[package]
+cargo = "Cargo.toml"        # optional: the Cargo.toml beside this file is the default
+
+[dependencies]
+hrs_std = "0.1"
+mylib = { path = "../mylib" }
+```
+
+Paths in `Hrs.toml` are relative to its own folder. Each command speaks to one registry, so a name is never looked up in the wrong one: `hrs add serde` answers that `serde` is a Rust crate, for `cargo add`. The crates for writing procedural macros — `hrs_proc_macro`, `hrs_quote`, `hrs_syn` — are compile-time tools, as `syn` and `quote` are Rust's, and stay in `Cargo.toml`. A project from before 0.3.0, with `hrs_std` in its `Cargo.toml`, is stopped with a message; `hrs migrate` moves it. In the rare project that wants a Harsh crate and a Rust crate of the same name, Cargo's rename keeps both: `foo_rs = { version = "1", package = "foo" }`, and the Rust one is `foo_rs` in your code.
 
 ## 17.4 Workspaces
 
@@ -9586,7 +9599,7 @@ Point { x: 1.0, y: 2.0 } Size { w: 3.0, h: 4.0 } 1.5 9.14 5 12 8 big counts: 2 4
 
 ## The tools — chapters 1, 14
 
-- `hrs new`, `hrs run`, `hrs build`, `hrs test`, `hrs check`, `hrs lint`, `hrs watch`; `hrs add hrs_std` adds Harsh's crates to a project, and Rust's are `cargo add`'s; `hrs fmt` lays a file out by these rules and is a no-op on one already laid out; `hrs export` writes the project as a plain Rust crate; `hrs-from` brings Rust in. (§1.2, §14.1)
+- `hrs new`, `hrs run`, `hrs build`, `hrs test`, `hrs check`, `hrs lint`, `hrs watch`; `hrs add hrs_std` adds Harsh's crates to a project's `Hrs.toml`, and Rust's are `cargo add`'s, in `Cargo.toml`; `hrs migrate` moves `hrs_std` out of a pre-0.3.0 `Cargo.toml`; `hrs fmt` lays a file out by these rules and is a no-op on one already laid out; `hrs export` writes the project as a plain Rust crate; `hrs-from` brings Rust in. (§1.2, §14.1)
 - Errors point at your `.hrs` line, whether Harsh raised them or the compiler did. (§1.2, §3.4)
 
 ## Precedence — appendix

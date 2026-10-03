@@ -2,9 +2,10 @@
 
 The third thing Harsh adds is linear algebra that reads like Julia's. A matrix literal with the same grammar, `*` meaning the matrix product, `A \ b` solving a system, and the same errors when sizes do not fit. If you have written Julia, nothing here will surprise you; if you have not, it is the notation of the textbooks, which is why Julia chose it.
 
-The literals, `m~` and `v~`, are part of the language — they are in the prelude, like `g~`. The types they build, `Matrix` and `Vector`, live in `hrs_std`, Harsh's standard library, a crate you add to a project once — `hrs add hrs_std`, which writes this line into `Cargo.toml`:
+The literals, `m~` and `v~`, are part of the language — they are in the prelude, like `g~`. The types they build, `Matrix` and `Vector`, live in `hrs_std`, Harsh's standard library, a crate you add to a project once — `hrs add hrs_std`, which writes this line into `Hrs.toml`, Harsh's manifest beside `Cargo.toml`:
 
 ```toml
+# Hrs.toml
 [dependencies]
 hrs_std = "0.1"
 ```
@@ -13,7 +14,7 @@ A project that uses `m~` without it is stopped by `hrs`, which tells you to run 
 
 ## 16.1 Writing a matrix
 
-`Cargo.toml`
+`Hrs.toml`
 
 ```text
 [dependencies]
@@ -65,7 +66,7 @@ A matrix prints its size and the type of its entries, as Julia's do. Sizes are v
 
 ## 16.2 Arithmetic
 
-`Cargo.toml`
+`Hrs.toml`
 
 ```text
 [dependencies]
@@ -110,7 +111,7 @@ $ hrs run
 
 ## 16.3 The identity
 
-`Cargo.toml`
+`Hrs.toml`
 
 ```text
 [dependencies]
@@ -147,7 +148,7 @@ $ hrs run
 
 ## 16.4 Joining matrices
 
-`Cargo.toml`
+`Hrs.toml`
 
 ```text
 [dependencies]
@@ -181,7 +182,7 @@ A block can be any matrix, not only a number, so the literal that builds a matri
 
 ## 16.5 Solving
 
-`Cargo.toml`
+`Hrs.toml`
 
 ```text
 [dependencies]
@@ -220,7 +221,7 @@ length 5, dot 25
 
 That is right when a singular matrix would be a bug — you built the matrix and know it is sound. When the matrix comes from data you have not checked, a singular one is a fact about the data, and the program should decide what to do, not stop. `try_solve` and `try_inv` do the same work and return a `Result`: `Ok` with the answer, or `Err` with a `LinAlgError` saying which failure it was — `Singular`, or `DimensionMismatch` with Julia's message. Rust's standard library pairs methods the same way: `RefCell`'s `borrow` stops the program where `try_borrow` returns a `Result`, and `Vec`'s `reserve` where `try_reserve` does. Use `solve` when you know the matrix is sound; `try_solve` when you do not — and `?` to hand the error to your caller.
 
-`Cargo.toml`
+`Hrs.toml`
 
 ```text
 [dependencies]
@@ -262,7 +263,7 @@ A vector has a length, `norm$`, and a dot product, `dot`. Entries are read by in
 
 ## 16.6 Fitting a line
 
-`Cargo.toml`
+`Hrs.toml`
 
 ```text
 [dependencies]
@@ -305,7 +306,7 @@ Each student is a row of the *design matrix*: a 1, which will be multiplied by t
 
 ## 16.7 Taking a part
 
-`Cargo.toml`
+`Hrs.toml`
 
 ```text
 [dependencies]
@@ -366,7 +367,7 @@ Julia writes a part `readings[2:3, 1:2]`, counting from 1 and including the end.
 
 ## 16.8 Element by element
 
-`Cargo.toml`
+`Hrs.toml`
 
 ```text
 [dependencies]
@@ -433,7 +434,7 @@ A dotted operator keeps the rank of the operator it is made from: `x + a .* b` m
 
 ## 16.9 When the sizes do not fit
 
-`Cargo.toml`
+`Hrs.toml`
 
 ```text
 [dependencies]
@@ -451,7 +452,7 @@ fn main$:
 
 ```text
 $ hrs run
-thread 'main' panicked at src/main.hrs:4:20:
+thread 'main' panicked at main.rs:4:20:
 DimensionMismatch: matrix A has dimensions (2, 3), matrix B has dimensions (2, 3)
 ```
 

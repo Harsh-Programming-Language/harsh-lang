@@ -161,14 +161,17 @@ cd hello
 hrs run
 ```
 
-prints `Hello from Harsh`. The project `hrs new` creates has three files:
+prints `Hello from Harsh`. The project `hrs new` creates has four files:
 
 ```rust harsh
 hello/
   Cargo.toml
+  Hrs.toml
   .gitignore
   src/main.hrs
 ```
+
+`Hrs.toml` lists Harsh's dependencies — `hrs_std`, Harsh crates — and `Cargo.toml` Rust's; `hrs` handles Harsh's before Cargo runs (since 0.3.0).
 
 `Cargo.toml` is a normal manifest with one addition — the binary target points at the *generated* tree, not at `src/`:
 
@@ -192,8 +195,9 @@ hrs check [cargo args]     transpile, then cargo check
 hrs lint  [cargo args]     transpile, then cargo clippy
 hrs watch [subcommand]     rebuild on every save (default: check)
 hrs new   <name>           create a project laid out for Harsh
-hrs add   <crate>..         add Harsh crates to Cargo.toml (hrs_std, ...);
-                           a Rust crate is added with cargo add
+hrs add   <crate>..         add Harsh crates to Hrs.toml (hrs_std, ...);
+                           a Rust crate is added to Cargo.toml with cargo add
+hrs migrate                move Harsh's crates from Cargo.toml to Hrs.toml
 hrs export [dir]           write the project as a plain Rust crate,
                            formatted with cargo fmt (default: target/export)
 hrs dist  <dir>            write Harsh's standard distribution (hrs_std and
@@ -2278,9 +2282,10 @@ fn main$:
 
 Julia's notation, for Julia's operations. The literals `m~` and `v~` are in the prelude; the types they build, `hrs_std::Matrix<T>` and `hrs_std::Vector<T>`, are in the `hrs_std` crate, which a project lists once. `hrs` stops a project that calls `m~` without it, and names the line to add.
 
-`hrs add hrs_std` writes it:
+`hrs add hrs_std` writes it, in `Hrs.toml`:
 
 ```toml
+# Hrs.toml
 [dependencies]
 hrs_std = "0.1"
 ```

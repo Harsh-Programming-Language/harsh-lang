@@ -413,9 +413,21 @@ impl Ra {
         });
         let mut ra = Ra { child, stdin, rx, next: 0, ready, started: Instant::now(), version: 0, given: HashMap::new() };
         let root_uri = Url::from_directory_path(root).map_err(|_| "the project's root is not a path".to_string())?;
+        // A project with Hrs.toml is built from its generated manifest
+        // (0.3.0): rust-analyzer reads that one, so hover and completion see
+        // the Harsh dependencies -- `hrs_std`, a nested Harsh crate.
+        let project = harsh_lang::driver::Project { root: root.to_path_buf() };
+        let generated = project.prepare(&mut Vec::new()).ok().flatten();
+        let manifest = generated.clone().unwrap_or_else(|| root.join("Cargo.toml"));
         // Harsh's standard distribution, only for a project that names it.
-        let patches = harsh_lang::driver::distribution(root, &[root.join("Cargo.toml")]).unwrap_or_default();
-        let options = if patches.is_empty() { json!({}) } else { json!({"cargo": {"extraArgs": patches}}) };
+        let patches = harsh_lang::driver::distribution(root, &[manifest]).unwrap_or_default();
+        let mut options = json!({});
+        if !patches.is_empty() {
+            options["cargo"] = json!({"extraArgs": patches});
+        }
+        if let Some(g) = &generated {
+            options["linkedProjects"] = json!([g.display().to_string()]);
+        }
         log(&format!("initialize {} with {options}", root.display()));
         ra.request(
             "initialize",

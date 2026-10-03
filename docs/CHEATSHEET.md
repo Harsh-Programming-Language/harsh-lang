@@ -507,7 +507,8 @@ Rust. A macro's own language — an `rsx!` tree, `view!` markup, `select!` arms
 | `hrs check` · `hrs lint` | `cargo check`, `cargo clippy`, mapped to Harsh |
 | `hrs watch` | rebuild on every save |
 | `hrs fmt` · `hrs fmt --check` | lay out the files by Harsh's rules |
-| `hrs add hrs_std` | add Harsh's crates (Rust crates: `cargo add`) |
+| `hrs add hrs_std` | add Harsh's crates, to `Hrs.toml` (Rust crates: `cargo add`, to `Cargo.toml`) |
+| `hrs migrate` | move `hrs_std` from a pre-0.3.0 `Cargo.toml` to `Hrs.toml` |
 | `hrs in.hrs -o out.rs` | transpile one file, anywhere |
 | `hrs export` | the project as a plain Rust crate |
 | `hrs-from file.rs` | convert Rust to Harsh |
@@ -521,8 +522,9 @@ Rust. A macro's own language — an `rsx!` tree, `view!` markup, `select!` arms
 | **Harsh project** (`hrs new`) | **#1:** a Harsh crate | **#2:** a Rust crate written in Harsh |
 | **Rust project** (`cargo new`) | (empty) | **#3:** Harsh files in a Rust crate |
 
-- **#1:** `hrs new mylib`, `hrs build`, `hrs test`; shared by path today,
-  Harsh macros included. Harsh's registry is still to come.
+- **#1:** `hrs new mylib`, `hrs build`, `hrs test`; used by path today, in
+  the user's `Hrs.toml`: `mylib = { path = "../mylib" }`, Harsh macros
+  included. Harsh's registry is still to come.
 - **#2:** `hrs new`, `hrs build`, then `hrs export` and `cargo publish`.
   Exported Harsh macros do not survive the export.
 - **#3:** `cargo new`; each `.hrs` file beside the `.rs` it produces, with

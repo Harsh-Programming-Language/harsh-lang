@@ -1913,7 +1913,8 @@ the same meaning for <code>*</code>, the same errors. They live in <code>hrs_std
 standard library, which a project adds to its dependencies once. The literals
 themselves, <code>m~</code> and <code>v~</code>, need no <code>use</code>: they are part of the language.</p>
 <h3 id="17-1-writing-them">17.1 Writing them</h3>
-<pre class="code"><code>[dependencies]
+<pre class="code"><code># Hrs.toml
+[dependencies]
 hrs_std = "0.1"</code></pre>
 <pre class="code harsh"><code><span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
     <span class="com">// A matrix: spaces between entries, `;` between rows.</span>
@@ -1950,7 +1951,8 @@ line break, so a matrix may be written one row per line, as it reads. A
 comma never joins; and <code>v~ [1 2 3]</code> is a row, which is a matrix, not a vector.</p>
 <p>A matrix prints its shape and its element type, as Julia does.</p>
 <h3 id="17-2-arithmetic">17.2 Arithmetic</h3>
-<pre class="code"><code>[dependencies]
+<pre class="code"><code># Hrs.toml
+[dependencies]
 hrs_std = "0.1"</code></pre>
 <pre class="code harsh"><code><span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
     <span class="k">let</span> a <span class="p">=</span> m<span class="p">~</span> <span class="p">[</span><span class="num">1.0</span> <span class="num">2.0</span><span class="p">;</span> <span class="num">3.0</span> <span class="num">4.0</span><span class="p">]</span>
@@ -1981,7 +1983,8 @@ chooses, from what is being multiplied — nothing has to be spelled out.</p>
 <p>The <code>&amp;</code> is ownership, Rust's rule: <code>&amp;a * &amp;b</code> borrows both, so <code>a</code> and <code>b</code> are
 still there on the next line. Without it, the product would consume them.</p>
 <h3 id="17-3-the-identity">17.3 The identity</h3>
-<pre class="code"><code>[dependencies]
+<pre class="code"><code># Hrs.toml
+[dependencies]
 hrs_std = "0.1"</code></pre>
 <pre class="code harsh"><code><span class="k">use</span> hrs_std<span class="p">.</span><span class="p">(</span><span class="t">UniformScaling</span><span class="p">,</span> <span class="t">I</span><span class="p">)</span>
 
@@ -2004,7 +2007,8 @@ hrs_std = "0.1"</code></pre>
 <p><code>UniformScaling k</code> is <code>k</code> times an identity of whatever size the other side
 needs, and <code>I</code> is the identity itself — Julia's own names.</p>
 <h3 id="17-4-joining-matrices">17.4 Joining matrices</h3>
-<pre class="code"><code>[dependencies]
+<pre class="code"><code># Hrs.toml
+[dependencies]
 hrs_std = "0.1"</code></pre>
 <pre class="code harsh"><code><span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
     <span class="k">let</span> a <span class="p">=</span> m<span class="p">~</span> <span class="p">[</span><span class="num">1</span> <span class="num">2</span><span class="p">;</span> <span class="num">3</span> <span class="num">4</span><span class="p">]</span>
@@ -2023,7 +2027,8 @@ hrs_std = "0.1"</code></pre>
 also joins matrices: side by side with a space, stacked with a <code>;</code>. Each block
 is isolated in parentheses, <code>(&amp;a)</code>, as any argument with an operator is.</p>
 <h3 id="17-5-solving">17.5 Solving</h3>
-<pre class="code"><code>[dependencies]
+<pre class="code"><code># Hrs.toml
+[dependencies]
 hrs_std = "0.1"</code></pre>
 <pre class="code harsh"><code><span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
     <span class="com">// 2x + y = 5 and x + y = 3, as a matrix and a vector.</span>
@@ -2052,7 +2057,8 @@ When the matrix comes from data you have not checked, <code>try_solve</code> and
 <code>try_inv</code> return a <code>Result</code> instead — <code>Err (LinAlgError.Singular)</code>, or
 <code>Err (LinAlgError.DimensionMismatch msg)</code> — as <code>RefCell</code>'s <code>try_borrow</code>
 pairs with <code>borrow</code>:</p>
-<pre class="code"><code>[dependencies]
+<pre class="code"><code># Hrs.toml
+[dependencies]
 hrs_std = "0.1"</code></pre>
 <pre class="code harsh"><code><span class="k">use</span> hrs_std<span class="p">.</span><span class="t">LinAlgError</span>
 
@@ -2077,7 +2083,8 @@ solved: 1.0 3.0
 no single solution: the matrix is singular
 DimensionMismatch: matrix has 2 rows, right-hand side has length 3</code></pre>
 <h3 id="17-6-fitting-a-line">17.6 Fitting a line</h3>
-<pre class="code"><code>[dependencies]
+<pre class="code"><code># Hrs.toml
+[dependencies]
 hrs_std = "0.1"</code></pre>
 <pre class="code harsh"><code><span class="k">use</span> hrs_std<span class="p">.</span><span class="t">Matrix</span>
 
@@ -2104,7 +2111,8 @@ residual 1.76
 <code>X \ y</code> does: linear regression in one line, with the design matrix built by
 a comprehension. Chapter 16 of the Book explains each step.</p>
 <h3 id="17-7-slicing">17.7 Slicing</h3>
-<pre class="code"><code>[dependencies]
+<pre class="code"><code># Hrs.toml
+[dependencies]
 hrs_std = "0.1"</code></pre>
 <pre class="code harsh"><code><span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
     <span class="k">let</span> <span class="k">mut</span> a <span class="p">=</span> m<span class="p">~</span> <span class="p">[</span><span class="num">1</span> <span class="num">2</span> <span class="num">3</span><span class="p">;</span> <span class="num">4</span> <span class="num">5</span> <span class="num">6</span><span class="p">;</span> <span class="num">7</span> <span class="num">8</span> <span class="num">9</span><span class="p">]</span>
@@ -2151,7 +2159,8 @@ row, read as a vector. To write, <code>a[1, 1] = 50</code> sets an element, and
 means the same and is what the comma stands for. An index is one element: a
 part of a matrix is a <code>slice</code> or a <code>view</code>.</p>
 <h3 id="17-8-broadcasting">17.8 Broadcasting</h3>
-<pre class="code"><code>[dependencies]
+<pre class="code"><code># Hrs.toml
+[dependencies]
 hrs_std = "0.1"</code></pre>
 <pre class="code harsh"><code><span class="k">fn</span> relu <span class="p">(</span>x<span class="p">:</span> f64<span class="p">)</span> <span class="op">-&gt;</span> f64<span class="p">:</span>
     x <span class="op">&lt;-</span> max <span class="num">0.0</span>
@@ -2204,7 +2213,8 @@ the operators that have no dotted form are ordinary functions: <code>f64.powf&lt
 is Julia's <code>a .^ 2</code>, and a comparison gives a matrix of <code>bool</code>. Beneath it is a
 method, <code>a &lt;- map f</code>, as <code>slice</code> is beneath the index.</p>
 <h3 id="17-9-when-sizes-do-not-fit">17.9 When sizes do not fit</h3>
-<pre class="code"><code>[dependencies]
+<pre class="code"><code># Hrs.toml
+[dependencies]
 hrs_std = "0.1"</code></pre>
 <pre class="code harsh"><code><span class="k">use</span> hrs_std<span class="p">.</span><span class="t">UniformScaling</span>
 

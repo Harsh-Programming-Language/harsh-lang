@@ -57,9 +57,10 @@ The crate has no `unsafe` (since 0.1.3: views were once references forged
 over a zero-sized slice, which Miri found undefined behaviour).
 
 The literals `m~` and `v~` are part of the language; a Harsh project that uses
-them adds one line -- `hrs add hrs_std` writes it:
+them adds one line to its `Hrs.toml` -- `hrs add hrs_std` writes it:
 
 ```toml
+# Hrs.toml
 [dependencies]
 hrs_std = "0.1"
 ```
@@ -1823,7 +1824,7 @@ readme = "README.md"
 # The transpiler's own lexer: one grammar for Harsh, never a second parser
 # (the user's ruling, 2026-09-24). Without default features it has no
 # dependencies. `path` for the tree; `version` for crates.io.
-harsh-lang = { version = "0.2", path = "..", default-features = false }
+harsh-lang = { version = "0.3", path = "..", default-features = false }
 "########),
     ("hrs_proc_macro/README.md", r########"# hrs_proc_macro
 

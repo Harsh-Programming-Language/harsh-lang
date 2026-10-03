@@ -18,9 +18,11 @@ usage:
   hrs cargo <sub> [args]     transpile, then any cargo subcommand (cargo leptos build, ..)
   hrs watch [subcommand]     rebuild on every save (default: check)
   hrs new   <name>           create a project laid out for Harsh
-  hrs add   <crate>..        add Harsh crates to Cargo.toml -- hrs_std and the
+  hrs add   <crate>..        add Harsh crates to Hrs.toml -- hrs_std and the
                              rest of Harsh's distribution; a Rust crate is
-                             added with cargo add
+                             added to Cargo.toml with cargo add
+  hrs migrate                move Harsh's crates from Cargo.toml to Hrs.toml
+                             (0.3.0: Hrs.toml lists Harsh's dependencies)
   hrs export [dir]           write the project as a plain Rust crate,
                              formatted with cargo fmt (default: target/export)
   hrs fmt   [--check] [files] reformat .hrs files in place (default: src/**.hrs);
@@ -60,6 +62,7 @@ fn main() -> ExitCode {
         "watch" => watch(&rest),
         "new" => new_project(&rest),
         "add" => add(&rest),
+        "migrate" => migrate(),
         "export" => export(&rest),
         "fmt" => fmt(&rest),
         "expand" => expand(&rest),
@@ -68,7 +71,8 @@ fn main() -> ExitCode {
     }
 }
 
-/// `hrs add <crate>..`: Harsh crates into the project's Cargo.toml.
+/// `hrs add <crate>..`: Harsh crates into the project's Hrs.toml (made if
+/// missing).
 fn add(args: &[String]) -> ExitCode {
     if args.is_empty() {
         eprintln!("hrs add <crate>..  (Harsh's crates: {})", driver::DISTRIBUTION.join(", "));
@@ -81,11 +85,10 @@ fn add(args: &[String]) -> ExitCode {
             return ExitCode::FAILURE;
         }
     };
-    let path = p.root.join("Cargo.toml");
-    let Ok(mut manifest) = std::fs::read_to_string(&path) else {
-        eprintln!("hrs: cannot read {}", path.display());
-        return ExitCode::FAILURE;
-    };
+    // `hrs_std` goes to Hrs.toml; the procedural-macro crates to Cargo.toml.
+    let to_cargo = args.iter().all(|a| driver::DISTRIBUTION.contains(&a.as_str()) && !driver::HRS_TOML_CRATES.contains(&a.as_str()));
+    let path = if to_cargo { p.root.join("Cargo.toml") } else { p.root.join(driver::HRS_MANIFEST) };
+    let mut manifest = std::fs::read_to_string(&path).unwrap_or_else(|_| NEW_HRS_TOML.to_string());
     let mut ok = true;
     for name in args {
         match driver::add_dependency(&manifest, name) {
@@ -104,6 +107,45 @@ fn add(args: &[String]) -> ExitCode {
         return ExitCode::FAILURE;
     }
     if ok { ExitCode::SUCCESS } else { ExitCode::FAILURE }
+}
+
+/// A new project's `Hrs.toml`: Harsh's dependencies, beside Cargo.toml.
+const NEW_HRS_TOML: &str = "# Hrs.toml -- Harsh's dependencies; Cargo.toml beside it keeps Rust's\n[package]\ncargo = \"Cargo.toml\"        # optional: the Cargo.toml beside this file is the default\n\n[dependencies]\n";
+
+/// `hrs migrate`: Harsh's crates moved from Cargo.toml to Hrs.toml (0.3.0).
+fn migrate() -> ExitCode {
+    // The nearest folder, here or above, with a Cargo.toml.
+    let mut dir = std::env::current_dir().ok();
+    let mut root = None;
+    while let Some(d) = dir {
+        if d.join("Cargo.toml").is_file() {
+            root = Some(d);
+            break;
+        }
+        dir = d.parent().map(|p| p.to_path_buf());
+    }
+    let Some(root) = root else {
+        eprintln!("hrs: no Cargo.toml here or above");
+        return ExitCode::FAILURE;
+    };
+    let cargo_path = root.join("Cargo.toml");
+    let hrs_path = root.join(driver::HRS_MANIFEST);
+    let Ok(cargo) = std::fs::read_to_string(&cargo_path) else {
+        eprintln!("hrs: cannot read {}", cargo_path.display());
+        return ExitCode::FAILURE;
+    };
+    let hrs = std::fs::read_to_string(&hrs_path).ok();
+    let (cargo2, hrs2, moved) = driver::migrate(&cargo, hrs.as_deref().or(Some(NEW_HRS_TOML)));
+    if moved.is_empty() {
+        eprintln!("hrs: nothing to move; Cargo.toml names none of Harsh's crates");
+        return ExitCode::SUCCESS;
+    }
+    if std::fs::write(&cargo_path, cargo2).is_err() || std::fs::write(&hrs_path, hrs2).is_err() {
+        eprintln!("hrs: cannot write the manifests");
+        return ExitCode::FAILURE;
+    }
+    eprintln!("hrs: moved {} from Cargo.toml to Hrs.toml", moved.iter().map(|n| format!("`{n}`")).collect::<Vec<_>>().join(", "));
+    ExitCode::SUCCESS
 }
 
 /// `hrs dist <dir>`: Harsh's standard distribution, written into `dir` --
@@ -381,6 +423,7 @@ fn new_project(args: &[String]) -> ExitCode {
              [[bin]]\nname = \"{name}\"\npath = \"target/hrs/main.rs\"\n\n[dependencies]\n"
         ),
     );
+    let _ = mk(root.join(driver::HRS_MANIFEST), NEW_HRS_TOML);
     let _ = mk(
         root.join("src/main.hrs"),
         "fn main$:\n    println! \"Hello from Harsh\"\n",

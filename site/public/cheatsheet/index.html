@@ -1397,7 +1397,11 @@ Rust. A macro's own language — an <code>rsx!</code> tree, <code>view!</code> m
 </tr>
 <tr>
 <td><code>hrs add hrs_std</code></td>
-<td>add Harsh's crates (Rust crates: <code>cargo add</code>)</td>
+<td>add Harsh's crates, to <code>Hrs.toml</code> (Rust crates: <code>cargo add</code>, to <code>Cargo.toml</code>)</td>
+</tr>
+<tr>
+<td><code>hrs migrate</code></td>
+<td>move <code>hrs_std</code> from a pre-0.3.0 <code>Cargo.toml</code> to <code>Hrs.toml</code></td>
 </tr>
 <tr>
 <td><code>hrs in.hrs -o out.rs</code></td>
@@ -1444,8 +1448,9 @@ Rust. A macro's own language — an <code>rsx!</code> tree, <code>view!</code> m
 </tbody>
 </table>
 <ul>
-<li><strong>#1:</strong> <code>hrs new mylib</code>, <code>hrs build</code>, <code>hrs test</code>; shared by path today,
-  Harsh macros included. Harsh's registry is still to come.</li>
+<li><strong>#1:</strong> <code>hrs new mylib</code>, <code>hrs build</code>, <code>hrs test</code>; used by path today, in
+  the user's <code>Hrs.toml</code>: <code>mylib = { path = "../mylib" }</code>, Harsh macros
+  included. Harsh's registry is still to come.</li>
 <li><strong>#2:</strong> <code>hrs new</code>, <code>hrs build</code>, then <code>hrs export</code> and <code>cargo publish</code>.
   Exported Harsh macros do not survive the export.</li>
 <li><strong>#3:</strong> <code>cargo new</code>; each <code>.hrs</code> file beside the <code>.rs</code> it produces, with

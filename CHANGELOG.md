@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.3.0 — 2026-10-03  (`hrs_std` 0.1.4 and the Jupyter kernel 0.1.3, unchanged)
+
+**Breaking: `Hrs.toml`, Harsh's own manifest** (the user's design). A Harsh project has two manifests side by side: `Cargo.toml` lists Rust's dependencies, `Hrs.toml` Harsh's -- `hrs_std`, and Harsh crates:
+
+```toml
+# Hrs.toml
+[package]
+cargo = "Cargo.toml"        # optional: the Cargo.toml beside this file is the default
+
+[dependencies]
+hrs_std = "0.1"
+mylib = { path = "../mylib" }
+```
+
+- **`hrs build`, in two stages:** the Harsh level -- each Harsh crate named in `Hrs.toml` is transpiled and prepared in turn (its own `Hrs.toml` first), its macros and signatures read -- then the Rust level, from a `Cargo.toml` generated in `target/hrs/`: the user's, its relative paths made absolute, plus the Harsh dependencies. The user's `Cargo.toml` is never edited; the project's `Cargo.lock` and `target/` stay the project's (a target directory the user chose wins). This ends the nested-crate gap: a Harsh crate is followed wherever it is, because it is named in `Hrs.toml`.
+- **`hrs new`** writes an `Hrs.toml`; **`hrs add hrs_std`** writes to it; **`hrs migrate`**, new, moves `hrs_std` from a `Cargo.toml` written before 0.3.0. Such a `Cargo.toml` is refused with that advice.
+- **The procedural-macro crates stay in `Cargo.toml`**: `hrs_proc_macro`, `hrs_quote` and `hrs_syn` are compile-time tools, as `syn` and `quote` are Rust's (the user's principle: "except the macro crates").
+- **`hrs-lsp`** points rust-analyzer at the generated manifest, so hover and completion see Harsh dependencies.
+- Taught: the Book (chapter 16's opening, chapter 17's *Adding dependencies*, *Harsh at a glance*), the guide (what `hrs new` creates, the command list, matrices), the cheat sheet, `hrs_std`'s README. The books' matrix projects moved to `Hrs.toml`, and their builders show it.
+- **To upgrade a project:** `hrs migrate` in its folder, once.
+
 ## 0.2.5 — 2026-10-03  (`hrs_std` 0.1.4 and the Jupyter kernel 0.1.3, unchanged)
 
 - **The deploy's link check** (the user's report: 0.2.4's site built, then the check failed): it read the cheat sheet's inline logo, a `data:image/png;base64,…` URL, as a relative link. `data:` URLs are no longer taken for links, and the new document pages, `/cheatsheet/` and `/glance/`, join the guide and the books among the pages the check leaves to `check.sh`. No change to `hrs` itself.

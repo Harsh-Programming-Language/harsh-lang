@@ -132,7 +132,7 @@ Point { x: 1.0, y: 2.0 } Size { w: 3.0, h: 4.0 } 1.5 9.14 5 12 8 big counts: 2 4
 
 ## The tools — chapters 1, 14
 
-- `hrs new`, `hrs run`, `hrs build`, `hrs test`, `hrs check`, `hrs lint`, `hrs watch`; `hrs add hrs_std` adds Harsh's crates to a project, and Rust's are `cargo add`'s; `hrs fmt` lays a file out by these rules and is a no-op on one already laid out; `hrs export` writes the project as a plain Rust crate; `hrs-from` brings Rust in. (§1.2, §14.1)
+- `hrs new`, `hrs run`, `hrs build`, `hrs test`, `hrs check`, `hrs lint`, `hrs watch`; `hrs add hrs_std` adds Harsh's crates to a project's `Hrs.toml`, and Rust's are `cargo add`'s, in `Cargo.toml`; `hrs migrate` moves `hrs_std` out of a pre-0.3.0 `Cargo.toml`; `hrs fmt` lays a file out by these rules and is a no-op on one already laid out; `hrs export` writes the project as a plain Rust crate; `hrs-from` brings Rust in. (§1.2, §14.1)
 - Errors point at your `.hrs` line, whether Harsh raised them or the compiler did. (§1.2, §3.4)
 
 ## Precedence — appendix

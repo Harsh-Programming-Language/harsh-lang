@@ -4784,12 +4784,13 @@ two</code></pre>
 <p>Next: matrices, and the linear algebra that makes Harsh a language for data.</p>
 <h2 id="16-matrices-and-linear-algebra">16. Matrices and linear algebra</h2>
 <p>The third thing Harsh adds is linear algebra that reads like Julia's. A matrix literal with the same grammar, <code>*</code> meaning the matrix product, <code>A \ b</code> solving a system, and the same errors when sizes do not fit. If you have written Julia, nothing here will surprise you; if you have not, it is the notation of the textbooks, which is why Julia chose it.</p>
-<p>The literals, <code>m~</code> and <code>v~</code>, are part of the language — they are in the prelude, like <code>g~</code>. The types they build, <code>Matrix</code> and <code>Vector</code>, live in <code>hrs_std</code>, Harsh's standard library, a crate you add to a project once — <code>hrs add hrs_std</code>, which writes this line into <code>Cargo.toml</code>:</p>
-<pre class="code"><code>[dependencies]
+<p>The literals, <code>m~</code> and <code>v~</code>, are part of the language — they are in the prelude, like <code>g~</code>. The types they build, <code>Matrix</code> and <code>Vector</code>, live in <code>hrs_std</code>, Harsh's standard library, a crate you add to a project once — <code>hrs add hrs_std</code>, which writes this line into <code>Hrs.toml</code>, Harsh's manifest beside <code>Cargo.toml</code>:</p>
+<pre class="code"><code># Hrs.toml
+[dependencies]
 hrs_std = "0.1"</code></pre>
 <p>A project that uses <code>m~</code> without it is stopped by <code>hrs</code>, which tells you to run <code>hrs add hrs_std</code>.</p>
 <h3 id="16-1-writing-a-matrix">16.1 Writing a matrix</h3>
-<p><code>Cargo.toml</code></p>
+<p><code>Hrs.toml</code></p>
 <pre class="code"><code>[dependencies]
 hrs_std = "0.1"</code></pre>
 <p><code>src/main.hrs</code></p>
@@ -4827,7 +4828,7 @@ true true
 <p>A bracket inside the literal is a <em>block</em>, built by the same rules: <code>[1, 4]</code> is a column, so <code>[[1, 4] [2, 5] [3, 6]]</code> is three columns side by side — the same matrix as <code>[1 2 3; 4 5 6]</code>. The rules are Julia's, and so are the refusals: <code>m~ [[1 2], [3 4]]</code> is not a matrix, because a comma never joins — in Julia it is a vector holding two matrices — and <code>v~ [1 2 3]</code> is not a vector, because spaces make a row, which is a matrix.</p>
 <p>A matrix prints its size and the type of its entries, as Julia's do. Sizes are values, not part of the type: a <code>Matrix&lt;i32&gt;</code> may be any size, and its size is known when the program runs.</p>
 <h3 id="16-2-arithmetic">16.2 Arithmetic</h3>
-<p><code>Cargo.toml</code></p>
+<p><code>Hrs.toml</code></p>
 <pre class="code"><code>[dependencies]
 hrs_std = "0.1"</code></pre>
 <p><code>src/main.hrs</code></p>
@@ -4858,7 +4859,7 @@ hrs_std = "0.1"</code></pre>
 <p><code>*</code> between two matrices is the matrix product. Between a number and a matrix it scales every entry. Between a matrix and a vector it gives a vector. Nothing marks which is meant: the compiler chooses from what is being multiplied, the way Julia chooses when the program runs.</p>
 <p><code>&amp;a * &amp;b</code> borrows the two matrices, so they can be used again; <code>a * b</code> would consume them. That is Rust's ownership rule, and the one visible difference from Julia. <code>size$</code> gives the rows and the columns, and <code>transpose$</code> is Julia's <code>transpose</code> — the <code>A'</code> of Julia is not available, because <code>'</code> begins a character or a lifetime in Rust.</p>
 <h3 id="16-3-the-identity">16.3 The identity</h3>
-<p><code>Cargo.toml</code></p>
+<p><code>Hrs.toml</code></p>
 <pre class="code"><code>[dependencies]
 hrs_std = "0.1"</code></pre>
 <p><code>src/main.hrs</code></p>
@@ -4882,7 +4883,7 @@ hrs_std = "0.1"</code></pre>
  3 5</code></pre>
 <p><code>UniformScaling k</code> is Julia's: <code>k</code> times an identity matrix of whatever size the other side needs. <code>I</code> is the identity itself. <code>a + I</code> adds one along the diagonal; <code>a * u</code> scales by <code>k</code>.</p>
 <h3 id="16-4-joining-matrices">16.4 Joining matrices</h3>
-<p><code>Cargo.toml</code></p>
+<p><code>Hrs.toml</code></p>
 <pre class="code"><code>[dependencies]
 hrs_std = "0.1"</code></pre>
 <p><code>src/main.hrs</code></p>
@@ -4903,7 +4904,7 @@ hrs_std = "0.1"</code></pre>
  0 0 3 4</code></pre>
 <p>A block can be any matrix, not only a number, so the literal that builds a matrix from numbers also joins matrices: side by side with a space, one above another with a <code>;</code> or a new line. Here a 2×2 block matrix and a 4×4 one. Each block is isolated in parentheses, <code>(&amp;a)</code>, as any argument with an operator in it is.</p>
 <h3 id="16-5-solving">16.5 Solving</h3>
-<p><code>Cargo.toml</code></p>
+<p><code>Hrs.toml</code></p>
 <pre class="code"><code>[dependencies]
 hrs_std = "0.1"</code></pre>
 <p><code>src/main.hrs</code></p>
@@ -4929,7 +4930,7 @@ det 1
 length 5, dot 25</code></pre>
 <p><code>a &lt;- solve (&amp;b)</code> is Julia's <code>a \ b</code>: the <code>x</code> for which <code>a * x</code> equals <code>b</code>. Harsh cannot use <code>\</code> for it — <code>\</code> opens a specification block — so the method is named for what it does. <code>det$</code> and <code>inv$</code> are the determinant and the inverse, with Julia's names. Asking for the inverse of a matrix that has none stops the program with Julia's <code>SingularException</code>.</p>
 <p>That is right when a singular matrix would be a bug — you built the matrix and know it is sound. When the matrix comes from data you have not checked, a singular one is a fact about the data, and the program should decide what to do, not stop. <code>try_solve</code> and <code>try_inv</code> do the same work and return a <code>Result</code>: <code>Ok</code> with the answer, or <code>Err</code> with a <code>LinAlgError</code> saying which failure it was — <code>Singular</code>, or <code>DimensionMismatch</code> with Julia's message. Rust's standard library pairs methods the same way: <code>RefCell</code>'s <code>borrow</code> stops the program where <code>try_borrow</code> returns a <code>Result</code>, and <code>Vec</code>'s <code>reserve</code> where <code>try_reserve</code> does. Use <code>solve</code> when you know the matrix is sound; <code>try_solve</code> when you do not — and <code>?</code> to hand the error to your caller.</p>
-<p><code>Cargo.toml</code></p>
+<p><code>Hrs.toml</code></p>
 <pre class="code"><code>[dependencies]
 hrs_std = "0.1"</code></pre>
 <p><code>src/main.hrs</code></p>
@@ -4958,7 +4959,7 @@ no single solution: the matrix is singular
 DimensionMismatch: matrix has 2 rows, right-hand side has length 3</code></pre>
 <p>A vector has a length, <code>norm$</code>, and a dot product, <code>dot</code>. Entries are read by index: <code>v[0]</code> for a vector and <code>a[(0, 1)]</code> for a matrix. Indexes start at 0, as they do for every collection in Harsh — this is the one place Harsh departs from Julia, which counts from 1.</p>
 <h3 id="16-6-fitting-a-line">16.6 Fitting a line</h3>
-<p><code>Cargo.toml</code></p>
+<p><code>Hrs.toml</code></p>
 <pre class="code"><code>[dependencies]
 hrs_std = "0.1"</code></pre>
 <p><code>src/main.hrs</code></p>
@@ -4987,7 +4988,7 @@ residual 1.76
 <p>This is linear regression: a straight line through data that does not lie on one. Given students' hours and scores, find the intercept and slope that fit best.</p>
 <p>Each student is a row of the <em>design matrix</em>: a 1, which will be multiplied by the intercept, and their hours, which will be multiplied by the slope. A comprehension builds those rows from the data. The matrix has six rows and two columns — more equations than unknowns — so no line fits every point exactly, and <code>solve</code> returns the <em>least-squares</em> line: the one that makes the total squared error smallest. That is what Julia's <code>X \ y</code> does for a tall matrix, and it is the first step of most statistics and machine learning. The residual measures what the line leaves unexplained, and the line predicts a score for seven hours.</p>
 <h3 id="16-7-taking-a-part">16.7 Taking a part</h3>
-<p><code>Cargo.toml</code></p>
+<p><code>Hrs.toml</code></p>
 <pre class="code"><code>[dependencies]
 hrs_std = "0.1"</code></pre>
 <p><code>src/main.hrs</code></p>
@@ -5031,7 +5032,7 @@ hrs_std = "0.1"</code></pre>
 <p>An index with several axes is written with a comma, <code>readings[0, 0]</code>. The comma makes the axes one value, a tuple, so <code>readings[(0, 0)]</code> means the same; the rule is the language's, not the matrix's, and any type indexed by a tuple may be written so. An index gives one element; a part of a matrix is a <code>slice</code> or a <code>view</code> — Rust's index must hand back something stored in the matrix, and a window onto it is not.</p>
 <p>Julia writes a part <code>readings[2:3, 1:2]</code>, counting from 1 and including the end. Harsh keeps the ranges of every other collection, so there is one way to count in a program.</p>
 <h3 id="16-8-element-by-element">16.8 Element by element</h3>
-<p><code>Cargo.toml</code></p>
+<p><code>Hrs.toml</code></p>
 <pre class="code"><code>[dependencies]
 hrs_std = "0.1"</code></pre>
 <p><code>src/main.hrs</code></p>
@@ -5082,7 +5083,7 @@ hrs_std = "0.1"</code></pre>
 <p>Beneath the mark is a method, <code>scores &lt;- map relu</code>, as <code>slice</code> is beneath the index.</p>
 <p>A dotted operator keeps the rank of the operator it is made from: <code>x + a .* b</code> multiplies first, and <code>a * b .* c</code> works from left to right. Julia writes these <code>a .* b</code> and <code>f.(a)</code>. The first is the same in Harsh; the second could not be, because <code>f.(a)</code> already begins a group of paths, as in a <code>use</code>.</p>
 <h3 id="16-9-when-the-sizes-do-not-fit">16.9 When the sizes do not fit</h3>
-<p><code>Cargo.toml</code></p>
+<p><code>Hrs.toml</code></p>
 <pre class="code"><code>[dependencies]
 hrs_std = "0.1"</code></pre>
 <p><code>src/main.hrs</code></p>
@@ -5091,7 +5092,7 @@ hrs_std = "0.1"</code></pre>
     <span class="com">// A 2×3 matrix times a 2×3 matrix: the inner sizes, 3 and 2, differ.</span>
     <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span><span class="p">&amp;</span>a <span class="p">*</span> <span class="p">&amp;</span>a<span class="p">)</span></code></pre>
 <pre class="code"><code>$ hrs run
-thread 'main' panicked at src/main.hrs:4:20:
+thread 'main' panicked at main.rs:4:20:
 DimensionMismatch: matrix A has dimensions (2, 3), matrix B has dimensions (2, 3)</code></pre>
 <p>A product needs the columns of the left matrix to match the rows of the right. Sizes are known when the program runs, not when it compiles, so a mismatch is caught then and reported in Julia's words: <code>DimensionMismatch</code>, with the two sizes.</p>
 <h3 id="16-10-what-you-have">16.10 What you have</h3>
@@ -5134,7 +5135,7 @@ opt-level = 3</code></pre>
 running 1 test
 test target/hrs/lib.rs - add_one (line 10) ... ok
 
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.17s</code></pre>
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.18s</code></pre>
 <p><code>cargo doc --open</code> renders every <code>///</code> and <code>//!</code> in the crate as HTML, with the Markdown inside them — headings, code blocks, links — laid out. The conventional sections are <code># Examples</code>, <code># Panics</code> (when the function can), <code># Errors</code> (what <code>Err</code>s it returns) and <code># Safety</code> (for <code>unsafe</code> functions). The example in the <code>///</code> is Harsh, like everything else in the file, and <code>cargo test</code> <em>runs it</em> — every code block in a doc comment is a test, so documentation cannot drift from the code without failing the build.</p>
 <blockquote>
 <p><strong>Harsh —</strong> A fenced block in a doc comment is the one kind of comment the transpiler reads. The documentation tool lifts such a block out, compiles it and runs it — it is code, not prose — so it is written in Harsh and the transpiler writes out the Rust that tool expects, the same translation it does everywhere else. A fence tagged with another language — <code>text</code>, <code>toml</code> — is prose and is left exactly as you wrote it. A line beginning <code>#</code> inside the fence is the documentation tool's own mark for <em>compile this but do not show it</em>, and it survives the translation.</p>
@@ -5185,7 +5186,15 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fini
 <p><code>crates.io</code> is the registry <code>cargo</code> fetches dependencies from, and publishing to it is <code>cargo publish</code> after <code>cargo login</code> once with a token from the site. <code>Cargo.toml</code> needs <code>name</code> (unique on the registry), <code>version</code>, <code>description</code> and <code>license</code> before the registry will accept it; a publish is permanent, since other crates may depend on it — versions can be <em>yanked</em> (<code>cargo yank --vers 1.0.1</code>) to stop new projects picking them up, but never deleted. For a Harsh crate, <code>hrs export</code> writes the transpiled Rust as a plain crate under <code>target/export</code>, which is what you publish: the registry, and the people who depend on you, see Rust.</p>
 <p>That is the way to share Harsh code <em>with Rust users</em>: they get readable Rust, formatted by <code>cargo fmt</code>, with no Harsh anywhere — the parts of <code>hrs_std</code> you use become the crate's own <code>matrix</code> module — and they never need <code>hrs</code>. It is not the way to share it with Harsh users, because of what a Rust crate cannot carry: Harsh's own macros. A <code>~</code> macro unfolds in Harsh, before anything is transpiled, and leaves nothing in the Rust; so the exported crate has no <code>macro_rules~</code> in it, and a Harsh program that depends on it cannot call them. (Rust's <code>!</code> macros, which are Rust, survive the export.)</p>
 <p>To share a library <em>as Harsh</em>, macros and all, share its Harsh: another project depends on it by path, as the next section shows, and <code>hrs</code> transpiles it first — its <code>~</code> macros, and those it re-exports with <code>pub use</code>, reach the program that uses it. A registry of Harsh's own is planned, so that a Harsh library can be published and added by name as a Rust crate is; until it exists, a path is how Harsh travels as Harsh.</p>
-<p><strong>Adding dependencies.</strong> A Harsh project's <code>Cargo.toml</code> is Cargo's, so a Rust crate is added as in Rust: <code>cargo add serde</code>. Harsh's own crates are added with <code>hrs add</code> — <code>hrs add hrs_std</code> today, the other crates of Harsh's distribution likewise, and the crates of Harsh's registry when it opens. Each command speaks to one registry, so a name is never looked up in the wrong one; <code>hrs add serde</code> answers that <code>serde</code> is a Rust crate, for <code>cargo add</code>. In the rare project that wants a Harsh crate and a Rust crate of the same name, Cargo's rename keeps both: <code>foo_rs = { version = "1", package = "foo" }</code>, and the Rust one is <code>foo_rs</code> in your code.</p>
+<p><strong>Adding dependencies.</strong> A Harsh project has two manifests side by side. <code>Cargo.toml</code> is Cargo's, and lists Rust's crates: <code>cargo add serde</code> writes there, as in Rust. <code>Hrs.toml</code> is Harsh's, and lists Harsh's dependencies — <code>hrs_std</code>, and Harsh crates — which <code>hrs</code> handles before Cargo runs: it reads each one's Harsh macros and signatures, transpiles it, and builds the project from a <code>Cargo.toml</code> it generates in <code>target/hrs/</code>, yours plus them. <code>hrs add hrs_std</code> writes to <code>Hrs.toml</code>. A Harsh crate of your own, in a folder beside the project, is one line:</p>
+<pre class="code"><code># Hrs.toml
+[package]
+cargo = "Cargo.toml"        # optional: the Cargo.toml beside this file is the default
+
+[dependencies]
+hrs_std = "0.1"
+mylib = { path = "../mylib" }</code></pre>
+<p>Paths in <code>Hrs.toml</code> are relative to its own folder. Each command speaks to one registry, so a name is never looked up in the wrong one: <code>hrs add serde</code> answers that <code>serde</code> is a Rust crate, for <code>cargo add</code>. The crates for writing procedural macros — <code>hrs_proc_macro</code>, <code>hrs_quote</code>, <code>hrs_syn</code> — are compile-time tools, as <code>syn</code> and <code>quote</code> are Rust's, and stay in <code>Cargo.toml</code>. A project from before 0.3.0, with <code>hrs_std</code> in its <code>Cargo.toml</code>, is stopped with a message; <code>hrs migrate</code> moves it. In the rare project that wants a Harsh crate and a Rust crate of the same name, Cargo's rename keeps both: <code>foo_rs = { version = "1", package = "foo" }</code>, and the Rust one is <code>foo_rs</code> in your code.</p>
 <h3 id="17-4-workspaces">17.4 Workspaces</h3>
 <p>A <em>workspace</em> is a set of packages sharing one <code>Cargo.lock</code> and one <code>target/</code> directory, for a project that has grown to several crates — a binary and the libraries it is split into, say. The root <code>Cargo.toml</code> lists the members:</p>
 <pre class="code"><code>[workspace]
@@ -7411,7 +7420,7 @@ worker 3 shut down
 </ul>
 <h3 id="the-tools-chapters-1-14">The tools — chapters 1, 14</h3>
 <ul>
-<li><code>hrs new</code>, <code>hrs run</code>, <code>hrs build</code>, <code>hrs test</code>, <code>hrs check</code>, <code>hrs lint</code>, <code>hrs watch</code>; <code>hrs add hrs_std</code> adds Harsh's crates to a project, and Rust's are <code>cargo add</code>'s; <code>hrs fmt</code> lays a file out by these rules and is a no-op on one already laid out; <code>hrs export</code> writes the project as a plain Rust crate; <code>hrs-from</code> brings Rust in. (§1.2, §14.1)</li>
+<li><code>hrs new</code>, <code>hrs run</code>, <code>hrs build</code>, <code>hrs test</code>, <code>hrs check</code>, <code>hrs lint</code>, <code>hrs watch</code>; <code>hrs add hrs_std</code> adds Harsh's crates to a project's <code>Hrs.toml</code>, and Rust's are <code>cargo add</code>'s, in <code>Cargo.toml</code>; <code>hrs migrate</code> moves <code>hrs_std</code> out of a pre-0.3.0 <code>Cargo.toml</code>; <code>hrs fmt</code> lays a file out by these rules and is a no-op on one already laid out; <code>hrs export</code> writes the project as a plain Rust crate; <code>hrs-from</code> brings Rust in. (§1.2, §14.1)</li>
 <li>Errors point at your <code>.hrs</code> line, whether Harsh raised them or the compiler did. (§1.2, §3.4)</li>
 </ul>
 <h3 id="precedence-appendix">Precedence — appendix</h3>

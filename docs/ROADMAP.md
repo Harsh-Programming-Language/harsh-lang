@@ -25,45 +25,74 @@ user's. 0.1.30 and 0.1.31 were handed over and are spent. The design questions
 are gathered in the development notes and wait on his use of what exists -- he decides
 after a few days with it. What needs no decision is done, or listed last below.
 
-### First: Harsh's two modes (the user, 2026-10-01 -- his strategy to come)
+### `Hrs.toml` -- Harsh's own manifest: built 2026-10-03 (0.3.0)
 
-He frames Harsh as two modes, distinguished by who drives the build. **He will
-devise the strategy and bring it; nothing is built until then.** The
-discussion so far, for that session:
+**Built as designed below, with one change found in building:** only `hrs_std` (and Harsh crates) go in `Hrs.toml`; the procedural-macro crates stay in `Cargo.toml` -- the user's own principle, "except the macro crates". **Still open from this entry:** `hrs export` of a project with Harsh path dependencies (the exported crate does not carry them yet); a parent workspace's inherited fields (`version.workspace = true`) are lost in the generated manifest, which is its own workspace; the #3 additions (`--check`, several files, the header); Harshlings' projects, if any list `hrs_std` in `Cargo.toml` (not in this tree); rust-analyzer through the generated manifest is untested here.
 
-- **Mode 1 -- pure Harsh projects; `hrs` drives.** `hrs build` / `hrs run`;
-  Harsh crates by path today, Harsh's registry later; Rust crates through
-  `cargo add`. Gap found (BenView, 2026-10-01): `hrs build` follows a nested
-  Harsh crate only when it is a one-line `name = { path = ".." }` directly
-  under `[dependencies]` (`driver::path_dependencies`, line matching). Missed:
-  `[target.'cfg(..)'.dependencies]` (Dioxus projects use them constantly),
-  `[dev-dependencies]`, `[build-dependencies]`, the long `[dependencies.name]`
-  form, workspace `members`, and `workspace = true` dependencies. Proposed: read
-  every dependency table with a real TOML parser (the `toml` crate), follow
-  workspace members; tests per form; chapter 17 lists what is followed. An
-  addition, so a patch release. The other session's workaround -- BenView
-  committing its nested crate's generated Rust, with a drift check -- goes
-  away with it.
-- **Mode 2 -- Harsh inside a Rust project; Cargo drives.** A Rust project
-  writes one module, some files, or a whole workspace crate in Harsh, and
-  builds with `cargo build` alone. Proposed: code generation in `build.rs`, as
-  `prost` and `lalrpop` do -- `harsh-lang` as a build-dependency (nothing to
-  install), `harsh_lang::build` transpiling `.hrs` into `OUT_DIR`, the Rust
-  including it (`mod parser { include!(concat!(env!("OUT_DIR"),
-  "/parser.rs")); }`; a whole crate: a one-line `src/lib.rs`). It also covers
-  a Harsh crate published for Rust users without committing generated Rust;
-  `hrs export` stays for plain Rust with no `harsh-lang` dependency at all.
-  Honest cost: rustc's type errors would cite the generated file in `OUT_DIR`
-  (Rust has no `#line`); `hrs`'s own transpile errors would still point at
-  the `.hrs`. A remapping `cargo hrs` wrapper could come later. Also
-  proposed: an `hrs new` template for it, a chapter-17 section beside
-  `hrs export`, tests building a Rust project that embeds a Harsh module and
-  a Harsh crate with `cargo build` only.
-- Open questions he was asked: is mode 2 "Cargo drives, `build.rs`
-  generates, nothing generated committed"? Mode 1's fix and mode 2
-  separately, or one batch?
+**The principle (the user's):** Harsh crates, nested or downloaded, exist to
+be a level above Rust. Like Rust's non-macro crates they provide code --
+types, functions -- to the crate that uses them, plus what only Harsh can
+carry: their Harsh macros, and their functions' parameter counts (so `$` and
+partial application work across crates). A Harsh project is built by `hrs`;
+`hrs` drives. No `build.rs` mode: the three intents never need one (#1 a
+Harsh crate, consumed through `hrs`; #2 `hrs export` to crates.io; #3
+committed Rust in a Rust project).
+
+**The design:**
+
+```toml
+# Hrs.toml -- Harsh's dependencies; Cargo.toml beside it keeps Rust's
+[package]
+cargo = "Cargo.toml"        # optional: the Cargo.toml beside this file is the default
+
+[dependencies]
+hrs_std = "0.1"
+mylib = { path = "../mylib" }
+```
+
+- `Hrs.toml` sits beside `Cargo.toml`; paths in it are relative to its own
+  folder (so nested crates, each with their own pair, never collide). The
+  `cargo` key is optional; the books and `hrs new` write `cargo =
+  "Cargo.toml"` (the user's choice; `./Cargo.toml` is accepted too).
+- `Cargo.toml` lists Rust's dependencies only. `hrs_std` moves to `Hrs.toml`.
+- `hrs build`: (1) the Harsh level -- for each dependency in `Hrs.toml`,
+  read its Harsh surface (macros, signatures) and transpile it, then the
+  crate itself, into `target/hrs/`; (2) the Rust level -- write a generated
+  `Cargo.toml` in `target/hrs/`, the user's plus one path dependency per
+  transpiled Harsh crate, and run Cargo on it. The user's `Cargo.toml` is
+  never edited.
+- `hrs add` writes to `Hrs.toml`; `cargo add` to `Cargo.toml`.
+- `hrs-lsp` points rust-analyzer at the generated manifest (hover and
+  completion must see Harsh dependencies).
+- The nested-crate gap (only one-line `[dependencies]` path entries
+  followed) disappears by construction: everything Harsh is in `Hrs.toml`.
+- Downloaded Harsh crates (the registry, later): the package ships its
+  `.hrs` for `hrs` to read and its Rust generated at publish time (a
+  published package never changes, so the two cannot drift).
+
+**Breaking, so 0.3.0:** `hrs_std` (or another Harsh crate) found in a
+`Cargo.toml` is refused with a message saying it belongs in `Hrs.toml` --
+better, `hrs` offers to move it (`hrs migrate`, or a one-line fix in the
+message). Every existing Harsh project moves `hrs_std` once: the user's
+apps (Docreview/BenView, snd_hrs, ...), Harshlings (exercises using
+`m~`), the Book's and By Example's matrix projects, the website if it uses
+`hrs_std`, `hrs new`'s templates, `hrs add`, the Jupyter kernel's
+generated projects. The books teach the pair in chapter 1 and chapter 17
+(beside the three intents table).
+
+**Also for #3 (Harsh files in a Rust crate):** the single-file form `hrs
+in.hrs -o out.rs` gains `--check` (fails if `out.rs` is not what `in.hrs`
+produces), several files at once (sibling files see each other's arities),
+and a header in each generated file (`// Generated from parser.hrs by hrs;
+edit that file.`); the #3 template sets up `--check` by default.
 
 ### Waiting on the user, after his testing
+
+- **Converter: a method called on a struct literal** -- `Project { root:
+  r }.prepare(x)` converts to `Project\ root = r <- prepare x`, the literal's
+  end lost (found 2026-10-03 by the self-round-trip on hrs-lsp.rs; worked
+  around there by binding the literal first). The converter should isolate
+  the literal: `(Project\ root = r) <- prepare x`.
 
 
 

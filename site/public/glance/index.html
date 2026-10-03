@@ -276,7 +276,7 @@ pre.code:hover .copy,.copy:focus-visible{opacity:1}
 </ul>
 <h2 id="the-tools-chapters-1-14">The tools — chapters 1, 14</h2>
 <ul>
-<li><code>hrs new</code>, <code>hrs run</code>, <code>hrs build</code>, <code>hrs test</code>, <code>hrs check</code>, <code>hrs lint</code>, <code>hrs watch</code>; <code>hrs add hrs_std</code> adds Harsh's crates to a project, and Rust's are <code>cargo add</code>'s; <code>hrs fmt</code> lays a file out by these rules and is a no-op on one already laid out; <code>hrs export</code> writes the project as a plain Rust crate; <code>hrs-from</code> brings Rust in. (§1.2, §14.1)</li>
+<li><code>hrs new</code>, <code>hrs run</code>, <code>hrs build</code>, <code>hrs test</code>, <code>hrs check</code>, <code>hrs lint</code>, <code>hrs watch</code>; <code>hrs add hrs_std</code> adds Harsh's crates to a project's <code>Hrs.toml</code>, and Rust's are <code>cargo add</code>'s, in <code>Cargo.toml</code>; <code>hrs migrate</code> moves <code>hrs_std</code> out of a pre-0.3.0 <code>Cargo.toml</code>; <code>hrs fmt</code> lays a file out by these rules and is a no-op on one already laid out; <code>hrs export</code> writes the project as a plain Rust crate; <code>hrs-from</code> brings Rust in. (§1.2, §14.1)</li>
 <li>Errors point at your <code>.hrs</code> line, whether Harsh raised them or the compiler did. (§1.2, §3.4)</li>
 </ul>
 <h2 id="precedence-appendix">Precedence — appendix</h2>

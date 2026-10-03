@@ -75,6 +75,17 @@ impl Project {
         let path = self.root.join("Cargo.toml");
         let text = fs::read_to_string(&path).map_err(|e| format!("{}: {}", path.display(), e))?;
         if text.contains(GEN_DIR) {
+            #[cfg(feature = "remap")]
+            {
+                let found = harsh_crates_in_cargo(&text);
+                if !found.is_empty() {
+                    return Err(format!(
+                        "{}: {} is Harsh's, and since 0.3.0 belongs in Hrs.toml beside it -- run `hrs migrate` to move it",
+                        path.display(),
+                        found.iter().map(|n| format!("`{n}`")).collect::<Vec<_>>().join(", ")
+                    ));
+                }
+            }
             return Ok(());
         }
         Err(format!(
@@ -611,13 +622,113 @@ impl Project {
     /// language -- lexer, layout, expander, emitter -- with no dependencies,
     /// which is what `hrs_proc_macro` builds on.
     #[cfg(feature = "remap")]
+    /// Before Cargo, the Harsh level (the user's design, 2026-10-03): with
+    /// an `Hrs.toml`, each Harsh crate it names by path is transpiled and
+    /// prepared in turn (its own Harsh crates first), and the generated
+    /// `target/hrs/Cargo.toml` -- the user's `Cargo.toml` plus the Harsh
+    /// dependencies -- is written. Its path, for `--manifest-path`; `None`
+    /// for a project without `Hrs.toml`, built from its `Cargo.toml` as ever.
+    #[cfg(feature = "remap")]
+    pub fn prepare(&self, seen: &mut Vec<PathBuf>) -> Result<Option<PathBuf>, String> {
+        let Some(m) = read_hrs_manifest(&self.root)? else { return Ok(None) };
+        let mut cargo_text = fs::read_to_string(&m.cargo).map_err(|e| format!("{}: {}", m.cargo.display(), e))?;
+        let cargo_dir = m.cargo.parent().unwrap_or(&self.root).to_path_buf();
+        // Cargo finds a `build.rs` beside its manifest unasked; the generated
+        // manifest is elsewhere, so it is named.
+        let script = cargo_dir.join("build.rs");
+        if script.is_file() && !cargo_text.lines().any(|l| l.trim_start().starts_with("build =")) {
+            cargo_text = cargo_text.replacen("[package]", &format!("[package]\nbuild = \"{}\"", manifest_path_str(&script)), 1);
+        }
+        let mut extra = Vec::new();
+        for (name, value) in &m.deps {
+            let mut value = value.clone();
+            if let Some(i) = value.find("path = \"") {
+                let at = i + 8;
+                let Some(len) = value[at..].find('"') else {
+                    return Err(format!("{}: `{name}`: an unclosed path", HRS_MANIFEST));
+                };
+                let rel = value[at..at + len].to_string();
+                // Harsh's own crates -- `hrs_std` from a checkout -- are
+                // Rust: passed through, the path made absolute.
+                if DISTRIBUTION.contains(&name.as_str()) {
+                    value.replace_range(at..at + len, &manifest_path_str(&self.root.join(&rel)));
+                    extra.push(format!("{name} = {value}"));
+                    continue;
+                }
+                let dir = self.root.join(&rel);
+                let dir = dir
+                    .canonicalize()
+                    .map_err(|e| format!("{}: the Harsh crate `{name}` at {}: {e}", HRS_MANIFEST, dir.display()))?;
+                let has_own = dir.join(HRS_MANIFEST).is_file();
+                if !seen.contains(&dir) {
+                    seen.push(dir.clone());
+                    let dep = Project { root: dir.clone() };
+                    dep.transpile(false)?;
+                    dep.prepare(seen)?;
+                }
+                // A Harsh crate with its own Hrs.toml is built from its
+                // generated manifest; one without, from its own Cargo.toml.
+                let at_dir = if has_own { dir.join(GEN_DIR) } else { dir.clone() };
+                value.replace_range(at..at + len, &manifest_path_str(&at_dir));
+            }
+            extra.push(format!("{name} = {value}"));
+        }
+        let text = generated_manifest(&cargo_text, &cargo_dir, &extra);
+        let gen = self.root.join(GEN_DIR).join("Cargo.toml");
+        fs::create_dir_all(gen.parent().unwrap()).map_err(|e| format!("{}: {e}", gen.display()))?;
+        if fs::read_to_string(&gen).ok().as_deref() != Some(text.as_str()) {
+            fs::write(&gen, &text).map_err(|e| format!("{}: {e}", gen.display()))?;
+        }
+        // The lockfile stays the project's: copied in here, back after Cargo.
+        let lock = cargo_dir.join("Cargo.lock");
+        if lock.is_file() {
+            let _ = fs::copy(&lock, gen.with_file_name("Cargo.lock"));
+        }
+        Ok(Some(gen))
+    }
+
+    #[cfg(feature = "remap")]
     pub fn cargo(&self, sub: &str, args: &[String], maps: &[PathBuf]) -> Result<i32, String> {
+        #[cfg(feature = "remap")]
+        let generated = self.prepare(&mut Vec::new())?;
+        #[cfg(not(feature = "remap"))]
+        let generated: Option<PathBuf> = None;
+        let result = self.cargo_run(sub, args, maps, generated.as_deref());
+        if let Some(g) = &generated {
+            let back = g.with_file_name("Cargo.lock");
+            if back.is_file() {
+                let _ = fs::copy(&back, self.root.join("Cargo.lock"));
+            }
+        }
+        result
+    }
+
+    #[cfg(feature = "remap")]
+    fn cargo_run(&self, sub: &str, args: &[String], maps: &[PathBuf], generated: Option<&Path>) -> Result<i32, String> {
+        let manifest = generated.map(|g| g.to_path_buf()).unwrap_or_else(|| self.root.join("Cargo.toml"));
+        // The generated manifest, with the project's own `target/` -- unless
+        // the user chose a target directory (`CARGO_TARGET_DIR`, or
+        // `target-dir` in a `.cargo/config.toml`), which then wins.
+        let chosen = std::env::var_os("CARGO_TARGET_DIR").is_some()
+            || ["config.toml", "config"].iter().any(|f| {
+                fs::read_to_string(self.root.join(".cargo").join(f)).map_or(false, |t| t.contains("target-dir"))
+            });
+        let at: Vec<String> = match generated {
+            Some(g) if chosen => vec!["--manifest-path".into(), g.display().to_string()],
+            Some(g) => vec![
+                "--manifest-path".into(),
+                g.display().to_string(),
+                "--target-dir".into(),
+                self.root.join("target").display().to_string(),
+            ],
+            None => Vec::new(),
+        };
         // Only cargo's own build commands speak `--message-format`; an
         // external subcommand (`cargo leptos`, `cargo doc`'s cousins) is run
         // plainly, its output passed through unmapped.
         if !matches!(sub, "build" | "run" | "test" | "check" | "clippy" | "bench" | "doc") {
             let status = Command::new("cargo")
-                .args(distribution(&self.root, &[self.root.join("Cargo.toml")])?)
+                .args(distribution(&self.root, &[manifest.clone()])?)
                 .arg(sub)
                 .args(args)
                 .current_dir(&self.root)
@@ -636,9 +747,10 @@ impl Project {
         // remapped diagnostics go to stdout of the same terminal, so the first
         // line of an error would land on top of a half-erased bar.
         cmd.env("CARGO_TERM_PROGRESS_WHEN", "never");
-        cmd.args(distribution(&self.root, &[self.root.join("Cargo.toml")])?);
+        cmd.args(distribution(&self.root, &[manifest.clone()])?);
         cmd.arg(sub)
             .arg("--message-format=json-diagnostic-rendered-ansi")
+            .args(&at)
             .args(args)
             .current_dir(&self.root)
             .stdout(Stdio::piped())
@@ -796,7 +908,7 @@ impl PanicPlaces {
 /// A file that defines its own `m` or `v` has shadowed the prelude's, and
 /// needs nothing.
 pub fn check_hrs_std(root: &Path, units: &[Unit], sources: &[String]) -> Result<(), String> {
-    let manifest = fs::read_to_string(root.join("Cargo.toml")).unwrap_or_default();
+    let manifest = fs::read_to_string(root.join(HRS_MANIFEST)).unwrap_or_default();
     let declared = manifest.lines().any(|l| {
         let l = l.trim_start();
         l.starts_with("hrs_std") && l[7..].trim_start().starts_with(['=', '.'])
@@ -808,7 +920,7 @@ pub fn check_hrs_std(root: &Path, units: &[Unit], sources: &[String]) -> Result<
         if let Some((name, line)) = uses_hrs_std(src) {
             return Err(format!(
                 "{}:{}: `{name}` needs the `hrs_std` crate, which this project does not depend on.\n\
-                 Add it with `hrs add hrs_std`, or by hand in Cargo.toml:\n\n    [dependencies]\n    hrs_std = \"0.1\"\n",
+                 Add it with `hrs add hrs_std`, or by hand in Hrs.toml:\n\n    [dependencies]\n    hrs_std = \"0.1\"\n",
                 u.source.display(),
                 line
             ));
@@ -936,6 +1048,173 @@ fn reexports_of(src: &str, lib: &str) -> Vec<String> {
 #[cfg(feature = "remap")]
 pub const DISTRIBUTION: [&str; 4] = ["hrs_std", "hrs_proc_macro", "hrs_quote", "hrs_syn"];
 
+/// Harsh's own manifest, beside `Cargo.toml` (the user's design,
+/// 2026-10-03): its `[dependencies]` are Harsh's -- `hrs_std`, Harsh crates
+/// -- and `Cargo.toml` keeps Rust's. `hrs` handles Harsh's at the Harsh
+/// level, then writes a generated `Cargo.toml` for Cargo.
+pub const HRS_MANIFEST: &str = "Hrs.toml";
+
+/// Harsh's crates that are Harsh dependencies, and so belong in `Hrs.toml`.
+/// The procedural-macro crates (`hrs_proc_macro`, `hrs_quote`, `hrs_syn`)
+/// are compile-time tooling, as `syn` and `quote` are Rust's, and stay in
+/// `Cargo.toml` (the user's principle: "except the macro crates").
+pub const HRS_TOML_CRATES: [&str; 1] = ["hrs_std"];
+
+/// What `Hrs.toml` says: the `Cargo.toml` it belongs to (`[package] cargo`,
+/// relative to its folder; the one beside it by default) and its
+/// dependencies, each `name = <value as written>`.
+pub struct HrsManifest {
+    pub cargo: PathBuf,
+    pub deps: Vec<(String, String)>,
+}
+
+pub fn read_hrs_manifest(root: &Path) -> Result<Option<HrsManifest>, String> {
+    let path = root.join(HRS_MANIFEST);
+    let Ok(text) = fs::read_to_string(&path) else { return Ok(None) };
+    let mut table = String::new();
+    let mut cargo = root.join("Cargo.toml");
+    let mut deps = Vec::new();
+    for (n, raw) in text.lines().enumerate() {
+        // A comment runs from a `#` outside a quoted string to the line's end.
+        let mut quoted = false;
+        let cut = raw
+            .char_indices()
+            .find(|&(_, c)| {
+                if c == '"' {
+                    quoted = !quoted;
+                }
+                c == '#' && !quoted
+            })
+            .map_or(raw.len(), |(i, _)| i);
+        let line = raw[..cut].trim();
+        if line.is_empty() {
+            continue;
+        }
+        if line.starts_with('[') {
+            table = line.trim_matches(|c| c == '[' || c == ']').trim().to_string();
+            continue;
+        }
+        let Some((key, value)) = line.split_once('=') else {
+            return Err(format!("{}:{}: expected `name = value`", path.display(), n + 1));
+        };
+        let (key, value) = (key.trim().to_string(), value.trim().to_string());
+        match table.as_str() {
+            "package" if key == "cargo" => cargo = root.join(value.trim_matches('"')),
+            "package" => {}
+            "dependencies" => deps.push((key, value)),
+            other => return Err(format!("{}:{}: `[{other}]` is not a table of Hrs.toml; it has `[package]` and `[dependencies]`", path.display(), n + 1)),
+        }
+    }
+    Ok(Some(HrsManifest { cargo, deps }))
+}
+
+/// Harsh's crates named as dependencies in a `Cargo.toml` -- since 0.3.0
+/// they belong in `Hrs.toml`.
+#[cfg(feature = "remap")]
+pub fn harsh_crates_in_cargo(text: &str) -> Vec<String> {
+    let mut table = String::new();
+    let mut out = Vec::new();
+    for raw in text.lines() {
+        let line = raw.trim();
+        if line.starts_with('[') {
+            table = line.to_string();
+            continue;
+        }
+        if !table.contains("dependencies") {
+            continue;
+        }
+        let key = line.split(['=', '.']).next().unwrap_or("").trim();
+        if HRS_TOML_CRATES.contains(&key) && !out.iter().any(|k: &String| k == key) {
+            out.push(key.to_string());
+        }
+    }
+    out
+}
+
+/// `hrs migrate`: Harsh's crates moved from `Cargo.toml`'s dependency tables
+/// into `Hrs.toml`'s `[dependencies]` -- the two texts after, and what moved.
+#[cfg(feature = "remap")]
+pub fn migrate(cargo: &str, hrs: Option<&str>) -> (String, String, Vec<String>) {
+    let mut table = String::new();
+    let mut kept = Vec::new();
+    let mut moved: Vec<String> = Vec::new();
+    let mut names = Vec::new();
+    for raw in cargo.lines() {
+        let line = raw.trim();
+        if line.starts_with('[') {
+            table = line.to_string();
+        } else if table.contains("dependencies") {
+            let key = line.split(['=', '.']).next().unwrap_or("").trim();
+            if HRS_TOML_CRATES.contains(&key) {
+                moved.push(line.to_string());
+                names.push(key.to_string());
+                continue;
+            }
+        }
+        kept.push(raw.to_string());
+    }
+    let mut hrs = hrs
+        .map(|t| t.to_string())
+        .unwrap_or_else(|| "# Hrs.toml -- Harsh's dependencies; Cargo.toml beside it keeps Rust's\n[package]\ncargo = \"Cargo.toml\"\n\n[dependencies]\n".to_string());
+    for line in &moved {
+        let name = line.split(['=', '.']).next().unwrap_or("").trim().to_string();
+        if let Ok((t, _)) = add_dependency_line(&hrs, &name, line) {
+            hrs = t;
+        }
+    }
+    (kept.join("\n") + "\n", hrs, names)
+}
+
+/// The generated `Cargo.toml` (`target/hrs/Cargo.toml`): the user's, with
+/// every relative `path`/`build` made absolute (the file moved), its own
+/// `[workspace]` (so a workspace above it does not claim it), and `extra`
+/// dependency lines added to `[dependencies]`.
+/// A path as a TOML string's contents: forward slashes, which Cargo reads
+/// on every platform.
+pub fn manifest_path_str(p: &Path) -> String {
+    p.display().to_string().replace('\\', "/")
+}
+
+pub fn generated_manifest(cargo_text: &str, cargo_dir: &Path, extra: &[String]) -> String {
+    let mut out = Vec::new();
+    let mut has_deps = false;
+    let mut has_workspace = false;
+    for raw in cargo_text.lines() {
+        let mut line = raw.to_string();
+        for key in ["path", "build"] {
+            let mut search = 0;
+            while let Some(i) = line[search..].find(&format!("{key} = \"")) {
+                let at = search + i + key.len() + 4;
+                let Some(len) = line[at..].find('"') else { break };
+                let value = line[at..at + len].to_string();
+                let abs = if Path::new(&value).is_absolute() { value.clone() } else { manifest_path_str(&cargo_dir.join(&value)) };
+                line.replace_range(at..at + len, &abs);
+                search = at + abs.len();
+            }
+        }
+        let t = line.trim().to_string();
+        out.push(line);
+        if t == "[dependencies]" {
+            has_deps = true;
+            out.extend(extra.iter().cloned());
+        }
+        if t == "[workspace]" {
+            has_workspace = true;
+        }
+    }
+    if !has_deps && !extra.is_empty() {
+        out.push(String::new());
+        out.push("[dependencies]".into());
+        out.extend(extra.iter().cloned());
+    }
+    if !has_workspace {
+        out.push(String::new());
+        out.push("# Its own workspace root: generated by hrs from Cargo.toml and Hrs.toml.".into());
+        out.push("[workspace]".into());
+    }
+    out.join("\n") + "\n"
+}
+
 /// A distribution crate's version as a dependency line gives it, `"0.1"`:
 /// major and minor, from its manifest embedded in `hrs`.
 #[cfg(feature = "remap")]
@@ -953,6 +1232,32 @@ pub fn dist_version(name: &str) -> Option<String> {
 /// crate is `cargo add`'s (the user's rule, 2026-09-29: one command per
 /// registry, so a name is never resolved against the wrong one).
 #[cfg(feature = "remap")]
+/// Insert `line` for `name` into a manifest's `[dependencies]`, unless
+/// `name` is there already.
+pub fn add_dependency_line(manifest: &str, name: &str, line: &str) -> Result<(String, String), String> {
+    let lines: Vec<&str> = manifest.lines().collect();
+    let key = |l: &str| l.split(['=', '.']).next().unwrap_or("").trim().to_string();
+    let table = lines.iter().position(|l| l.trim() == "[dependencies]");
+    let text = match table {
+        Some(s) => {
+            let end = (s + 1..lines.len()).find(|&k| lines[k].trim_start().starts_with('[')).unwrap_or(lines.len());
+            if lines[s + 1..end].iter().any(|l| key(l) == name) {
+                return Ok((manifest.to_string(), format!("`{name}` is already in Hrs.toml")));
+            }
+            let mut at = end;
+            while at > s + 1 && lines[at - 1].trim().is_empty() {
+                at -= 1;
+            }
+            let mut out: Vec<String> = lines.iter().map(|l| l.to_string()).collect();
+            out.insert(at, line.to_string());
+            out.join("\n") + "\n"
+        }
+        None => format!("{}\n\n[dependencies]\n{line}\n", manifest.trim_end()),
+    };
+    Ok((text, format!("added `{line}` to Hrs.toml")))
+}
+
+#[cfg(feature = "remap")]
 pub fn add_dependency(manifest: &str, name: &str) -> Result<(String, String), String> {
     if !DISTRIBUTION.contains(&name) {
         return Err(format!("`{name}` is not a Harsh crate; a Rust crate is added with `cargo add {name}`"));
@@ -966,7 +1271,7 @@ pub fn add_dependency(manifest: &str, name: &str) -> Result<(String, String), St
         Some(s) => {
             let end = (s + 1..lines.len()).find(|&k| lines[k].trim_start().starts_with('[')).unwrap_or(lines.len());
             if lines[s + 1..end].iter().any(|l| key(l) == name) {
-                return Ok((manifest.to_string(), format!("`{name}` is already in Cargo.toml")));
+                return Ok((manifest.to_string(), format!("`{name}` is already in Hrs.toml")));
             }
             let mut at = end;
             while at > s + 1 && lines[at - 1].trim().is_empty() {
@@ -978,7 +1283,7 @@ pub fn add_dependency(manifest: &str, name: &str) -> Result<(String, String), St
         }
         None => format!("{}\n\n[dependencies]\n{line}\n", manifest.trim_end()),
     };
-    Ok((text, format!("added `{line}` to Cargo.toml")))
+    Ok((text, format!("added `{line}` to Hrs.toml")))
 }
 
 /// A project whose Rust names `hrs_std` -- `m~`, `v~`, the matrices -- but
@@ -986,7 +1291,7 @@ pub fn add_dependency(manifest: &str, name: &str) -> Result<(String, String), St
 /// "use of undeclared crate `hrs_std`".
 #[cfg(feature = "remap")]
 pub fn missing_std(root: &Path) -> Option<String> {
-    let manifest = std::fs::read_to_string(root.join("Cargo.toml")).ok()?;
+    let manifest = std::fs::read_to_string(root.join(HRS_MANIFEST)).unwrap_or_default();
     let listed = manifest.lines().any(|l| {
         let t = l.trim_start();
         t.starts_with("hrs_std") && t[7..].trim_start().starts_with(['=', '.'])
@@ -1005,7 +1310,7 @@ pub fn missing_std(root: &Path) -> Option<String> {
             } else if p.extension().map_or(false, |x| x == "rs")
                 && std::fs::read_to_string(&p).map_or(false, |t| t.contains("hrs_std::"))
             {
-                return Some("this project uses `hrs_std` (`m~`, `v~`, the matrices), which Cargo.toml does not list: run `hrs add hrs_std`".into());
+                return Some("this project uses `hrs_std` (`m~`, `v~`, the matrices), which Hrs.toml does not list: run `hrs add hrs_std`".into());
             }
         }
     }

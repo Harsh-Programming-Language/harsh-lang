@@ -2619,7 +2619,7 @@ fn main$:
 
 ```text
 None
-thread 'main' panicked at vec_index_panic.hrs:6:
+thread 'main' panicked at vec_index_panic.hrs:7:
 index out of bounds: the len is 5 but the index is 100
 ```
 
@@ -2954,7 +2954,7 @@ fn main$:
 
 ```text
 about to fail
-thread 'main' panicked at panic.hrs:3:
+thread 'main' panicked at panic.hrs:4:
 crash and burn
 ```
 
@@ -2970,7 +2970,7 @@ fn main$:
 ```
 
 ```text
-thread 'main' panicked at panic_index.hrs:3:
+thread 'main' panicked at panic_index.hrs:4:
 index out of bounds: the len is 3 but the index is 99
 ```
 
@@ -3003,7 +3003,7 @@ fn main$:
 ```
 
 ```text
-thread 'main' panicked at result_match.hrs:9:
+thread 'main' panicked at result_match.hrs:10:
 Problem opening the file: Os { code: 2, kind: NotFound, message: "No such file or directory" }
 ```
 
@@ -3052,7 +3052,7 @@ fn main$:
 ```
 
 ```text
-thread 'main' panicked at unwrap_expect.hrs:4:
+thread 'main' panicked at unwrap_expect.hrs:5:
 called `Result::unwrap()` on an `Err` value: Os { code: 2, kind: NotFound, message: "No such file or directory" }
 ```
 
@@ -3070,7 +3070,7 @@ fn main$:
 ```
 
 ```text
-thread 'main' panicked at expect.hrs:6:
+thread 'main' panicked at expect.hrs:7:
 hello.txt should be included in this project: Os { code: 2, kind: NotFound, message: "No such file or directory" }
 ```
 
@@ -3238,7 +3238,7 @@ fn main$:
 
 ```text
 50
-thread 'main' panicked at guess_validate.hrs:8:
+thread 'main' panicked at guess_validate.hrs:9:
 Guess value must be between 1 and 100, got 200.
 ```
 
@@ -3842,7 +3842,7 @@ test tests::another ... FAILED
 test tests::exploration ... ok
 failures:
 ---- tests::another stdout ----
-thread 'tests::another' panicked at failing.hrs:10:
+thread 'tests::another' panicked at failing.hrs:11:
 Make this test fail
 failures:
     tests::another
@@ -3914,7 +3914,7 @@ running 1 test
 test tests::it_adds_two ... FAILED
 failures:
 ---- tests::it_adds_two stdout ----
-thread 'tests::it_adds_two' panicked at assert_eq_fail.hrs:12:
+thread 'tests::it_adds_two' panicked at assert_eq_fail.hrs:13:
 assertion `left == right` failed
   left: 5
  right: 4
@@ -3951,7 +3951,7 @@ running 1 test
 test tests::greeting_contains_name ... FAILED
 failures:
 ---- tests::greeting_contains_name stdout ----
-thread 'tests::greeting_contains_name' panicked at custom_message.hrs:12:
+thread 'tests::greeting_contains_name' panicked at custom_message.hrs:13:
 Greeting did not contain name, value was `Hello!`
 failures:
     tests::greeting_contains_name
@@ -4227,7 +4227,7 @@ fn main$:
 
 ```text
 $ cargo run
-thread 'main' panicked at src/main.hrs:12:
+thread 'main' panicked at src/main.hrs:13:
 not enough arguments
 ```
 
@@ -6604,7 +6604,7 @@ $ hrs test
 running 1 test
 test target/hrs/lib.rs - add_one (line 10) ... ok
 
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.18s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.19s
 ```
 
 `cargo doc --open` renders every `///` and `//!` in the crate as HTML, with the Markdown inside them — headings, code blocks, links — laid out. The conventional sections are `# Examples`, `# Panics` (when the function can), `# Errors` (what `Err`s it returns) and `# Safety` (for `unsafe` functions). The example in the `///` is Harsh, like everything else in the file, and `cargo test` *runs it* — every code block in a doc comment is a test, so documentation cannot drift from the code without failing the build.
@@ -6682,7 +6682,7 @@ hrs_std = "0.1"
 mylib = { path = "../mylib" }
 ```
 
-Paths in `Hrs.toml` are relative to its own folder. Each command speaks to one registry, so a name is never looked up in the wrong one: `hrs add serde` answers that `serde` is a Rust crate, for `cargo add`. The crates for writing procedural macros — `hrs_proc_macro`, `hrs_quote`, `hrs_syn` — are compile-time tools, as `syn` and `quote` are Rust's, and stay in `Cargo.toml`. A project from before 0.3.0, with `hrs_std` in its `Cargo.toml`, is stopped with a message; `hrs migrate` moves it. In the rare project that wants a Harsh crate and a Rust crate of the same name, Cargo's rename keeps both: `foo_rs = { version = "1", package = "foo" }`, and the Rust one is `foo_rs` in your code.
+Paths in `Hrs.toml` are relative to its own folder. In a workspace, a member that inherits (`version.workspace = true`) gets the workspace's values. `hrs export` writes such a project as plain Rust, each Harsh crate it uses exported beside it and named with a path and a version, so `cargo publish` takes them in order. Harsh files inside a Rust project are transpiled together — `hrs src/parser.hrs src/lexer.hrs` — each `.rs` beside its `.hrs`, headed with the name of its source; `hrs --check src/*.hrs` in CI fails when a committed `.rs` has fallen behind. Each command speaks to one registry, so a name is never looked up in the wrong one: `hrs add serde` answers that `serde` is a Rust crate, for `cargo add`. The crates for writing procedural macros — `hrs_proc_macro`, `hrs_quote`, `hrs_syn` — are compile-time tools, as `syn` and `quote` are Rust's, and stay in `Cargo.toml`. A project from before 0.3.0, with `hrs_std` in its `Cargo.toml`, is stopped with a message; `hrs migrate` moves it. In the rare project that wants a Harsh crate and a Rust crate of the same name, Cargo's rename keeps both: `foo_rs = { version = "1", package = "foo" }`, and the Rust one is `foo_rs` in your code.
 
 ## 17.4 Workspaces
 
@@ -6956,7 +6956,7 @@ fn main$:
 ```
 
 ```text
-thread 'main' panicked at refcell_panic.hrs:6:
+thread 'main' panicked at refcell_panic.hrs:7:
 already borrowed: BorrowMutError
 ```
 
@@ -7259,8 +7259,8 @@ error[E0277]: `Rc<Mutex<i32>>` cannot be sent between threads safely
 12 |         let handle = thread.spawn move ||:
    |                      ------------ required by a bound introduced by this call
    |                                   ^^^^^^^^ `Rc<Mutex<i32>>` cannot be sent between threads safely
-   |                                   ------- within this `{closure@mutex_rc_err.hrs:12:36: 12:43}`
-   = help: within `{closure@mutex_rc_err.hrs:12:36: 12:43}`, the trait `Send` is not implemented for `Rc<Mutex<i32>>`
+   |                                   ------- within this `{closure@mutex_rc_err.hrs:13:36: 13:43}`
+   = help: within `{closure@mutex_rc_err.hrs:13:36: 13:43}`, the trait `Send` is not implemented for `Rc<Mutex<i32>>`
    = note: required because it's used within this closure (hrs 12:35)
    = note: required by a bound in `spawn`
 ```

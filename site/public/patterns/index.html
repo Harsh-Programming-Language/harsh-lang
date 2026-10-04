@@ -1262,14 +1262,14 @@ change made to one is missing from the other. First the refusal:</p>
     names <span class="op">&lt;-</span> push <span class="p">(</span><span class="t">String</span><span class="p">.</span>from <span class="str">"Grace"</span><span class="p">)</span>
     <span class="mac">println!</span> <span class="str">"{first}"</span></code></pre>
 <pre class="code"><code>error[E0502]: cannot borrow `names` as mutable because it is also borrowed as immutable
- --&gt; clone_refused.hrs:5:5
+ --&gt; clone_refused.hrs:6:5
   |
-3 |     let first = &amp;names[0];
+4 |     let first = &amp;names[0];
   |                  ----- immutable borrow occurs here
-4 |     // Refused: `names` is borrowed by `first` while we push.
-5 |     names.push(String::from("Grace"));
+5 |     // Refused: `names` is borrowed by `first` while we push.
+6 |     names.push(String::from("Grace"));
   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ mutable borrow occurs here
-6 |     println!("{first}")
+7 |     println!("{first}")
   |               ------- immutable borrow later used here
 
 error: aborting due to previous error

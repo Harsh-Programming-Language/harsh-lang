@@ -11,7 +11,7 @@ it is uploaded anywhere: a fix afterwards gets the next number.
 **Verified for this delivery:** 277 tests, 0 ignored, no warnings;
 `check.sh`, with the self-host and the website's four gates; the public
 tree's own 277 tests; the Jupyter kernel's 6 tests. Under 0.1.31, whose
-transpiler 0.3.0 keeps unchanged: the guide's 99 blocks, the Book's 248
+transpiler 0.3.1 keeps unchanged: the guide's 99 blocks, the Book's 248
 snippets and *By Example*'s 62 built and run, Harshlings' 65 exercises with
 0 problems.
 
@@ -31,7 +31,7 @@ Cargo's promise for versions below 1.0 (the user's rule, 2026-09-30):
 
 In the delivery bundle, this file sits in `_Installation & Deployment/` with
 `TESTING.md` (what is new, and how to try it) and `DEPLOY-WEBSITE.md` (a copy
-of `site/DEPLOY.md`). Beside that folder: `harsh-public-0.3.0.tar.gz` (the public tree: the
+of `site/DEPLOY.md`). Beside that folder: `harsh-public-0.3.1.tar.gz` (the public tree: the
 crate, the kernel's sources in `kernel/`, the website in `site/`),
 `harshlings-0.1.7.tar.gz`, `editors/` (the VS Code `.vsix`, the Zed
 repositories), `jupyter/` (the kernel's wheel). Everything else is in the
@@ -42,7 +42,7 @@ public tree: what is new in `CHANGELOG.md`; the website's full guide in
 
 | Product | Version | Where it is published | From |
 |---|---|---|---|
-| `harsh-lang` -- `hrs`, `hrs-from`, `hrs-remap`, `hrs-lsp` | **0.3.0** | crates.io | this repository |
+| `harsh-lang` -- `hrs`, `hrs-from`, `hrs-remap`, `hrs-lsp` | **0.3.1** | crates.io | this repository |
 | Harsh's standard distribution -- `hrs_std` 0.1.4, `hrs_proc_macro` 0.2.0, `hrs_quote` 0.1.0, `hrs_syn` 0.1.0 | inside `hrs` | nowhere: shipped inside `harsh-lang` | this repository |
 | The Jupyter kernel, `harsh-kernel` | **0.1.3** | PyPI | `kernel/` |
 | The VS Code extension, `harsh-lang.harsh-lang` | **0.1.5** | the VS Code Marketplace (Open VSX: not yet) | `editors/vscode-harsh/`; the `.vsix` in the bundle |
@@ -80,7 +80,7 @@ From a fresh copy of the public tree:
 
 ```sh
 mkdir -p ~/harsh-release && cd ~/harsh-release
-tar -xzf /path/to/bundle/harsh-public-0.3.0.tar.gz        # makes harsh/
+tar -xzf /path/to/bundle/harsh-public-0.3.1.tar.gz        # makes harsh/
 cd harsh
 cargo test                                          # 277 passed, 0 ignored
 ./check.sh                                          # the examples, the self-host, the site's gates (the editor's needs node)
@@ -176,11 +176,11 @@ carries `.github/workflows/pages.yml`, which GitHub refuses otherwise.
 
 ```sh
 cd harsh-lang                                       # your clone of the GitLab home
-tar -xzf /path/to/bundle/harsh-public-0.3.0.tar.gz --strip-components=1
+tar -xzf /path/to/bundle/harsh-public-0.3.1.tar.gz --strip-components=1
 test ! -d harsh && grep '^version' Cargo.toml       # version = "0.2.1", and no harsh/ folder
 git status
 git add -A
-git commit -m "0.3.0: Hrs.toml, Harsh's own manifest"
+git commit -m "0.3.1: export takes Harsh crates along; workspaces; --check; two converter gaps"
 git tag -a v0.2.1 -m "0.2.1"
 git push origin main v0.2.1                        # if it times out: push main, then the tag
 ```

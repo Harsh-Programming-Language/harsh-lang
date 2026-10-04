@@ -68,6 +68,9 @@ def transpile(harsh):
         path = f.name
     r = subprocess.run([HRS, path, "-o", path[:-4] + ".rs"], capture_output=True, text=True)
     out = open(path[:-4] + ".rs").read() if r.returncode == 0 else None
+    # Since 0.3.1 a written file starts with a header naming its source.
+    if out is not None and out.startswith("// Generated from "):
+        out = out.split("\n", 1)[1]
     for p in (path, path[:-4] + ".rs", path[:-4] + ".rs.map.json"):
         try:
             os.unlink(p)

@@ -1,6 +1,6 @@
 # Roadmap
 
-Sizing is relative: XS, S, M, L. "Blocked by" matters more than the estimate.
+Sizing is relative to one session. "Blocked by" matters more than the estimate.
 
 ## Done
 
@@ -14,6 +14,7 @@ Sizing is relative: XS, S, M, L. "Blocked by" matters more than the estimate.
 - Harsh's own proc macros, the function-like form (0.1.28, ruling 17): a Harsh function marked `#[proc_macro~]`, called `name~ stream`, run by a generated runner when the caller is transpiled; `hrs_proc_macro` 0.1.0
 - Harsh derives (0.1.29), mirroring Rust's: `#[proc_macro_derive~ Name]` with optional helper attributes, called `#[derive~ Name]`
 - Language guide doubled — tutorial plus every construct in every form — with every snippet transpiled, compiled and run
+- `docs/dev/HANDOVER.md` and `docs/dev/RESUME.md` with each delivery
 - Driver verified on a Mac with rustc 1.97 and current cargo: `new`, `build`, `run`, remapping. Manifest guard (refuses to build without a target under `target/hrs/`), always-on transpile report, equal-mtime staleness, progress bar suppressed; remapper locates zero-width insertion spans; application-vs-`<-` precedence stated in the guide and pinned by a test
 
 ## Open, in order (2026-09-25)
@@ -27,7 +28,7 @@ after a few days with it. What needs no decision is done, or listed last below.
 
 ### `Hrs.toml` -- Harsh's own manifest: built 2026-10-03 (0.3.0)
 
-**Built as designed below, with one change found in building:** only `hrs_std` (and Harsh crates) go in `Hrs.toml`; the procedural-macro crates stay in `Cargo.toml` -- the user's own principle, "except the macro crates". **Still open from this entry:** `hrs export` of a project with Harsh path dependencies (the exported crate does not carry them yet); a parent workspace's inherited fields (`version.workspace = true`) are lost in the generated manifest, which is its own workspace; the #3 additions (`--check`, several files, the header); Harshlings' projects, if any list `hrs_std` in `Cargo.toml` (not in this tree); rust-analyzer through the generated manifest is untested here.
+**Built as designed below, with one change found in building:** only `hrs_std` (and Harsh crates) go in `Hrs.toml`; the procedural-macro crates stay in `Cargo.toml` -- the user's own principle, "except the macro crates". **Done in 0.3.1:** `hrs export` of a project with Harsh path dependencies; a workspace's inherited fields; the #3 additions (`--check`, several files, the header). **Still open:** Harshlings' projects, if any list `hrs_std` in `Cargo.toml` (not in this tree); rust-analyzer through the generated manifest is untested here.
 
 **The principle (the user's):** Harsh crates, nested or downloaded, exist to
 be a level above Rust. Like Rust's non-macro crates they provide code --
@@ -86,13 +87,42 @@ produces), several files at once (sibling files see each other's arities),
 and a header in each generated file (`// Generated from parser.hrs by hrs;
 edit that file.`); the #3 template sets up `--check` by default.
 
+### First: `.<T>`, the turbofish as Harsh writes it (decided 2026-10-03, for 0.4.0)
+
+**The rule (the user's):** Rust's `::` is Harsh's `.`, everywhere -- the
+turbofish included. A generic list in an expression is written `.<T>`:
+
+| Harsh | Rust |
+| :--- | :--- |
+| `Vec.<u32>.new$` | `Vec::<u32>::new()` |
+| `std.mem.size_of.<u32>$` | `std::mem::size_of::<u32>()` |
+| `Vec.<u32>.with_capacity 4` | `Vec::<u32>::with_capacity(4)` |
+| `Layout.array.<u32> 4` | `Layout::array::<u32>(4)` |
+| `"42" <- parse.<i32>$` | `"42".parse::<i32>()` |
+| `v <- iter$ <- sum.<i32>$` | `v.iter().sum::<i32>()` |
+
+All of these transpile correctly already (checked 2026-10-03). Type position
+is untouched: `let v: Vec<u32>` is a type, as in Rust.
+
+**The old form is refused (the user's decision):** `Vec<u32>.new$`,
+`size_of<u32>$`, `parse<i32>$` -- the guide's "you never write turbofish
+yourself", where the transpiler inserted `::` -- becomes an error giving the
+fix: "a generic list in an expression is written `.<T>`, as Rust's `::<T>`:
+`Vec.<u32>.new$`". One spelling, one rule; the message teaches it. Breaking,
+so 0.4.0. The "missing turbofish" (`Layout.array<u32> 4`) was never a gap:
+it is the wrong syntax.
+
+**To do:** the refusal in the transpiler (where it now inserts the
+turbofish after a generic list followed by a path step, a call or `$`,
+refuse instead -- in expression position only); the guide's *Generics*
+section rewritten around the mapping (it teaches the opposite now); the
+cheat sheet (`mem.size_of<u32>$`, `parse<i32>$`, `sum<i32>$` rows);
+*Harsh at a glance*; every Harsh program in the books, examples, site and
+tests written the old way (the error finds them); the converter, which must
+write `.<T>` for Rust's `::<T>`; a test of the refusal and of each form.
+
 ### Waiting on the user, after his testing
 
-- **Converter: a method called on a struct literal** -- `Project { root:
-  r }.prepare(x)` converts to `Project\ root = r <- prepare x`, the literal's
-  end lost (found 2026-10-03 by the self-round-trip on hrs-lsp.rs; worked
-  around there by binding the literal first). The converter should isolate
-  the literal: `(Project\ root = r) <- prepare x`.
 
 
 
@@ -116,12 +146,6 @@ edit that file.`); the #3 template sets up `--check` by default.
 
 - ~~**The Harshonomicon**~~ -- delivered in 0.1.45 (13 chapters, 35
   programs), after *Harsh Design Patterns* in 0.1.44.
-- **A generic function applied to arguments gets no turbofish.**
-  `Layout.array<u32> 4` stays `Layout::array<u32> 4` -- a Rust parse error --
-  while `mem.size_of<u32>$` and `sum<u32>$` are turbofished. The books work
-  around it (`Layout.from_size_align`, a typed binding for `transmute`); the
-  transpiler should turbofish a generic list followed by an argument too.
-  Found 2026-09-28.
 - **Books quote the generated Rust in error excerpts.** The books' builders
   remap an error's positions with `hrs-remap`, but its excerpt still quotes
   the generated Rust (`names.push(String::from(..))`) -- in *Harsh by

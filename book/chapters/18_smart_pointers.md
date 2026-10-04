@@ -249,7 +249,7 @@ fn main$:
 ```
 
 ```text
-thread 'main' panicked at refcell_panic.hrs:6:
+thread 'main' panicked at refcell_panic.hrs:7:
 already borrowed: BorrowMutError
 ```
 

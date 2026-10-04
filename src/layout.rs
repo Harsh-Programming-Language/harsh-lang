@@ -1026,7 +1026,14 @@ fn check_old_marks(ln: &Line, outer: BlockKind) -> Result<(), LayoutError> {
             }
             d == 0 && t.is_kw("match")
         });
-        if is_match && !sig.iter().any(|t| t.is_kw("if") || t.is_kw("while")) {
+        // A `:` inside a bracket still open at the line's end is a closure's,
+        // `match x <- and_then (|d|:` with its body beneath (2026-10-03).
+        let open_at_end = sig.iter().fold(0i32, |d, t| match t.kind {
+            Tk::Open(_) => d + 1,
+            Tk::Close(_) => d - 1,
+            _ => d,
+        }) > 0;
+        if is_match && !open_at_end && !sig.iter().any(|t| t.is_kw("if") || t.is_kw("while")) {
             let head_end = sig.len() - if sig.len() >= 2 && sig[sig.len() - 2].is_kw("do") { 2 } else { 1 };
             let head: Vec<&str> = sig[..head_end].iter().map(|t| t.text.as_str()).collect();
             return Err(LayoutError {

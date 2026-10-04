@@ -509,7 +509,9 @@ Rust. A macro's own language — an `rsx!` tree, `view!` markup, `select!` arms
 | `hrs fmt` · `hrs fmt --check` | lay out the files by Harsh's rules |
 | `hrs add hrs_std` | add Harsh's crates, to `Hrs.toml` (Rust crates: `cargo add`, to `Cargo.toml`) |
 | `hrs migrate` | move `hrs_std` from a pre-0.3.0 `Cargo.toml` to `Hrs.toml` |
-| `hrs in.hrs -o out.rs` | transpile one file, anywhere |
+| `hrs in.hrs -o out.rs` | transpile one file, anywhere; the `.rs` starts with a header naming its source |
+| `hrs a.hrs b.hrs` | several files, each beside its `.hrs`, seeing each other's functions |
+| `hrs --check a.hrs b.hrs` | write nothing; fail if a `.rs` is not what its `.hrs` makes (for CI) |
 | `hrs export` | the project as a plain Rust crate |
 | `hrs-from file.rs` | convert Rust to Harsh |
 | Editors | `hrs-lsp`: Enter and Tab by layout, format on save, hover, definitions, completion |
@@ -526,9 +528,12 @@ Rust. A macro's own language — an `rsx!` tree, `view!` markup, `select!` arms
   the user's `Hrs.toml`: `mylib = { path = "../mylib" }`, Harsh macros
   included. Harsh's registry is still to come.
 - **#2:** `hrs new`, `hrs build`, then `hrs export` and `cargo publish`.
-  Exported Harsh macros do not survive the export.
+  A Harsh crate it uses is exported beside it (`target/export-mylib`) and
+  named with a path and a version: publish that one first. Exported Harsh
+  macros do not survive the export.
 - **#3:** `cargo new`; each `.hrs` file beside the `.rs` it produces, with
-  `hrs src/parser.hrs -o src/parser.rs`; commit the `.rs`, then
+  `hrs src/parser.hrs src/lexer.hrs` (files given together see each other's
+  functions); commit the `.rs`, put `hrs --check src/*.hrs` in CI, then
   `cargo publish`.
 
 ## Layout style

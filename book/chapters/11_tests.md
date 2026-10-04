@@ -50,7 +50,7 @@ test tests::another ... FAILED
 test tests::exploration ... ok
 failures:
 ---- tests::another stdout ----
-thread 'tests::another' panicked at failing.hrs:10:
+thread 'tests::another' panicked at failing.hrs:11:
 Make this test fail
 failures:
     tests::another
@@ -122,7 +122,7 @@ running 1 test
 test tests::it_adds_two ... FAILED
 failures:
 ---- tests::it_adds_two stdout ----
-thread 'tests::it_adds_two' panicked at assert_eq_fail.hrs:12:
+thread 'tests::it_adds_two' panicked at assert_eq_fail.hrs:13:
 assertion `left == right` failed
   left: 5
  right: 4
@@ -159,7 +159,7 @@ running 1 test
 test tests::greeting_contains_name ... FAILED
 failures:
 ---- tests::greeting_contains_name stdout ----
-thread 'tests::greeting_contains_name' panicked at custom_message.hrs:12:
+thread 'tests::greeting_contains_name' panicked at custom_message.hrs:13:
 Greeting did not contain name, value was `Hello!`
 failures:
     tests::greeting_contains_name

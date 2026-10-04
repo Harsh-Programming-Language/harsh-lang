@@ -454,7 +454,7 @@ returning something wrong:</p>
     <span class="mac">println!</span> <span class="str">"reaching for element {n}"</span>
     <span class="mac">println!</span> <span class="str">"{}"</span> xs<span class="p">[</span>n<span class="p">]</span></code></pre>
 <pre class="code"><code>reaching for element 5
-thread 'main' panicked at out_of_range.hrs:5:20:</code></pre>
+thread 'main' panicked at out_of_range.hrs:6:20:</code></pre>
 <h2 id="3-custom-types">3. Custom types</h2>
 <h3 id="3-1-structures">3.1 Structures</h3>
 <pre class="code harsh"><code><span class="attr">#[derive Debug]</span>
@@ -608,14 +608,14 @@ runs:</p>
     x <span class="p">=</span> <span class="num">2</span>
     <span class="mac">println!</span> <span class="str">"{x}"</span></code></pre>
 <pre class="code"><code>error[E0384]: cannot assign twice to immutable variable `x`
- --&gt; immutable.hrs:3:5
+ --&gt; immutable.hrs:4:5
   |
-2 |     let x = 1;
+3 |     let x = 1;
   |         -
   |         |
   |         first assignment to `x`
   |         help: consider making this binding mutable: `mut x`
-3 |     x = 2;
+4 |     x = 2;
   |     ^^^^^ cannot assign twice to immutable variable
 
 error: aborting due to previous error
@@ -1149,26 +1149,26 @@ and small copyable values such as integers are copied rather than moved.</p>
     consume a
     <span class="mac">println!</span> <span class="str">"{a}"</span></code></pre>
 <pre class="code"><code>error[E0382]: borrow of moved value: `a`
- --&gt; use_after_move.hrs:8:15
+ --&gt; use_after_move.hrs:9:15
   |
-6 |     let a = String::from("hello");
+7 |     let a = String::from("hello");
   |         - move occurs because `a` has type `String`, which does not implement the `Copy` trait
-7 |     consume(a);
+8 |     consume(a);
   |             - value moved here
-8 |     println!("{a}")
+9 |     println!("{a}")
   |               ^^^ value borrowed here after move
   |
 note: consider changing this parameter type in function `consume` to borrow instead if owning the value isn't necessary
- --&gt; use_after_move.hrs:1:15
+ --&gt; use_after_move.hrs:2:15
   |
-1 | fn consume(s: String) {
+2 | fn consume(s: String) {
   |    -------    ^^^^^^ this parameter takes ownership of the value
   |    |
   |    in this function
   = note: this error originates in the macro `$crate::format_args_nl` which comes from the expansion of the macro `println` (in Nightly builds, run with -Z macro-backtrace for more info)
 help: consider cloning the value if the performance cost is acceptable
   |
-7 |     consume(a.clone());
+8 |     consume(a.clone());
   |              ++++++++
 
 error: aborting due to previous error
@@ -1579,9 +1579,9 @@ import is written with parentheses: <code>use std.io.(Read, Write)</code>.</p>
     <span class="k">let</span> c <span class="p">=</span> counter<span class="p">.</span><span class="t">Counter</span><span class="p">.</span>new<span class="defer">$</span>
     <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span>c <span class="op">&lt;-</span> value<span class="p">)</span></code></pre>
 <pre class="code"><code>error[E0616]: field `value` of struct `Counter` is private
-  --&gt; privacy.hrs:18:22
+  --&gt; privacy.hrs:19:22
    |
-18 |     println!("{}", c.value)
+19 |     println!("{}", c.value)
    |                      ^^^^^ private field
 
 error: aborting due to previous error
@@ -1782,27 +1782,27 @@ uses. Attached to <code>for a</code>, the same test cannot see <code>b</code>:</
             <span class="k">for</span> c <span class="k">in</span> b<span class="op">..</span><span class="num">20</span>
     <span class="mac">println!</span> <span class="str">"{triples:?}"</span></code></pre>
 <pre class="code"><code>error[E0425]: cannot find value `b` in this scope
- --&gt; too_early.hrs:4:80
+ --&gt; too_early.hrs:5:80
   |
-4 | ....flat_map(move | a | ((true &amp;&amp;(a * a + b * b == c * c)).then(|| ((a .. 20).into_iter().flat_map(move | b | ((true).then(|| ((b .. 20)....
+5 | ....flat_map(move | a | ((true &amp;&amp;(a * a + b * b == c * c)).then(|| ((a .. 20).into_iter().flat_map(move | b | ((true).then(|| ((b .. 20)....
   |                                           ^ help: a local variable with a similar name exists: `a`
 
 error[E0425]: cannot find value `b` in this scope
- --&gt; too_early.hrs:4:84
+ --&gt; too_early.hrs:5:84
   |
-4 | ...t_map(move | a | ((true &amp;&amp;(a * a + b * b == c * c)).then(|| ((a .. 20).into_iter().flat_map(move | b | ((true).then(|| ((b .. 20).into...
+5 | ...t_map(move | a | ((true &amp;&amp;(a * a + b * b == c * c)).then(|| ((a .. 20).into_iter().flat_map(move | b | ((true).then(|| ((b .. 20).into...
   |                                           ^ help: a local variable with a similar name exists: `a`
 
 error[E0425]: cannot find value `c` in this scope
- --&gt; too_early.hrs:4:89
+ --&gt; too_early.hrs:5:89
   |
-4 | ...(move | a | ((true &amp;&amp;(a * a + b * b == c * c)).then(|| ((a .. 20).into_iter().flat_map(move | b | ((true).then(|| ((b .. 20).into_iter...
+5 | ...(move | a | ((true &amp;&amp;(a * a + b * b == c * c)).then(|| ((a .. 20).into_iter().flat_map(move | b | ((true).then(|| ((b .. 20).into_iter...
   |                                           ^ help: a local variable with a similar name exists: `a`
 
 error[E0425]: cannot find value `c` in this scope
- --&gt; too_early.hrs:4:93
+ --&gt; too_early.hrs:5:93
   |
-4 | ...e | a | ((true &amp;&amp;(a * a + b * b == c * c)).then(|| ((a .. 20).into_iter().flat_map(move | b | ((true).then(|| ((b .. 20).into_iter().f...
+5 | ...e | a | ((true &amp;&amp;(a * a + b * b == c * c)).then(|| ((a .. 20).into_iter().flat_map(move | b | ((true).then(|| ((b .. 20).into_iter().f...
   |                                           ^ help: a local variable with a similar name exists: `a`
 
 error: aborting due to 4 previous errors

@@ -52,26 +52,26 @@ fn main$:
 
 ```text
 error[E0382]: borrow of moved value: `a`
- --> use_after_move.hrs:8:15
+ --> use_after_move.hrs:9:15
   |
-6 |     let a = String::from("hello");
+7 |     let a = String::from("hello");
   |         - move occurs because `a` has type `String`, which does not implement the `Copy` trait
-7 |     consume(a);
+8 |     consume(a);
   |             - value moved here
-8 |     println!("{a}")
+9 |     println!("{a}")
   |               ^^^ value borrowed here after move
   |
 note: consider changing this parameter type in function `consume` to borrow instead if owning the value isn't necessary
- --> use_after_move.hrs:1:15
+ --> use_after_move.hrs:2:15
   |
-1 | fn consume(s: String) {
+2 | fn consume(s: String) {
   |    -------    ^^^^^^ this parameter takes ownership of the value
   |    |
   |    in this function
   = note: this error originates in the macro `$crate::format_args_nl` which comes from the expansion of the macro `println` (in Nightly builds, run with -Z macro-backtrace for more info)
 help: consider cloning the value if the performance cost is acceptable
   |
-7 |     consume(a.clone());
+8 |     consume(a.clone());
   |              ++++++++
 
 error: aborting due to previous error

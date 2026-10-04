@@ -612,6 +612,48 @@ impl Project {
             .status()
             .map(|s| s.success())
             .unwrap_or(false);
+        // The Harsh crates this one uses (Hrs.toml), each exported beside it
+        // -- `target/export-mylib` -- and named with a path and a version, as
+        // Cargo's own workspaces are published: the path while building, the
+        // version on crates.io, once that crate is published first.
+        #[cfg(feature = "remap")]
+        {
+            let mut files = files;
+            if let Some(m) = read_hrs_manifest(&self.root)? {
+                let mut lines = Vec::new();
+                for (name, value) in &m.deps {
+                    if DISTRIBUTION.contains(&name.as_str()) {
+                        continue;
+                    }
+                    let Some(i) = value.find("path = \"") else { continue };
+                    let at = i + 8;
+                    let Some(len) = value[at..].find('"') else { continue };
+                    let dep_root = self.root.join(&value[at..at + len]);
+                    let dep = Project { root: dep_root.canonicalize().unwrap_or(dep_root) };
+                    let base = dir.file_name().map(|f| f.to_string_lossy().to_string()).unwrap_or_else(|| "export".into());
+                    let dep_dir = dir.with_file_name(format!("{base}-{name}"));
+                    let e = dep.export(&dep_dir)?;
+                    files.extend(e.files);
+                    let version = fs::read_to_string(dep.root.join("Cargo.toml"))
+                        .ok()
+                        .and_then(|t| t.lines().find_map(|l| l.trim().strip_prefix("version = \"").map(|v| v.trim_end_matches('"').to_string())))
+                        .unwrap_or_else(|| "0.1.0".into());
+                    lines.push(format!("{name} = {{ path = \"../{base}-{name}\", version = \"{version}\" }}"));
+                }
+                if !lines.is_empty() {
+                    let manifest = dir.join("Cargo.toml");
+                    let text = fs::read_to_string(&manifest).map_err(|e| format!("{}: {e}", manifest.display()))?;
+                    let text = if text.contains("[dependencies]") {
+                        text.replacen("[dependencies]", &format!("[dependencies]\n{}", lines.join("\n")), 1)
+                    } else {
+                        format!("{}\n\n[dependencies]\n{}\n", text.trim_end(), lines.join("\n"))
+                    };
+                    fs::write(&manifest, text).map_err(|e| format!("{}: {e}", manifest.display()))?;
+                }
+            }
+            return Ok(Export { files, formatted });
+        }
+        #[cfg(not(feature = "remap"))]
         Ok(Export { files, formatted })
     }
 
@@ -673,6 +715,7 @@ impl Project {
             }
             extra.push(format!("{name} = {value}"));
         }
+        let cargo_text = resolve_workspace(&cargo_text, &cargo_dir);
         let text = generated_manifest(&cargo_text, &cargo_dir, &extra);
         let gen = self.root.join(GEN_DIR).join("Cargo.toml");
         fs::create_dir_all(gen.parent().unwrap()).map_err(|e| format!("{}: {e}", gen.display()))?;
@@ -1169,6 +1212,106 @@ pub fn migrate(cargo: &str, hrs: Option<&str>) -> (String, String, Vec<String>) 
 /// every relative `path`/`build` made absolute (the file moved), its own
 /// `[workspace]` (so a workspace above it does not claim it), and `extra`
 /// dependency lines added to `[dependencies]`.
+/// A workspace member's inherited fields written out (2026-10-03): the
+/// generated manifest is its own workspace, so `version.workspace = true`
+/// and `serde = { workspace = true, features = [..] }` take their values
+/// from the nearest `[workspace]` above `cargo_dir` -- `[workspace.package]`
+/// and `[workspace.dependencies]`, a path there made absolute from the
+/// workspace's root. Without a workspace above, the text is unchanged.
+pub fn resolve_workspace(cargo_text: &str, cargo_dir: &Path) -> String {
+    if !cargo_text.contains("workspace = true") {
+        return cargo_text.to_string();
+    }
+    let mut ws: Option<(PathBuf, String)> = None;
+    let mut d = cargo_dir.parent();
+    while let Some(dir) = d {
+        if let Ok(t) = fs::read_to_string(dir.join("Cargo.toml")) {
+            if t.lines().any(|l| l.trim() == "[workspace]") {
+                ws = Some((dir.to_path_buf(), t));
+                break;
+            }
+        }
+        d = dir.parent();
+    }
+    let Some((ws_dir, ws_text)) = ws else { return cargo_text.to_string() };
+    // The workspace's tables, `name = value` as written.
+    let mut package = std::collections::HashMap::new();
+    let mut deps = std::collections::HashMap::new();
+    let mut table = String::new();
+    for raw in ws_text.lines() {
+        let line = raw.trim();
+        if line.starts_with('[') {
+            table = line.to_string();
+            continue;
+        }
+        let Some((k, v)) = line.split_once('=') else { continue };
+        let (k, mut v) = (k.trim().to_string(), v.trim().to_string());
+        if let Some(i) = v.find("path = \"") {
+            let at = i + 8;
+            if let Some(len) = v[at..].find('"') {
+                let rel = v[at..at + len].to_string();
+                if !Path::new(&rel).is_absolute() {
+                    v.replace_range(at..at + len, &manifest_path_str(&ws_dir.join(&rel)));
+                }
+            }
+        }
+        match table.as_str() {
+            "[workspace.package]" => {
+                package.insert(k, v);
+            }
+            "[workspace.dependencies]" => {
+                deps.insert(k, v);
+            }
+            _ => {}
+        }
+    }
+    let mut out = Vec::new();
+    table.clear();
+    for raw in cargo_text.lines() {
+        let line = raw.trim();
+        if line.starts_with('[') {
+            table = line.to_string();
+            out.push(raw.to_string());
+            continue;
+        }
+        let in_deps = table.contains("dependencies");
+        // `key.workspace = true`
+        if let Some(key) = line.strip_suffix(".workspace = true") {
+            let key = key.trim();
+            let found = if in_deps { deps.get(key) } else { package.get(key) };
+            if let Some(v) = found {
+                out.push(format!("{key} = {v}"));
+                continue;
+            }
+        }
+        // `key = { workspace = true, more.. }`
+        if let Some((key, value)) = line.split_once('=') {
+            let (key, value) = (key.trim(), value.trim());
+            if value.starts_with('{') && value.contains("workspace = true") {
+                let found = if in_deps { deps.get(key) } else { package.get(key) };
+                if let Some(v) = found {
+                    let more: Vec<&str> = value
+                        .trim_matches(|c| c == '{' || c == '}')
+                        .split(',')
+                        .map(str::trim)
+                        .filter(|p| !p.is_empty() && *p != "workspace = true")
+                        .collect();
+                    let base = if v.starts_with('{') {
+                        v.trim_matches(|c| c == '{' || c == '}').trim().to_string()
+                    } else {
+                        format!("version = {v}")
+                    };
+                    let all: Vec<String> = std::iter::once(base).chain(more.iter().map(|m| m.to_string())).collect();
+                    out.push(format!("{key} = {{ {} }}", all.join(", ")));
+                    continue;
+                }
+            }
+        }
+        out.push(raw.to_string());
+    }
+    out.join("\n") + "\n"
+}
+
 /// A path as a TOML string's contents: forward slashes, which Cargo reads
 /// on every platform.
 pub fn manifest_path_str(p: &Path) -> String {

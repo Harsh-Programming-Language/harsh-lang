@@ -1417,14 +1417,14 @@ fn main$:
 
 ```text
 error[E0502]: cannot borrow `names` as mutable because it is also borrowed as immutable
- --> clone_refused.hrs:5:5
+ --> clone_refused.hrs:6:5
   |
-3 |     let first = &names[0];
+4 |     let first = &names[0];
   |                  ----- immutable borrow occurs here
-4 |     // Refused: `names` is borrowed by `first` while we push.
-5 |     names.push(String::from("Grace"));
+5 |     // Refused: `names` is borrowed by `first` while we push.
+6 |     names.push(String::from("Grace"));
   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ mutable borrow occurs here
-6 |     println!("{first}")
+7 |     println!("{first}")
   |               ------- immutable borrow later used here
 
 error: aborting due to previous error

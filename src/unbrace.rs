@@ -42,6 +42,13 @@ enum Kind {
 }
 
 pub fn convert(src: &str) -> Result<String, String> {
+    // A file `hrs` wrote starts with a header naming its Harsh source
+    // (0.3.1); it says where the Rust came from, and is no part of the
+    // program -- dropped, so a round trip does not stack them.
+    let src = match src.split_once('\n') {
+        Some((first, rest)) if first.starts_with("// Generated from ") && first.contains(" by hrs;") => rest,
+        _ => src,
+    };
     // A Rust `macro_rules!` is Rust on both sides of the boundary (2026-09-17,
     // two worlds): it is copied into the Harsh file verbatim rather than
     // converted, so the round trip is byte-exact for free. Harsh's own macros
@@ -2834,7 +2841,27 @@ impl<'a> Writer<'a> {
                             // A bracket inside a literal is text: `Tk.Open '['`
                             // before the `match` left the depth at one, and the
                             // retired `match x:` was written (found 2026-09-21).
-                            let line = mask_literals(&line);
+                            // The statement, not only its last line: a scrutinee
+                            // ending in a paren block, `match x.and_then(|d| {
+                            // .. })`, leaves `)` alone on the last line, and the
+                            // `match` lines above it (found 2026-10-03).
+                            let line = {
+                                let lines: Vec<&str> = self.out.split('\n').collect();
+                                let bal = |t: &str| {
+                                    mask_literals(t).chars().fold(0i32, |d, c| match c {
+                                        '(' | '[' => d + 1,
+                                        ')' | ']' => d - 1,
+                                        _ => d,
+                                    })
+                                };
+                                let mut k = lines.len().saturating_sub(1);
+                                let mut text = lines.get(k).copied().unwrap_or("").to_string();
+                                while bal(&text) < 0 && k > 0 {
+                                    k -= 1;
+                                    text = format!("{} {}", lines[k], text);
+                                }
+                                mask_literals(&text)
+                            };
                             for w in line.split_whitespace() {
                                 for c in w.chars() {
                                     match c {
@@ -3106,9 +3133,14 @@ impl<'a> Writer<'a> {
                                     c == '{' && oc.map_or(false, |oc| toks[oc].line == toks[o].line && Self::is_struct_literal(toks, o, oc))
                                 })
                             };
+                            // A literal reached through, `P { r: 1 }.twice()`:
+                            // isolated, `(P\ r = 1) <- twice$`, or its list
+                            // would take the chain (found 2026-10-03).
+                            let reached = toks.get(close + 1).map_or(false, |t| t.text == ".");
                             let in_brackets = (innermost_open_is_bracket(toks, i) && !last_in_brackets && !macro_list)
                                 || innermost_open_is_tuple(toks, i)
-                                || nested_inline;
+                                || nested_inline
+                                || reached;
                             if in_brackets {
                                 // The name is already written: put `(` before it.
                                 let line = self.out.rsplit('\n').next().unwrap_or("").to_string();

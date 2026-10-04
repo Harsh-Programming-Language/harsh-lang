@@ -79,8 +79,11 @@ done
 
 say "Round trip: Rust -> Harsh -> Rust"
 for f in general edge params brackets; do
-    "$BIN/hrs-from" "$WORK/$f.rs" -o "$WORK/$f.back.hrs"
-    "$BIN/hrs" "$WORK/$f.back.hrs" -o "$WORK/$f.back.rs"
+    # The converted Harsh keeps its file's name, in a folder of its own, so
+    # the header `hrs` writes (0.3.1) names the same source on both sides.
+    mkdir -p "$WORK/back"
+    "$BIN/hrs-from" "$WORK/$f.rs" -o "$WORK/back/$f.hrs"
+    "$BIN/hrs" "$WORK/back/$f.hrs" -o "$WORK/$f.back.rs"
     if diff -q "$WORK/$f.rs" "$WORK/$f.back.rs" > /dev/null; then
         echo "  $f: byte-identical"
     elif diff -q <(tr -d ' \n' < "$WORK/$f.rs") <(tr -d ' \n' < "$WORK/$f.back.rs") > /dev/null; then

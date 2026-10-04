@@ -198,6 +198,9 @@ hrs new   <name>           create a project laid out for Harsh
 hrs add   <crate>..         add Harsh crates to Hrs.toml (hrs_std, ...);
                            a Rust crate is added to Cargo.toml with cargo add
 hrs migrate                move Harsh's crates from Cargo.toml to Hrs.toml
+hrs <a.hrs> [b.hrs ..]     transpile files in a Rust project, each beside its
+                           .hrs, seeing each other's functions; --check
+                           writes nothing and fails on a stale .rs
 hrs export [dir]           write the project as a plain Rust crate,
                            formatted with cargo fmt (default: target/export)
 hrs dist  <dir>            write Harsh's standard distribution (hrs_std and

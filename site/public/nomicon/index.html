@@ -470,14 +470,14 @@ same value. The compiler refuses a second <code>&amp;mut</code>:</p>
     <span class="p">*</span>a <span class="op">+=</span> <span class="num">1</span>
     <span class="p">*</span>b <span class="op">+=</span> <span class="num">1</span></code></pre>
 <pre class="code"><code>error[E0499]: cannot borrow `total` as mutable more than once at a time
- --&gt; references.hrs:5:13
+ --&gt; references.hrs:6:13
   |
-3 |     let a = &amp;mut total;
+4 |     let a = &amp;mut total;
   |             ---------- first mutable borrow occurs here
-4 |     // Refused: `total` is already borrowed mutably by `a`.
-5 |     let b = &amp;mut total;
+5 |     // Refused: `total` is already borrowed mutably by `a`.
+6 |     let b = &amp;mut total;
   |             ^^^^^^^^^^ second mutable borrow occurs here
-6 |     *a += 1;
+7 |     *a += 1;
   |     ------- first borrow later used here
 
 error: aborting due to previous error
@@ -540,39 +540,39 @@ others.</p>
     <span class="k">let</span> <span class="k">mut</span> m <span class="p">=</span> <span class="t">HashMap</span><span class="p">.</span>new<span class="defer">$</span>
     <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span>get_default <span class="p">(</span><span class="p">&amp;</span><span class="k">mut</span> m<span class="p">)</span> <span class="num">1</span><span class="p">)</span></code></pre>
 <pre class="code"><code>error[E0499]: cannot borrow `*map` as mutable more than once at a time
-  --&gt; limits.hrs:9:21
+  --&gt; limits.hrs:10:21
    |
-5  |   fn get_default&lt;'m&gt;(map: &amp;'m mut HashMap&lt;i32, String&gt;, key: i32) -&gt; &amp;'m mut String {
+6  |   fn get_default&lt;'m&gt;(map: &amp;'m mut HashMap&lt;i32, String&gt;, key: i32) -&gt; &amp;'m mut String {
    |                  -- lifetime `'m` defined here
-6  |       match map.get_mut(&amp;key) {
+7  |       match map.get_mut(&amp;key) {
    |       -     --- first mutable borrow occurs here
    |  _____|
    | |
-7  | |         Some(value) =&gt; value,
-8  | |         None =&gt; {
-9  | |             let _ = map.insert(key, String::new());
+8  | |         Some(value) =&gt; value,
+9  | |         None =&gt; {
+10 | |             let _ = map.insert(key, String::new());
    | |                     ^^^ second mutable borrow occurs here
-10 | |             map.get_mut(&amp;key).unwrap()
-11 | |         },
-12 | |     }
+11 | |             map.get_mut(&amp;key).unwrap()
+12 | |         },
+13 | |     }
    | |_____- returning this value requires that `*map` is borrowed for `'m`
 
 error[E0499]: cannot borrow `*map` as mutable more than once at a time
-  --&gt; limits.hrs:10:13
+  --&gt; limits.hrs:11:13
    |
-5  |   fn get_default&lt;'m&gt;(map: &amp;'m mut HashMap&lt;i32, String&gt;, key: i32) -&gt; &amp;'m mut String {
+6  |   fn get_default&lt;'m&gt;(map: &amp;'m mut HashMap&lt;i32, String&gt;, key: i32) -&gt; &amp;'m mut String {
    |                  -- lifetime `'m` defined here
-6  |       match map.get_mut(&amp;key) {
+7  |       match map.get_mut(&amp;key) {
    |       -     --- first mutable borrow occurs here
    |  _____|
    | |
-7  | |         Some(value) =&gt; value,
-8  | |         None =&gt; {
-9  | |             let _ = map.insert(key, String::new());
-10 | |             map.get_mut(&amp;key).unwrap()
+8  | |         Some(value) =&gt; value,
+9  | |         None =&gt; {
+10 | |             let _ = map.insert(key, String::new());
+11 | |             map.get_mut(&amp;key).unwrap()
    | |             ^^^ second mutable borrow occurs here
-11 | |         },
-12 | |     }
+12 | |         },
+13 | |     }
    | |_____- returning this value requires that `*map` is borrowed for `'m`
 
 error: aborting due to 2 previous errors
@@ -700,15 +700,15 @@ hold.</p>
     inspector <span class="p">=</span> <span class="t">Inspector</span>\ seen <span class="p">=</span> <span class="p">&amp;</span>value
     <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span>inspector <span class="op">&lt;-</span> seen<span class="p">)</span></code></pre>
 <pre class="code"><code>error[E0597]: `value` does not live long enough
-  --&gt; dropck.hrs:17:15
+  --&gt; dropck.hrs:18:15
    |
-14 |     let value = String::from("treasure");
+15 |     let value = String::from("treasure");
    |         ----- binding `value` declared here
 ...
-17 |         seen: &amp;value,
+18 |         seen: &amp;value,
    |               ^^^^^^ borrowed value does not live long enough
 ...
-20 | }
+21 | }
    | -
    | |
    | `value` dropped here while still borrowed
@@ -895,15 +895,15 @@ tracks every path and refuses a read that might come first.</p>
     <span class="com">// Refused: on the other path, `x` was never given a value.</span>
     <span class="mac">println!</span> <span class="str">"{x}"</span></code></pre>
 <pre class="code"><code>error[E0381]: used binding `x` is possibly-uninitialized
- --&gt; checked.hrs:8:15
+ --&gt; checked.hrs:9:15
   |
-2 |     let x: i32;
+3 |     let x: i32;
   |         - binding declared here but left uninitialized
 ...
-5 |         x = 1
+6 |         x = 1
   |         ----- binding initialized here in some conditions
 ...
-8 |     println!("{x}")
+9 |     println!("{x}")
   |               ^^^ `x` used here but it is possibly-uninitialized
   |
   = note: this error originates in the macro `$crate::format_args_nl` which comes from the expansion of the macro `println` (in Nightly builds, run with -Z macro-backtrace for more info)

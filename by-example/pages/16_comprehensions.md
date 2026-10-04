@@ -91,27 +91,27 @@ fn main$:
 
 ```text
 error[E0425]: cannot find value `b` in this scope
- --> too_early.hrs:4:80
+ --> too_early.hrs:5:80
   |
-4 | ....flat_map(move | a | ((true &&(a * a + b * b == c * c)).then(|| ((a .. 20).into_iter().flat_map(move | b | ((true).then(|| ((b .. 20)....
+5 | ....flat_map(move | a | ((true &&(a * a + b * b == c * c)).then(|| ((a .. 20).into_iter().flat_map(move | b | ((true).then(|| ((b .. 20)....
   |                                           ^ help: a local variable with a similar name exists: `a`
 
 error[E0425]: cannot find value `b` in this scope
- --> too_early.hrs:4:84
+ --> too_early.hrs:5:84
   |
-4 | ...t_map(move | a | ((true &&(a * a + b * b == c * c)).then(|| ((a .. 20).into_iter().flat_map(move | b | ((true).then(|| ((b .. 20).into...
+5 | ...t_map(move | a | ((true &&(a * a + b * b == c * c)).then(|| ((a .. 20).into_iter().flat_map(move | b | ((true).then(|| ((b .. 20).into...
   |                                           ^ help: a local variable with a similar name exists: `a`
 
 error[E0425]: cannot find value `c` in this scope
- --> too_early.hrs:4:89
+ --> too_early.hrs:5:89
   |
-4 | ...(move | a | ((true &&(a * a + b * b == c * c)).then(|| ((a .. 20).into_iter().flat_map(move | b | ((true).then(|| ((b .. 20).into_iter...
+5 | ...(move | a | ((true &&(a * a + b * b == c * c)).then(|| ((a .. 20).into_iter().flat_map(move | b | ((true).then(|| ((b .. 20).into_iter...
   |                                           ^ help: a local variable with a similar name exists: `a`
 
 error[E0425]: cannot find value `c` in this scope
- --> too_early.hrs:4:93
+ --> too_early.hrs:5:93
   |
-4 | ...e | a | ((true &&(a * a + b * b == c * c)).then(|| ((a .. 20).into_iter().flat_map(move | b | ((true).then(|| ((b .. 20).into_iter().f...
+5 | ...e | a | ((true &&(a * a + b * b == c * c)).then(|| ((a .. 20).into_iter().flat_map(move | b | ((true).then(|| ((b .. 20).into_iter().f...
   |                                           ^ help: a local variable with a similar name exists: `a`
 
 error: aborting due to 4 previous errors

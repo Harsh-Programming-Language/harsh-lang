@@ -49,7 +49,7 @@ $ hrs test
 running 1 test
 test target/hrs/lib.rs - add_one (line 10) ... ok
 
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.18s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.19s
 ```
 
 `cargo doc --open` renders every `///` and `//!` in the crate as HTML, with the Markdown inside them — headings, code blocks, links — laid out. The conventional sections are `# Examples`, `# Panics` (when the function can), `# Errors` (what `Err`s it returns) and `# Safety` (for `unsafe` functions). The example in the `///` is Harsh, like everything else in the file, and `cargo test` *runs it* — every code block in a doc comment is a test, so documentation cannot drift from the code without failing the build.
@@ -127,7 +127,7 @@ hrs_std = "0.1"
 mylib = { path = "../mylib" }
 ```
 
-Paths in `Hrs.toml` are relative to its own folder. Each command speaks to one registry, so a name is never looked up in the wrong one: `hrs add serde` answers that `serde` is a Rust crate, for `cargo add`. The crates for writing procedural macros — `hrs_proc_macro`, `hrs_quote`, `hrs_syn` — are compile-time tools, as `syn` and `quote` are Rust's, and stay in `Cargo.toml`. A project from before 0.3.0, with `hrs_std` in its `Cargo.toml`, is stopped with a message; `hrs migrate` moves it. In the rare project that wants a Harsh crate and a Rust crate of the same name, Cargo's rename keeps both: `foo_rs = { version = "1", package = "foo" }`, and the Rust one is `foo_rs` in your code.
+Paths in `Hrs.toml` are relative to its own folder. In a workspace, a member that inherits (`version.workspace = true`) gets the workspace's values. `hrs export` writes such a project as plain Rust, each Harsh crate it uses exported beside it and named with a path and a version, so `cargo publish` takes them in order. Harsh files inside a Rust project are transpiled together — `hrs src/parser.hrs src/lexer.hrs` — each `.rs` beside its `.hrs`, headed with the name of its source; `hrs --check src/*.hrs` in CI fails when a committed `.rs` has fallen behind. Each command speaks to one registry, so a name is never looked up in the wrong one: `hrs add serde` answers that `serde` is a Rust crate, for `cargo add`. The crates for writing procedural macros — `hrs_proc_macro`, `hrs_quote`, `hrs_syn` — are compile-time tools, as `syn` and `quote` are Rust's, and stay in `Cargo.toml`. A project from before 0.3.0, with `hrs_std` in its `Cargo.toml`, is stopped with a message; `hrs migrate` moves it. In the rare project that wants a Harsh crate and a Rust crate of the same name, Cargo's rename keeps both: `foo_rs = { version = "1", package = "foo" }`, and the Rust one is `foo_rs` in your code.
 
 ## 17.4 Workspaces
 

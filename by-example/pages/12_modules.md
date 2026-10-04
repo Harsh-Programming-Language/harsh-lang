@@ -57,9 +57,9 @@ fn main$:
 
 ```text
 error[E0616]: field `value` of struct `Counter` is private
-  --> privacy.hrs:18:22
+  --> privacy.hrs:19:22
    |
-18 |     println!("{}", c.value)
+19 |     println!("{}", c.value)
    |                      ^^^^^ private field
 
 error: aborting due to previous error

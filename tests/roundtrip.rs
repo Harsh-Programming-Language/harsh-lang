@@ -2679,3 +2679,37 @@ fn hrs_toml_reads_migrates_and_generates() {
     assert!(g.trim_end().ends_with("[workspace]"), "{g}");
 }
 
+/// The roadmap's open items after 0.3.0 (2026-10-03): a workspace member's
+/// inherited fields resolved; and two converter gaps -- a method on a
+/// struct literal, a `match` on a value ending in a block closure.
+#[test]
+fn workspace_fields_and_two_converter_gaps() {
+    use harsh_lang::driver::resolve_workspace;
+    let root = std::env::temp_dir().join(format!("hrs-ws-{}", std::process::id()));
+    let member = root.join("app");
+    std::fs::create_dir_all(&member).unwrap();
+    std::fs::write(root.join("Cargo.toml"), "[workspace]\nmembers = [\"app\"]\n\n[workspace.package]\nversion = \"0.4.0\"\n\n[workspace.dependencies]\nhelper = { path = \"helper\" }\nserde = \"1\"\n").unwrap();
+    let text = "[package]\nname = \"app\"\nversion.workspace = true\n\n[dependencies]\nhelper = { workspace = true }\nserde = { workspace = true, features = [\"derive\"] }\n";
+    let out = resolve_workspace(text, &member);
+    std::fs::remove_dir_all(&root).unwrap();
+    assert!(out.contains("version = \"0.4.0\""), "{out}");
+    assert!(out.contains("helper = { path = \"") && out.contains("/helper\" }"), "{out}");
+    assert!(out.contains("serde = { version = \"1\", features = [\"derive\"] }"), "{out}");
+    let h = convert("struct P { r: i32 }\nfn main() {\n    let a = P { r: 21 }.twice();\n}\n");
+    assert!(h.contains("(P\\ r = 21) <- twice$"), "{h}");
+    let h = convert("fn main() {\n    let b = match Some(3).and_then(|d| {\n        let e = d + 1;\n        Some(e)\n    }) {\n        Some(x) => x,\n        None => 0,\n    };\n}\n");
+    assert!(h.contains(")\\\n"), "{h}");
+    assert!(harsh_lang::driver::transpile_str(&h).is_ok(), "{h}");
+}
+
+/// A file `hrs` wrote starts with a header naming its source (0.3.1); the
+/// converter drops it, so converting a generated file back does not carry
+/// a stale header along.
+#[test]
+fn the_converter_drops_hrs_s_header() {
+    let h = convert("// Generated from main.hrs by hrs; edit that file, not this one.\nfn main() {\n    println!(\"hi\");\n}\n");
+    assert!(!h.contains("Generated from"), "{h}");
+    let h = convert("// A comment of the user's own.\nfn main() {\n    println!(\"hi\");\n}\n");
+    assert!(h.contains("A comment of the user's own"), "{h}");
+}
+

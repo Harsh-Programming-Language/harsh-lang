@@ -1405,7 +1405,15 @@ Rust. A macro's own language — an <code>rsx!</code> tree, <code>view!</code> m
 </tr>
 <tr>
 <td><code>hrs in.hrs -o out.rs</code></td>
-<td>transpile one file, anywhere</td>
+<td>transpile one file, anywhere; the <code>.rs</code> starts with a header naming its source</td>
+</tr>
+<tr>
+<td><code>hrs a.hrs b.hrs</code></td>
+<td>several files, each beside its <code>.hrs</code>, seeing each other's functions</td>
+</tr>
+<tr>
+<td><code>hrs --check a.hrs b.hrs</code></td>
+<td>write nothing; fail if a <code>.rs</code> is not what its <code>.hrs</code> makes (for CI)</td>
 </tr>
 <tr>
 <td><code>hrs export</code></td>
@@ -1452,9 +1460,12 @@ Rust. A macro's own language — an <code>rsx!</code> tree, <code>view!</code> m
   the user's <code>Hrs.toml</code>: <code>mylib = { path = "../mylib" }</code>, Harsh macros
   included. Harsh's registry is still to come.</li>
 <li><strong>#2:</strong> <code>hrs new</code>, <code>hrs build</code>, then <code>hrs export</code> and <code>cargo publish</code>.
-  Exported Harsh macros do not survive the export.</li>
+  A Harsh crate it uses is exported beside it (<code>target/export-mylib</code>) and
+  named with a path and a version: publish that one first. Exported Harsh
+  macros do not survive the export.</li>
 <li><strong>#3:</strong> <code>cargo new</code>; each <code>.hrs</code> file beside the <code>.rs</code> it produces, with
-  <code>hrs src/parser.hrs -o src/parser.rs</code>; commit the <code>.rs</code>, then
+  <code>hrs src/parser.hrs src/lexer.hrs</code> (files given together see each other's
+  functions); commit the <code>.rs</code>, put <code>hrs --check src/*.hrs</code> in CI, then
   <code>cargo publish</code>.</li>
 </ul>
 <h2 id="layout-style">Layout style</h2>

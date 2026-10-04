@@ -324,7 +324,7 @@ fn main$:
 
 ```text
 reaching for element 5
-thread 'main' panicked at out_of_range.hrs:5:20:
+thread 'main' panicked at out_of_range.hrs:6:20:
 ```
 
 
@@ -524,14 +524,14 @@ fn main$:
 
 ```text
 error[E0384]: cannot assign twice to immutable variable `x`
- --> immutable.hrs:3:5
+ --> immutable.hrs:4:5
   |
-2 |     let x = 1;
+3 |     let x = 1;
   |         -
   |         |
   |         first assignment to `x`
   |         help: consider making this binding mutable: `mut x`
-3 |     x = 2;
+4 |     x = 2;
   |     ^^^^^ cannot assign twice to immutable variable
 
 error: aborting due to previous error
@@ -1225,26 +1225,26 @@ fn main$:
 
 ```text
 error[E0382]: borrow of moved value: `a`
- --> use_after_move.hrs:8:15
+ --> use_after_move.hrs:9:15
   |
-6 |     let a = String::from("hello");
+7 |     let a = String::from("hello");
   |         - move occurs because `a` has type `String`, which does not implement the `Copy` trait
-7 |     consume(a);
+8 |     consume(a);
   |             - value moved here
-8 |     println!("{a}")
+9 |     println!("{a}")
   |               ^^^ value borrowed here after move
   |
 note: consider changing this parameter type in function `consume` to borrow instead if owning the value isn't necessary
- --> use_after_move.hrs:1:15
+ --> use_after_move.hrs:2:15
   |
-1 | fn consume(s: String) {
+2 | fn consume(s: String) {
   |    -------    ^^^^^^ this parameter takes ownership of the value
   |    |
   |    in this function
   = note: this error originates in the macro `$crate::format_args_nl` which comes from the expansion of the macro `println` (in Nightly builds, run with -Z macro-backtrace for more info)
 help: consider cloning the value if the performance cost is acceptable
   |
-7 |     consume(a.clone());
+8 |     consume(a.clone());
   |              ++++++++
 
 error: aborting due to previous error
@@ -1782,9 +1782,9 @@ fn main$:
 
 ```text
 error[E0616]: field `value` of struct `Counter` is private
-  --> privacy.hrs:18:22
+  --> privacy.hrs:19:22
    |
-18 |     println!("{}", c.value)
+19 |     println!("{}", c.value)
    |                      ^^^^^ private field
 
 error: aborting due to previous error
@@ -2055,27 +2055,27 @@ fn main$:
 
 ```text
 error[E0425]: cannot find value `b` in this scope
- --> too_early.hrs:4:80
+ --> too_early.hrs:5:80
   |
-4 | ....flat_map(move | a | ((true &&(a * a + b * b == c * c)).then(|| ((a .. 20).into_iter().flat_map(move | b | ((true).then(|| ((b .. 20)....
+5 | ....flat_map(move | a | ((true &&(a * a + b * b == c * c)).then(|| ((a .. 20).into_iter().flat_map(move | b | ((true).then(|| ((b .. 20)....
   |                                           ^ help: a local variable with a similar name exists: `a`
 
 error[E0425]: cannot find value `b` in this scope
- --> too_early.hrs:4:84
+ --> too_early.hrs:5:84
   |
-4 | ...t_map(move | a | ((true &&(a * a + b * b == c * c)).then(|| ((a .. 20).into_iter().flat_map(move | b | ((true).then(|| ((b .. 20).into...
+5 | ...t_map(move | a | ((true &&(a * a + b * b == c * c)).then(|| ((a .. 20).into_iter().flat_map(move | b | ((true).then(|| ((b .. 20).into...
   |                                           ^ help: a local variable with a similar name exists: `a`
 
 error[E0425]: cannot find value `c` in this scope
- --> too_early.hrs:4:89
+ --> too_early.hrs:5:89
   |
-4 | ...(move | a | ((true &&(a * a + b * b == c * c)).then(|| ((a .. 20).into_iter().flat_map(move | b | ((true).then(|| ((b .. 20).into_iter...
+5 | ...(move | a | ((true &&(a * a + b * b == c * c)).then(|| ((a .. 20).into_iter().flat_map(move | b | ((true).then(|| ((b .. 20).into_iter...
   |                                           ^ help: a local variable with a similar name exists: `a`
 
 error[E0425]: cannot find value `c` in this scope
- --> too_early.hrs:4:93
+ --> too_early.hrs:5:93
   |
-4 | ...e | a | ((true &&(a * a + b * b == c * c)).then(|| ((a .. 20).into_iter().flat_map(move | b | ((true).then(|| ((b .. 20).into_iter().f...
+5 | ...e | a | ((true &&(a * a + b * b == c * c)).then(|| ((a .. 20).into_iter().flat_map(move | b | ((true).then(|| ((b .. 20).into_iter().f...
   |                                           ^ help: a local variable with a similar name exists: `a`
 
 error: aborting due to 4 previous errors

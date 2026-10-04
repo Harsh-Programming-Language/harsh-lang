@@ -24,15 +24,15 @@ fn main$:
 
 ```text
 error[E0381]: used binding `x` is possibly-uninitialized
- --> checked.hrs:8:15
+ --> checked.hrs:9:15
   |
-2 |     let x: i32;
+3 |     let x: i32;
   |         - binding declared here but left uninitialized
 ...
-5 |         x = 1
+6 |         x = 1
   |         ----- binding initialized here in some conditions
 ...
-8 |     println!("{x}")
+9 |     println!("{x}")
   |               ^^^ `x` used here but it is possibly-uninitialized
   |
   = note: this error originates in the macro `$crate::format_args_nl` which comes from the expansion of the macro `println` (in Nightly builds, run with -Z macro-backtrace for more info)

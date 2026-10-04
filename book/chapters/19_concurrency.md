@@ -224,8 +224,8 @@ error[E0277]: `Rc<Mutex<i32>>` cannot be sent between threads safely
 12 |         let handle = thread.spawn move ||:
    |                      ------------ required by a bound introduced by this call
    |                                   ^^^^^^^^ `Rc<Mutex<i32>>` cannot be sent between threads safely
-   |                                   ------- within this `{closure@mutex_rc_err.hrs:12:36: 12:43}`
-   = help: within `{closure@mutex_rc_err.hrs:12:36: 12:43}`, the trait `Send` is not implemented for `Rc<Mutex<i32>>`
+   |                                   ------- within this `{closure@mutex_rc_err.hrs:13:36: 13:43}`
+   = help: within `{closure@mutex_rc_err.hrs:13:36: 13:43}`, the trait `Send` is not implemented for `Rc<Mutex<i32>>`
    = note: required because it's used within this closure (hrs 12:35)
    = note: required by a bound in `spawn`
 ```

@@ -2186,7 +2186,7 @@ None Some(1)</code></pre>
     <span class="k">let</span> does_not_exist <span class="p">=</span> <span class="p">&amp;</span>v<span class="p">[</span><span class="num">100</span><span class="p">]</span>        <span class="com">// this line panics at runtime</span>
     <span class="mac">println!</span> <span class="str">"{}"</span> does_not_exist</code></pre>
 <pre class="code"><code>None
-thread 'main' panicked at vec_index_panic.hrs:6:
+thread 'main' panicked at vec_index_panic.hrs:7:
 index out of bounds: the len is 5 but the index is 100</code></pre>
 <p>The program printed <code>None</code> for <code>get 100</code>, then reached <code>&amp;v[100]</code> and stopped, with the line. That is what a panic is: an unrecoverable error that ends the program with a message rather than reading memory it should not. Chapter 9 is about when to panic and when to return an <code>Option</code> or <code>Result</code> instead.</p>
 <h4 id="borrowing-a-vector">Borrowing a vector</h4>
@@ -2411,7 +2411,7 @@ Some(25) Some(50)</code></pre>
     <span class="mac">println!</span> <span class="str">"about to fail"</span>
     <span class="mac">panic!</span> <span class="str">"crash and burn"</span></code></pre>
 <pre class="code"><code>about to fail
-thread 'main' panicked at panic.hrs:3:
+thread 'main' panicked at panic.hrs:4:
 crash and burn</code></pre>
 <p>The program printed its first line, reached <code>panic!</code>, printed the message with the file and line, and exited. That is the whole mechanism. By default the panic <em>unwinds</em>: it walks back up the stack dropping every value on the way, so files close and memory is freed, and then the process ends. (A backtrace — the chain of calls that led here — is available with <code>RUST_BACKTRACE=1</code> in the environment; the book leaves it off.)</p>
 <p>Most panics are not written; they are hit:</p>
@@ -2419,7 +2419,7 @@ crash and burn</code></pre>
     <span class="k">let</span> v <span class="p">=</span> <span class="mac">vec!</span> <span class="num">1</span> <span class="num">2</span> <span class="num">3</span>
     v<span class="p">[</span><span class="num">99</span><span class="p">]</span>                           <span class="com">// the value is discarded; the index still runs</span>
     <span class="p">(</span><span class="p">)</span></code></pre>
-<pre class="code"><code>thread 'main' panicked at panic_index.hrs:3:
+<pre class="code"><code>thread 'main' panicked at panic_index.hrs:4:
 index out of bounds: the len is 3 but the index is 99</code></pre>
 <p>Chapter 8's index rule, seen from the other side. In C this reads whatever happens to be at that address — a <em>buffer over-read</em>, the root of a large fraction of security holes. Rust checks, and panics, and the panic is not the bug: the index was. The panic is the report.</p>
 <h3 id="9-2-recoverable-errors-with-result">9.2 Recoverable errors with <code>Result</code></h3>
@@ -2439,7 +2439,7 @@ index out of bounds: the len is 3 but the index is 99</code></pre>
             <span class="t">Err</span> error <span class="op">=&gt;</span> <span class="mac">panic!</span> <span class="str">"Problem opening the file: {error:?}"</span>
 
     <span class="k">let</span> _ <span class="p">=</span> greeting_file</code></pre>
-<pre class="code"><code>thread 'main' panicked at result_match.hrs:9:
+<pre class="code"><code>thread 'main' panicked at result_match.hrs:10:
 Problem opening the file: Os { code: 2, kind: NotFound, message: "No such file or directory" }</code></pre>
 <p>There is no <code>hello.txt</code>, so the <code>Err</code> arm ran and the program panicked with the error inside it. This is a recoverable error handled by choosing not to recover — which is fine for a program that cannot do anything without the file — and the point is that the choice was made in the code, visibly, rather than by the runtime.</p>
 <h4 id="matching-on-the-kind-of-error">Matching on the kind of error</h4>
@@ -2470,7 +2470,7 @@ Problem opening the file: Os { code: 2, kind: NotFound, message: "No such file o
 <span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
     <span class="k">let</span> f <span class="p">=</span> <span class="t">File</span><span class="p">.</span>open <span class="str">"hello.txt"</span> <span class="op">&lt;-</span> unwrap<span class="defer">$</span>
     <span class="k">let</span> _ <span class="p">=</span> f</code></pre>
-<pre class="code"><code>thread 'main' panicked at unwrap_expect.hrs:4:
+<pre class="code"><code>thread 'main' panicked at unwrap_expect.hrs:5:
 called `Result::unwrap()` on an `Err` value: Os { code: 2, kind: NotFound, message: "No such file or directory" }</code></pre>
 <p><code>unwrap$</code> is the <code>match</code> above with a generic message. <code>expect</code> is the same with <em>your</em> message:</p>
 <pre class="code harsh"><code><span class="k">use</span> std<span class="p">.</span>fs<span class="p">.</span><span class="t">File</span>
@@ -2481,7 +2481,7 @@ called `Result::unwrap()` on an `Err` value: Os { code: 2, kind: NotFound, messa
             <span class="op">&lt;-</span> expect <span class="str">"hello.txt should be included in this project"</span>
 
     <span class="k">let</span> _ <span class="p">=</span> f</code></pre>
-<pre class="code"><code>thread 'main' panicked at expect.hrs:6:
+<pre class="code"><code>thread 'main' panicked at expect.hrs:7:
 hello.txt should be included in this project: Os { code: 2, kind: NotFound, message: "No such file or directory" }</code></pre>
 <p>Prefer <code>expect</code>: when it fires, the message says what you were assuming, and that is what you need to know first. Both are right when the <code>Err</code> case really cannot happen — a literal that you know parses — or in a quick program where stopping is the correct response. In library code they are a smell, since the library does not know what the caller wants done.</p>
 <h4 id="propagating-errors">Propagating errors</h4>
@@ -2599,7 +2599,7 @@ None</code></pre>
     <span class="k">let</span> bad <span class="p">=</span> <span class="t">Guess</span><span class="p">.</span>new <span class="num">200</span>
     <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span>bad <span class="op">&lt;-</span> value<span class="defer">$</span><span class="p">)</span></code></pre>
 <pre class="code"><code>50
-thread 'main' panicked at guess_validate.hrs:8:
+thread 'main' panicked at guess_validate.hrs:9:
 Guess value must be between 1 and 100, got 200.</code></pre>
 <p><code>Guess.new</code> checks the range once; <code>value</code> is private, so a <code>Guess</code> cannot be made any other way; every function that takes a <code>Guess</code> can therefore trust it without checking. Making an invalid state impossible to construct is the strongest form of error handling, because the error has nowhere to occur.</p>
 <h3 id="9-4-what-you-have">9.4 What you have</h3>
@@ -3040,7 +3040,7 @@ test tests::another ... FAILED
 test tests::exploration ... ok
 failures:
 ---- tests::another stdout ----
-thread 'tests::another' panicked at failing.hrs:10:
+thread 'tests::another' panicked at failing.hrs:11:
 Make this test fail
 failures:
     tests::another
@@ -3095,7 +3095,7 @@ running 1 test
 test tests::it_adds_two ... FAILED
 failures:
 ---- tests::it_adds_two stdout ----
-thread 'tests::it_adds_two' panicked at assert_eq_fail.hrs:12:
+thread 'tests::it_adds_two' panicked at assert_eq_fail.hrs:13:
 assertion `left == right` failed
   left: 5
  right: 4
@@ -3123,7 +3123,7 @@ running 1 test
 test tests::greeting_contains_name ... FAILED
 failures:
 ---- tests::greeting_contains_name stdout ----
-thread 'tests::greeting_contains_name' panicked at custom_message.hrs:12:
+thread 'tests::greeting_contains_name' panicked at custom_message.hrs:13:
 Greeting did not contain name, value was `Hello!`
 failures:
     tests::greeting_contains_name
@@ -3323,7 +3323,7 @@ To an admiring bog!</code></pre>
 
     <span class="mac">println!</span> <span class="str">"With text:\n{contents}"</span></code></pre>
 <pre class="code"><code>$ cargo run
-thread 'main' panicked at src/main.hrs:12:
+thread 'main' panicked at src/main.hrs:13:
 not enough arguments</code></pre>
 <p><code>Config</code> names the two values, and <code>Config.new</code> builds one from the argument list — cloning the strings, which costs a little and keeps the ownership story simple: the <code>Config</code> owns its fields, and <code>args</code> is untouched. The check for too few arguments is in the one place the arguments are looked at. Run with none and the check fires — as a panic, which is the right <em>check</em> with the wrong <em>response</em>: a panic is for bugs, and a user forgetting an argument is not a bug.</p>
 <p><code>src/main.hrs</code></p>
@@ -5135,7 +5135,7 @@ opt-level = 3</code></pre>
 running 1 test
 test target/hrs/lib.rs - add_one (line 10) ... ok
 
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.18s</code></pre>
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.19s</code></pre>
 <p><code>cargo doc --open</code> renders every <code>///</code> and <code>//!</code> in the crate as HTML, with the Markdown inside them — headings, code blocks, links — laid out. The conventional sections are <code># Examples</code>, <code># Panics</code> (when the function can), <code># Errors</code> (what <code>Err</code>s it returns) and <code># Safety</code> (for <code>unsafe</code> functions). The example in the <code>///</code> is Harsh, like everything else in the file, and <code>cargo test</code> <em>runs it</em> — every code block in a doc comment is a test, so documentation cannot drift from the code without failing the build.</p>
 <blockquote>
 <p><strong>Harsh —</strong> A fenced block in a doc comment is the one kind of comment the transpiler reads. The documentation tool lifts such a block out, compiles it and runs it — it is code, not prose — so it is written in Harsh and the transpiler writes out the Rust that tool expects, the same translation it does everywhere else. A fence tagged with another language — <code>text</code>, <code>toml</code> — is prose and is left exactly as you wrote it. A line beginning <code>#</code> inside the fence is the documentation tool's own mark for <em>compile this but do not show it</em>, and it survives the translation.</p>
@@ -5194,7 +5194,7 @@ cargo = "Cargo.toml"        # optional: the Cargo.toml beside this file is the d
 [dependencies]
 hrs_std = "0.1"
 mylib = { path = "../mylib" }</code></pre>
-<p>Paths in <code>Hrs.toml</code> are relative to its own folder. Each command speaks to one registry, so a name is never looked up in the wrong one: <code>hrs add serde</code> answers that <code>serde</code> is a Rust crate, for <code>cargo add</code>. The crates for writing procedural macros — <code>hrs_proc_macro</code>, <code>hrs_quote</code>, <code>hrs_syn</code> — are compile-time tools, as <code>syn</code> and <code>quote</code> are Rust's, and stay in <code>Cargo.toml</code>. A project from before 0.3.0, with <code>hrs_std</code> in its <code>Cargo.toml</code>, is stopped with a message; <code>hrs migrate</code> moves it. In the rare project that wants a Harsh crate and a Rust crate of the same name, Cargo's rename keeps both: <code>foo_rs = { version = "1", package = "foo" }</code>, and the Rust one is <code>foo_rs</code> in your code.</p>
+<p>Paths in <code>Hrs.toml</code> are relative to its own folder. In a workspace, a member that inherits (<code>version.workspace = true</code>) gets the workspace's values. <code>hrs export</code> writes such a project as plain Rust, each Harsh crate it uses exported beside it and named with a path and a version, so <code>cargo publish</code> takes them in order. Harsh files inside a Rust project are transpiled together — <code>hrs src/parser.hrs src/lexer.hrs</code> — each <code>.rs</code> beside its <code>.hrs</code>, headed with the name of its source; <code>hrs --check src/*.hrs</code> in CI fails when a committed <code>.rs</code> has fallen behind. Each command speaks to one registry, so a name is never looked up in the wrong one: <code>hrs add serde</code> answers that <code>serde</code> is a Rust crate, for <code>cargo add</code>. The crates for writing procedural macros — <code>hrs_proc_macro</code>, <code>hrs_quote</code>, <code>hrs_syn</code> — are compile-time tools, as <code>syn</code> and <code>quote</code> are Rust's, and stay in <code>Cargo.toml</code>. A project from before 0.3.0, with <code>hrs_std</code> in its <code>Cargo.toml</code>, is stopped with a message; <code>hrs migrate</code> moves it. In the rare project that wants a Harsh crate and a Rust crate of the same name, Cargo's rename keeps both: <code>foo_rs = { version = "1", package = "foo" }</code>, and the Rust one is <code>foo_rs</code> in your code.</p>
 <h3 id="17-4-workspaces">17.4 Workspaces</h3>
 <p>A <em>workspace</em> is a set of packages sharing one <code>Cargo.lock</code> and one <code>target/</code> directory, for a project that has grown to several crates — a binary and the libraries it is split into, say. The root <code>Cargo.toml</code> lists the members:</p>
 <pre class="code"><code>[workspace]
@@ -5381,7 +5381,7 @@ c after = Cons(RefCell { value: 4 }, Cons(RefCell { value: 15 }, Nil))</code></p
     <span class="k">let</span> one <span class="p">=</span> cell <span class="op">&lt;-</span> borrow_mut<span class="defer">$</span>
     <span class="k">let</span> two <span class="p">=</span> cell <span class="op">&lt;-</span> borrow_mut<span class="defer">$</span>       <span class="com">// two mutable borrows: the rule, checked at runtime</span>
     <span class="mac">println!</span> <span class="str">"{one} {two}"</span></code></pre>
-<pre class="code"><code>thread 'main' panicked at refcell_panic.hrs:6:
+<pre class="code"><code>thread 'main' panicked at refcell_panic.hrs:7:
 already borrowed: BorrowMutError</code></pre>
 <p>Two <code>borrow_mut$</code> guards alive at once is exactly what the compiler forbids for <code>&amp;mut</code>, and <code>RefCell</code> panics with <code>already borrowed</code>. The rules did not change; only when they are checked did. Use <code>RefCell</code> when you know the code respects the rules and the compiler cannot see it — a value mutated through shared handles, a mock object recording calls in a test — and accept that the check has moved from build time to the first run that violates it.</p>
 <h3 id="18-6-reference-cycles">18.6 Reference cycles</h3>
@@ -5604,8 +5604,8 @@ main is done</code></pre>
 12 |         let handle = thread.spawn move ||:
    |                      ------------ required by a bound introduced by this call
    |                                   ^^^^^^^^ `Rc&lt;Mutex&lt;i32&gt;&gt;` cannot be sent between threads safely
-   |                                   ------- within this `{closure@mutex_rc_err.hrs:12:36: 12:43}`
-   = help: within `{closure@mutex_rc_err.hrs:12:36: 12:43}`, the trait `Send` is not implemented for `Rc&lt;Mutex&lt;i32&gt;&gt;`
+   |                                   ------- within this `{closure@mutex_rc_err.hrs:13:36: 13:43}`
+   = help: within `{closure@mutex_rc_err.hrs:13:36: 13:43}`, the trait `Send` is not implemented for `Rc&lt;Mutex&lt;i32&gt;&gt;`
    = note: required because it's used within this closure (hrs 12:35)
    = note: required by a bound in `spawn`</code></pre>
 <p>Refused. <code>Rc</code> counts references without any synchronisation — two threads incrementing the count at once would corrupt it — and so <code>Rc&lt;T&gt;</code> is not <code>Send</code>, and <code>spawn</code> requires <code>Send</code>. The type system knows which types are safe to move across threads, and this one is not. The thread-safe reference count is <code>Arc</code>, <em>atomic</em> <code>Rc</code>, with the same API:</p>

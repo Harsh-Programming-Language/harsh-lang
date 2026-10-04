@@ -25,14 +25,14 @@ fn main$:
 
 ```text
 error[E0499]: cannot borrow `total` as mutable more than once at a time
- --> references.hrs:5:13
+ --> references.hrs:6:13
   |
-3 |     let a = &mut total;
+4 |     let a = &mut total;
   |             ---------- first mutable borrow occurs here
-4 |     // Refused: `total` is already borrowed mutably by `a`.
-5 |     let b = &mut total;
+5 |     // Refused: `total` is already borrowed mutably by `a`.
+6 |     let b = &mut total;
   |             ^^^^^^^^^^ second mutable borrow occurs here
-6 |     *a += 1;
+7 |     *a += 1;
   |     ------- first borrow later used here
 
 error: aborting due to previous error
@@ -125,39 +125,39 @@ fn main$:
 
 ```text
 error[E0499]: cannot borrow `*map` as mutable more than once at a time
-  --> limits.hrs:9:21
+  --> limits.hrs:10:21
    |
-5  |   fn get_default<'m>(map: &'m mut HashMap<i32, String>, key: i32) -> &'m mut String {
+6  |   fn get_default<'m>(map: &'m mut HashMap<i32, String>, key: i32) -> &'m mut String {
    |                  -- lifetime `'m` defined here
-6  |       match map.get_mut(&key) {
+7  |       match map.get_mut(&key) {
    |       -     --- first mutable borrow occurs here
    |  _____|
    | |
-7  | |         Some(value) => value,
-8  | |         None => {
-9  | |             let _ = map.insert(key, String::new());
+8  | |         Some(value) => value,
+9  | |         None => {
+10 | |             let _ = map.insert(key, String::new());
    | |                     ^^^ second mutable borrow occurs here
-10 | |             map.get_mut(&key).unwrap()
-11 | |         },
-12 | |     }
+11 | |             map.get_mut(&key).unwrap()
+12 | |         },
+13 | |     }
    | |_____- returning this value requires that `*map` is borrowed for `'m`
 
 error[E0499]: cannot borrow `*map` as mutable more than once at a time
-  --> limits.hrs:10:13
+  --> limits.hrs:11:13
    |
-5  |   fn get_default<'m>(map: &'m mut HashMap<i32, String>, key: i32) -> &'m mut String {
+6  |   fn get_default<'m>(map: &'m mut HashMap<i32, String>, key: i32) -> &'m mut String {
    |                  -- lifetime `'m` defined here
-6  |       match map.get_mut(&key) {
+7  |       match map.get_mut(&key) {
    |       -     --- first mutable borrow occurs here
    |  _____|
    | |
-7  | |         Some(value) => value,
-8  | |         None => {
-9  | |             let _ = map.insert(key, String::new());
-10 | |             map.get_mut(&key).unwrap()
+8  | |         Some(value) => value,
+9  | |         None => {
+10 | |             let _ = map.insert(key, String::new());
+11 | |             map.get_mut(&key).unwrap()
    | |             ^^^ second mutable borrow occurs here
-11 | |         },
-12 | |     }
+12 | |         },
+13 | |     }
    | |_____- returning this value requires that `*map` is borrowed for `'m`
 
 error: aborting due to 2 previous errors
@@ -341,15 +341,15 @@ fn main$:
 
 ```text
 error[E0597]: `value` does not live long enough
-  --> dropck.hrs:17:15
+  --> dropck.hrs:18:15
    |
-14 |     let value = String::from("treasure");
+15 |     let value = String::from("treasure");
    |         ----- binding `value` declared here
 ...
-17 |         seen: &value,
+18 |         seen: &value,
    |               ^^^^^^ borrowed value does not live long enough
 ...
-20 | }
+21 | }
    | -
    | |
    | `value` dropped here while still borrowed

@@ -62,7 +62,7 @@ fn main$:
 
 ```text
 None
-thread 'main' panicked at vec_index_panic.hrs:6:
+thread 'main' panicked at vec_index_panic.hrs:7:
 index out of bounds: the len is 5 but the index is 100
 ```
 

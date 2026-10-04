@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.3.1 — 2026-10-03  (`hrs_std` 0.1.4 and the Jupyter kernel 0.1.3, unchanged)
+
+The roadmap's open items after 0.3.0 (the user's request: "get them done").
+
+- **`hrs export` takes a project's Harsh crates along:** each Harsh crate named in `Hrs.toml` is exported beside it (`target/export-mylib`) and named in the export's `Cargo.toml` with a path and a version, as Cargo's workspaces are published -- `cargo build` on the export builds with no `hrs`, and `cargo publish` takes the crates in order. The road to crates.io: `hrs export`, `cargo build`, `cargo publish`.
+- **A workspace member's inherited fields** (`version.workspace = true`, `serde = { workspace = true, features = [..] }`) are written out in the generated manifest, from the workspace's `[workspace.package]` and `[workspace.dependencies]`.
+- **Harsh files in a Rust project (intent #3):** `hrs a.hrs b.hrs` transpiles several files together, each beside its `.hrs`, seeing each other's functions (`$` and partial application across them); every written `.rs` starts with a header naming its source (the source map shifted to match); `hrs --check a.hrs b.hrs` writes nothing and fails when a `.rs` is not what its `.hrs` makes -- the drift check, for CI.
+- **The converter:** a method on a struct literal is isolated, `(P\ r = 21) <- twice$`; a `match` whose scrutinee ends in a block closure gets its arms' `\` (it was `:`), and the transpiler accepts a closure's `:` inside a bracket still open on a `match` line.
+- The converter drops the header `hrs` writes, so converting a generated file back to Harsh does not carry a stale one along (found by `check.sh`'s round trip, which now keeps the converted file's name).
+- Taught: the Book's chapter 17, the guide's command list, the cheat sheet.
+
 ## 0.3.0 — 2026-10-03  (`hrs_std` 0.1.4 and the Jupyter kernel 0.1.3, unchanged)
 
 **Breaking: `Hrs.toml`, Harsh's own manifest** (the user's design). A Harsh project has two manifests side by side: `Cargo.toml` lists Rust's dependencies, `Hrs.toml` Harsh's -- `hrs_std`, and Harsh crates:

@@ -433,8 +433,14 @@ fn new_project(args: &[String]) -> ExitCode {
     ExitCode::SUCCESS
 }
 
+/// `hrs in.hrs [-o out.rs] [--map m.json]`, `hrs a.hrs b.hrs ..`, and
+/// `--check`: Harsh files in a Rust project (intent #3, 2026-10-03). Several
+/// files share their functions' parameter counts, as a project's do, and
+/// each is written beside its `.hrs`. A written file starts with a header
+/// naming its source; `--check` writes nothing and fails if a `.rs` is not
+/// what its `.hrs` makes -- the drift check, for CI.
 fn single_file(args: &[String]) -> ExitCode {
-    let (mut input, mut output, mut map) = (None, None, None);
+    let (mut inputs, mut output, mut map, mut check) = (Vec::new(), None, None, false);
     let mut i = 0;
     while i < args.len() {
         match args[i].as_str() {
@@ -446,7 +452,8 @@ fn single_file(args: &[String]) -> ExitCode {
                 i += 1;
                 map = args.get(i).map(PathBuf::from);
             }
-            s if input.is_none() => input = Some(PathBuf::from(s)),
+            "--check" => check = true,
+            s if s.ends_with(".hrs") => inputs.push(PathBuf::from(s)),
             _ => {
                 eprintln!("{}", USAGE);
                 return ExitCode::from(2);
@@ -454,24 +461,98 @@ fn single_file(args: &[String]) -> ExitCode {
         }
         i += 1;
     }
-    let Some(input) = input else {
+    if inputs.is_empty() {
         eprintln!("{}", USAGE);
         return ExitCode::from(2);
-    };
-    let src = match std::fs::read_to_string(&input) {
-        Ok(s) => s,
-        Err(e) => {
-            eprintln!("hrs: cannot read {}: {}", input.display(), e);
-            return ExitCode::FAILURE;
-        }
-    };
-    let rust = output.clone().unwrap_or_else(|| PathBuf::from("/dev/stdout"));
-    let mapp = map.unwrap_or_else(|| PathBuf::from("/dev/null"));
-    match driver::transpile_one(&src, &input, &rust, &mapp) {
-        Ok(_) => ExitCode::SUCCESS,
-        Err(e) => {
-            eprintln!("{}", e);
-            ExitCode::FAILURE
+    }
+    if inputs.len() > 1 && (output.is_some() || map.is_some()) {
+        eprintln!("hrs: `-o` and `--map` name one file; several are each written beside their .hrs");
+        return ExitCode::from(2);
+    }
+    // Every file's parameter counts, for `$` and partial application across
+    // the files given together.
+    let mut sources = Vec::new();
+    let mut arities = std::collections::HashMap::new();
+    for input in &inputs {
+        match std::fs::read_to_string(input) {
+            Ok(s) => {
+                if let Ok(toks) = harsh_lang::lex::lex(&s) {
+                    arities.extend(harsh_lang::juxt::collect_arities(&toks));
+                }
+                sources.push(s);
+            }
+            Err(e) => {
+                eprintln!("hrs: cannot read {}: {}", input.display(), e);
+                return ExitCode::FAILURE;
+            }
         }
     }
+    let mut drifted = Vec::new();
+    for (n, (input, src)) in inputs.iter().zip(&sources).enumerate() {
+        let target = if inputs.len() == 1 { output.clone() } else { Some(input.with_extension("rs")) };
+        let target = if check && target.is_none() { Some(input.with_extension("rs")) } else { target };
+        let tmp = std::env::temp_dir().join(format!("hrs-one-{}-{n}.rs", std::process::id()));
+        let tmp_map = tmp.with_extension("map");
+        if let Err(e) = driver::transpile_one_with(src, input, &tmp, &tmp_map, &arities) {
+            eprintln!("{}", e);
+            return ExitCode::FAILURE;
+        }
+        let body = std::fs::read_to_string(&tmp).unwrap_or_default();
+        let _ = std::fs::remove_file(&tmp);
+        let name = input.file_name().map(|f| f.to_string_lossy().to_string()).unwrap_or_default();
+        let header = format!("// Generated from {name} by hrs; edit that file, not this one.\n");
+        let text = if target.is_some() { format!("{header}{body}") } else { body };
+        if check {
+            let target = target.unwrap();
+            if std::fs::read_to_string(&target).ok().as_deref() != Some(text.as_str()) {
+                drifted.push(target);
+            }
+            let _ = std::fs::remove_file(&tmp_map);
+            continue;
+        }
+        match &target {
+            Some(t) => {
+                if std::fs::write(t, &text).is_err() {
+                    eprintln!("hrs: cannot write {}", t.display());
+                    return ExitCode::FAILURE;
+                }
+            }
+            None => print!("{text}"),
+        }
+        // The map's generated offsets move by the header's length.
+        if let Some(m) = &map {
+            let shift = if target.is_some() { header.len() as u64 } else { 0 };
+            let shifted = std::fs::read_to_string(&tmp_map)
+                .ok()
+                .and_then(|t| serde_json::from_str::<serde_json::Value>(&t).ok())
+                .map(|mut v| {
+                    // The map names the file written, not the scratch file
+                    // the transpiler wrote first.
+                    if let Some(t) = &target {
+                        v["generated"] = serde_json::json!(t.display().to_string());
+                    }
+                    if let Some(es) = v["entries"].as_array_mut() {
+                        for e in es.iter_mut() {
+                            for k in 0..2 {
+                                if let Some(x) = e[k].as_u64() {
+                                    e[k] = serde_json::json!(x + shift);
+                                }
+                            }
+                        }
+                    }
+                    v.to_string()
+                });
+            if let Some(t) = shifted {
+                let _ = std::fs::write(m, t);
+            }
+        }
+        let _ = std::fs::remove_file(&tmp_map);
+    }
+    if !drifted.is_empty() {
+        for d in &drifted {
+            eprintln!("hrs: {} is not what its .hrs makes: run hrs on it again", d.display());
+        }
+        return ExitCode::FAILURE;
+    }
+    ExitCode::SUCCESS
 }

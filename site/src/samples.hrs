@@ -31,9 +31,9 @@ fn main$:
                                  <- collect$
     top <- sort_by
         |a, b|:
-            b <- 1
-              <- cmp (a <- 1)
-              <- then (a <- 0 <- cmp (b <- 0))
+            b.1
+              <- cmp a.1
+              <- then (a.0 <- cmp b.0)
     for (word, n) in top <- iter$ <- take 3:
         println! "{word}: {n}"
 "#

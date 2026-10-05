@@ -52,31 +52,16 @@ fn main$:
 
 ```text
 error[E0382]: borrow of moved value: `a`
- --> use_after_move.hrs:9:15
-  |
-7 |     let a = String::from("hello");
-  |         - move occurs because `a` has type `String`, which does not implement the `Copy` trait
-8 |     consume(a);
-  |             - value moved here
-9 |     println!("{a}")
-  |               ^^^ value borrowed here after move
-  |
-note: consider changing this parameter type in function `consume` to borrow instead if owning the value isn't necessary
- --> use_after_move.hrs:2:15
-  |
-2 | fn consume(s: String) {
-  |    -------    ^^^^^^ this parameter takes ownership of the value
-  |    |
-  |    in this function
-  = note: this error originates in the macro `$crate::format_args_nl` which comes from the expansion of the macro `println` (in Nightly builds, run with -Z macro-backtrace for more info)
-help: consider cloning the value if the performance cost is acceptable
-  |
-8 |     consume(a.clone());
-  |              ++++++++
-
-error: aborting due to previous error
-
-For more information about this error, try `rustc --explain E0382`.
+  --> use_after_move.hrs:7:15
+   |
+ 5 |     let a = String.from "hello"
+   |         - move occurs because `a` has type `String`, which does not implement the `Copy` trait
+ 6 |     consume a
+   |             - value moved here
+ 7 |     println! "{a}"
+   |               ^^^ value borrowed here after move
+   = note: consider changing this parameter type in function `consume` to borrow instead if owning the value isn't necessary (hrs 1:16)
+   = help: consider cloning the value if the performance cost is acceptable (hrs 6:14)
 ```
 
 The error arrives on the Harsh line that caused it, not on the generated Rust.

@@ -57,14 +57,10 @@ fn main$:
 
 ```text
 error[E0616]: field `value` of struct `Counter` is private
-  --> privacy.hrs:19:22
+  --> privacy.hrs:12:25
    |
-19 |     println!("{}", c.value)
-   |                      ^^^^^ private field
-
-error: aborting due to previous error
-
-For more information about this error, try `rustc --explain E0616`.
+12 |     println! "{}" (c <- value)
+   |                         ^^^^^ private field
 ```
 
 In a real project the modules live in files rather than in one: `src/main.hrs`

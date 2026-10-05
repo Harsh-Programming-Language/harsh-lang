@@ -829,7 +829,34 @@ fn empty_params(toks: &[Token]) -> std::collections::HashSet<usize> {
 impl<'a> Writer<'a> {
     /// The indentation of the output line being written.
     fn current_line_indent(&self) -> usize {
-        let line = self.out.rsplit('\n').next().unwrap_or("");
+        // The *logical* line: one that begins inside a string continued
+        // from a line above belongs to the line the string began on -- as
+        // Harsh's layout reads it. (`format!("a \\ {t} b", t = if ..)` put
+        // an `else:` at the continuation's column, found 2026-10-04.)
+        let lines: Vec<&str> = self.out.rsplit('\n').take(60).collect();
+        let lines: Vec<&str> = lines.into_iter().rev().collect();
+        let mut inside = false; // string state at each line's start
+        let mut starts_inside = Vec::with_capacity(lines.len());
+        for l in &lines {
+            starts_inside.push(inside);
+            let b = l.as_bytes();
+            let mut i = 0;
+            while i < b.len() {
+                match b[i] {
+                    b'\\' if inside => i += 1,
+                    b'\'' if !inside && i + 2 < b.len() && b[i + 2] == b'\'' => i += 2,
+                    b'"' => inside = !inside,
+                    b'/' if !inside && i + 1 < b.len() && b[i + 1] == b'/' => break,
+                    _ => {}
+                }
+                i += 1;
+            }
+        }
+        let mut k = lines.len().saturating_sub(1);
+        while k > 0 && starts_inside[k] {
+            k -= 1;
+        }
+        let line = lines.get(k).copied().unwrap_or("");
         line.len() - line.trim_start().len()
     }
 
@@ -853,6 +880,22 @@ impl<'a> Writer<'a> {
     }
 
     fn word(&mut self, s: &str, space_before: bool) {
+        // A `-` never touches a `<` before it: `d < -1` written tight would
+        // be `d<- 1`, Harsh's arrow (found 2026-10-04 by the spacing rule;
+        // every Rust comparison with a negative converted that way).
+        if s.starts_with('-') && self.out.ends_with('<') {
+            self.out.push(' ');
+        }
+        // No space after a path's dot (`Vec.<u32>.new$`, it was `. new$`),
+        // nor after a negative's `-` beside a `<` (`d < -1`, it was `- 1`).
+        let space_before = space_before
+            && !(self.out.ends_with('.') && !self.out.ends_with(".."))
+            && !self.out.ends_with("< -");
+        // A path's dot touches the name after it, whatever wrote a space
+        // there (after a generic list: `Vec.<u32>. new$`).
+        if self.out.ends_with(". ") && !self.out.ends_with(".. ") && s.chars().next().map_or(false, |c| c.is_alphabetic() || c == '_') {
+            self.out.pop();
+        }
         self.indent();
         if space_before && !self.out.ends_with(' ') && !self.out.ends_with('\n') {
             self.out.push(' ');
@@ -1907,7 +1950,10 @@ impl<'a> Writer<'a> {
             if b.kind == Tk::Ident && (crate::rules::is_keyword(&b.text) || BLOCK_KEYWORDS.contains(&b.text.as_str()) || matches!(b.text.as_str(), "in" | "mut" | "ref")) {
                 return false;
             }
-            if b.kind == Tk::Punct && (b.text == "&" || b.text == "!") {
+            // After `!` it is a macro's body. After `&` it is a reference to
+            // a literal, `&Fake { .. }`, unless the context below makes it a
+            // pattern (it used to be left in braces, which Harsh refuses).
+            if b.kind == Tk::Punct && b.text == "!" {
                 return false;
             }
             // `|Point { x, y }| ..` is a pattern: the `|` *opens* a closure's
@@ -1998,6 +2044,23 @@ impl<'a> Writer<'a> {
         let Some(first) = first else { return false };
         if !toks[open - 1].text.chars().next().map_or(false, |c| c.is_uppercase()) {
             return false;
+        }
+        // A closure's parameter, `|P { x }|`, `|&P { x }|`: a pattern, now
+        // written `P\` like any other (braced patterns removed, 2026-10-04).
+        // The `|` *opens* the parameters -- nothing ending an expression
+        // stands before it -- and a `|` or `,` follows the braces.
+        {
+            let mut b = first;
+            while b > 0 && ((toks[b - 1].kind == Tk::Punct && toks[b - 1].text == "&") || toks[b - 1].is_kw("mut")) {
+                b -= 1;
+            }
+            if b > 0 && toks[b - 1].kind == Tk::Punct && toks[b - 1].text == "|" {
+                let opens = !(b >= 2 && matches!(toks[b - 2].kind, Tk::Ident | Tk::Close(_) | Tk::Gt));
+                let then = toks.get(close + 1).map_or(false, |t| t.kind == Tk::Punct && (t.text == "|" || t.text == ","));
+                if opens && then {
+                    return true;
+                }
+            }
         }
         // Pattern position.
         let mut d = 0i32;
@@ -2181,6 +2244,28 @@ impl<'a> Writer<'a> {
                 self.out.push_str(&toks[k].text);
                 self.out.push_str(" = ");
                 self.at_line_start = false;
+                // `a: if c { x } else { y }`, each branch one expression on
+                // one line: Harsh's inline `if`, isolated -- `a = (if c: x
+                // else: y)` (it was left as Rust's braced `if`, 2026-10-04).
+                if let Some((o1, c1, o2, c2)) = simple_if_else(toks, c + 1, b) {
+                    self.out.push_str("(if ");
+                    self.run(toks, cl, c + 2, o1, Kind::Stmts);
+                    while self.out.ends_with(' ') {
+                        self.out.pop();
+                    }
+                    self.out.push_str(": ");
+                    self.run(toks, cl, o1 + 1, c1, Kind::Stmts);
+                    while self.out.ends_with(' ') {
+                        self.out.pop();
+                    }
+                    self.out.push_str(" else: ");
+                    self.run(toks, cl, o2 + 1, c2, Kind::Stmts);
+                    while self.out.ends_with(' ') {
+                        self.out.pop();
+                    }
+                    self.out.push(')');
+                    return;
+                }
                 self.run(toks, cl, c + 1, b, Kind::Stmts);
                 while self.out.ends_with(' ') {
                     self.out.pop();
@@ -2720,8 +2805,76 @@ impl<'a> Writer<'a> {
                     if t.text == "|" {
                         {
                             let mut pp: Option<&Token> = None;
-                            for j in i + 1..k {
+                            // Where the current parameter starts in the
+                            // output: a struct pattern in it, `P { x, .. }`,
+                            // is written `P\ x, ..` and isolated there,
+                            // `|(P\ x, ..)|` -- its commas would otherwise
+                            // read as more parameters (braced patterns
+                            // removed, 2026-10-04).
+                            let mut param_at = self.out.len();
+                            let mut dd = 0i32;
+                            let mut j = i + 1;
+                            while j < k {
                                 let tj = &toks[j];
+                                if tj.kind == Tk::Comma && dd == 0 {
+                                    self.word(",", false);
+                                    pp = Some(tj);
+                                    j += 1;
+                                    param_at = self.out.len();
+                                    continue;
+                                }
+                                let brace_pattern = tj.kind == Tk::Ident
+                                    && tj.text.chars().next().map_or(false, |c| c.is_uppercase())
+                                    && toks.get(j + 1).map_or(false, |n| n.kind == Tk::Open('{'));
+                                if brace_pattern {
+                                    let mut m = j + 1;
+                                    let mut d2 = 0i32;
+                                    while m < k {
+                                        match toks[m].kind {
+                                            Tk::Open(_) => d2 += 1,
+                                            Tk::Close(_) => {
+                                                d2 -= 1;
+                                                if d2 == 0 {
+                                                    break;
+                                                }
+                                            }
+                                            _ => {}
+                                        }
+                                        m += 1;
+                                    }
+                                    let sp = pp.map_or(false, |p| p.kind == Tk::Comma);
+                                    let pre = self.out.split_off(param_at);
+                                    let pre = pre.trim_start().to_string();
+                                    if sp {
+                                        self.out.push(' ');
+                                    }
+                                    self.out.push('(');
+                                    self.out.push_str(&pre);
+                                    self.out.push_str(&tj.text);
+                                    self.out.push('\\');
+                                    let mut q: Option<&Token> = None;
+                                    for f in j + 2..m {
+                                        let tf = &toks[f];
+                                        let fs = match tf.kind {
+                                            Tk::Comma | Tk::Colon => false,
+                                            _ => q.map_or(true, |p| p.kind == Tk::Comma || p.kind == Tk::Colon || needs_space(Some(p), tf)),
+                                        };
+                                        match tf.kind {
+                                            Tk::PathSep => self.out.push('.'),
+                                            _ => self.word(&tf.text, fs),
+                                        }
+                                        q = Some(tf);
+                                    }
+                                    self.out.push(')');
+                                    pp = Some(&toks[m]);
+                                    j = m + 1;
+                                    continue;
+                                }
+                                match tj.kind {
+                                    Tk::Open(_) => dd += 1,
+                                    Tk::Close(_) => dd -= 1,
+                                    _ => {}
+                                }
                                 let sp = match tj.kind {
                                     Tk::Comma | Tk::Colon => false,
                                     _ => pp.map_or(false, |p| p.kind == Tk::Comma || p.kind == Tk::Colon || (needs_space(Some(p), tj) && p.kind != Tk::Punct)),
@@ -2731,6 +2884,7 @@ impl<'a> Writer<'a> {
                                     _ => self.word(&tj.text, sp),
                                 }
                                 pp = Some(tj);
+                                j += 1;
                             }
                             self.out.push('|');
                             prev = Some(&toks[k]);
@@ -3233,13 +3387,10 @@ impl<'a> Writer<'a> {
                         }
                     }
                 },
-                Tk::PathSep => {
-                    // `::<T>` turbofish loses its `::`; Harsh writes `Vec<i32>.new()`.
-                    let next_is_lt = toks.get(i + 1).map(|t| t.kind == Tk::Lt).unwrap_or(false);
-                    if !next_is_lt {
-                        self.word(".", false);
-                    }
-                }
+                // Rust's `::` is Harsh's `.`, everywhere -- the turbofish
+                // included: `Vec::<i32>::new()` is `Vec.<i32>.new$` (the
+                // user's rule, 2026-10-03; the `::` used to be dropped).
+                Tk::PathSep => self.word(".", false),
                 Tk::Dot | Tk::LArrow => self.word("<-", true),
                 Tk::TupleIdx => self.word(&t.text, false),
                 Tk::Hash => {
@@ -3423,3 +3574,40 @@ fn needs_space(prev: Option<&Token>, t: &Token) -> bool {
     }
     true
 }
+
+/// `if c { x } else { y }` spanning exactly `from..to`, on one line, each
+/// branch one expression (no `;`, no inner brace, no `else if`). Returns the
+/// two branches' braces: (open1, close1, open2, close2).
+fn simple_if_else(toks: &[Token], from: usize, to: usize) -> Option<(usize, usize, usize, usize)> {
+    if from >= to || !toks[from].is_kw("if") || toks[from].line != toks[to - 1].line {
+        return None;
+    }
+    let mut d = 0i32;
+    let mut o1 = None;
+    for k in from + 1..to {
+        match toks[k].kind {
+            Tk::Open('{') if d == 0 => {
+                o1 = Some(k);
+                break;
+            }
+            Tk::Open(_) => d += 1,
+            Tk::Close(_) => d -= 1,
+            _ => {}
+        }
+    }
+    let o1 = o1?;
+    let c1 = (o1 + 1..to).find(|&k| matches!(toks[k].kind, Tk::Close('}') | Tk::Open('{') | Tk::Semi))?;
+    if toks[c1].kind != Tk::Close('}') || c1 == o1 + 1 {
+        return None;
+    }
+    if c1 + 2 >= to || !toks[c1 + 1].is_kw("else") || toks[c1 + 2].kind != Tk::Open('{') {
+        return None;
+    }
+    let o2 = c1 + 2;
+    let c2 = (o2 + 1..to).find(|&k| matches!(toks[k].kind, Tk::Close('}') | Tk::Open('{') | Tk::Semi))?;
+    if toks[c2].kind != Tk::Close('}') || c2 == o2 + 1 || c2 != to - 1 {
+        return None;
+    }
+    Some((o1, c1, o2, c2))
+}
+

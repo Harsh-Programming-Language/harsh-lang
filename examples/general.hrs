@@ -27,7 +27,7 @@ pub enum ParseErr
     Empty
     BadDigit char
 fn parse_all<'a, I>(items: I) -> Result<Vec<i64>, ParseErr> where I: Iterator<Item = &'a str>:
-    let mut out = Vec<i64>. new$
+    let mut out = Vec.<i64>. new$
     for s in items:
         if s <- is_empty$:
             return Err ParseErr.Empty
@@ -39,7 +39,7 @@ fn parse_all<'a, I>(items: I) -> Result<Vec<i64>, ParseErr> where I: Iterator<It
         out <- push n
     Ok out
 fn tally<T: AsRef<str>>(words: &[T]) -> HashMap<String, usize>:
-    let mut m = HashMap<String, usize>. new$
+    let mut m = HashMap.<String, usize>. new$
     for w in words:
         let k = w <- as_ref$ <- to_lowercase$
         let e = m <- entry k <- or_insert 0

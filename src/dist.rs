@@ -7,7 +7,7 @@
 pub const FILES: &[(&str, &str)] = &[
     ("hrs_std/Cargo.toml", r########"[package]
 name = "hrs_std"
-version = "0.1.4"
+version = "0.1.5"
 edition = "2021"
 authors = ["Bahiminin Benoit Dah"]
 license = "MPL-2.0"
@@ -711,6 +711,11 @@ mod tests {
 //! Harsh has no types, so a macro cannot tell a number from a matrix. The
 //! trait system can: `A * B` and `2.0 * A` pick different implementations at
 //! compile time -- the dispatch Julia does at run time.
+
+// No unsafe code, enforced (2026-10-04): views are values (`View`, `ViewMut`,
+// `VectorView`, `VectorViewMut`, 0.1.37), and the compiler keeps them sound --
+// the zero-sized-slice trick of 0.1.30 cannot come back by accident.
+#![forbid(unsafe_code)]
 
 use nalgebra::{DMatrix, DVector, Scalar};
 use std::fmt;
@@ -1824,7 +1829,7 @@ readme = "README.md"
 # The transpiler's own lexer: one grammar for Harsh, never a second parser
 # (the user's ruling, 2026-09-24). Without default features it has no
 # dependencies. `path` for the tree; `version` for crates.io.
-harsh-lang = { version = "0.3", path = "..", default-features = false }
+harsh-lang = { version = "0.6", path = "..", default-features = false }
 "########),
     ("hrs_proc_macro/README.md", r########"# hrs_proc_macro
 

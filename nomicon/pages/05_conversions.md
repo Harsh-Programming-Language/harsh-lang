@@ -99,7 +99,7 @@ fn main$:
     // A reference to a raw pointer, and to an integer address.
     let x = 7
     let p = &x as *const i32
-    println! "{}" ((p as usize) % (std.mem.align_of<i32>$))
+    println! "{}" ((p as usize) % (std.mem.align_of.<i32>$))
 ```
 
 ```text

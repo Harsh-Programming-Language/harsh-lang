@@ -62,7 +62,7 @@ fn main$:
         let _ = s <- spawn (move ||:
             let p = p
             unsafe:
-                *p <- 0 += 1
+                *p.0 += 1
         )
     )
     println! "{value}"

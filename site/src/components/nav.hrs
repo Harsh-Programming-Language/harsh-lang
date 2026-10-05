@@ -11,7 +11,7 @@ const LOGO: Asset = asset! "/assets/favicon.png"
 /// On phones the links fold into a menu behind a three-line button (`open`).
 #[component]
 pub fn Nav$ -> Element:
-    let over = use_route<Route>$ == Route.Home {}
+    let over = use_route.<Route>$ == Route.Home {}
     let mut open = use_signal (|| false)
     use_effect ||:
         let _ = document.eval ESCAPE_CLOSES

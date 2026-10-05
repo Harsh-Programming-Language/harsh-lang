@@ -1,5 +1,82 @@
 # Changelog
 
+## 0.6.4 — 2026-10-04  (`hrs_std` 0.1.5; the Jupyter kernel 0.1.3, unchanged)
+
+- **`hrs_std` forbids unsafe code** (`#![forbid(unsafe_code)]`). Matrix views have been values since 0.1.37 (`a <- view rows cols`, `a <- view_mut rows cols`), sound with no `unsafe` behind them; the compiler now guarantees it stays so. No change in behaviour.
+- **The records caught up:** the roadmap still listed the views' unsoundness as open, and `RELEASE.md`'s Miri step still expected a failure at the old view code. All of `hrs_std` is now expected clean under both of Miri's models.
+
+## 0.6.3 — 2026-10-04  (`hrs_std` 0.1.4 and the Jupyter kernel 0.1.3, unchanged)
+
+The hole-mark decisions (the user's rulings, B2 and B7).
+
+- **A hole's code may start on the `@:` line with lines beneath aligned to it:** `{@: if n > 2:` with `else:` under `if`. It was refused ("column 8 matches no open block"): the first line was taken out at column 0 while the lines beneath kept theirs. The first line now keeps its real column when the lines beneath align to it; a closure's body indented from its line is measured from that line, as before.
+- **`hrs fmt` writes holes in one layout:** the code on the `@:` line, `:@` ending the last line (on its own line when that line ends in a `//` comment), one space inside each mark, none between a mark and the DSL's brace. Files with a multi-line DSL body were never formatted at all -- the body's blanked lines collapsed and the formatter backed out -- so their holes now are, the rest kept as written, checked by comparing the Rust. `onclick:@:` was read as a closing `:@`; fixed.
+- **Enter and Tab in editors follow the hole's columns** (through `hrs-lsp`, so VS Code and Zed): after `{@: if n > 2:` the new line is one level in from `if`, and Tab offers `if`'s column for `else:`.
+- Taught: the guide's DSL section, the macros page, `docs/DECISIONS.md`.
+
+## 0.6.2 — 2026-10-04  (`hrs_std` 0.1.4 and the Jupyter kernel 0.1.3, unchanged)
+
+- **Errors in a file whose `~` macro expands to a brace body point at the right line.** Such a file is re-read from its expansion, and the source map pointed into that rendered text: an error on line 8 was reported on line 6, at a macro call. The map is now carried back to the file you wrote (open since 0.1.26).
+- **The converter: an `if` after a string continued over lines** -- `format!("a \\ {t} b", t = if c { .. } else { .. })` -- put its `else:` at the continuation's column, which matches no block; it now aligns with the line the string began on, as Harsh's layout reads it. Found in `hrs new`'s own source.
+
+## 0.6.1 — 2026-10-04  (`hrs_std` 0.1.4 and the Jupyter kernel 0.1.3, unchanged)
+
+- **No guess about a `<` in juxtaposition:** `juxt.rs` extended an argument over a no-dot generic list (`Vec<i32>` followed by a call or a path step) -- the old turbofish's last trace. Only `.<` opens a generic list in an expression; a plain `<` is mapped as written (the user's rule).
+- **Literal arguments after a turbofish:** `f.<u8> 1 2` was refused ("a literal cannot be applied"); the `>` closing a `.<` list now ends its atom, as a name does. A comparison's `>` still does not.
+- **The converter writes a field's inline `if` as Harsh:** `S { a: if c { 1 } else { 2 } }` becomes `S\ a = (if c: 1 else: 2)` (it kept Rust's braces). Converter spacing: `Vec.<u32>.new$` (it wrote `. new$`) and `d< -1` (it wrote `- 1`).
+
+## 0.6.0 — 2026-10-04  (`hrs_std` 0.1.4 and the Jupyter kernel 0.1.3, unchanged)
+
+- **Breaking: a struct pattern has one spelling, `P\ x, y`** (the user's ruling). The braced pattern, `P { x, y }`, is refused with the `\` forms in the message -- it had been "still accepted" in some places and refused in others. Nested in another pattern it is isolated: `for (i, (P\ x, ..)) in v`, `|(P\ x, ..)| x`. The converter writes `P\` everywhere, closure parameters included (it copied their braces).
+- **`hrs new --lib`** makes a library -- `src/lib.hrs` with one public function and a test, `[lib]` in `Cargo.toml` -- with `--lib` before or after the name. **`hrs new --help`** prints its usage; it created a project named `--help`. A name starting with `-` is refused.
+- **`hrs publish`** checks the package as a registry would -- `name`, `version`, `description`, `license`, and every Harsh dependency by version, not path -- then stops: Harsh's registry is not open yet, and the message says how to share today.
+- **`hrs export`** warns when `description` or `license` is missing, which crates.io requires.
+- **The converter wrote every Rust comparison with a negative as the arrow:** `d < -1` became `d<- 1`. Found by 0.5.0's spacing rule in the transpiler's own source; a `-` no longer touches a `<` before it.
+- **`docs/DECISIONS.md`**, new: the language's settled decisions, each with its reason, examples and edge cases -- read before reopening any question.
+- Taught: the three intents and their commands in the Book's section 17.3; patterns in chapter 22 (whose prose still showed `Message.Move { x, y }`), *Harsh at a glance*, the guide (two stale blocks), the cheat sheet; a hole inside a DSL string in the guide and chapter 23; the guide's *Bracketed regions* and the macros page corrected.
+- **To upgrade:** write struct patterns with `\`, isolated when nested.
+
+## 0.5.1 — 2026-10-04  (`hrs_std` 0.1.4 and the Jupyter kernel 0.1.3, unchanged)
+
+- **A name always follows `<-`** (the user's rule): a field or a method, which is what the arrow means. A number, a negative or a bracket after it is refused, the message naming the two things meant: a tuple's item is `t.3`, and a comparison with a negative is `x < -3`. Spaced, `t <- 3` compiled silently as the tuple item `t.3` when `t` had four items.
+- **A tuple's item is `t.0`** in every book: five programs (*By Example*'s tuples and structs, *Design Patterns*' optics and newtype, the Harshonomicon's `Send`/`Sync`) and two sentences wrote `<- 0`, a second spelling; rewritten, with the playground's word-count sample.
+- Taught: the guide's arrow section, the Book's chapter 1 and *Harsh at a glance*, the cheat sheet (*A tuple's item*).
+
+## 0.5.0 — 2026-10-04  (`hrs_std` 0.1.4 and the Jupyter kernel 0.1.3, unchanged)
+
+The user's rulings from the audit of exceptions, built.
+
+- **Breaking: `<-` has a space on each side**, `value <- method`. Tight -- `p<-y`, `p <-y`, `p<- y`, `x<-1` -- it is refused, the message naming both readings: a method step is `value <- method`, a comparison with a negative is `value < -x`. Written tight, `t<-below` compiled silently as the field `t.below` where `t < -below` was meant (the test keeps that program).
+- **Generics are mapped, never guessed:** `.<` is `::<`, `<` is `<`, and rustc judges the result. The emitter no longer inserts `::` before a `<`, and 0.4.0's refusal of the no-dot form -- itself a guess -- is removed: `Vec<u32>.new$` is Rust's `Vec<u32>::new()`, which rustc rejects.
+- **A block passed as an argument is isolated:** `myfunc { let u = 3; u * u }` -- a struct literal to Rust, passed through broken -- is refused with `myfunc ({ … })`; braces holding fields get the struct-literal message. Empty records (`Empty {}`), patterns (`let`, `for`, `=>`, a closure's `|P { x }|`) and keyword blocks keep their braces.
+- **The struct-literal message names Harsh's forms**, `P\ x = 1, y = 2` or `P\` with the fields beneath (it named the retired `P: field = value`).
+- **The converter writes a literal behind a reference as Harsh**, `&Fake\ macros = …` (it left Rust's braces). Found by the refusal above in the transpiler's own source.
+- Taught: the guide (*Generics*, the arrow, *Chain forms*, inline blocks), the Book (chapters 1 and 2, *Harsh at a glance* -- and chapter 2's stale sentence on `;`, retired in 0.2.0), the cheat sheet (two rows), the macros page (*The three rules*).
+- **To upgrade:** put a space on each side of `<-`; isolate a block argument.
+
+## 0.4.0 — 2026-10-04  (`hrs_std` 0.1.4 and the Jupyter kernel 0.1.3, unchanged)
+
+**Breaking: the turbofish is written `.<T>`** (the user's rule): Rust's `::` is Harsh's `.` everywhere, the turbofish included.
+
+| Harsh | Rust |
+| :--- | :--- |
+| `Vec.<u32>.new$` | `Vec::<u32>::new()` |
+| `std.mem.size_of.<u32>$` | `std::mem::size_of::<u32>()` |
+| `Layout.array.<u32> 4` | `Layout::array::<u32>(4)` |
+| `"42" <- parse.<i32>$` | `"42".parse::<i32>()` |
+
+- **The form without the dot is refused** -- `Vec<u32>.new$`, `size_of<u32>$`, `parse<i32>$`, `array<u32> 4` -- with the dotted spelling in the message. The transpiler used to complete it with `::`, and could not before an argument (`array<u32> 4`): that was never a gap, it was the wrong syntax. Type position is unchanged: `let v: Vec<u32>`.
+- **The converter writes `.<T>`** for Rust's `::<T>` (it dropped the `::`).
+- The prelude's `list~`, `set~` and `dict~` use the dotted form inside; 37 generic calls in the books, examples and site rewritten; the guide's *Generics* section rewritten around the mapping (it taught the opposite); the cheat sheet; the README.
+- **To upgrade:** the error points at each generic call to give its dot.
+
+Also in 0.4.0:
+
+- **No mixed `if`:** an inline branch followed by a block `else` -- `if c: a else:` with the block beneath -- passed through to the Rust unconverted. It is now an error naming the two forms that work, both inline or both blocks (the user: no mixed form).
+- **`hrs fmt` keeps a `match`'s arms under the `match`** when a chain is broken before its `\` (`match v` / `<- iter$` / `<- copied$` / `<- max$\`): it pushed them one level deeper.
+- **Error excerpts in the companions quote the Harsh:** *By Example*, *Design Patterns* and *The Harshonomicon* render a compiler error as `hrs build` does -- rustc's JSON through `hrs-remap` -- where they quoted the generated Rust. The Book already did.
+- **Harshlings 0.1.8** (its own repository): the matrix exercises' projects use `Hrs.toml`; `layout07` teaches the `()` line; the runner builds again (it still had a `;`).
+
 ## 0.3.1 — 2026-10-03  (`hrs_std` 0.1.4 and the Jupyter kernel 0.1.3, unchanged)
 
 The roadmap's open items after 0.3.0 (the user's request: "get them done").

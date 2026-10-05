@@ -105,7 +105,7 @@ unsafe impl<T: Sync> Sync for MyVec<T>
 impl<T> MyVec<T>
     pub fn new$ -> Self:
         assert!
-            (mem.size_of<T>$ != 0)
+            (mem.size_of.<T>$ != 0)
             "zero-sized types are not handled here"
         Self\
             ptr = NonNull.dangling$
@@ -113,8 +113,8 @@ impl<T> MyVec<T>
             len = 0
 
     fn layout (cap: usize) -> Layout:
-        let size = cap * mem.size_of<T>$
-        Layout.from_size_align size (mem.align_of<T>$) <- unwrap$
+        let size = cap * mem.size_of.<T>$
+        Layout.from_size_align size (mem.align_of.<T>$) <- unwrap$
 
     fn grow (&mut self):
         let new_cap = if self <- cap == 0: 4 else: 2 * self <- cap

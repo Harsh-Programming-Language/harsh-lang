@@ -91,32 +91,32 @@ fn main$:
 
 ```text
 error[E0425]: cannot find value `b` in this scope
- --> too_early.hrs:5:80
-  |
-5 | ....flat_map(move | a | ((true &&(a * a + b * b == c * c)).then(|| ((a .. 20).into_iter().flat_map(move | b | ((true).then(|| ((b .. 20)....
-  |                                           ^ help: a local variable with a similar name exists: `a`
+  --> too_early.hrs:6:39
+   |
+ 6 |             for a in 1..20 if a * a + b * b == c * c
+   |                                       ^
+   = help: a local variable with a similar name exists (hrs 6:39)
 
 error[E0425]: cannot find value `b` in this scope
- --> too_early.hrs:5:84
-  |
-5 | ...t_map(move | a | ((true &&(a * a + b * b == c * c)).then(|| ((a .. 20).into_iter().flat_map(move | b | ((true).then(|| ((b .. 20).into...
-  |                                           ^ help: a local variable with a similar name exists: `a`
+  --> too_early.hrs:6:43
+   |
+ 6 |             for a in 1..20 if a * a + b * b == c * c
+   |                                           ^
+   = help: a local variable with a similar name exists (hrs 6:43)
 
 error[E0425]: cannot find value `c` in this scope
- --> too_early.hrs:5:89
-  |
-5 | ...(move | a | ((true &&(a * a + b * b == c * c)).then(|| ((a .. 20).into_iter().flat_map(move | b | ((true).then(|| ((b .. 20).into_iter...
-  |                                           ^ help: a local variable with a similar name exists: `a`
+  --> too_early.hrs:6:48
+   |
+ 6 |             for a in 1..20 if a * a + b * b == c * c
+   |                                                ^
+   = help: a local variable with a similar name exists (hrs 6:48)
 
 error[E0425]: cannot find value `c` in this scope
- --> too_early.hrs:5:93
-  |
-5 | ...e | a | ((true &&(a * a + b * b == c * c)).then(|| ((a .. 20).into_iter().flat_map(move | b | ((true).then(|| ((b .. 20).into_iter().f...
-  |                                           ^ help: a local variable with a similar name exists: `a`
-
-error: aborting due to 4 previous errors
-
-For more information about this error, try `rustc --explain E0425`.
+  --> too_early.hrs:6:52
+   |
+ 6 |             for a in 1..20 if a * a + b * b == c * c
+   |                                                    ^
+   = help: a local variable with a similar name exists (hrs 6:52)
 ```
 
 ## 16.4 Collecting: list~, set~, dict~

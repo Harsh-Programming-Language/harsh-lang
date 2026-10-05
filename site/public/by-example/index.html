@@ -387,8 +387,8 @@ isolated, so it is <code>println! "{}" (1 + 2 * 3)</code>.</p>
 <span class="k">struct</span> <span class="t">Matrix</span> f32 f32 f32 f32
 
 <span class="k">fn</span> transpose <span class="p">(</span>m<span class="p">:</span> <span class="t">Matrix</span><span class="p">)</span> <span class="op">-&gt;</span> <span class="t">Matrix</span><span class="p">:</span>
-    <span class="com">// Fields of a tuple are reached by number.</span>
-    <span class="t">Matrix</span> <span class="p">(</span>m <span class="op">&lt;-</span> <span class="num">0</span><span class="p">)</span> <span class="p">(</span>m <span class="op">&lt;-</span> <span class="num">2</span><span class="p">)</span> <span class="p">(</span>m <span class="op">&lt;-</span> <span class="num">1</span><span class="p">)</span> <span class="p">(</span>m <span class="op">&lt;-</span> <span class="num">3</span><span class="p">)</span>
+    <span class="com">// Fields of a tuple are reached by number, with a dot.</span>
+    <span class="t">Matrix</span> m<span class="p">.</span><span class="num">0</span> m<span class="p">.</span><span class="num">2</span> m<span class="p">.</span><span class="num">1</span> m<span class="p">.</span><span class="num">3</span>
 
 <span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
     <span class="com">// A tuple value: one construct, commas inside.</span>
@@ -415,7 +415,7 @@ Rust. A <strong>tuple struct</strong> declares its fields by juxtaposition:
 single payload, so <code>struct Wrapped (i32, i32)</code> is one field that happens to be
 a pair, not two fields.</p>
 <p>Constructing follows the same rule as any call — <code>Matrix 1.1 1.2 2.1 2.2</code> —
-and reaching a field by number is <code>m &lt;- 0</code>.</p>
+and reaching a field by number is <code>m.0</code>, with a dot, as for any tuple.</p>
 <h3 id="2-3-arrays-and-slices">2.3 Arrays and slices</h3>
 <pre class="code harsh"><code><span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
     <span class="com">// An array: fixed length, all one type.</span>
@@ -480,7 +480,7 @@ thread 'main' panicked at out_of_range.hrs:6:20:</code></pre>
     <span class="mac">println!</span> <span class="str">"{} is {}"</span> <span class="p">(</span>jane <span class="op">&lt;-</span> name<span class="p">)</span> <span class="p">(</span>jane <span class="op">&lt;-</span> age<span class="p">)</span>
 
     <span class="k">let</span> pair <span class="p">=</span> <span class="t">Pair</span> <span class="num">1</span> <span class="num">0.1</span>
-    <span class="mac">println!</span> <span class="str">"{} {}"</span> <span class="p">(</span>pair <span class="op">&lt;-</span> <span class="num">0</span><span class="p">)</span> <span class="p">(</span>pair <span class="op">&lt;-</span> <span class="num">1</span><span class="p">)</span>
+    <span class="mac">println!</span> <span class="str">"{} {}"</span> pair<span class="p">.</span><span class="num">0</span> pair<span class="p">.</span><span class="num">1</span>
 
     <span class="com">// A struct is taken apart by naming its fields, the same `\`.</span>
     <span class="k">let</span> <span class="t">Pair</span> x y <span class="p">=</span> pair
@@ -608,19 +608,13 @@ runs:</p>
     x <span class="p">=</span> <span class="num">2</span>
     <span class="mac">println!</span> <span class="str">"{x}"</span></code></pre>
 <pre class="code"><code>error[E0384]: cannot assign twice to immutable variable `x`
- --&gt; immutable.hrs:4:5
-  |
-3 |     let x = 1;
-  |         -
-  |         |
-  |         first assignment to `x`
-  |         help: consider making this binding mutable: `mut x`
-4 |     x = 2;
-  |     ^^^^^ cannot assign twice to immutable variable
-
-error: aborting due to previous error
-
-For more information about this error, try `rustc --explain E0384`.</code></pre>
+  --&gt; immutable.hrs:3:5
+   |
+ 2 |     let x = 1
+   |         - first assignment to `x`
+ 3 |     x = 2
+   |     ^^^^^ cannot assign twice to immutable variable
+   = help: consider making this binding mutable (hrs 2:9)</code></pre>
 <h3 id="4-2-types">4.2 Types</h3>
 <pre class="code harsh"><code><span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
     <span class="com">// An annotation names the type; otherwise it is inferred.</span>
@@ -1149,31 +1143,16 @@ and small copyable values such as integers are copied rather than moved.</p>
     consume a
     <span class="mac">println!</span> <span class="str">"{a}"</span></code></pre>
 <pre class="code"><code>error[E0382]: borrow of moved value: `a`
- --&gt; use_after_move.hrs:9:15
-  |
-7 |     let a = String::from("hello");
-  |         - move occurs because `a` has type `String`, which does not implement the `Copy` trait
-8 |     consume(a);
-  |             - value moved here
-9 |     println!("{a}")
-  |               ^^^ value borrowed here after move
-  |
-note: consider changing this parameter type in function `consume` to borrow instead if owning the value isn't necessary
- --&gt; use_after_move.hrs:2:15
-  |
-2 | fn consume(s: String) {
-  |    -------    ^^^^^^ this parameter takes ownership of the value
-  |    |
-  |    in this function
-  = note: this error originates in the macro `$crate::format_args_nl` which comes from the expansion of the macro `println` (in Nightly builds, run with -Z macro-backtrace for more info)
-help: consider cloning the value if the performance cost is acceptable
-  |
-8 |     consume(a.clone());
-  |              ++++++++
-
-error: aborting due to previous error
-
-For more information about this error, try `rustc --explain E0382`.</code></pre>
+  --&gt; use_after_move.hrs:7:15
+   |
+ 5 |     let a = String.from "hello"
+   |         - move occurs because `a` has type `String`, which does not implement the `Copy` trait
+ 6 |     consume a
+   |             - value moved here
+ 7 |     println! "{a}"
+   |               ^^^ value borrowed here after move
+   = note: consider changing this parameter type in function `consume` to borrow instead if owning the value isn't necessary (hrs 1:16)
+   = help: consider cloning the value if the performance cost is acceptable (hrs 6:14)</code></pre>
 <p>The error arrives on the Harsh line that caused it, not on the generated Rust.</p>
 <h3 id="8-2-borrowing">8.2 Borrowing</h3>
 <pre class="code harsh"><code><span class="com">// A borrow reads without taking ownership.</span>
@@ -1579,14 +1558,10 @@ import is written with parentheses: <code>use std.io.(Read, Write)</code>.</p>
     <span class="k">let</span> c <span class="p">=</span> counter<span class="p">.</span><span class="t">Counter</span><span class="p">.</span>new<span class="defer">$</span>
     <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span>c <span class="op">&lt;-</span> value<span class="p">)</span></code></pre>
 <pre class="code"><code>error[E0616]: field `value` of struct `Counter` is private
-  --&gt; privacy.hrs:19:22
+  --&gt; privacy.hrs:12:25
    |
-19 |     println!("{}", c.value)
-   |                      ^^^^^ private field
-
-error: aborting due to previous error
-
-For more information about this error, try `rustc --explain E0616`.</code></pre>
+12 |     println! "{}" (c &lt;- value)
+   |                         ^^^^^ private field</code></pre>
 <p>In a real project the modules live in files rather than in one: <code>src/main.hrs</code>
 plus <code>src/shapes.hrs</code>, and <code>mod shapes</code> in the main file. <code>hrs build</code>
 transpiles the tree and cargo compiles it.</p>
@@ -1782,32 +1757,32 @@ uses. Attached to <code>for a</code>, the same test cannot see <code>b</code>:</
             <span class="k">for</span> c <span class="k">in</span> b<span class="op">..</span><span class="num">20</span>
     <span class="mac">println!</span> <span class="str">"{triples:?}"</span></code></pre>
 <pre class="code"><code>error[E0425]: cannot find value `b` in this scope
- --&gt; too_early.hrs:5:80
-  |
-5 | ....flat_map(move | a | ((true &amp;&amp;(a * a + b * b == c * c)).then(|| ((a .. 20).into_iter().flat_map(move | b | ((true).then(|| ((b .. 20)....
-  |                                           ^ help: a local variable with a similar name exists: `a`
+  --&gt; too_early.hrs:6:39
+   |
+ 6 |             for a in 1..20 if a * a + b * b == c * c
+   |                                       ^
+   = help: a local variable with a similar name exists (hrs 6:39)
 
 error[E0425]: cannot find value `b` in this scope
- --&gt; too_early.hrs:5:84
-  |
-5 | ...t_map(move | a | ((true &amp;&amp;(a * a + b * b == c * c)).then(|| ((a .. 20).into_iter().flat_map(move | b | ((true).then(|| ((b .. 20).into...
-  |                                           ^ help: a local variable with a similar name exists: `a`
+  --&gt; too_early.hrs:6:43
+   |
+ 6 |             for a in 1..20 if a * a + b * b == c * c
+   |                                           ^
+   = help: a local variable with a similar name exists (hrs 6:43)
 
 error[E0425]: cannot find value `c` in this scope
- --&gt; too_early.hrs:5:89
-  |
-5 | ...(move | a | ((true &amp;&amp;(a * a + b * b == c * c)).then(|| ((a .. 20).into_iter().flat_map(move | b | ((true).then(|| ((b .. 20).into_iter...
-  |                                           ^ help: a local variable with a similar name exists: `a`
+  --&gt; too_early.hrs:6:48
+   |
+ 6 |             for a in 1..20 if a * a + b * b == c * c
+   |                                                ^
+   = help: a local variable with a similar name exists (hrs 6:48)
 
 error[E0425]: cannot find value `c` in this scope
- --&gt; too_early.hrs:5:93
-  |
-5 | ...e | a | ((true &amp;&amp;(a * a + b * b == c * c)).then(|| ((a .. 20).into_iter().flat_map(move | b | ((true).then(|| ((b .. 20).into_iter().f...
-  |                                           ^ help: a local variable with a similar name exists: `a`
-
-error: aborting due to 4 previous errors
-
-For more information about this error, try `rustc --explain E0425`.</code></pre>
+  --&gt; too_early.hrs:6:52
+   |
+ 6 |             for a in 1..20 if a * a + b * b == c * c
+   |                                                    ^
+   = help: a local variable with a similar name exists (hrs 6:52)</code></pre>
 <h3 id="16-4-collecting-list-set-dict">16.4 Collecting: list~, set~, dict~</h3>
 <pre class="code harsh"><code><span class="k">use</span> std<span class="p">.</span>collections<span class="p">.</span><span class="t">HashMap</span>
 <span class="k">use</span> std<span class="p">.</span>collections<span class="p">.</span><span class="t">HashSet</span>

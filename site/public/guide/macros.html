@@ -141,6 +141,7 @@ pre.code:hover .copy,.copy:focus-visible{opacity:1}
     </header>
     <div class="cols">
       <nav class="toc"><p class="toc-h">Contents</p><ul>
+<li class="d0"><a href="#the-three-rules">The three rules</a></li>
 <li class="d0"><a href="#where-macros-stand">Where macros stand</a></li>
 <li class="d0"><a href="#harsh-macros">Harsh macros (~)</a></li>
 <li class="d1"><a href="#declarative-macros">Declarative macros</a></li>
@@ -165,18 +166,48 @@ pre.code:hover .copy,.copy:focus-visible{opacity:1}
 <li class="d1"><a href="#derives-and-attributes">Derives and attributes</a></li>
 <li class="d1"><a href="#rule-1-a-rust-macro-s-brace-body-is-rust-its-holes-are-harsh">Rule 1 — a Rust macro&#x27;s brace body is Rust; its holes are Harsh</a></li>
 <li class="d0"><a href="#what-does-not-change">What does not change</a></li>
-<li class="d0"><a href="#order-of-work-done">Order of work — done</a></li>
-<li class="d1"><a href="#the-steps-as-planned">The steps as planned</a></li>
 </ul></nav>
       <main>
   <p>Decided in conversation before any code, from a real test: five notebooks of Leptos, Axum and Actix notes converted with <code>hrs-from</code>, whose <code>view!</code> bodies the transpiler mangled. The principle that came out of it: <strong>the macro rules are Harsh's rules, on both sides.</strong> A Harsh call is one group per argument; a Harsh matcher is one group per fragment; a macro body is Harsh where it is expressions and markup where it is markup; and the bracketed and braced forms are Rust's, exactly as brackets and braces are everywhere else in the language. Macros do not produce Harsh — <code>hrs</code> transpiles the file, then rustc expands — but the programmer never has to know: both sides of every macro are written in Harsh and meet in Rust.</p>
+<h2 id="the-three-rules">The three rules</h2>
+<p>Every macro call in Harsh follows one of three rules, decided by who wrote the
+macro and what its stream is.</p>
+<p><strong>1. A Harsh macro's stream is Harsh.</strong> A macro marked <code>~</code> is written in Harsh
+and expanded by <code>hrs</code> before anything is transpiled: its call, its matcher and
+its expansion are all Harsh, and nothing of it reaches the Rust but what it
+expands to.</p>
+<pre class="code harsh"><code>macro_rules<span class="p">~</span> twice
+    <span class="p">(</span> <span class="p">(</span><span class="defer">$</span>x<span class="p">:</span>expr<span class="p">)</span> <span class="p">)</span> <span class="op">=&gt;</span> <span class="k">do</span><span class="p">:</span> <span class="defer">$</span>x <span class="p">*</span> <span class="num">2</span>
+
+<span class="k">let</span> n <span class="p">=</span> twice<span class="p">~</span> <span class="p">(</span>a <span class="p">+</span> <span class="num">1</span><span class="p">)</span></code></pre>
+<p><strong>2. A Rust macro's stream is Rust; Harsh goes in holes.</strong> A macro marked <code>!</code>
+that takes a language of its own -- a framework's markup, a query,
+<code>select!</code>'s arms -- takes it in braces, written exactly as its documentation
+shows. Harsh reads none of it. Wherever that language takes Rust code, a hole
+<code>@: … :@</code> holds the Harsh for it, and is transpiled in place:</p>
+<pre class="code harsh"><code><span class="mac">rsx!</span> <span class="p">{</span>                                       <span class="mac">rsx!</span> <span class="p">{</span>
+    button <span class="p">{</span>                                     button <span class="p">{</span>
+        onclick<span class="p">:</span> <span class="p">@</span><span class="p">:</span> <span class="k">move</span> <span class="p">|</span>_<span class="p">|</span> n <span class="op">&lt;-</span> set <span class="num">0</span> <span class="p">:</span><span class="p">@</span><span class="p">,</span>          onclick<span class="p">:</span> <span class="k">move</span> <span class="p">|</span>_<span class="p">|</span> n<span class="p">.</span>set<span class="p">(</span><span class="num">0</span><span class="p">)</span><span class="p">,</span>
+        <span class="str">"reset"</span>                                      <span class="str">"reset"</span>
+    <span class="p">}</span>                                            <span class="p">}</span>
+    strong <span class="p">{</span> <span class="str">"{@: n$ :@}"</span> <span class="p">}</span>                      strong <span class="p">{</span> <span class="str">"{n()}"</span> <span class="p">}</span>
+<span class="p">}</span>                                            <span class="p">}</span></code></pre>
+<p>A hole of several lines may start its code on the <code>@:</code> line or the next, and end with <code>:@</code> on its last line or its own; lines beneath align with the code. <code>hrs fmt</code> writes <code>{@: if n &gt; 2:</code> with <code>else:</code> under <code>if</code> and <code>"few" :@}</code> closing the last line.</p>
+<p><strong>3. The one exception: a list of values is juxtaposed.</strong> When a Rust macro's
+stream is just comma-separated expressions -- <code>println!</code>, <code>vec!</code>,
+<code>assert_eq!</code> -- it is written by Harsh's rule for application instead:
+arguments juxtaposed, any argument that is not an atom isolated in
+parentheses, no commas. This is the only place Harsh decides how a macro's
+stream is written, so that calling a macro keeps Harsh's feel:</p>
+<pre class="code harsh"><code><span class="mac">println!</span> <span class="str">"{} {}"</span> a <span class="p">(</span>b <span class="p">+</span> <span class="num">1</span><span class="p">)</span>          <span class="mac">println!</span><span class="p">(</span><span class="str">"{} {}"</span><span class="p">,</span> a<span class="p">,</span> b <span class="p">+</span> <span class="num">1</span><span class="p">)</span><span class="p">;</span>
+<span class="k">let</span> v <span class="p">=</span> <span class="mac">vec!</span> <span class="num">1</span> <span class="num">2</span> <span class="num">3</span>                  <span class="k">let</span> v <span class="p">=</span> <span class="mac">vec!</span><span class="p">(</span><span class="num">1</span><span class="p">,</span> <span class="num">2</span><span class="p">,</span> <span class="num">3</span><span class="p">)</span><span class="p">;</span></code></pre>
 <h2 id="where-macros-stand">Where macros stand</h2>
 <p>Macros are organised by who wrote them, in what, and whether they are yours:</p>
 <ul>
 <li><strong>Harsh macros (~)</strong> -- your own, written in Harsh. <em>Declarative</em>
-  (<code>macro_rules~</code>): finished. <em>Procedural</em>, mirroring Rust's (ruling 17):
-  custom derive, built (0.1.29); attribute-like, built (this batch);
-  function-like, built (0.1.28) -- the Rust Book's three kinds, in its order.</li>
+  (<code>macro_rules~</code>), and <em>procedural</em>, mirroring Rust's (ruling 17): custom
+  derive, attribute-like and function-like -- the Rust Book's three kinds,
+  in its order.</li>
 <li><strong>Rust macros (!)</strong> -- your own, written in Rust inside a Harsh project:
   still supported. <em>Declarative</em> (<code>macro_rules!</code>): a zone of Rust, copied
   verbatim. <em>Procedural</em>: a Rust proc-macro crate beside your Harsh crates,
@@ -191,8 +222,8 @@ pre.code:hover .copy,.copy:focus-visible{opacity:1}
   or give it braces, <code>my_macro! { a | b | c }</code>.</li>
 </ul>
 <p>Parsing and building for Harsh's procedural macros: a Harsh counterpart to
-<code>syn</code> and <code>quote</code> is in progress (<code>hrs_syn</code>, <code>hrs_quote</code>); until it lands, a
-macro reads and writes its tokens with <code>hrs_proc_macro</code>.</p>
+<code>syn</code> and <code>quote</code> ships with <code>hrs</code>: <code>hrs_syn</code> and <code>hrs_quote</code>. A macro may
+also read and write its tokens directly with <code>hrs_proc_macro</code>.</p>
 <h2 id="harsh-macros">Harsh macros (~)</h2>
 <p>Your own macros, written in Harsh, expanded by <code>hrs</code> into Harsh before anything is transpiled.</p>
 <h3 id="declarative-macros">Declarative macros</h3>
@@ -551,20 +582,6 @@ put Harsh inside a macro's language by guessing its grammar; Harsh no longer
 guesses.</p>
 <h2 id="what-does-not-change">What does not change</h2>
 <p>Calls are juxtaposed (<code>println! "{}" a</code>); <code>m! { … }</code> calls keep their braces, and a bracket after <code>!</code> is an array argument; the body of a <code>macro_rules~</code> transcriber may still be written in Rust's braces under rule 3 when that is wanted. Procedural macros are unaffected: they receive the transpiled tokens.</p>
-<h2 id="order-of-work-done">Order of work — done</h2>
-<p><em>History. Rules 1, 2, 3 and 6 and the <code>#:</code> block named below were retired on
-2026-09-23; see the new Rule 1.</em></p>
-<p>Every step below has landed. Step 5, the notebooks, is regenerated outside this tree.</p>
-<h3 id="the-steps-as-planned">The steps as planned</h3>
-<ol>
-<li>Transpiler: rule 3 (juxtaposition off inside macro braces — the fix the notebooks needed first; later withdrawn, see rule 3 above), rule 1 (HSX from the block's tokens, holes laid out as fragments), rule 2 (arm classification, <code>$ident</code> atoms, line-level repetition semicolons, <code>$(</code> paren block), rule 4 (matcher mapping), rule 5 (nothing to do — verify), rule 6 (the brace tree). A test per rule; round trip byte-exact.</li>
-<li>Converter: Rust <code>view! { … }</code> → <code>view! do:</code> with attribute values and holes in <code>{ }</code> (the end-of-expression heuristic lives here — depth-zero <code>&gt;</code> or the next <code>name=</code> — where permissiveness is fine); Rust matchers → rule 4 groups; other macro bodies → rule 3 with the author's whitespace kept. Round trip over the five notebooks.</li>
-<li>Book: chapter 17's <code>select!</code> and chapter 20's <code>my_vec</code> in rule 2 form; HSX and the matcher rule in chapter 20's macro section.</li>
-<li>Guide: a "Macros" section stating rules 1–5 with these examples, verified.</li>
-<li>The five notebooks regenerated.</li>
-<li>Tree-sitter and VSCode: HSX holes as code, markup as markup. Handover, changelog, archive.</li>
-</ol>
-<p>Corpus for the mapping: the Book's macros, the guide's, <code>hashmap~</code>, <code>filled~</code>, <code>log!</code> above, and the notebooks' <code>view!</code> bodies.</p>
     </main>
   </div>
 </div>

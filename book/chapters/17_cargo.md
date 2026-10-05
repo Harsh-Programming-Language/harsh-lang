@@ -49,7 +49,7 @@ $ hrs test
 running 1 test
 test target/hrs/lib.rs - add_one (line 10) ... ok
 
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.19s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.17s
 ```
 
 `cargo doc --open` renders every `///` and `//!` in the crate as HTML, with the Markdown inside them — headings, code blocks, links — laid out. The conventional sections are `# Examples`, `# Panics` (when the function can), `# Errors` (what `Err`s it returns) and `# Safety` (for `unsafe` functions). The example in the `///` is Harsh, like everything else in the file, and `cargo test` *runs it* — every code block in a doc comment is a test, so documentation cannot drift from the code without failing the build.
@@ -128,6 +128,55 @@ mylib = { path = "../mylib" }
 ```
 
 Paths in `Hrs.toml` are relative to its own folder. In a workspace, a member that inherits (`version.workspace = true`) gets the workspace's values. `hrs export` writes such a project as plain Rust, each Harsh crate it uses exported beside it and named with a path and a version, so `cargo publish` takes them in order. Harsh files inside a Rust project are transpiled together — `hrs src/parser.hrs src/lexer.hrs` — each `.rs` beside its `.hrs`, headed with the name of its source; `hrs --check src/*.hrs` in CI fails when a committed `.rs` has fallen behind. Each command speaks to one registry, so a name is never looked up in the wrong one: `hrs add serde` answers that `serde` is a Rust crate, for `cargo add`. The crates for writing procedural macros — `hrs_proc_macro`, `hrs_quote`, `hrs_syn` — are compile-time tools, as `syn` and `quote` are Rust's, and stay in `Cargo.toml`. A project from before 0.3.0, with `hrs_std` in its `Cargo.toml`, is stopped with a message; `hrs migrate` moves it. In the rare project that wants a Harsh crate and a Rust crate of the same name, Cargo's rename keeps both: `foo_rs = { version = "1", package = "foo" }`, and the Rust one is `foo_rs` in your code.
+
+**Three intents.** How a project is made, and where its code is published, give three cases — and the commands for each already exist:
+
+| | Published to Harsh's registry | Published to crates.io |
+| --- | --- | --- |
+| **A Harsh project** (`hrs new`) | #1: a Harsh crate | #2: a Rust crate written in Harsh |
+| **A Rust project** (`cargo new`) | — | #3: Harsh files in a Rust crate |
+
+A program is made with `hrs new app`; a library — a crate others use, with no `main` — with `hrs new --lib geometry` (or `hrs new geometry --lib`), which writes `src/lib.hrs` with one public function and a test, so `hrs test` passes at once. #1 and #2 start the same way: which one a library becomes is chosen when it is published, not when it is made, and the same library can be published both ways.
+
+*#1, a Harsh crate,* is shared as Harsh, with its `~` macros, for Harsh users:
+
+```console
+hrs new --lib geometry
+hrs build
+hrs publish
+```
+
+Harsh's registry is not open yet, so `hrs publish` checks the package as a registry would — `name`, `version`, `description` and `license` in `Cargo.toml`, and every Harsh dependency named by version rather than by path, since a published crate cannot point at a folder on your disk — and then stops, saying how to share today. Until it opens, another project lists the library in its own `Hrs.toml` by path, and uses it as any crate, `geometry.add 2 3`:
+
+```toml
+[dependencies]
+geometry = { path = "../geometry" }
+```
+
+`hrs add` adds the crates of Harsh's distribution, like `hrs_std`; a crate on a path is written into `Hrs.toml` by hand.
+
+*#2, a Rust crate written in Harsh,* is shared with Rust users, who never need `hrs`. The project is written in Harsh, and published as the Rust `hrs export` writes:
+
+```console
+hrs new --lib geometry
+hrs export                # target/export: plain Rust, the Harsh crates it uses beside it
+cd target/export
+cargo build               # check it builds without hrs
+cargo publish
+```
+
+`hrs export` keeps a library a library, and warns when `description` or `license` is missing from `Cargo.toml`, which crates.io requires before `cargo publish`.
+
+*#3, Harsh files in a Rust crate,* keeps a Rust project and writes some of its files in Harsh. Each `.hrs` file is transpiled to the `.rs` beside it, headed with the name of its source; files transpiled together see each other's functions; and `--check` lets CI fail when a `.rs` is stale:
+
+```console
+cargo new parser
+hrs src/lexer.hrs src/grammar.hrs      # writes src/lexer.rs and src/grammar.rs
+hrs --check src/lexer.hrs src/grammar.hrs   # in CI: writes nothing, fails if stale
+cargo publish
+```
+
+The edge cases: a procedural-macro crate stays in `Cargo.toml` in every case, as a Rust dependency; in #2 the Harsh crates a project uses are published first, in the order `hrs export` names them; and in #3 the `.rs` files are what Cargo builds, so they are committed with the `.hrs` they come from.
 
 ## 17.4 Workspaces
 

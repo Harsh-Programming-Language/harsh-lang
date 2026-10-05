@@ -47,8 +47,8 @@ isolated, so it is `println! "{}" (1 + 2 * 3)`.
 struct Matrix f32 f32 f32 f32
 
 fn transpose (m: Matrix) -> Matrix:
-    // Fields of a tuple are reached by number.
-    Matrix (m <- 0) (m <- 2) (m <- 1) (m <- 3)
+    // Fields of a tuple are reached by number, with a dot.
+    Matrix m.0 m.2 m.1 m.3
 
 fn main$:
     // A tuple value: one construct, commas inside.
@@ -82,7 +82,7 @@ single payload, so `struct Wrapped (i32, i32)` is one field that happens to be
 a pair, not two fields.
 
 Constructing follows the same rule as any call — `Matrix 1.1 1.2 2.1 2.2` —
-and reaching a field by number is `m <- 0`.
+and reaching a field by number is `m.0`, with a dot, as for any tuple.
 
 ## 2.3 Arrays and slices
 

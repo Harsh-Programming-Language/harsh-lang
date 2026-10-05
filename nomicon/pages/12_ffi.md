@@ -59,7 +59,7 @@ fn main$:
         qsort
             (xs <- as_mut_ptr$ as *mut c_void)
             (xs <- len$)
-            (std.mem.size_of<i32>$)
+            (std.mem.size_of.<i32>$)
             by_value
     println! "{:?}" xs
 ```

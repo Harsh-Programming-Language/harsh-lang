@@ -1,6 +1,6 @@
 # Roadmap
 
-Sizing is relative to one session. "Blocked by" matters more than the estimate.
+Sizing is relative: XS, S, M, L. "Blocked by" matters more than the estimate.
 
 ## Done
 
@@ -14,7 +14,6 @@ Sizing is relative to one session. "Blocked by" matters more than the estimate.
 - Harsh's own proc macros, the function-like form (0.1.28, ruling 17): a Harsh function marked `#[proc_macro~]`, called `name~ stream`, run by a generated runner when the caller is transpiled; `hrs_proc_macro` 0.1.0
 - Harsh derives (0.1.29), mirroring Rust's: `#[proc_macro_derive~ Name]` with optional helper attributes, called `#[derive~ Name]`
 - Language guide doubled — tutorial plus every construct in every form — with every snippet transpiled, compiled and run
-- `docs/dev/HANDOVER.md` and `docs/dev/RESUME.md` with each delivery
 - Driver verified on a Mac with rustc 1.97 and current cargo: `new`, `build`, `run`, remapping. Manifest guard (refuses to build without a target under `target/hrs/`), always-on transpile report, equal-mtime staleness, progress bar suppressed; remapper locates zero-width insertion spans; application-vs-`<-` precedence stated in the guide and pinned by a test
 
 ## Open, in order (2026-09-25)
@@ -87,7 +86,7 @@ produces), several files at once (sibling files see each other's arities),
 and a header in each generated file (`// Generated from parser.hrs by hrs;
 edit that file.`); the #3 template sets up `--check` by default.
 
-### First: `.<T>`, the turbofish as Harsh writes it (decided 2026-10-03, for 0.4.0)
+### `.<T>`, the turbofish as Harsh writes it: built 2026-10-04 (0.4.0)
 
 **The rule (the user's):** Rust's `::` is Harsh's `.`, everywhere -- the
 turbofish included. A generic list in an expression is written `.<T>`:
@@ -123,19 +122,17 @@ write `.<T>` for Rust's `::<T>`; a test of the refusal and of each form.
 
 ### Waiting on the user, after his testing
 
+- **For his review: `a[i, j]` beside `a[(i, j)]`** (audit item D). Built
+  without his ruling: `a[i, j]` reads one matrix element and is written to
+  Rust as `a[(i, j)]` (a top-level comma in an index makes a tuple);
+  `a[(i, j)]` gives the same Rust. Left as is until he checks it.
+
+
 
 
 
 
 - **`hrs fmt` applies the countable rules -- built 2026-09-29 (0.1.52).** Remaining from the list below: (1) and (3).
-- **Three layout bugs found applying the handwriting rule (2026-09-29).**
-  (1) `let x =` then, on the next line, `if c: a` with its `else:` beneath:
-  the inline block is not transpiled (a `:` reaches the Rust). The books use
-  `let x = do:` instead. (2) `hrs fmt` flattens a nested `else` in an `if`
-  bound by `let`, changing its layout wrongly. (3) `hrs fmt` indents a
-  `match`'s arms under its head when the head is a broken chain. Also: the
-  companions' programs have never been through `hrs fmt`; formatting them is
-  his decision.
 
 - **Real Harsh colours on GitLab and GitHub.** Since 0.1.50 Harsh blocks are
   fenced `rust harsh` and coloured as Rust there. For Harsh's own colours:
@@ -146,12 +143,6 @@ write `.<T>` for Rust's `::<T>`; a test of the refusal and of each form.
 
 - ~~**The Harshonomicon**~~ -- delivered in 0.1.45 (13 chapters, 35
   programs), after *Harsh Design Patterns* in 0.1.44.
-- **Books quote the generated Rust in error excerpts.** The books' builders
-  remap an error's positions with `hrs-remap`, but its excerpt still quotes
-  the generated Rust (`names.push(String::from(..))`) -- in *Harsh by
-  Example* and *Harsh Design Patterns* alike -- while `hrs run` quotes the
-  Harsh. The builders should render errors as `hrs run` does. Found
-  2026-09-28.
 
 - ~~**Hover, go-to-definition through rust-analyzer**~~ -- **built 2026-09-27
   (0.1.38)** with his three rulings. To try on the Mac with the real
@@ -163,15 +154,9 @@ write `.<T>` for Rust's `::<T>`; a test of the refusal and of each form.
   with the page checks, the trial job retired (`site/DEPLOY.md`, part D).
 - **Completion** -- built 2026-09-27 (0.1.39), on the text being typed.
 
-- **Matrix views as values** -- `VIEWS-DESIGN.md`: the spelling (methods
-  `view`/`view_mut`, or a `view~` macro), `&a[range, range]` then refused,
-  the release it goes in. The views' undefined behaviour under Stacked
-  Borrows is the known issue of 0.1.30.
 - **Hover, go-to-definition, completion through rust-analyzer** --
   `LSP-RA-DESIGN.md`: how rust-analyzer sees the distribution, answers while
   a file does not transpile, first-release scope.
-- **B7's outside of the marks** (the inside is built) and **B2** --
-  `DSL-REVIEW.md`.
 - **Zed** -- the two Enter causes in `ZED-FINDINGS.md`, then the registry PR:
   his editor.
 - **sr-auto** -- the hand-written rewrite: his to run.
@@ -203,6 +188,8 @@ check); the matcher ruling's leftovers (the kernel's test).
 
 ### Open, needing no decision
 
+
+
 - ~~**Item-level shaking of `hrs_std`**~~ -- **built 2026-09-25**
   (`src/shake.rs`): 18 real programs (the Book's and *By Example*'s matrix
   examples) exported, built with cargo alone, identical to `hrs run`, zero
@@ -232,7 +219,8 @@ check); the matcher ruling's leftovers (the kernel's test).
   `tree-sitter-harsh` is pushed and `zed-harsh/extension.toml`'s `rev` set to
   that commit (the user's). Left: the guide's DSL chapter and its precedence
   table.
-- **A real Leptos build**, and source-map offsets for a re-read expansion.
+- **A real Leptos build** -- not possible in the sandbox (rustc 1.75; Leptos
+  needs newer): to try on the user's Mac or in CI.
 
 ### Last
 
@@ -306,17 +294,6 @@ items done since -- is kept in the handover and the changelog.)*
   only when stale (`a_harsh_app_uses_a_harsh_library_by_path`); chapter 17
   corrected to say what `hrs` does. `hrs` at a workspace's root, without a
   `[package]`, is still not a command -- run it in a member.
-
-- **Matrix views are undefined behaviour under Stacked Borrows** (Miri on the
-  user's Mac, 2026-09-25; released so in 0.1.30 by his decision). `&a[0..2,
-  ..]` returns a reference to a zero-sized slice pointing at the matrix, its
-  window in the slice's length -- `bitvec`'s technique -- and widening that
-  reference back to the matrix is rejected by Stacked Borrows (Tree Borrows
-  accepts it; the rest of `hrs_std` is clean under both). **First work after
-  0.1.30, the user's choice (2026-09-25): (c), a view as a value** --
-  `View<'a, T>` holding `&Matrix` and the window, sound with no trick -- which
-  needs a spelling of its own, since Rust's `Index` must return a reference
-  and the transpiler has no types to route `&a[..]` elsewhere. Design first.
 
 - **`hrs-from`: an `if` as a struct literal's field value, with a string
   continued over lines in a branch** (found 2026-09-24 by the self-host in
@@ -504,7 +481,7 @@ The two cases bare has to survive, and both do:
 impl<T> Summary for Wrapper<T>      impl<T> Summary for Wrapper<T>
     [where T: Display]                  where
     fn summarize (&self) -> String:         T: Display,
-        format! "{}" (self <- 0)        {
+        format! "{}" self.0        {
                                             fn summarize(&self) -> String {
                                                 format!("{}", self.0)
                                             }

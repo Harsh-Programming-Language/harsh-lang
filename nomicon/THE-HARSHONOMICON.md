@@ -215,12 +215,12 @@ fn main$:
     // Rust may reorder the fields to pack them; C's order pads.
     println!
         "Loose:   size {} align {}"
-        (mem.size_of<Loose>$)
-        (mem.align_of<Loose>$)
+        (mem.size_of.<Loose>$)
+        (mem.align_of.<Loose>$)
     println!
         "InOrder: size {} align {}"
-        (mem.size_of<InOrder>$)
-        (mem.align_of<InOrder>$)
+        (mem.size_of.<InOrder>$)
+        (mem.align_of.<InOrder>$)
 ```
 
 ```text
@@ -251,14 +251,14 @@ trait Shape
 
 fn main$:
     // Zero-sized: no space at all.
-    println! "()      {}" (mem.size_of<()>$)
-    println! "Nothing {}" (mem.size_of<Nothing>$)
-    println! "Void    {}" (mem.size_of<Void>$)
+    println! "()      {}" (mem.size_of.<()>$)
+    println! "Nothing {}" (mem.size_of.<Nothing>$)
+    println! "Void    {}" (mem.size_of.<Void>$)
     // A pointer to a dynamically sized type carries its length or vtable.
-    println! "&u8        {}" (mem.size_of<&u8>$)
-    println! "&[u8]      {}" (mem.size_of<&[u8]>$)
-    println! "&str       {}" (mem.size_of<&str>$)
-    println! "&dyn Shape {}" (mem.size_of<&dyn Shape>$)
+    println! "&u8        {}" (mem.size_of.<&u8>$)
+    println! "&[u8]      {}" (mem.size_of.<&[u8]>$)
+    println! "&str       {}" (mem.size_of.<&str>$)
+    println! "&dyn Shape {}" (mem.size_of.<&dyn Shape>$)
 ```
 
 ```text
@@ -305,9 +305,9 @@ struct Packed
     b: u32
 
 fn main$:
-    println! "{} {}" (mem.size_of<Color>$) (Color.Green as u8)
-    println! "{} {}" (mem.size_of<Meters>$) (mem.size_of<f64>$)
-    println! "{}" (mem.size_of<Packed>$)
+    println! "{} {}" (mem.size_of.<Color>$) (Color.Green as u8)
+    println! "{} {}" (mem.size_of.<Meters>$) (mem.size_of.<f64>$)
+    println! "{}" (mem.size_of.<Packed>$)
 ```
 
 ```text
@@ -347,19 +347,14 @@ fn main$:
 
 ```text
 error[E0499]: cannot borrow `total` as mutable more than once at a time
- --> references.hrs:6:13
-  |
-4 |     let a = &mut total;
-  |             ---------- first mutable borrow occurs here
-5 |     // Refused: `total` is already borrowed mutably by `a`.
-6 |     let b = &mut total;
-  |             ^^^^^^^^^^ second mutable borrow occurs here
-7 |     *a += 1;
-  |     ------- first borrow later used here
-
-error: aborting due to previous error
-
-For more information about this error, try `rustc --explain E0499`.
+  --> references.hrs:5:13
+   |
+ 3 |     let a = &mut total
+   |             ---------- first mutable borrow occurs here
+ 5 |     let b = &mut total
+   |             ^^^^^^^^^^ second mutable borrow occurs here
+ 6 |     *a += 1
+   |     ------- first borrow later used here
 ```
 
 **In Harsh:** the refusal points at the `.hrs` lines of both borrows.
@@ -447,44 +442,26 @@ fn main$:
 
 ```text
 error[E0499]: cannot borrow `*map` as mutable more than once at a time
-  --> limits.hrs:10:21
+  --> limits.hrs:9:21
    |
-6  |   fn get_default<'m>(map: &'m mut HashMap<i32, String>, key: i32) -> &'m mut String {
-   |                  -- lifetime `'m` defined here
-7  |       match map.get_mut(&key) {
-   |       -     --- first mutable borrow occurs here
-   |  _____|
-   | |
-8  | |         Some(value) => value,
-9  | |         None => {
-10 | |             let _ = map.insert(key, String::new());
-   | |                     ^^^ second mutable borrow occurs here
-11 | |             map.get_mut(&key).unwrap()
-12 | |         },
-13 | |     }
-   | |_____- returning this value requires that `*map` is borrowed for `'m`
+ 5 | fn get_default<'m> (map: &'m mut HashMap<i32, String>) (key: i32) -> &'m mut String:
+   |                -- lifetime `'m` defined here
+ 6 |     match map <- get_mut (&key)\
+   |     ---------------------------- returning this value requires that `*map` is borrowed for `'m`
+   |           --- first mutable borrow occurs here
+ 9 |             let _ = map <- insert key (String.new$)
+   |                     ^^^ second mutable borrow occurs here
 
 error[E0499]: cannot borrow `*map` as mutable more than once at a time
-  --> limits.hrs:11:13
+  --> limits.hrs:10:13
    |
-6  |   fn get_default<'m>(map: &'m mut HashMap<i32, String>, key: i32) -> &'m mut String {
-   |                  -- lifetime `'m` defined here
-7  |       match map.get_mut(&key) {
-   |       -     --- first mutable borrow occurs here
-   |  _____|
-   | |
-8  | |         Some(value) => value,
-9  | |         None => {
-10 | |             let _ = map.insert(key, String::new());
-11 | |             map.get_mut(&key).unwrap()
-   | |             ^^^ second mutable borrow occurs here
-12 | |         },
-13 | |     }
-   | |_____- returning this value requires that `*map` is borrowed for `'m`
-
-error: aborting due to 2 previous errors
-
-For more information about this error, try `rustc --explain E0499`.
+ 5 | fn get_default<'m> (map: &'m mut HashMap<i32, String>) (key: i32) -> &'m mut String:
+   |                -- lifetime `'m` defined here
+ 6 |     match map <- get_mut (&key)\
+   |     ---------------------------- returning this value requires that `*map` is borrowed for `'m`
+   |           --- first mutable borrow occurs here
+10 |             map <- get_mut (&key) <- unwrap$
+   |             ^^^ second mutable borrow occurs here
 ```
 
 **In Harsh:** rustc's refusal points at the `.hrs` lines; the usual way
@@ -663,25 +640,13 @@ fn main$:
 
 ```text
 error[E0597]: `value` does not live long enough
-  --> dropck.hrs:18:15
+  --> dropck.hrs:13:35
    |
-15 |     let value = String::from("treasure");
+11 |     let value = String.from "treasure"
    |         ----- binding `value` declared here
-...
-18 |         seen: &value,
-   |               ^^^^^^ borrowed value does not live long enough
-...
-21 | }
-   | -
-   | |
-   | `value` dropped here while still borrowed
-   | borrow might be used here, when `inspector` is dropped and runs the `Drop` code for type `Inspector`
-   |
+13 |     inspector = Inspector\ seen = &value
+   |                                   ^^^^^^ borrowed value does not live long enough
    = note: values in a scope are dropped in the opposite order they are defined
-
-error: aborting due to previous error
-
-For more information about this error, try `rustc --explain E0597`.
 ```
 
 **In Harsh:** declaring the borrowed value first, so it is dropped last, is
@@ -864,7 +829,7 @@ fn main$:
     // A reference to a raw pointer, and to an integer address.
     let x = 7
     let p = &x as *const i32
-    println! "{}" ((p as usize) % (std.mem.align_of<i32>$))
+    println! "{}" ((p as usize) % (std.mem.align_of.<i32>$))
 ```
 
 ```text
@@ -934,22 +899,14 @@ fn main$:
 
 ```text
 error[E0381]: used binding `x` is possibly-uninitialized
- --> checked.hrs:9:15
-  |
-3 |     let x: i32;
-  |         - binding declared here but left uninitialized
-...
-6 |         x = 1
-  |         ----- binding initialized here in some conditions
-...
-9 |     println!("{x}")
-  |               ^^^ `x` used here but it is possibly-uninitialized
-  |
-  = note: this error originates in the macro `$crate::format_args_nl` which comes from the expansion of the macro `println` (in Nightly builds, run with -Z macro-backtrace for more info)
-
-error: aborting due to previous error
-
-For more information about this error, try `rustc --explain E0381`.
+  --> checked.hrs:7:15
+   |
+ 2 |     let x: i32
+   |         - binding declared here but left uninitialized
+ 5 |         x = 1
+   |         ----- binding initialized here in some conditions
+ 7 |     println! "{x}"
+   |               ^^^ `x` used here but it is possibly-uninitialized
 ```
 
 **In Harsh:** the error points at the `.hrs` line of the read.
@@ -1288,7 +1245,7 @@ fn main$:
         let _ = s <- spawn (move ||:
             let p = p
             unsafe:
-                *p <- 0 += 1
+                *p.0 += 1
         )
     )
     println! "{value}"
@@ -1446,7 +1403,7 @@ unsafe impl<T: Sync> Sync for MyVec<T>
 impl<T> MyVec<T>
     pub fn new$ -> Self:
         assert!
-            (mem.size_of<T>$ != 0)
+            (mem.size_of.<T>$ != 0)
             "zero-sized types are not handled here"
         Self\
             ptr = NonNull.dangling$
@@ -1454,8 +1411,8 @@ impl<T> MyVec<T>
             len = 0
 
     fn layout (cap: usize) -> Layout:
-        let size = cap * mem.size_of<T>$
-        Layout.from_size_align size (mem.align_of<T>$) <- unwrap$
+        let size = cap * mem.size_of.<T>$
+        Layout.from_size_align size (mem.align_of.<T>$) <- unwrap$
 
     fn grow (&mut self):
         let new_cap = if self <- cap == 0: 4 else: 2 * self <- cap
@@ -1762,7 +1719,7 @@ fn main$:
         qsort
             (xs <- as_mut_ptr$ as *mut c_void)
             (xs <- len$)
-            (std.mem.size_of<i32>$)
+            (std.mem.size_of.<i32>$)
             by_value
     println! "{:?}" xs
 ```

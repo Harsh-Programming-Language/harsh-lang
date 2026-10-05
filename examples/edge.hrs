@@ -22,9 +22,9 @@ fn describe (s: &Shape) -> String:
 fn main$:
     let p = Point.new 3 4
     println! "{:?} norm={}" p (p <- norm$)
-    let v = Vec<i32>. new$
+    let v = Vec.<i32>. new$
     println! "{}" (v <- len$)
-    let m = HashMap<String, i32>. new$
+    let m = HashMap.<String, i32>. new$
     println! "{}" (m <- len$)
     let t = (1, 2.5, "three")
     println! "{} {} {}" (t.0) (t.1) (t.2)

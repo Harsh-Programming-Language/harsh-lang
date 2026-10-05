@@ -49,8 +49,38 @@ pub fn columns(src: &str, line: usize) -> Columns {
             c.legal.push(blank);
             c.legal.sort_unstable();
         }
+    } else if let Some((code_col, opens_block)) = hole_opened_above(prefix) {
+        // A hole whose code starts on the `@:` line (B2, 2026-10-04): its
+        // lines align with that code -- `{@: if n > 2:` puts the next line
+        // one level in from `if`, and Tab offers `if`'s own column for
+        // `else:`.
+        c.default = if opens_block { code_col + unit } else { code_col };
+        for col in [code_col, code_col + unit] {
+            if !c.legal.contains(&col) {
+                c.legal.push(col);
+            }
+        }
+        c.legal.sort_unstable();
     }
     c
+}
+
+/// The line just above opens a hole with its code on the same line and does
+/// not close it: the code's column, and whether that line opens a block.
+fn hole_opened_above(prefix: &str) -> Option<(usize, bool)> {
+    let body = prefix.strip_suffix('\n').unwrap_or(prefix);
+    let last = body.rsplit('\n').next()?;
+    let at = last.rfind("@:")?;
+    if last[..at].ends_with('@') {
+        return None;
+    }
+    let after = &last[at + 2..];
+    if after.contains(":@") || after.trim().is_empty() {
+        return None;
+    }
+    let lead = after.len() - after.trim_start().len();
+    let code_col = last[..at + 2].chars().count() + lead;
+    Some((code_col, after.trim_end().ends_with(':')))
 }
 
 /// Indentation of the last line of `prefix` if that line is whitespace only.

@@ -32,7 +32,7 @@ impl Report
                                        (w = *width)
 
     fn render (&self) (n: usize) -> String:
-        let mut out = Vec<String>.new$
+        let mut out = Vec.<String>.new$
         for (i, (w, c)) in self <- top n
             <- iter$
             <- enumerate$:

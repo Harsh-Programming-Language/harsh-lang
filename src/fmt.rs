@@ -59,7 +59,11 @@ fn format_around_bodies(src: &str, dz: &[crate::dslzone::Zone]) -> String {
     let out = format_harsh(&work);
     let (wl, ol): (Vec<&str>, Vec<&str>) = (work.split('\n').collect(), out.split('\n').collect());
     if wl.len() != ol.len() {
-        return src.to_string();
+        // The rest of the file keeps its lines (the conservative choice), but
+        // its holes are still laid out -- inside the bodies only, checked
+        // token for token (found 2026-10-04: a multi-line body's blanked
+        // lines collapse, and no hole in such a file was ever formatted).
+        return format_holes_only(src, dz);
     }
     let sl: Vec<&str> = src.split('\n').collect();
     let line_of = |at: usize| src[..at].matches('\n').count();
@@ -82,13 +86,132 @@ fn format_around_bodies(src: &str, dz: &[crate::dslzone::Zone]) -> String {
         }
     }
     // B7 (a): the holes' marks with one space inside (the user, 2026-09-25),
-    // kept only when the Rust is the same, token for token -- Rule 0.
+    // none between a mark and the DSL's brace (2026-10-04); B2: the holes in
+    // layout #3, the code starting on the `@:` line and `:@` ending the last
+    // (2026-10-04). Kept only when the Rust is the same, token for token --
+    // Rule 0.
+    let holes = hole_layout(holes.iter().map(|l| tight_hole_braces(l)).collect());
     let plain = lines.join("\n");
     let spaced = holes.join("\n");
-    if spaced != plain && rust_tokens(&spaced).is_some() && rust_tokens(&spaced) == rust_tokens(&plain) {
+    if spaced != plain && ((rust_tokens(&spaced).is_some() && rust_tokens(&spaced) == rust_tokens(&plain)) || same_rust(&spaced, &plain)) {
         return spaced;
     }
     plain
+}
+
+/// Only the holes, in a file left otherwise as written: the bodies' lines
+/// normalised (B7) and laid out (#3), kept when the Rust is unchanged.
+fn format_holes_only(src: &str, dz: &[crate::dslzone::Zone]) -> String {
+    let sl: Vec<String> = src.split('\n').map(|l| l.to_string()).collect();
+    let line_of = |at: usize| src[..at].matches('\n').count();
+    let mut holes = sl.clone();
+    for z in dz {
+        let (first, last) = (line_of(z.open), line_of(z.close));
+        let col = z.open - (src[..z.open].rfind('\n').map_or(0, |k| k + 1));
+        holes[first] = format!("{}{}", &sl[first][..col], crate::dslzone::normalize_hole_line(&sl[first][col..]));
+        for k in first + 1..=last {
+            holes[k] = crate::dslzone::normalize_hole_line(&sl[k]);
+        }
+    }
+    let holes = hole_layout(holes.iter().map(|l| tight_hole_braces(l)).collect());
+    let spaced = holes.join("\n");
+    if spaced != src && same_rust(&spaced, src) {
+        return spaced;
+    }
+    src.to_string()
+}
+
+/// Rule 0 for a file with DSL bodies, which `rust_tokens` cannot read: both
+/// versions transpiled, compared with their whitespace removed.
+fn same_rust(a: &str, b: &str) -> bool {
+    let t = |s: &str| crate::driver::transpile_str(s).ok().map(|r| r.chars().filter(|c| !c.is_whitespace()).collect::<String>());
+    match (t(a), t(b)) {
+        (Some(x), Some(y)) => x == y,
+        _ => false,
+    }
+}
+
+/// B7: no space between a hole's marks and braces that enclose exactly that
+/// hole, `{ @: x :@ }` -> `{@: x :@}`. A brace that is the DSL's own --
+/// `sql! { WHERE id = @: count :@ }`, whose `}` closes `sql!` -- is left.
+fn tight_hole_braces(l: &str) -> String {
+    let mut out = l.to_string();
+    let mut from = 0;
+    while let Some(p) = out[from..].find("{ @:").map(|p| p + from) {
+        let Some(c) = out[p + 4..].find(":@").map(|c| c + p + 4) else { break };
+        let rest = &out[c + 2..];
+        let sp = rest.len() - rest.trim_start_matches(' ').len();
+        if rest[sp..].starts_with('}') && sp > 0 {
+            out.replace_range(c + 2..c + 2 + sp, "");
+            out.replace_range(p + 1..p + 2, "");
+        }
+        from = p + 2;
+    }
+    out
+}
+
+/// Layout #3 for holes (the user, 2026-10-04): a `@:` that ends its line takes
+/// up the code from the next line, every line beneath moving by the same
+/// amount so its alignment holds; a `:@` alone on its line joins the end of
+/// the last code line -- unless that line ends in a `//` comment, which would
+/// swallow it.
+fn hole_layout(mut lines: Vec<String>) -> Vec<String> {
+    let ind = |l: &str| l.len() - l.trim_start().len();
+    let mut k = 0;
+    while k < lines.len() {
+        let t = lines[k].trim_end().to_string();
+        if t.ends_with("@:") && !t.ends_with("@@:") {
+            // The next non-blank line is the code's first.
+            let Some(n) = (k + 1..lines.len()).find(|&j| !lines[j].trim().is_empty()) else { break };
+            if lines[n].trim_start().starts_with(":@") {
+                k += 1;
+                continue;
+            }
+            let new_col = t.len() + 1;
+            let old_col = ind(&lines[n]);
+            let delta = new_col as isize - old_col as isize;
+            let joined = format!("{t} {}", lines[n].trim_start());
+            // Shift the lines up to the closing mark.
+            let mut j = n + 1;
+            while j < lines.len() {
+                let l = lines[j].clone();
+                if l.trim().is_empty() {
+                    j += 1;
+                    continue;
+                }
+                let c = ind(&l) as isize + delta;
+                if c < 0 || l.trim_start().starts_with(":@") {
+                    break;
+                }
+                lines[j] = format!("{}{}", " ".repeat(c as usize), l.trim_start());
+                if l.contains(":@") {
+                    break;
+                }
+                j += 1;
+            }
+            lines[k] = joined;
+            lines.drain(k + 1..=n);
+        }
+        k += 1;
+    }
+    // A `:@` alone on its line joins the code above it.
+    let mut k = 1;
+    while k < lines.len() {
+        let t = lines[k].trim().to_string();
+        if t.starts_with(":@") {
+            let Some(p) = (0..k).rev().find(|&j| !lines[j].trim().is_empty()) else { k += 1; continue };
+            let prev = lines[p].trim_end().to_string();
+            let ends_in_comment = prev.contains("//") && !prev.contains("\"");
+            if !prev.trim_end().ends_with("@:") && !ends_in_comment {
+                lines[p] = format!("{prev} {t}");
+                lines.drain(p + 1..=k);
+                k = p + 1;
+                continue;
+            }
+        }
+        k += 1;
+    }
+    lines
 }
 
 fn format_harsh(src: &str) -> String {
@@ -580,13 +703,31 @@ fn rebreak(src: &str) -> String {
             shifts.push((lo, to, d));
         }
         // The block beneath a moved header only needs to stay deeper than
-        // the header's last line: shifted by what that takes, and no more.
+        // the line holding its keyword: shifted by what that takes, and no
+        // more. When the keyword is on the moved part (`if c:` after `let x
+        // =`), that is the header's last line; when it begins the header and
+        // a chain follows (`match v` / `<- iter$` / `<- max$\`), it is the
+        // first -- the arms belong under `match`, not under the chain's last
+        // link (a layout bug found 2026-09-29; fixed 2026-10-04).
         if let Some(&(_, _)) = noted.last() {
             if last_hi > line_hi {
-                let last_ind = noted.last().map(|&(lo, _)| breaks.get(&lo).copied().unwrap_or(0)).unwrap_or(0);
+                let kw = t.iter().rposition(|x| {
+                    matches!(x.text.as_str(), "match" | "if" | "else" | "while" | "for" | "loop" | "do")
+                        && x.kind == Tk::Ident
+                        && depth_at(t, t.iter().position(|y| std::ptr::eq(y, x)).unwrap_or(0)) == 0
+                });
+                let kw_ind = match kw {
+                    Some(k) => noted
+                        .iter()
+                        .filter(|&&(lo, _)| lo <= t[k].span.lo)
+                        .last()
+                        .map(|&(lo, _)| breaks.get(&lo).copied().unwrap_or(0))
+                        .unwrap_or_else(|| orig_col_of(src, t, 0)),
+                    None => noted.last().map(|&(lo, _)| breaks.get(&lo).copied().unwrap_or(0)).unwrap_or(0),
+                };
                 let body_ind = lines.get(li + 1).map(|n| n.indent).unwrap_or(0);
-                if body_ind <= last_ind {
-                    shifts.push((line_hi, last_hi, (last_ind + UNIT) as isize - body_ind as isize));
+                if body_ind <= kw_ind {
+                    shifts.push((line_hi, last_hi, (kw_ind + UNIT) as isize - body_ind as isize));
                 }
             }
         }
@@ -1445,6 +1586,29 @@ fn opener_token(toks: &[Token]) -> Option<usize> {
     let &colon = sig.last()?;
     let line_start_of = |i: usize| (0..=i).rev().find(|&k| toks[k].line_start.is_some()).unwrap_or(0);
     if toks[colon].kind != Tk::Colon {
+        // A `match`'s arms, opened by `\`, belong under the `match` -- not
+        // under the last line of a chain broken before the `\` (`match v` /
+        // `<- iter$` / `<- max$\`; a layout bug found 2026-09-29, fixed
+        // 2026-10-04).
+        if toks[colon].kind == Tk::Backslash {
+            let mut d = 0i32;
+            for k in (0..colon).rev() {
+                match toks[k].kind {
+                    Tk::Close(_) => d += 1,
+                    Tk::Open(_) => d -= 1,
+                    _ => {}
+                }
+                // Only a `match` that starts its own line: mid-line (an
+                // arm's value, `p => match x\`), the line's start stays the
+                // reference, as before.
+                if d == 0 && toks[k].is_kw("match") {
+                    if toks[k].line_start.is_some() && line_start_of(colon) != k {
+                        return Some(k);
+                    }
+                    break;
+                }
+            }
+        }
         return Some(line_start_of(colon));
     }
     // Opened inside a group on this line?

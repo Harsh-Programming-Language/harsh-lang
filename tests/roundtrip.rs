@@ -193,7 +193,6 @@ fn paths_and_members() {
     check(&[
         ("fn main$:\n    let a = std.fmt.Debug\n", "std::fmt::Debug"),
         ("fn main$:\n    let a = s <- len$\n", "s.len()"),
-        ("fn main$:\n    let a = s<-len$\n", "s.len()"),
         ("fn main$:\n    let a = t.0\n", "t.0"),
         ("fn main$:\n    let a = 1.5\n", "1.5"),
         ("fn main$:\n    for i in 0..3:\n        f$\n", "0..3"),
@@ -203,7 +202,7 @@ fn paths_and_members() {
 #[test]
 fn generics_turbofish() {
     check(&[
-        ("fn main$:\n    let v = Vec<i32>.new$\n", "Vec::<i32>::new()"),
+        ("fn main$:\n    let v = Vec.<i32>.new$\n", "Vec::<i32>::new()"),
         ("fn f<T> (x: T) -> T:\n    x\n", "fn f<T>(x: T) -> T"),
         ("fn main$:\n    let v: Vec<i32> = q$\n", "let v: Vec<i32>"),
     ]);
@@ -1010,7 +1009,7 @@ fn dollar_applies_to_nothing() {
     check(&[
         ("fn main$:\n    let a = 1\n", "fn main() {"),
         ("fn one$ -> i32:\n    1\n", "fn one() -> i32 {"),
-        ("fn m$:\n    let v = Vec<i32>.new$\n", "Vec::<i32>::new()"),
+        ("fn m$:\n    let v = Vec.<i32>.new$\n", "Vec::<i32>::new()"),
         ("fn m$:\n    let n = s <- trim$ <- len$\n", "s.trim().len()"),
         ("fn m$:\n    let n = m!$\n", "m!()"),
         ("fn m$:\n    let n = (add 10)$\n", "(add(10))()"),
@@ -1027,7 +1026,7 @@ fn dollar_applies_to_nothing() {
     // The converter writes `$` for an empty call and `()` for a unit argument.
     let back = harsh_lang::unbrace::convert("fn f() -> i32 { g(()) + h::<i32>() }\n").expect("convert");
     assert!(back.contains("fn f$ -> i32:"), "{back}");
-    assert!(back.contains("g () + h<i32>$") || back.contains("g () + h.<i32>$") || back.contains("h<i32>$"), "{back}");
+    assert!(back.contains("g () + h.<i32>$") || back.contains("g () + h.<i32>$") || back.contains("h.<i32>$"), "{back}");
 }
 
 /// A lone parameter may be bare; with more, every one is a group.
@@ -1291,10 +1290,12 @@ fn blocks_inside_groups() {
     // Braces build nothing: a brace literal is an error, even on one line.
     assert!(layout_err("fn m$:\n    let p = Point { x: 1, y: 2 }\n").contains("a struct is built with"));
     // A pattern is written `Point\\ x, y` and comes out braced; the brace
-    // form of a pattern is still accepted.
-    let got = transpile("fn m$:\n    let Point\\ x, y = p\n    let ((a, b), Point { x: px, .. }) = q\n");
+    // form of a pattern is refused (2026-10-04).
+    let got = transpile("fn m$:\n    let Point\\ x, y = p\n    let ((a, b), (Point\\ x: px, ..)) = q\n");
     assert!(got.contains("let Point { x, y } = p;"), "{got}");
-    assert!(got.contains("Point { x: px, .. }) = q;"), "{got}");
+    assert!(got.contains("Point { x: px, .. })) = q;") || got.contains("Point { x: px, .. }) = q;"), "{got}");
+    // The braced pattern is refused (removed 2026-10-04): one spelling.
+    assert!(layout_err("fn m$:\n    let Point { x, y } = p\n").contains("a pattern is written with"));
     // A line inside an open group indents past the line that opened it, or
     // is the `)` that closes it.
     let e = layout_err("fn m$:\n    let e = foo (a,\n    b)\n");
@@ -1539,7 +1540,7 @@ fn a_backslash_follows_the_construct_it_specifies() {
         "fn main$:\n    let p = P\\ x = 1, y = 2\n",
         "fn main$:\n    let p =\n        a.b.P\\\n            x = 1\n",
         "struct P\n    x: i32\nimpl P\n    fn new$ -> Self:\n        Self\\ x = 1\n",
-        "fn main$:\n    let w = W<i32>\\ v = 1\n",
+        "fn main$:\n    let w = W.<i32>\\ v = 1\n",
         "fn main$:\n    let P\\ x, y = p\n",
         "fn main$:\n    let a = match f (x)\\ 0 => 0, _ => 1\n",
         "struct P\\ x: i32, y: i32\n",
@@ -1748,7 +1749,7 @@ fn a_matrix_literal_names_the_crate_it_needs() {
     // `hrs_std::DOT` and `hrs_std::each!`: they need the crate too.
     assert_eq!(harsh_lang::driver::uses_hrs_std("use std.collections.*\n\nfn f (a: &M) -> M:\n    a .* a\n"), Some((".*".into(), 4)));
     assert_eq!(harsh_lang::driver::uses_hrs_std("fn f (a: &M) -> M:\n    f64.sqrt<> a\n"), Some(("sqrt<>".into(), 2)));
-    assert_eq!(harsh_lang::driver::uses_hrs_std("use std.collections.*\n\nfn f$:\n    let v = xs <- collect<Vec<_>>$\n"), None);
+    assert_eq!(harsh_lang::driver::uses_hrs_std("use std.collections.*\n\nfn f$:\n    let v = xs <- collect.<Vec<_>>$\n"), None);
 }
 
 /// An array literal passed as an argument is isolated: brackets always index
@@ -1904,7 +1905,7 @@ fn a_function_marked_each_becomes_the_each_macro() {
         assert!(out.contains(want), "missing `{want}` in:\n{out}");
     }
     // Generics and comparisons are untouched.
-    let out = transpile("fn f$:\n    let v = xs <- collect<Vec<_>>$\n    let b = a < c && c > d\n");
+    let out = transpile("fn f$:\n    let v = xs <- collect.<Vec<_>>$\n    let b = a < c && c > d\n");
     assert!(out.contains("xs.collect::<Vec<_>>()") && out.contains("a < c && c > d"), "{out}");
 }
 
@@ -2711,5 +2712,117 @@ fn the_converter_drops_hrs_s_header() {
     assert!(!h.contains("Generated from"), "{h}");
     let h = convert("// A comment of the user's own.\nfn main() {\n    println!(\"hi\");\n}\n");
     assert!(h.contains("A comment of the user's own"), "{h}");
+}
+
+/// The turbofish is `.<T>` (0.4.0, the user's rule: Rust's `::` is Harsh's
+/// `.`, the turbofish included). The form without the dot is refused with
+/// the dotted spelling; comparisons and types are untouched.
+#[test]
+fn the_turbofish_is_written_with_a_dot() {
+    let t = |body: &str| harsh_lang::driver::transpile_str(&format!("fn main$:\n    {body}\n"));
+    for (h, r) in [
+        ("let a = Vec.<u32>.new$", "Vec::<u32>::new()"),
+        ("let b = std.mem.size_of.<u32>$", "std::mem::size_of::<u32>()"),
+        ("let c = Layout.array.<u32> 4", "Layout::array::<u32>(4)"),
+        ("let d = \"4\" <- parse.<i32>$", "\"4\".parse::<i32>()"),
+        ("let e = v <- iter$ <- sum.<i32>$", "v.iter().sum::<i32>()"),
+    ] {
+        let rust = t(h).unwrap();
+        assert!(rust.contains(r), "{h}: {rust}");
+    }
+    // Rust's `<` is Harsh's `<`, mapped as written: nothing is inserted and
+    // nothing refused -- rustc decides (the user's rule, 2026-10-04).
+    for old in ["let a = Vec<u32>.new$", "let b = std.mem.size_of<u32>$", "let d = \"4\" <- parse<i32>$"] {
+        let rust = t(old).unwrap();
+        assert!(!rust.contains("::<"), "{old}: {rust}");
+    }
+    for fine in ["let v: Vec<u32> = Vec.new$", "let ok = e < v <- len$ && (k > 2)", "let b = x < y && y > (z)"] {
+        assert!(t(fine).is_ok(), "{fine}");
+    }
+    let h = convert("fn main() {\n    let a = std::mem::size_of::<u32>();\n    let b = \"4\".parse::<i32>().unwrap();\n}\n");
+    assert!(h.contains("size_of.<u32>$") && h.contains("parse.<i32>$"), "{h}");
+}
+
+/// `if c: a else:` with a block beneath -- an inline branch, then a block
+/// `else` -- is refused with the two forms that work (the user: no mixed
+/// form, 2026-10-04); both forms transpile.
+#[test]
+fn no_inline_if_with_a_block_else() {
+    let t = |src: &str| harsh_lang::driver::transpile_str(src);
+    let e = t("fn main$:\n    let n = 2\n    let x = if n == 1: 10 else:\n        20\n").unwrap_err().to_string();
+    assert!(e.contains("takes an inline `else`"), "{e}");
+    assert!(t("fn main$:\n    let n = 2\n    let x = if n == 1: 10 else: 20\n").is_ok());
+    assert!(t("fn main$:\n    let n = 2\n    let x =\n        if n == 1:\n            10\n        else:\n            20\n").is_ok());
+}
+
+/// A block passed as an argument is isolated like any argument (the user,
+/// 2026-10-04): `myfunc { … }` -- braces right after a name, a struct
+/// literal to Rust -- is refused with `myfunc ({ … })`; blocks owned by a
+/// keyword, after `=`, and patterns keep their braces.
+#[test]
+fn a_block_after_a_name_is_refused() {
+    let t = |body: &str| harsh_lang::driver::transpile_str(&format!("fn myfunc x: i32 -> i32: x\nfn f$: ()\nfn main$:\n    let c = true\n    {body}\n"));
+    let e = t("let a = myfunc { let u = 3; u * u }").unwrap_err().to_string();
+    assert!(e.contains("`myfunc ({ … })`"), "{e}");
+    for fine in ["let a = myfunc ({ let u = 3; u * u })", "if c { f$ } else { f$ }", "let h = { let u = 3; u * u }", "while c { f$ }"] {
+        assert!(t(fine).is_ok(), "{fine}: {:?}", t(fine).err());
+    }
+}
+
+/// `<-` has a space on each side (the user, 2026-10-04). Written tight it is
+/// a comparison with a negative misspelt -- and in this program `t<-below`
+/// compiled silently as the field `t.below`, a `bool` like the comparison,
+/// printing `false` where `t < -below` is `true`. Refused in every tight
+/// form; `x < -1` and a vertical chain pass.
+#[test]
+fn arrow_has_a_space_on_each_side() {
+    let t = |body: &str| harsh_lang::driver::transpile_str(&format!("fn main$:\n    let x = 3\n    let p = 1\n    {body}\n"));
+    for tight in ["let b = p<-y", "let b = p <-y", "let b = p<- y", "let d = x<-1", "let c = p <- len$<-to_string$"] {
+        let e = t(tight).unwrap_err().to_string();
+        assert!(e.contains("a space on each side") && e.contains("`value < -x`"), "{tight}: {e}");
+    }
+    for fine in ["let a = p <- x", "let c = x < -1", "let n =\n        p <- iter$\n          <- count$"] {
+        assert!(t(fine).is_ok(), "{fine}: {:?}", t(fine).err());
+    }
+    let silent = "#[derive Clone Copy PartialEq PartialOrd]\nstruct Temp\n    deg: i32\n    below: bool\n\nfn main$:\n    let t = Temp\\ deg = -10, below = false\n    let below = Temp\\ deg = 5, below = true\n    let wrote = t<-below\n";
+    assert!(harsh_lang::driver::transpile_str(silent).is_err());
+}
+
+/// `<-` reaches into a value, so a name follows it -- a field or a method
+/// (the user, 2026-10-04). A number, a negative, a bracket are refused:
+/// `t <- 3` compiled silently as the tuple item `t.3`, which is written
+/// `t.3`; a comparison with a negative is `x < -3`.
+#[test]
+fn a_name_follows_the_arrow() {
+    let t = |body: &str| harsh_lang::driver::transpile_str(&format!("fn main$:\n    let x = 5\n    let t = (1, 2, 3, 4)\n    {body}\n"));
+    for bad in ["let r = x <- 3", "let r = x <- 3.5", "let r = x <- -3", "let r = x <- (t)", "let r = t <- 3"] {
+        let e = t(bad).unwrap_err().to_string();
+        assert!(e.contains("by its name") && e.contains("`t.3`"), "{bad}: {e}");
+    }
+    for fine in ["let r = t.3", "let r = x < -3", "let r = x <- pow 2", "let r = x <- r#type"] {
+        assert!(t(fine).is_ok(), "{fine}: {:?}", t(fine).err());
+    }
+}
+
+/// A turbofish's `>` ends its atom, so literal arguments follow it:
+/// `f.<u8> 1 2` is `f::<u8>(1, 2)` (found 2026-10-04); a comparison's `>`
+/// does not, and `x > 1 2` stays refused.
+#[test]
+fn literal_arguments_after_a_turbofish() {
+    let t = |b: &str| harsh_lang::driver::transpile_str(&format!("fn f<T> (a: i32) (b: i32) -> i32: a\nfn main$:\n    let x = 1\n    {b}\n"));
+    assert!(t("let b = f.<u8> 1 2").unwrap().contains("f::<u8>(1, 2)"));
+    assert!(t("let c = f.<Vec<u8>> 1 2").unwrap().contains("f::<Vec<u8>>(1, 2)"));
+    assert!(t("let d = x > 1 2").is_err());
+}
+
+/// An `if` as a macro's named argument after a string continued over lines:
+/// its `else:` aligns with the logical line -- where the string began -- as
+/// the layout reads it (found 2026-10-04 in `hrs new`'s own source).
+#[test]
+fn if_after_a_continued_string() {
+    let rust = "fn main() {\n    let lib = true;\n    let b = format!(\n        \"a \\\n         {t} b\",\n        t = if lib {\n            \"L\".to_string()\n        } else {\n            \"B\".to_string()\n        }\n    );\n    println!(\"{b}\");\n}\n";
+    let h = convert(rust);
+    let back = transpile(&h);
+    assert!(back.contains("if lib"), "{h}\n{back}");
 }
 

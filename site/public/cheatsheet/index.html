@@ -249,6 +249,14 @@ page is transpiled by <code>check.sh</code>, so none of it can fall behind the l
 <td><code>let parts = line &lt;- split ","</code></td>
 </tr>
 <tr>
+<td>A comparison with a negative</td>
+<td><code>let low = n &lt; -1</code></td>
+</tr>
+<tr>
+<td>A tuple's item</td>
+<td><code>let first = pair.0</code></td>
+</tr>
+<tr>
 <td>A field</td>
 <td><code>let w = rect &lt;- width</code></td>
 </tr>
@@ -312,7 +320,7 @@ in parentheses. <code>f$</code> calls with no arguments.</p>
 </tr>
 <tr>
 <td>Error propagation</td>
-<td><code>let n = s &lt;- parse&lt;i32&gt;$?</code></td>
+<td><code>let n = s &lt;- parse.&lt;i32&gt;$?</code></td>
 </tr>
 </tbody>
 </table>
@@ -681,6 +689,10 @@ dereferences the field <code>x</code>, not <code>p</code>.</p>
 <td>Discard a block's last value</td>
 <td><code>for w in words: seen &lt;- insert w</code> then a line <code>()</code> beneath</td>
 </tr>
+<tr>
+<td>A block as an argument</td>
+<td><code>let r = f ({ let u = 3; u * u })</code></td>
+</tr>
 </tbody>
 </table>
 <p>Blocks over several lines are what you will write most:</p>
@@ -730,6 +742,10 @@ dereferences the field <code>x</code>, not <code>p</code>.</p>
 <tr>
 <td>Rename while destructuring</td>
 <td><code>let Point\ x: px, y: py = p</code></td>
+</tr>
+<tr>
+<td>Destructure in a closure's parameter</td>
+<td><code>let xs: Vec&lt;f64&gt; = ps &lt;- iter$ &lt;- map (\|(Point\ x, ..)\| *x) &lt;- collect$</code></td>
 </tr>
 <tr>
 <td><code>matches!</code></td>
@@ -1039,7 +1055,7 @@ with more than two fields goes one field per line:</p>
 </tr>
 <tr>
 <td>Propagate with <code>?</code></td>
-<td><code>let n = text &lt;- parse&lt;i32&gt;$?</code></td>
+<td><code>let n = text &lt;- parse.&lt;i32&gt;$?</code></td>
 </tr>
 <tr>
 <td>Convert <code>Option</code> to <code>Result</code></td>

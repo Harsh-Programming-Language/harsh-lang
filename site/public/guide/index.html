@@ -307,7 +307,7 @@ pre.code:hover .copy,.copy:focus-visible{opacity:1}
 <span class="k">let</span> beta <span class="p">=</span> x<span class="p">.</span>svd<span class="p">(</span><span class="k">true</span><span class="p">,</span> <span class="k">true</span><span class="p">)</span><span class="p">.</span>solve<span class="p">(</span><span class="p">&amp;</span>y<span class="p">,</span> <span class="num">1e</span><span class="p">-</span><span class="num">12</span><span class="p">)</span><span class="p">.</span>unwrap<span class="p">(</span><span class="p">)</span><span class="p">;</span></code></pre>
 <p>Each has its section below: <a href="#partial-application-with-the-pipes">Pipes and partial application</a>, <a href="#generator-comprehensions">Generator comprehensions</a>, <a href="#matrices-and-linear-algebra">Matrices and linear algebra</a>.</p>
 <h3 id="the-mark">The mark</h3>
-<pre class="code"><code>#[Ha&lt;rs&gt;.h]
+<pre class="code"><code>#[Ha.&lt;rs&gt;.h]
      │  │
      │  └── .h
      └───── rs</code></pre>
@@ -394,10 +394,13 @@ hrs test  [cargo args]     transpile, then cargo test
 hrs check [cargo args]     transpile, then cargo check
 hrs lint  [cargo args]     transpile, then cargo clippy
 hrs watch [subcommand]     rebuild on every save (default: check)
-hrs new   &lt;name&gt;           create a project laid out for Harsh
+hrs new   [--lib] &lt;name&gt;   create a project laid out for Harsh: a program,
+                           or with --lib a library
 hrs add   &lt;crate&gt;..         add Harsh crates to Hrs.toml (hrs_std, ...);
                            a Rust crate is added to Cargo.toml with cargo add
 hrs migrate                move Harsh's crates from Cargo.toml to Hrs.toml
+hrs publish                check the package for Harsh's registry (not open
+                           yet: it says how to share today)
 hrs &lt;a.hrs&gt; [b.hrs ..]     transpile files in a Rust project, each beside its
                            .hrs, seeing each other's functions; --check
                            writes nothing and fails on a stale .rs
@@ -531,11 +534,11 @@ g <span class="num">2.0</span> <span class="num">0.5</span>                     
 </ul>
 <p>An arm whose body needs several lines ends with <code>=&gt;</code> and indents:</p>
 <pre class="code harsh"><code>    <span class="k">fn</span> render <span class="p">(</span><span class="p">&amp;</span><span class="k">self</span><span class="p">)</span> <span class="p">(</span>n<span class="p">:</span> usize<span class="p">)</span> <span class="op">-&gt;</span> <span class="t">String</span><span class="p">:</span>
-        <span class="k">let</span> <span class="k">mut</span> out <span class="p">=</span> <span class="t">Vec</span><span class="p">&lt;</span><span class="t">String</span><span class="p">&gt;</span><span class="p">.</span>new<span class="defer">$</span>
+        <span class="k">let</span> <span class="k">mut</span> out <span class="p">=</span> <span class="t">Vec</span><span class="p">.</span><span class="p">&lt;</span><span class="t">String</span><span class="p">&gt;</span><span class="p">.</span>new<span class="defer">$</span>
         <span class="k">for</span> <span class="p">(</span>i<span class="p">,</span> <span class="p">(</span>w<span class="p">,</span> c<span class="p">)</span><span class="p">)</span> <span class="k">in</span> <span class="k">self</span> <span class="op">&lt;-</span> top n <span class="op">&lt;-</span> iter<span class="defer">$</span> <span class="op">&lt;-</span> enumerate<span class="defer">$</span><span class="p">:</span>
             out <span class="op">&lt;-</span> push <span class="p">(</span><span class="k">self</span> <span class="op">&lt;-</span> render_line i w <span class="p">(</span><span class="p">*</span>c<span class="p">)</span><span class="p">)</span>
         out <span class="op">&lt;-</span> join <span class="str">"\n"</span></code></pre>
-<p><code>Vec&lt;String&gt;.new$</code> needs no turbofish; the transpiler inserts <code>::&lt;&gt;</code> because the generic list is followed by a path step. <code>(*c)</code> is isolated because <code>*c</code> is an operator expression.</p>
+<p><code>Vec.&lt;String&gt;.new$</code> is Rust's <code>Vec::&lt;String&gt;::new()</code>, its <code>::</code> written <code>.</code> as everywhere. <code>(*c)</code> is isolated because <code>*c</code> is an operator expression.</p>
 <h3 id="putting-it-together">Putting it together</h3>
 <pre class="code harsh"><code><span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
     <span class="k">let</span> text <span class="p">=</span> <span class="str">"the cat sat on the mat. The mat sat still; the cat did not."</span>
@@ -662,7 +665,7 @@ all: it is written in the macro's braces, as Rust, with Harsh in its holes
     a_name_too_long_to_chain_from
         <span class="op">&lt;-</span> iter<span class="defer">$</span>
         <span class="op">&lt;-</span> map <span class="p">(</span><span class="p">|</span>n<span class="p">|</span> n <span class="p">*</span> <span class="num">2</span><span class="p">)</span>
-        <span class="op">&lt;-</span> sum<span class="p">&lt;</span>i32<span class="p">&gt;</span><span class="defer">$</span></code></pre>
+        <span class="op">&lt;-</span> sum<span class="p">.</span><span class="p">&lt;</span>i32<span class="p">&gt;</span><span class="defer">$</span></code></pre>
 <ul>
 <li>A logical line ends when the next line is at the same indentation or shallower.</li>
 <li>Continuation applies to any construct, including multi-line <code>where</code> clauses before a block-opening colon.</li>
@@ -671,10 +674,10 @@ all: it is written in the macro's braces, as Rust, with Harsh in its holes
         <span class="k">where</span> <span class="t">I</span><span class="p">:</span> <span class="t">Iterator</span><span class="p">&lt;</span><span class="t">Item</span> <span class="p">=</span> <span class="p">&amp;</span>'a str<span class="p">&gt;</span><span class="p">:</span>
     <span class="com">// body</span></code></pre>
 <h4 id="bracketed-regions">Bracketed regions</h4>
-<p>Inside <code>(</code>, <code>[</code>, or <code>{</code>, layout is suppressed entirely. Lines break freely and indentation carries no meaning until the bracket closes.</p>
+<p>Inside <code>(</code> or <code>[</code>, a line break continues the expression: a multi-line argument list or array literal needs no mark.</p>
 <ul>
-<li>This is how multi-line argument lists, array literals, and brace-form struct literals work.</li>
-<li>It is also why a closure body written inside a call cannot currently use indentation — use the brace form there.</li>
+<li>Parentheses are transparent to layout for blocks: a closure body written inside a call may be indented beneath it, as <em>Parens are transparent to layout</em> shows.</li>
+<li>Braces are not a region of free layout. In Harsh code they are Rust's one-line block, <code>{ let u = 3; u * u }</code>, and a <code>{</code> with its <code>}</code> on different lines is an error; in a Rust macro's own language they belong to the macro, which may break them as it likes.</li>
 </ul>
 <h4 id="layout-style">Layout style</h4>
 <p><code>hrs fmt</code> applies everything in this section — <code>hrs fmt --check</code> lists the files that would change, <code>hrs fmt</code> rewrites them, the editors format on save — and it changes no token and never joins lines: it adds the breaks the style asks for and puts every line at its column.</p>
@@ -930,6 +933,7 @@ to the writer: a literal inside a literal, an <code>if</code> of three clauses a
 </tbody>
 </table>
 <p>An inline block holds <strong>one expression</strong> — one rule, no separator. Several statements on one line are Rust's braces, <code>if c { f$; g$ } else { h$ }</code> or <code>{ let a = 1; a * 2 }</code> on its own, and a <code>;</code> inside an inline colon-block is an error. The reason is that an inline statement block nested in a comma-block has no end the layout can find: <code>A =&gt; do: f(); g(), B =&gt; 2</code> would put <code>g()</code> outside the arm. Braces say where a block ends; the colon form does not, on one line. The two are not combined: <code>if c: { .. }</code> is an error, since the braces open the block by themselves and the colon would open a second one inside it. Braces are for short blocks — Rust's line and Rust's judgement; anything longer takes the indented form. (A <code>;</code> that ends the whole line still discards the tail value, as everywhere.)</p>
+<p>A block passed as an argument is isolated like any argument: <code>myfunc ({ let u = 3; u * u })</code>. Braces right after a name are refused — <code>myfunc { … }</code> is a struct literal to Rust, and Harsh builds a struct with <code>\</code> (since 0.5.0).</p>
 <pre class="code harsh"><code><span class="k">if</span> t<span class="p">:</span> <span class="num">1</span> <span class="k">else</span><span class="p">:</span> <span class="num">2</span>              →  <span class="k">if</span> t <span class="p">{</span> <span class="num">1</span> <span class="p">}</span> <span class="k">else</span> <span class="p">{</span> <span class="num">2</span> <span class="p">}</span>
 <span class="k">for</span> i <span class="k">in</span> <span class="num">0..3</span><span class="p">:</span> f i           →  <span class="k">for</span> i <span class="k">in</span> <span class="num">0..3</span> <span class="p">{</span> f<span class="p">(</span>i<span class="p">)</span> <span class="p">}</span></code></pre>
 <p>Each <code>else</code> binds to the nearest open <code>if</code>; written on several lines — the
@@ -1196,7 +1200,8 @@ last_parent_statement
            <span class="op">&lt;-</span> unwrap_or <span class="str">"World"</span></code></pre>
 <ul>
 <li>The arrow binds tightly, so whitespace around it is dropped in the output while line breaks are kept. This is what allows the vertical chain style.</li>
-<li><code>&lt;-</code> is already a reserved token in rustc, so it never collides with a comparison against a negative value — Rust itself requires a space in <code>x &lt; -1</code>.</li>
+<li><code>&lt;-</code> is written with a space on each side, <code>value &lt;- method</code>. Rust lexes <code>&lt;-</code> as one token too, and so writes a comparison with a negative with a space between <code>&lt;</code> and <code>-</code>: <code>x &lt; -1</code>. Written tight, <code>x&lt;-y</code> would be the field <code>x.y</code> — and compile, when <code>x</code> has a field <code>y</code> of the right type — so Harsh refuses <code>&lt;-</code> without its spaces (since 0.5.0).</li>
+<li>A name always follows <code>&lt;-</code> — a field or a method; that is what the arrow means, reaching into a value. A number, a negative or a bracket after it is refused: <code>t &lt;- 3</code> is the tuple item <code>t.3</code>, written with a dot, and <code>x &lt;- -3</code> the comparison <code>x &lt; -3</code> (since 0.5.1).</li>
 </ul>
 <p>The mapping is a plain substitution in both directions, with no context and no exceptions:</p>
 <table>
@@ -1224,11 +1229,11 @@ params <span class="op">&lt;-</span> name
 <span class="k">self</span> <span class="op">&lt;-</span> field</code></pre>
 <h4 id="chain-forms">Chain forms</h4>
 <ul>
-<li>Spacing around <code>&lt;-</code> is insignificant: spaced, tight and mixed produce identical Rust.</li>
+<li><code>&lt;-</code> always has a space on each side. <code>p&lt;-y</code>, <code>p &lt;-y</code>, <code>p&lt;- y</code> and <code>x&lt;-1</code> are refused, the message naming both readings: a method step is <code>value &lt;- method</code>, a comparison with a negative is <code>value &lt; -x</code>.</li>
 </ul>
-<pre class="code harsh"><code><span class="k">let</span> a <span class="p">=</span> p <span class="op">&lt;-</span> x
-<span class="k">let</span> b <span class="p">=</span> p<span class="op">&lt;-</span>y
-<span class="k">let</span> c <span class="p">=</span> v <span class="op">&lt;-</span> len<span class="defer">$</span><span class="op">&lt;-</span>to_string<span class="defer">$</span></code></pre>
+<pre class="code harsh"><code><span class="k">let</span> a <span class="p">=</span> p <span class="op">&lt;-</span> x                         <span class="com">// a field</span>
+<span class="k">let</span> b <span class="p">=</span> v <span class="op">&lt;-</span> len<span class="defer">$</span> <span class="op">&lt;-</span> to_string<span class="defer">$</span>        <span class="com">// two steps</span>
+<span class="k">let</span> c <span class="p">=</span> x <span class="p">&lt;</span> <span class="p">-</span><span class="num">1</span>                         <span class="com">// a comparison with a negative</span></code></pre>
 <ul>
 <li>A horizontal chain and a vertical one are the same expression; the vertical form is the continuation rule with <code>&lt;-</code> leading each line.</li>
 </ul>
@@ -1241,9 +1246,9 @@ params <span class="op">&lt;-</span> name
 <span class="k">let</span> d <span class="p">=</span>
     v <span class="op">&lt;-</span> iter<span class="defer">$</span>
       <span class="op">&lt;-</span> map <span class="p">(</span><span class="p">|</span>n<span class="p">|</span> n <span class="p">*</span> <span class="num">2</span><span class="p">)</span>
-      <span class="op">&lt;-</span> sum<span class="p">&lt;</span>i32<span class="p">&gt;</span><span class="defer">$</span></code></pre>
+      <span class="op">&lt;-</span> sum<span class="p">.</span><span class="p">&lt;</span>i32<span class="p">&gt;</span><span class="defer">$</span></code></pre>
 <ul>
-<li><code>sum&lt;i32&gt; ()</code> — a generic method call needs no turbofish; after <code>&lt;-</code> the <code>&lt;</code> is always generics.</li>
+<li><code>sum.&lt;i32&gt;$</code> — a generic method call takes its list with a dot, as Rust's <code>sum::&lt;i32&gt;()</code>.</li>
 <li>A tuple index or float keeps its dot — <code>t.0</code>, <code>t.1</code>, <code>2.5</code> — and a tuple index is part of its atom, so <code>show t.0 t.1</code> is two arguments: <code>show(t.0, t.1)</code>.</li>
 </ul>
 <h4 id="where-the-dot-is-not-a-path-separator">Where the dot is not a path separator</h4>
@@ -1257,9 +1262,9 @@ params <span class="op">&lt;-</span> name
 <p>Writing <code>s.len()</code> in Harsh therefore produces <code>s::len()</code>, which rustc rejects with a diagnostic that remaps to the right column and suggests an instance method. The transpiler does not try to catch this itself: a <code>.</code> following a value could only come from <code>::</code> following a value in Rust, which is not valid Rust either, so the converter can never produce one. The only source is a typo, and rustc already reports those.</p>
 <p>There is no accommodation for pasted Rust. Use <code>hrs-from</code>, which converts completely and predictably.</p>
 <h3 id="generics">Generics</h3>
-<p>Generic argument lists pass through unchanged in type position and are automatically turbofished when followed by a path separator.</p>
-<pre class="code harsh"><code><span class="k">let</span> v <span class="p">=</span> <span class="t">Vec</span><span class="p">&lt;</span>i32<span class="p">&gt;</span><span class="p">.</span>new<span class="defer">$</span>
-<span class="k">let</span> m <span class="p">=</span> <span class="t">HashMap</span><span class="p">&lt;</span><span class="t">String</span><span class="p">,</span> usize<span class="p">&gt;</span><span class="p">.</span>new<span class="defer">$</span>
+<p>Rust's <code>::</code> is Harsh's <code>.</code> — everywhere, the turbofish included. A generic list applied in an expression is written <code>.&lt;T&gt;</code>, as Rust writes <code>::&lt;T&gt;</code>; in type position it is written as in Rust.</p>
+<pre class="code harsh"><code><span class="k">let</span> v <span class="p">=</span> <span class="t">Vec</span><span class="p">.</span><span class="p">&lt;</span>i32<span class="p">&gt;</span><span class="p">.</span>new<span class="defer">$</span>
+<span class="k">let</span> m <span class="p">=</span> <span class="t">HashMap</span><span class="p">.</span><span class="p">&lt;</span><span class="t">String</span><span class="p">,</span> usize<span class="p">&gt;</span><span class="p">.</span>new<span class="defer">$</span>
 <span class="k">let</span> counts<span class="p">:</span> <span class="t">Vec</span><span class="p">&lt;</span><span class="p">(</span><span class="t">String</span><span class="p">,</span> usize<span class="p">)</span><span class="p">&gt;</span> <span class="p">=</span>
     tally <span class="p">(</span><span class="p">&amp;</span>words<span class="p">)</span> <span class="op">&lt;-</span> into_iter<span class="defer">$</span>
                    <span class="op">&lt;-</span> collect<span class="defer">$</span></code></pre>
@@ -1267,8 +1272,9 @@ params <span class="op">&lt;-</span> name
 <span class="k">let</span> m <span class="p">=</span> <span class="t">HashMap</span><span class="op">::</span><span class="p">&lt;</span><span class="t">String</span><span class="p">,</span> usize<span class="p">&gt;</span><span class="op">::</span>new<span class="p">(</span><span class="p">)</span><span class="p">;</span>
 <span class="k">let</span> counts<span class="p">:</span> <span class="t">Vec</span><span class="p">&lt;</span><span class="p">(</span><span class="t">String</span><span class="p">,</span> usize<span class="p">)</span><span class="p">&gt;</span> <span class="p">=</span> tally<span class="p">(</span><span class="p">&amp;</span>words<span class="p">)</span><span class="p">.</span>into_iter<span class="p">(</span><span class="p">)</span><span class="p">.</span>collect<span class="p">(</span><span class="p">)</span><span class="p">;</span></code></pre>
 <ul>
-<li>You never write turbofish yourself. <code>Vec&lt;i32&gt;::new()</code> is a parse error in Rust's expression position, so the transpiler inserts the <code>::</code>.</li>
-<li>The substitution is safe without knowing type from expression position, because turbofish is legal in both.</li>
+<li>One rule, no exception: a reader who knows Rust's <code>::&lt;T&gt;</code> knows Harsh's <code>.&lt;T&gt;</code>.</li>
+<li>The mapping is exact: <code>.&lt;</code> for <code>::&lt;</code>, and <code>&lt;</code> for <code>&lt;</code>. Nothing is inserted and nothing guessed; rustc judges the result, so <code>Vec&lt;i32&gt;.new$</code> is Rust's <code>Vec&lt;i32&gt;::new()</code>, which rustc rejects.</li>
+<li>A <code>&lt;</code> opens a generic list in a definition's header (<code>fn f&lt;T&gt;</code>, <code>struct S&lt;T&gt;</code>); in a type — after an annotation's <code>:</code>, after <code>-&gt;</code>, after <code>as</code>, in <code>impl … for</code> and <code>where</code> bounds, up to the next <code>=</code>, <code>)</code>, <code>,</code>, <code>|</code>, <code>]</code> or block opener; after a <code>.</code>; and at the start of a qualified path, <code>&lt;T as Trait&gt;.f$</code>. Everywhere else it is a comparison: <code>s &lt; to &amp;&amp; a.lo &gt; b</code>.</li>
 </ul>
 <h4 id="generics-in-every-position">Generics in every position</h4>
 <pre class="code harsh"><code><span class="k">fn</span> generic<span class="p">&lt;</span><span class="t">T</span><span class="p">:</span> std<span class="p">.</span>fmt<span class="p">.</span><span class="t">Debug</span><span class="p">&gt;</span> <span class="p">(</span>label<span class="p">:</span> <span class="p">&amp;</span>str<span class="p">)</span> <span class="p">(</span>item<span class="p">:</span> <span class="t">T</span><span class="p">)</span> <span class="op">-&gt;</span> <span class="t">String</span><span class="p">:</span>     function
@@ -1277,11 +1283,11 @@ params <span class="op">&lt;-</span> name
 <span class="k">impl</span><span class="p">&lt;</span><span class="t">T</span><span class="p">:</span> std<span class="p">.</span>fmt<span class="p">.</span><span class="t">Debug</span><span class="p">&gt;</span> <span class="t">Generic</span><span class="p">&lt;</span><span class="t">T</span><span class="p">&gt;</span><span class="p">:</span>                                   <span class="k">impl</span>
     <span class="k">fn</span> show <span class="p">(</span><span class="p">&amp;</span><span class="k">self</span><span class="p">)</span> <span class="op">-&gt;</span> <span class="t">String</span><span class="p">:</span>
         <span class="mac">format!</span> <span class="str">"{:?}"</span> <span class="p">(</span><span class="k">self</span> <span class="op">&lt;-</span> inner<span class="p">)</span>
-<span class="k">let</span> m <span class="p">=</span> <span class="t">HashMap</span><span class="p">&lt;</span><span class="t">String</span><span class="p">,</span> i32<span class="p">&gt;</span><span class="p">.</span>new<span class="defer">$</span>                                  call — turbofish inserted
-<span class="k">let</span> parsed <span class="p">=</span> <span class="str">"42"</span> <span class="op">&lt;-</span> parse<span class="p">&lt;</span>i32<span class="p">&gt;</span><span class="defer">$</span> <span class="op">&lt;-</span> unwrap<span class="defer">$</span>                      method — turbofish inserted
+<span class="k">let</span> m <span class="p">=</span> <span class="t">HashMap</span><span class="p">.</span><span class="p">&lt;</span><span class="t">String</span><span class="p">,</span> i32<span class="p">&gt;</span><span class="p">.</span>new<span class="defer">$</span>                                 call — `<span class="p">.</span><span class="p">&lt;</span><span class="t">T</span><span class="p">&gt;</span>`<span class="p">,</span> <span class="t">Rust</span>'s `<span class="op">::</span><span class="p">&lt;</span><span class="t">T</span><span class="p">&gt;</span>`
+<span class="k">let</span> parsed <span class="p">=</span> <span class="str">"42"</span> <span class="op">&lt;-</span> parse<span class="p">.</span><span class="p">&lt;</span>i32<span class="p">&gt;</span><span class="defer">$</span> <span class="op">&lt;-</span> unwrap<span class="defer">$</span>                     method — `<span class="p">.</span><span class="p">&lt;</span><span class="t">T</span><span class="p">&gt;</span>` after the method
 <span class="k">let</span> v<span class="p">:</span> <span class="t">Vec</span><span class="p">&lt;</span>i32<span class="p">&gt;</span> <span class="p">=</span> q<span class="defer">$</span>                                               <span class="k">type</span> — untouched</code></pre>
 <ul>
-<li>The turbofish is inserted only where a generic list is followed by a path step or a call. In type position it is left alone, so <code>let v: Vec&lt;i32&gt;</code> emits exactly that.</li>
+<li>In type position a generic list is written as in Rust, so <code>let v: Vec&lt;i32&gt;</code> emits exactly that; in an expression it takes its dot, <code>Vec.&lt;i32&gt;</code>.</li>
 </ul>
 <h3 id="items">Items</h3>
 <h4 id="use-declarations">Use declarations</h4>
@@ -1394,7 +1400,7 @@ params <span class="op">&lt;-</span> name
 <p>Written <code>(Point\ x = 1, msg)</code> when <code>Point</code> has no field <code>msg</code>, it is still one literal, and rustc names the missing field. Whether a literal is satisfied is rustc's question; where it ends is the layout's, and that never depends on a definition. <code>hrs-from</code> isolates a literal that is one element of a Rust tuple for the same reason.</p>
 <p><code>Point { x: 1 }</code> — a brace literal — is an error, on one line or several: one spelling per construct.</p>
 <h4 id="patterns">Patterns</h4>
-<p>A pattern destructures with the same mark: <code>Point\ x, y</code>, <code>Point\ x: px, ..</code> (a rename keeps Rust's <code>:</code>). The braced pattern is still accepted.</p>
+<p>A pattern destructures with the same mark: <code>Point\ x, y</code>, <code>Point\ x: px, ..</code> (a rename keeps Rust's <code>:</code>). It is the one spelling: a braced pattern, <code>Point { x, y }</code>, is refused (since 0.6.0). Nested in another pattern — a tuple's element, a closure's parameter — it is isolated like a nested literal: <code>for (i, (Point\ x, ..)) in v</code>, <code>|(Point\ x, ..)| x</code>.</p>
 <pre class="code harsh"><code><span class="k">let</span> <span class="t">Point</span>\ x<span class="p">,</span> y <span class="p">=</span> p
 <span class="k">match</span> q\
     <span class="t">Point</span>\ x<span class="p">:</span> <span class="num">0</span><span class="p">,</span> y <span class="op">=&gt;</span> <span class="mac">println!</span> <span class="str">"on the y axis at {y}"</span>
@@ -1644,9 +1650,9 @@ f <span class="defer">$</span>                     `<span class="defer">$</span>
 <li>Guards and or-patterns pass through unchanged.</li>
 <li>A <code>;</code> at the end of an arm is rejected. <code>;</code> discards a block's tail value, and an arm body is not a block. The same applies to struct fields, enum variants and use-tree entries.</li>
 </ul>
-<p>A struct literal may appear in a scrutinee or condition, which Rust itself forbids. Harsh has no ambiguity there, since the <code>:</code> ends the expression, so the expression is parenthesised on emission:</p>
-<pre class="code harsh"><code><span class="k">match</span> <span class="t">P</span> <span class="p">{</span> x<span class="p">:</span> <span class="num">1</span><span class="p">,</span> y<span class="p">:</span> <span class="num">2</span> <span class="p">}</span>\
-    <span class="t">P</span> <span class="p">{</span> x<span class="p">,</span> y <span class="p">}</span> <span class="op">=&gt;</span> x <span class="p">+</span> y</code></pre>
+<p>A struct literal may appear in a scrutinee or condition, which Rust forbids unparenthesised. In Harsh it is isolated, as any argument with structure is, and the parentheses carry into the Rust; the arm's pattern takes <code>\\</code> like the literal:</p>
+<pre class="code harsh"><code><span class="k">match</span> <span class="p">(</span><span class="t">P</span>\ x <span class="p">=</span> <span class="num">1</span><span class="p">,</span> y <span class="p">=</span> <span class="num">2</span><span class="p">)</span>\
+    <span class="t">P</span>\ x<span class="p">,</span> y <span class="op">=&gt;</span> x <span class="p">+</span> y</code></pre>
 <pre class="code rust"><code><span class="k">match</span> <span class="p">(</span><span class="t">P</span> <span class="p">{</span> x<span class="p">:</span> <span class="num">1</span><span class="p">,</span> y<span class="p">:</span> <span class="num">2</span> <span class="p">}</span><span class="p">)</span> <span class="p">{</span>
     <span class="t">P</span> <span class="p">{</span> x<span class="p">,</span> y <span class="p">}</span> <span class="op">=&gt;</span> x <span class="p">+</span> y<span class="p">,</span>
 <span class="p">}</span></code></pre>
@@ -1657,7 +1663,7 @@ f <span class="defer">$</span>                     `<span class="defer">$</span>
     <span class="t">Shape</span><span class="p">.</span><span class="t">Rect</span> w h <span class="op">=&gt;</span>    <span class="com">// block-bodied arm</span>
         <span class="k">let</span> area <span class="p">=</span> w <span class="p">*</span> h
         <span class="mac">format!</span> <span class="str">"rect {area}"</span>
-    <span class="t">Shape</span><span class="p">.</span><span class="t">Named</span> <span class="p">{</span> name<span class="p">,</span> sides <span class="p">}</span> <span class="op">=&gt;</span> <span class="mac">format!</span> <span class="str">"{name}/{sides}"</span>
+    <span class="t">Shape</span><span class="p">.</span><span class="t">Named</span>\ name<span class="p">,</span> sides <span class="op">=&gt;</span> <span class="mac">format!</span> <span class="str">"{name}/{sides}"</span>
 
 <span class="k">match</span> n\ <span class="num">0</span> <span class="op">=&gt;</span> <span class="str">"zero"</span><span class="p">,</span> _ <span class="op">=&gt;</span> <span class="str">"other"</span>    <span class="com">// inline arms</span>
 
@@ -1972,6 +1978,23 @@ expanded.</p>
 <ul>
 <li><strong>A hole is Harsh; everything else is the macro's.</strong> <code>{count}</code> needs no mark — a name reads the same in both languages — while a handler written in Harsh sits in a hole. A hole may span lines: <code>@:</code> where it opens, the Harsh beneath at that line's indentation, <code>:@</code> where it ends. It may hold a macro call with braces of its own, and holes inside those.</li>
 <li><strong>Braces may span lines</strong>, as in Rust: the body is the macro's, so Harsh's layout never applies to it. The formatter leaves it byte for byte.</li>
+<li><strong>A hole goes wherever the macro's language takes Rust code</strong> — one rule, with no positions to learn. Dioxus takes Rust code in a format slot inside its strings, so a hole goes there too:</li>
+</ul>
+<pre class="code harsh"><code><span class="mac">rsx!</span> <span class="p">{</span>                                    <span class="mac">rsx!</span> <span class="p">{</span>
+    strong <span class="p">{</span> <span class="str">"count: {@: n$ :@}"</span> <span class="p">}</span>            strong <span class="p">{</span> <span class="str">"count: {n()}"</span> <span class="p">}</span>
+<span class="p">}</span>                                         <span class="p">}</span></code></pre>
+<ul>
+<li><strong>A hole of several lines</strong> may start its code on the <code>@:</code> line or on the next, and close <code>:@</code> at the end of its last line or on a line of its own. Lines beneath align with the code as anywhere in Harsh — an <code>else:</code> under its <code>if</code>, a chain's <code>&lt;-</code> under the first link — and a closure's body under <code>onclick: @: move |_|:</code> is indented from that line. <code>hrs fmt</code> writes the compact form, the code on the <code>@:</code> line and <code>:@</code> ending the last (unless that line ends in a <code>//</code> comment), with one space inside each mark and none between a mark and the DSL's brace; and Enter in an editor lands on these columns:</li>
+</ul>
+<pre class="code harsh"><code><span class="mac">rsx!</span> <span class="p">{</span>
+    p <span class="p">{</span>
+        <span class="p">{</span><span class="p">@</span><span class="p">:</span> <span class="k">if</span> n <span class="p">&gt;</span> <span class="num">2</span><span class="p">:</span>
+                <span class="str">"many"</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="str">"few"</span> <span class="p">:</span><span class="p">@</span><span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span></code></pre>
+<ul>
 <li><code>@@:</code> is a literal <code>@:</code> in the body's text. <code>@:</code> anywhere else is refused.</li>
 <li><strong><code>hrs-from</code> writes the holes.</strong> Converting a Leptos, Dioxus or Tokio file keeps each body's DSL as written and turns every piece of Rust code in it into a hole of Harsh: a <code>{ … }</code> group, an attribute's value (<code>name=value</code>, <code>name: value</code>), a <code>for</code>/<code>if</code> expression, a <code>select!</code> arm's pattern, future and handler. A literal stays as written. A piece it cannot write as Harsh stops the conversion, named by line — never silently left as Rust.</li>
 <li>A block passed to a macro <em>as an argument</em> is isolated like any argument, <code>m! (do: …) x</code>. <code>m! do:</code> as the macro's body, and <code>#:</code>, are retired (2026-09-23); each is refused with the braces named.</li>
@@ -2239,7 +2262,7 @@ hrs-from existing.rs -o existing.hrs</code></pre>
 </tr>
 <tr>
 <td>Generic call</td>
-<td><code>Vec&lt;i32&gt;.new()</code></td>
+<td><code>Vec.&lt;i32&gt;.new()</code></td>
 <td><code>Vec::&lt;i32&gt;::new()</code></td>
 </tr>
 <tr>

@@ -81,7 +81,7 @@ Point { x: 1.0, y: 2.0 } Size { w: 3.0, h: 4.0 } 1.5 9.14 5 12 8 big counts: 2 4
 ## Layout — chapter 2
 
 - A block opens at a `:` that ends its line; its body is the lines indented beneath it, and ends where the indentation does. (§2.6)
-- The same block may be written inline, the body after the colon on the same line when it is one expression; or in braces on one line only, `{ let u = 3; u * u }`, when several statements must share a line. A `{` and its `}` on different lines is an error. (§2.6)
+- The same block may be written inline, the body after the colon on the same line when it is one expression; or in braces on one line only, `{ let u = 3; u * u }`, when several statements must share a line. A `{` and its `}` on different lines is an error. (§2.6) A block passed as an argument is isolated: `f ({ … })`.
 - `do:` opens a block that belongs to nothing — a scope of its own, a value, an operand in parentheses. (§2.6, §3.1)
 - A line ending ends a statement. Harsh writes no `;`: a block whose last value is to be discarded ends with a line `()`, and a `;` ending a line is refused. A call whose last argument is an indented block takes its `()` on the line after the block. (§2.6, §3.4)
 - A line indented deeper than the one above it, with no `:` to open a block, continues it. (§2.6)
@@ -97,7 +97,7 @@ Point { x: 1.0, y: 2.0 } Size { w: 3.0, h: 4.0 } 1.5 9.14 5 12 8 big counts: 2 4
 - Parentheses make a tuple (the comma does it), set precedence, or group — and nothing else. (§20.5)
 - A block's opener says how its entries end: **no mark** after a header that ends itself (`struct`, `enum`, `union`, `impl`, `trait`, `mod`, `extern`, `macro_rules!`), **`\`** for a comma-separated list, **`:`** or **`do:`** for statements. A grammar of its author's own is a macro's, written in its braces, `m! { … }`. A construct that already has a spelling keeps it — `impl Point:` is refused. (§2.6, §5.1, §20)
 - Brackets index, never apply: `arr[1]` is part of its atom (`f arr[1]` passes the element); `arr [1]` is the same index but is refused inside an application; an array argument is isolated, `f ([1, 2])`. (§2.6)
-- `<-` reaches into a value: a field, a method. `.` walks a path: a module, a type, an item. A tuple index keeps its dot, `d.0`. (§2.6, §5.1)
+- `<-` reaches into a value: a field, a method — always a name after it, and a space on each side, `s <- len$`; a comparison with a negative is `x < -1`. `.` walks a path: a module, a type, an item. A tuple index keeps its dot, `d.0`. (§2.6, §5.1)
 - A macro applies like a function, its `!` glued to its name: `vec! 1 2`, `println! "{x}"`. (§2.6)
 
 ## Declaring — chapters 3, 5, 6, 10
@@ -114,6 +114,7 @@ Point { x: 1.0, y: 2.0 } Size { w: 3.0, h: 4.0 } 1.5 9.14 5 12 8 big counts: 2 4
 ## Patterns — chapters 6, 19
 
 - A pattern is an application: `Some n`, `Ok value`, `Circle r`, `Coin.Quarter state`. (§6.2)
+- A struct pattern takes `\`, like its literal: `Point\ x, y`, `Point\ x: px, ..`; nested in another pattern it is isolated, `(Point\ x, ..)`. A braced pattern is refused. (§22)
 - A record is taken apart with the mark that builds it: `Point\ x, y`, `Point\ x: a, y: b`, `Point\ x, ..`. (§19.1)
 - `match x\` with one arm per line, `pattern => body`, no commas; several arms on one line are comma-separated. An arm with several statements is `=> do:`. (§6.2, §3.5)
 

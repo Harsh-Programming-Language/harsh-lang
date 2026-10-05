@@ -17,7 +17,8 @@ usage:
   hrs lint  [cargo args]     transpile, then cargo clippy
   hrs cargo <sub> [args]     transpile, then any cargo subcommand (cargo leptos build, ..)
   hrs watch [subcommand]     rebuild on every save (default: check)
-  hrs new   <name>           create a project laid out for Harsh
+  hrs new   [--lib] <name>   create a project laid out for Harsh -- a program,
+                             or with --lib a library
   hrs add   <crate>..        add Harsh crates to Hrs.toml -- hrs_std and the
                              rest of Harsh's distribution; a Rust crate is
                              added to Cargo.toml with cargo add
@@ -25,6 +26,8 @@ usage:
                              (0.3.0: Hrs.toml lists Harsh's dependencies)
   hrs export [dir]           write the project as a plain Rust crate,
                              formatted with cargo fmt (default: target/export)
+  hrs publish                check the package for Harsh's registry (not open
+                             yet: says how to share today)
   hrs fmt   [--check] [files] reformat .hrs files in place (default: src/**.hrs);
                              --check lists the files that would change, exit 1
   hrs dist  <dir>             write Harsh's standard distribution (hrs_std,
@@ -61,6 +64,7 @@ fn main() -> ExitCode {
         "cargo" if !rest.is_empty() => cargo_cmd(&rest[0], &rest[1..]),
         "watch" => watch(&rest),
         "new" => new_project(&rest),
+        "publish" => publish(&rest),
         "add" => add(&rest),
         "migrate" => migrate(),
         "export" => export(&rest),
@@ -316,6 +320,16 @@ fn export(args: &[String]) -> ExitCode {
                 dir.display(),
                 if e.formatted { ", formatted with cargo fmt" } else { " (cargo fmt not available; left unformatted)" }
             );
+            // crates.io refuses a crate without these: say so now, not at
+            // `cargo publish` (decided 2026-10-04).
+            let toml = std::fs::read_to_string(dir.join("Cargo.toml")).unwrap_or_default();
+            let package = toml.split("\n[").next().unwrap_or("");
+            let has = |k: &str| package.lines().any(|l| { let t = l.trim_start(); t.starts_with(&format!("{k} ")) || t.starts_with(&format!("{k}=")) || (k == "license" && t.starts_with("license-file")) });
+            for k in ["description", "license"] {
+                if !has(k) {
+                    eprintln!("hrs: warning: Cargo.toml has no `{k}` in [package] -- crates.io requires it before `cargo publish`");
+                }
+            }
             ExitCode::SUCCESS
         }
         Err(e) => {
@@ -400,11 +414,74 @@ fn watch(args: &[String]) -> ExitCode {
     ExitCode::SUCCESS
 }
 
+/// A new library's source: one public function and a test, so `hrs test`
+/// works at once and shows where tests go.
+const NEW_LIB_HRS: &str = "/// Adds two numbers.\npub fn add (a: i32) (b: i32) -> i32: a + b\n\n#[cfg test]\nmod tests\n    use super.*\n\n    #[test]\n    fn adds$:\n        assert_eq! (add 2 3) 5\n";
+
+/// `hrs publish` (decided 2026-10-04): checks the package as a registry
+/// would -- `name`, `version`, `description`, `license` in `Cargo.toml`, and
+/// every Harsh dependency in `Hrs.toml` by version, not by path -- then stops,
+/// since Harsh's registry is not open yet, naming the two ways to share.
+fn publish(_args: &[String]) -> ExitCode {
+    let cargo = std::fs::read_to_string("Cargo.toml").unwrap_or_default();
+    let hrs = std::fs::read_to_string(driver::HRS_MANIFEST).unwrap_or_default();
+    if cargo.is_empty() {
+        eprintln!("hrs publish: no Cargo.toml here -- run it at the root of a Harsh project");
+        return ExitCode::from(2);
+    }
+    let mut problems = Vec::new();
+    let package: String = cargo.split("\n[").next().unwrap_or("").to_string();
+    for key in ["name", "version", "description"] {
+        if !package.lines().any(|l| l.trim_start().starts_with(&format!("{key} ")) || l.trim_start().starts_with(&format!("{key}="))) {
+            problems.push(format!("Cargo.toml has no `{key}` in [package]"));
+        }
+    }
+    if !package.lines().any(|l| { let t = l.trim_start(); t.starts_with("license ") || t.starts_with("license=") || t.starts_with("license-file") }) {
+        problems.push("Cargo.toml has no `license` (or `license-file`) in [package]".to_string());
+    }
+    let mut in_deps = false;
+    for l in hrs.lines() {
+        let t = l.trim();
+        if t.starts_with('[') {
+            in_deps = t == "[dependencies]";
+            continue;
+        }
+        if in_deps && t.contains("path") && !t.contains("version") && !t.starts_with('#') {
+            let dep = t.split('=').next().unwrap_or("").trim();
+            problems.push(format!("Hrs.toml: `{dep}` is a path -- a published crate names its dependencies by version"));
+        }
+    }
+    if problems.is_empty() {
+        println!("hrs publish: the package is ready.");
+    } else {
+        for p in &problems {
+            eprintln!("hrs publish: {p}");
+        }
+    }
+    eprintln!("hrs publish: Harsh's registry is not open yet. To share as Harsh today, list the crate by path in Hrs.toml; to publish to crates.io: hrs export, then cargo build and cargo publish in target/export.");
+    ExitCode::FAILURE
+}
+
 fn new_project(args: &[String]) -> ExitCode {
-    let Some(name) = args.first() else {
-        eprintln!("usage: hrs new <name>");
+    const USAGE: &str = "usage: hrs new [--lib] <name>\n  creates <name>/ laid out for Harsh: Cargo.toml, Hrs.toml, and src/main.hrs -- or, with --lib, a library: src/lib.hrs";
+    // A flag is not a name (found 2026-10-04: `hrs new --help` created a
+    // project called `--help`).
+    if args.iter().any(|a| a == "--help" || a == "-h") {
+        println!("{USAGE}");
+        return ExitCode::SUCCESS;
+    }
+    // `--lib`, before or after the name, as `cargo new` takes it (decided
+    // 2026-10-04): a library for intent #1 or #2.
+    let lib = args.iter().any(|a| a == "--lib");
+    let names: Vec<&String> = args.iter().filter(|a| a.as_str() != "--lib").collect();
+    let Some(name) = names.first().copied() else {
+        eprintln!("{USAGE}");
         return ExitCode::from(2);
     };
+    if name.starts_with('-') {
+        eprintln!("hrs: `{name}` is not a project name -- a name cannot start with `-`\n{USAGE}");
+        return ExitCode::from(2);
+    }
     let root = PathBuf::from(name);
     if root.exists() {
         eprintln!("hrs: {} already exists", root.display());
@@ -415,15 +492,26 @@ fn new_project(args: &[String]) -> ExitCode {
         eprintln!("hrs: cannot create {}", root.display());
         return ExitCode::FAILURE;
     }
+    let target = if lib {
+        "[lib]\npath = \"target/hrs/lib.rs\"\n".to_string()
+    } else {
+        format!("[[bin]]\nname = \"{name}\"\npath = \"target/hrs/main.rs\"\n")
+    };
     let _ = mk(
         root.join("Cargo.toml"),
         &format!(
             "[package]\nname = \"{name}\"\nversion = \"0.1.0\"\nedition = \"2021\"\n\n\
              # Harsh sources are in src/**.hrs; `hrs build` generates this tree.\n\
-             [[bin]]\nname = \"{name}\"\npath = \"target/hrs/main.rs\"\n\n[dependencies]\n"
+             {target}\n[dependencies]\n"
         ),
     );
     let _ = mk(root.join(driver::HRS_MANIFEST), NEW_HRS_TOML);
+    if lib {
+        let _ = mk(root.join("src/lib.hrs"), NEW_LIB_HRS);
+        let _ = mk(root.join(".gitignore"), "/target\n");
+        println!("created {} (a library)\n  cd {} && hrs test", root.display(), root.display());
+        return ExitCode::SUCCESS;
+    }
     let _ = mk(
         root.join("src/main.hrs"),
         "fn main$:\n    println! \"Hello from Harsh\"\n",

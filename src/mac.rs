@@ -1841,13 +1841,13 @@ macro_rules~ g
         ($it) <- into_iter$ <- flat_map (move |$p| ((true $( && ($c) )*) <- then (|| $e)))
 
 macro_rules~ list
-    ($(($t:tt))*) => do: (hrs_std.g~ $($t)*) <- collect<Vec<_>>$
+    ($(($t:tt))*) => do: (hrs_std.g~ $($t)*) <- collect.<Vec<_>>$
 
 macro_rules~ set
-    ($(($t:tt))*) => do: (hrs_std.g~ $($t)*) <- collect<std.collections.HashSet<_>>$
+    ($(($t:tt))*) => do: (hrs_std.g~ $($t)*) <- collect.<std.collections.HashSet<_>>$
 
 macro_rules~ dict
-    (($k:expr) => ($v:expr) for $(($rest:tt))*) => do: (hrs_std.g~ ($k, $v) for $($rest)*) <- collect<std.collections.HashMap<_, _>>$
+    (($k:expr) => ($v:expr) for $(($rest:tt))*) => do: (hrs_std.g~ ($k, $v) for $($rest)*) <- collect.<std.collections.HashMap<_, _>>$
 
 macro_rules~ m
     ([ [ $(($a:tt))* ] $( , [ $(($b:tt))* ] )+ ]) => do: compile_error! "`m~ [[…], […]]`: in Julia, commas never concatenate, so this is a vector of two matrices, not a matrix. Stack the rows with `;` or a line break: `m~ [[1 2]; [3 4]]`."

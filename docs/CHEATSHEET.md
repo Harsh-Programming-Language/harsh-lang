@@ -26,6 +26,8 @@ page is transpiled by `check.sh`, so none of it can fall behind the language.
 | A non-atom argument | `let s = add (n * 2) (-1)` |
 | A method | `let n = text <- len$` |
 | A method with arguments | `let parts = line <- split ","` |
+| A comparison with a negative | `let low = n < -1` |
+| A tuple's item | `let first = pair.0` |
 | A field | `let w = rect <- width` |
 | A path | `let m = std.cmp.max 3 7` |
 
@@ -47,7 +49,7 @@ in parentheses. `f$` calls with no arguments.
 | Reference argument | `let n = count_words (&text)` |
 | Dereference argument | `let v = double (*p)` |
 | Dereference then field | `let x = (*p) <- x` |
-| Error propagation | `let n = s <- parse<i32>$?` |
+| Error propagation | `let n = s <- parse.<i32>$?` |
 
 Tightest first: atoms (`f$`, `v[i]`, `( … )`), application `f a b`, the
 chain `<-`, `?`, the prefix operators, Rust's operators in Rust's order, the
@@ -155,6 +157,7 @@ dereferences the field `x`, not `p`.
 | `while let` | `while let Some top = stack <- pop$: println! "{top}"` |
 | `let … else` | `let Some n = first else: return` |
 | Discard a block's last value | `for w in words: seen <- insert w` then a line `()` beneath |
+| A block as an argument | `let r = f ({ let u = 3; u * u })` |
 
 Blocks over several lines are what you will write most:
 
@@ -185,6 +188,7 @@ fn count_new (words: &[&str]) -> usize:
 | Destructure a struct | `let Point\ x, y = p` |
 | Part of a struct | `let Point\ x, .. = p` |
 | Rename while destructuring | `let Point\ x: px, y: py = p` |
+| Destructure in a closure's parameter | `let xs: Vec<f64> = ps <- iter$ <- map (\|(Point\ x, ..)\| *x) <- collect$` |
 | `matches!` | `let digit = matches! c ('0'..='9')` |
 
 More than two arms go one per line, no commas:
@@ -341,7 +345,7 @@ impl fmt.Display for Circle
 | `Option` | `let found: Option<i32> = Some 3` |
 | Default when absent | `let n = found <- unwrap_or 0` |
 | `Result` | `let r: Result<i32, String> = Ok 1` |
-| Propagate with `?` | `let n = text <- parse<i32>$?` |
+| Propagate with `?` | `let n = text <- parse.<i32>$?` |
 | Convert `Option` to `Result` | `let v = found <- ok_or "missing"?` |
 | Transform the value | `let doubled = found <- map (\|x\| x * 2)` |
 | Panic | `panic! "unreachable state: {s}"` |

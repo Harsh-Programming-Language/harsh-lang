@@ -26,7 +26,7 @@ fn main$:
     println! "{} is {}" (jane <- name) (jane <- age)
 
     let pair = Pair 1 0.1
-    println! "{} {}" (pair <- 0) (pair <- 1)
+    println! "{} {}" pair.0 pair.1
 
     // A struct is taken apart by naming its fields, the same `\`.
     let Pair x y = pair

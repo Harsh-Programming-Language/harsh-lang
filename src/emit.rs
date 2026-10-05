@@ -310,65 +310,10 @@ impl<'a> Emitter<'a> {
         format!("\"{}\"", joined)
     }
 
-    /// True when `toks[i]` begins a generic argument list that is immediately
-    /// followed by the path separator, i.e. `Vec<i32>.new()`. Such a list must
-    /// be emitted as a turbofish, because `Vec<i32>::new()` is a parse error in
-    /// expression position. Turbofish is legal in type position too, so this
-    /// substitution is safe without knowing which position we are in.
-    fn needs_turbofish(toks: &[Token], i: usize) -> bool {
-        if toks.get(i).map(|t| t.kind != Tk::Lt).unwrap_or(true) {
-            return false;
-        }
-        match toks.get(i.wrapping_sub(1)).map(|t| &t.kind) {
-            Some(Tk::Ident) => {}
-            _ => return false,
-        }
-        // `fn name<T> (..)` and `struct Name<T>` are definitions, where the
-        // generics are declared rather than applied. Turbofish is illegal there.
-        if i >= 2 {
-            if let Some(k) = toks.get(i - 2) {
-                if k.kind == Tk::Ident
-                    && matches!(
-                        k.text.as_str(),
-                        "fn" | "struct" | "enum" | "union" | "trait" | "type" | "impl"
-                    )
-                {
-                    return false;
-                }
-            }
-        }
-        let mut depth = 0i32;
-        for (k, t) in toks.iter().enumerate().skip(i) {
-            match t.kind {
-                Tk::Lt => depth += 1,
-                Tk::Gt => {
-                    depth -= 1;
-                    if depth == 0 {
-                        return matches!(
-                            toks.get(k + 1).map(|t| &t.kind),
-                            Some(Tk::Dot) | Some(Tk::Open('('))
-                        );
-                    }
-                }
-                // `>>` closes two lists at once: `collect<Vec<_>> ()`.
-                Tk::Punct if t.text == ">>" => {
-                    depth -= 2;
-                    if depth <= 0 {
-                        return depth == 0
-                            && matches!(
-                                toks.get(k + 1).map(|t| &t.kind),
-                                Some(Tk::Dot) | Some(Tk::Open('('))
-                            );
-                    }
-                }
-                // Anything that cannot appear inside a generic argument list
-                // means this `<` was a comparison after all.
-                Tk::Semi | Tk::Open('{') | Tk::Close('}') | Tk::FatArrow => return false,
-                _ => {}
-            }
-        }
-        false
-    }
+    // No turbofish is ever inserted (the user's rule, 2026-10-04): Rust's
+    // `::<` is Harsh's `.<`, Rust's `<` is Harsh's `<`, mapped as written;
+    // rustc decides what a `<` means. `needs_turbofish` guessed it from what
+    // followed the `>` and grew three patches -- removed.
 
     /// `.(` opens a use-tree group and must become `::{`, with its matching
     /// `)` becoming `}`. `.(` is not valid Rust in any other position, so this
@@ -935,7 +880,7 @@ impl<'a> Emitter<'a> {
                         }
                     }
                     self.out.push('(');
-                    let tf = Self::needs_turbofish(toks, i);
+                    let tf = false;
                     let mut t2 = t.clone();
                     t2.span.lo = t.span.lo;
                     self.tok(&t2, None, tf, braces.contains(&i));
@@ -946,14 +891,14 @@ impl<'a> Emitter<'a> {
                     continue;
                 }
                 Some(Fix::CloseAfter) => {
-                    let tf = Self::needs_turbofish(toks, i);
+                    let tf = false;
                     self.tok(t, prev.as_ref(), tf, braces.contains(&i));
                     self.out.push(')');
                     prev = Some(t.clone());
                     continue;
                 }
                 Some(Fix::TextAfter(s)) => {
-                    let tf = Self::needs_turbofish(toks, i);
+                    let tf = false;
                     self.tok(t, prev.as_ref(), tf, braces.contains(&i));
                     self.out.push_str(s);
                     prev = Some(t.clone());
@@ -961,7 +906,7 @@ impl<'a> Emitter<'a> {
                 }
                 None => {}
             }
-            let tf = Self::needs_turbofish(toks, i);
+            let tf = false;
             if fixes_drop.contains(&i) {
                 if comma_at.contains(&i) {
                     while self.out.ends_with(' ') {

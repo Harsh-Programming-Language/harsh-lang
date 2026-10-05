@@ -235,8 +235,8 @@ isolated, so it is `println! "{}" (1 + 2 * 3)`.
 struct Matrix f32 f32 f32 f32
 
 fn transpose (m: Matrix) -> Matrix:
-    // Fields of a tuple are reached by number.
-    Matrix (m <- 0) (m <- 2) (m <- 1) (m <- 3)
+    // Fields of a tuple are reached by number, with a dot.
+    Matrix m.0 m.2 m.1 m.3
 
 fn main$:
     // A tuple value: one construct, commas inside.
@@ -270,7 +270,7 @@ single payload, so `struct Wrapped (i32, i32)` is one field that happens to be
 a pair, not two fields.
 
 Constructing follows the same rule as any call — `Matrix 1.1 1.2 2.1 2.2` —
-and reaching a field by number is `m <- 0`.
+and reaching a field by number is `m.0`, with a dot, as for any tuple.
 
 ## 2.3 Arrays and slices
 
@@ -356,7 +356,7 @@ fn main$:
     println! "{} is {}" (jane <- name) (jane <- age)
 
     let pair = Pair 1 0.1
-    println! "{} {}" (pair <- 0) (pair <- 1)
+    println! "{} {}" pair.0 pair.1
 
     // A struct is taken apart by naming its fields, the same `\`.
     let Pair x y = pair
@@ -524,19 +524,13 @@ fn main$:
 
 ```text
 error[E0384]: cannot assign twice to immutable variable `x`
- --> immutable.hrs:4:5
-  |
-3 |     let x = 1;
-  |         -
-  |         |
-  |         first assignment to `x`
-  |         help: consider making this binding mutable: `mut x`
-4 |     x = 2;
-  |     ^^^^^ cannot assign twice to immutable variable
-
-error: aborting due to previous error
-
-For more information about this error, try `rustc --explain E0384`.
+  --> immutable.hrs:3:5
+   |
+ 2 |     let x = 1
+   |         - first assignment to `x`
+ 3 |     x = 2
+   |     ^^^^^ cannot assign twice to immutable variable
+   = help: consider making this binding mutable (hrs 2:9)
 ```
 
 ## 4.2 Types
@@ -1225,31 +1219,16 @@ fn main$:
 
 ```text
 error[E0382]: borrow of moved value: `a`
- --> use_after_move.hrs:9:15
-  |
-7 |     let a = String::from("hello");
-  |         - move occurs because `a` has type `String`, which does not implement the `Copy` trait
-8 |     consume(a);
-  |             - value moved here
-9 |     println!("{a}")
-  |               ^^^ value borrowed here after move
-  |
-note: consider changing this parameter type in function `consume` to borrow instead if owning the value isn't necessary
- --> use_after_move.hrs:2:15
-  |
-2 | fn consume(s: String) {
-  |    -------    ^^^^^^ this parameter takes ownership of the value
-  |    |
-  |    in this function
-  = note: this error originates in the macro `$crate::format_args_nl` which comes from the expansion of the macro `println` (in Nightly builds, run with -Z macro-backtrace for more info)
-help: consider cloning the value if the performance cost is acceptable
-  |
-8 |     consume(a.clone());
-  |              ++++++++
-
-error: aborting due to previous error
-
-For more information about this error, try `rustc --explain E0382`.
+  --> use_after_move.hrs:7:15
+   |
+ 5 |     let a = String.from "hello"
+   |         - move occurs because `a` has type `String`, which does not implement the `Copy` trait
+ 6 |     consume a
+   |             - value moved here
+ 7 |     println! "{a}"
+   |               ^^^ value borrowed here after move
+   = note: consider changing this parameter type in function `consume` to borrow instead if owning the value isn't necessary (hrs 1:16)
+   = help: consider cloning the value if the performance cost is acceptable (hrs 6:14)
 ```
 
 The error arrives on the Harsh line that caused it, not on the generated Rust.
@@ -1782,14 +1761,10 @@ fn main$:
 
 ```text
 error[E0616]: field `value` of struct `Counter` is private
-  --> privacy.hrs:19:22
+  --> privacy.hrs:12:25
    |
-19 |     println!("{}", c.value)
-   |                      ^^^^^ private field
-
-error: aborting due to previous error
-
-For more information about this error, try `rustc --explain E0616`.
+12 |     println! "{}" (c <- value)
+   |                         ^^^^^ private field
 ```
 
 In a real project the modules live in files rather than in one: `src/main.hrs`
@@ -2055,32 +2030,32 @@ fn main$:
 
 ```text
 error[E0425]: cannot find value `b` in this scope
- --> too_early.hrs:5:80
-  |
-5 | ....flat_map(move | a | ((true &&(a * a + b * b == c * c)).then(|| ((a .. 20).into_iter().flat_map(move | b | ((true).then(|| ((b .. 20)....
-  |                                           ^ help: a local variable with a similar name exists: `a`
+  --> too_early.hrs:6:39
+   |
+ 6 |             for a in 1..20 if a * a + b * b == c * c
+   |                                       ^
+   = help: a local variable with a similar name exists (hrs 6:39)
 
 error[E0425]: cannot find value `b` in this scope
- --> too_early.hrs:5:84
-  |
-5 | ...t_map(move | a | ((true &&(a * a + b * b == c * c)).then(|| ((a .. 20).into_iter().flat_map(move | b | ((true).then(|| ((b .. 20).into...
-  |                                           ^ help: a local variable with a similar name exists: `a`
+  --> too_early.hrs:6:43
+   |
+ 6 |             for a in 1..20 if a * a + b * b == c * c
+   |                                           ^
+   = help: a local variable with a similar name exists (hrs 6:43)
 
 error[E0425]: cannot find value `c` in this scope
- --> too_early.hrs:5:89
-  |
-5 | ...(move | a | ((true &&(a * a + b * b == c * c)).then(|| ((a .. 20).into_iter().flat_map(move | b | ((true).then(|| ((b .. 20).into_iter...
-  |                                           ^ help: a local variable with a similar name exists: `a`
+  --> too_early.hrs:6:48
+   |
+ 6 |             for a in 1..20 if a * a + b * b == c * c
+   |                                                ^
+   = help: a local variable with a similar name exists (hrs 6:48)
 
 error[E0425]: cannot find value `c` in this scope
- --> too_early.hrs:5:93
-  |
-5 | ...e | a | ((true &&(a * a + b * b == c * c)).then(|| ((a .. 20).into_iter().flat_map(move | b | ((true).then(|| ((b .. 20).into_iter().f...
-  |                                           ^ help: a local variable with a similar name exists: `a`
-
-error: aborting due to 4 previous errors
-
-For more information about this error, try `rustc --explain E0425`.
+  --> too_early.hrs:6:52
+   |
+ 6 |             for a in 1..20 if a * a + b * b == c * c
+   |                                                    ^
+   = help: a local variable with a similar name exists (hrs 6:52)
 ```
 
 ## 16.4 Collecting: list~, set~, dict~

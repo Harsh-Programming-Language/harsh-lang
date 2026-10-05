@@ -25,19 +25,14 @@ fn main$:
 
 ```text
 error[E0499]: cannot borrow `total` as mutable more than once at a time
- --> references.hrs:6:13
-  |
-4 |     let a = &mut total;
-  |             ---------- first mutable borrow occurs here
-5 |     // Refused: `total` is already borrowed mutably by `a`.
-6 |     let b = &mut total;
-  |             ^^^^^^^^^^ second mutable borrow occurs here
-7 |     *a += 1;
-  |     ------- first borrow later used here
-
-error: aborting due to previous error
-
-For more information about this error, try `rustc --explain E0499`.
+  --> references.hrs:5:13
+   |
+ 3 |     let a = &mut total
+   |             ---------- first mutable borrow occurs here
+ 5 |     let b = &mut total
+   |             ^^^^^^^^^^ second mutable borrow occurs here
+ 6 |     *a += 1
+   |     ------- first borrow later used here
 ```
 
 **In Harsh:** the refusal points at the `.hrs` lines of both borrows.
@@ -125,44 +120,26 @@ fn main$:
 
 ```text
 error[E0499]: cannot borrow `*map` as mutable more than once at a time
-  --> limits.hrs:10:21
+  --> limits.hrs:9:21
    |
-6  |   fn get_default<'m>(map: &'m mut HashMap<i32, String>, key: i32) -> &'m mut String {
-   |                  -- lifetime `'m` defined here
-7  |       match map.get_mut(&key) {
-   |       -     --- first mutable borrow occurs here
-   |  _____|
-   | |
-8  | |         Some(value) => value,
-9  | |         None => {
-10 | |             let _ = map.insert(key, String::new());
-   | |                     ^^^ second mutable borrow occurs here
-11 | |             map.get_mut(&key).unwrap()
-12 | |         },
-13 | |     }
-   | |_____- returning this value requires that `*map` is borrowed for `'m`
+ 5 | fn get_default<'m> (map: &'m mut HashMap<i32, String>) (key: i32) -> &'m mut String:
+   |                -- lifetime `'m` defined here
+ 6 |     match map <- get_mut (&key)\
+   |     ---------------------------- returning this value requires that `*map` is borrowed for `'m`
+   |           --- first mutable borrow occurs here
+ 9 |             let _ = map <- insert key (String.new$)
+   |                     ^^^ second mutable borrow occurs here
 
 error[E0499]: cannot borrow `*map` as mutable more than once at a time
-  --> limits.hrs:11:13
+  --> limits.hrs:10:13
    |
-6  |   fn get_default<'m>(map: &'m mut HashMap<i32, String>, key: i32) -> &'m mut String {
-   |                  -- lifetime `'m` defined here
-7  |       match map.get_mut(&key) {
-   |       -     --- first mutable borrow occurs here
-   |  _____|
-   | |
-8  | |         Some(value) => value,
-9  | |         None => {
-10 | |             let _ = map.insert(key, String::new());
-11 | |             map.get_mut(&key).unwrap()
-   | |             ^^^ second mutable borrow occurs here
-12 | |         },
-13 | |     }
-   | |_____- returning this value requires that `*map` is borrowed for `'m`
-
-error: aborting due to 2 previous errors
-
-For more information about this error, try `rustc --explain E0499`.
+ 5 | fn get_default<'m> (map: &'m mut HashMap<i32, String>) (key: i32) -> &'m mut String:
+   |                -- lifetime `'m` defined here
+ 6 |     match map <- get_mut (&key)\
+   |     ---------------------------- returning this value requires that `*map` is borrowed for `'m`
+   |           --- first mutable borrow occurs here
+10 |             map <- get_mut (&key) <- unwrap$
+   |             ^^^ second mutable borrow occurs here
 ```
 
 **In Harsh:** rustc's refusal points at the `.hrs` lines; the usual way
@@ -341,25 +318,13 @@ fn main$:
 
 ```text
 error[E0597]: `value` does not live long enough
-  --> dropck.hrs:18:15
+  --> dropck.hrs:13:35
    |
-15 |     let value = String::from("treasure");
+11 |     let value = String.from "treasure"
    |         ----- binding `value` declared here
-...
-18 |         seen: &value,
-   |               ^^^^^^ borrowed value does not live long enough
-...
-21 | }
-   | -
-   | |
-   | `value` dropped here while still borrowed
-   | borrow might be used here, when `inspector` is dropped and runs the `Drop` code for type `Inspector`
-   |
+13 |     inspector = Inspector\ seen = &value
+   |                                   ^^^^^^ borrowed value does not live long enough
    = note: values in a scope are dropped in the opposite order they are defined
-
-error: aborting due to previous error
-
-For more information about this error, try `rustc --explain E0597`.
 ```
 
 **In Harsh:** declaring the borrowed value first, so it is dropped last, is

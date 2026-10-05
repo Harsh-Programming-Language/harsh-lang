@@ -2,14 +2,61 @@
 
 Decided in conversation before any code, from a real test: five notebooks of Leptos, Axum and Actix notes converted with `hrs-from`, whose `view!` bodies the transpiler mangled. The principle that came out of it: **the macro rules are Harsh's rules, on both sides.** A Harsh call is one group per argument; a Harsh matcher is one group per fragment; a macro body is Harsh where it is expressions and markup where it is markup; and the bracketed and braced forms are Rust's, exactly as brackets and braces are everywhere else in the language. Macros do not produce Harsh — `hrs` transpiles the file, then rustc expands — but the programmer never has to know: both sides of every macro are written in Harsh and meet in Rust.
 
+## The three rules
+
+Every macro call in Harsh follows one of three rules, decided by who wrote the
+macro and what its stream is.
+
+**1. A Harsh macro's stream is Harsh.** A macro marked `~` is written in Harsh
+and expanded by `hrs` before anything is transpiled: its call, its matcher and
+its expansion are all Harsh, and nothing of it reaches the Rust but what it
+expands to.
+
+```rust harsh
+macro_rules~ twice
+    ( ($x:expr) ) => do: $x * 2
+
+let n = twice~ (a + 1)
+```
+
+**2. A Rust macro's stream is Rust; Harsh goes in holes.** A macro marked `!`
+that takes a language of its own -- a framework's markup, a query,
+`select!`'s arms -- takes it in braces, written exactly as its documentation
+shows. Harsh reads none of it. Wherever that language takes Rust code, a hole
+`@: … :@` holds the Harsh for it, and is transpiled in place:
+
+```rust harsh
+rsx! {                                       rsx! {
+    button {                                     button {
+        onclick: @: move |_| n <- set 0 :@,          onclick: move |_| n.set(0),
+        "reset"                                      "reset"
+    }                                            }
+    strong { "{@: n$ :@}" }                      strong { "{n()}" }
+}                                            }
+```
+
+A hole of several lines may start its code on the `@:` line or the next, and end with `:@` on its last line or its own; lines beneath align with the code. `hrs fmt` writes `{@: if n > 2:` with `else:` under `if` and `"few" :@}` closing the last line.
+
+**3. The one exception: a list of values is juxtaposed.** When a Rust macro's
+stream is just comma-separated expressions -- `println!`, `vec!`,
+`assert_eq!` -- it is written by Harsh's rule for application instead:
+arguments juxtaposed, any argument that is not an atom isolated in
+parentheses, no commas. This is the only place Harsh decides how a macro's
+stream is written, so that calling a macro keeps Harsh's feel:
+
+```rust harsh
+println! "{} {}" a (b + 1)          println!("{} {}", a, b + 1);
+let v = vec! 1 2 3                  let v = vec!(1, 2, 3);
+```
+
 ## Where macros stand
 
 Macros are organised by who wrote them, in what, and whether they are yours:
 
 - **Harsh macros (~)** -- your own, written in Harsh. *Declarative*
-  (`macro_rules~`): finished. *Procedural*, mirroring Rust's (ruling 17):
-  custom derive, built (0.1.29); attribute-like, built (this batch);
-  function-like, built (0.1.28) -- the Rust Book's three kinds, in its order.
+  (`macro_rules~`), and *procedural*, mirroring Rust's (ruling 17): custom
+  derive, attribute-like and function-like -- the Rust Book's three kinds,
+  in its order.
 - **Rust macros (!)** -- your own, written in Rust inside a Harsh project:
   still supported. *Declarative* (`macro_rules!`): a zone of Rust, copied
   verbatim. *Procedural*: a Rust proc-macro crate beside your Harsh crates,
@@ -24,8 +71,8 @@ Macros are organised by who wrote them, in what, and whether they are yours:
   or give it braces, `my_macro! { a | b | c }`.
 
 Parsing and building for Harsh's procedural macros: a Harsh counterpart to
-`syn` and `quote` is in progress (`hrs_syn`, `hrs_quote`); until it lands, a
-macro reads and writes its tokens with `hrs_proc_macro`.
+`syn` and `quote` ships with `hrs`: `hrs_syn` and `hrs_quote`. A macro may
+also read and write its tokens directly with `hrs_proc_macro`.
 
 ## Harsh macros (~)
 
@@ -469,21 +516,3 @@ guesses.
 ## What does not change
 
 Calls are juxtaposed (`println! "{}" a`); `m! { … }` calls keep their braces, and a bracket after `!` is an array argument; the body of a `macro_rules~` transcriber may still be written in Rust's braces under rule 3 when that is wanted. Procedural macros are unaffected: they receive the transpiled tokens.
-
-## Order of work — done
-
-*History. Rules 1, 2, 3 and 6 and the `#:` block named below were retired on
-2026-09-23; see the new Rule 1.*
-
-Every step below has landed. Step 5, the notebooks, is regenerated outside this tree.
-
-### The steps as planned
-
-1. Transpiler: rule 3 (juxtaposition off inside macro braces — the fix the notebooks needed first; later withdrawn, see rule 3 above), rule 1 (HSX from the block's tokens, holes laid out as fragments), rule 2 (arm classification, `$ident` atoms, line-level repetition semicolons, `$(` paren block), rule 4 (matcher mapping), rule 5 (nothing to do — verify), rule 6 (the brace tree). A test per rule; round trip byte-exact.
-2. Converter: Rust `view! { … }` → `view! do:` with attribute values and holes in `{ }` (the end-of-expression heuristic lives here — depth-zero `>` or the next `name=` — where permissiveness is fine); Rust matchers → rule 4 groups; other macro bodies → rule 3 with the author's whitespace kept. Round trip over the five notebooks.
-3. Book: chapter 17's `select!` and chapter 20's `my_vec` in rule 2 form; HSX and the matcher rule in chapter 20's macro section.
-4. Guide: a "Macros" section stating rules 1–5 with these examples, verified.
-5. The five notebooks regenerated.
-6. Tree-sitter and VSCode: HSX holes as code, markup as markup. Handover, changelog, archive.
-
-Corpus for the mapping: the Book's macros, the guide's, `hashmap~`, `filled~`, `log!` above, and the notebooks' `view!` bodies.

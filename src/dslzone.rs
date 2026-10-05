@@ -306,7 +306,11 @@ fn fill_holes(src: &str, lo: usize, hi: usize, hole: &dyn Fn(&str) -> Result<Str
             // The hole's baseline: the indentation of the line it opens on.
             let line_start = src[..lo + i].rfind('\n').map_or(0, |k| k + 1);
             let base = src[line_start..].len() - src[line_start..].trim_start().len();
-            let code = dedent(&text[i + 2..e], base);
+            // Where the code really starts on the `@:` line, after its spaces.
+            let after = &src[lo + i + 2..];
+            let lead = after.len() - after.trim_start_matches([' ', '\t']).len();
+            let first_col = lo + i + 2 + lead - line_start;
+            let code = dedent(&text[i + 2..e], base, first_col);
             let rust = hole(&code).map_err(|m| {
                 let line = src[..lo + i].matches('\n').count() + 1;
                 format!("in the hole opened on line {line}: {m}")
@@ -373,6 +377,13 @@ pub fn normalize_hole_line(line: &str) -> String {
             i = j;
             continue;
         }
+        // `:@:` is the DSL's `:` and an opening `@:` (`onclick:@: …`), never a
+        // closing mark (found 2026-10-04).
+        if line[i..].starts_with(":@:") {
+            out.push(':');
+            i += 1;
+            continue;
+        }
         if line[i..].starts_with(":@") {
             // The mark ends a hole: one space after the code, unless the mark
             // starts its line.
@@ -393,18 +404,23 @@ pub fn normalize_hole_line(line: &str) -> String {
     out
 }
 
-fn dedent(code: &str, base: usize) -> String {
+/// B2 (the user, 2026-10-04): code may start on the `@:` line with the lines
+/// beneath aligned to it -- `{@: if c:` / `"a"` / `else:` under `if` -- so
+/// when every line beneath sits at or right of the code's real column
+/// `first_col`, the first line keeps that column. Lines left of it (a
+/// closure's body under `onclick: @: move |_|:`) are measured from the
+/// hole's line, `base`, as before.
+fn dedent(code: &str, base: usize, first_col: usize) -> String {
     let mut lines = code.split('\n');
     let mut out: Vec<String> = Vec::new();
-    if let Some(first) = lines.next() {
-        if !first.trim().is_empty() {
-            out.push(first.trim().to_string());
-        }
+    let first = lines.next().unwrap_or("");
+    let rest: Vec<&str> = lines.filter(|l| !l.trim().is_empty()).collect();
+    let aligned = !first.trim().is_empty() && rest.iter().all(|l| l.len() - l.trim_start().len() >= first_col);
+    if !first.trim().is_empty() {
+        let keep = if aligned { first_col.saturating_sub(base) } else { 0 };
+        out.push(format!("{}{}", " ".repeat(keep), first.trim()));
     }
-    for l in lines {
-        if l.trim().is_empty() {
-            continue;
-        }
+    for l in rest {
         let ind = l.len() - l.trim_start().len();
         let keep = ind.saturating_sub(base);
         out.push(format!("{}{}", " ".repeat(keep), l.trim_start()));
@@ -515,7 +531,7 @@ mod tests {
     #[test]
     fn a_block_hole_keeps_its_relative_layout() {
         let code = "\n    if a:\n        1\n    else:\n        2\n    ";
-        assert_eq!(dedent(code, 4), "if a:\n    1\nelse:\n    2");
-        assert_eq!(dedent(" move |_| f$ ", 8), "move |_| f$");
+        assert_eq!(dedent(code, 4, 8), "if a:\n    1\nelse:\n    2");
+        assert_eq!(dedent(" move |_| f$ ", 8, 20), "move |_| f$");
     }
 }

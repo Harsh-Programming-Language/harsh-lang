@@ -960,6 +960,71 @@ fn check_closure_params(sig: &[&Token]) -> Result<(), LayoutError> {
     Ok(())
 }
 
+/// `if c: a else:` with a block beneath: an inline branch, then a block
+/// `else`. It used to reach the Rust as written (found applying the
+/// handwriting rules, 2026-09-29); now an error naming the two forms that
+/// work -- both inline, or both blocks.
+fn check_inline_if_block_else(sig: &[&Token]) -> Result<(), LayoutError> {
+    let n = sig.len();
+    if n < 4 || sig[n - 1].kind != Tk::Colon || !sig[n - 2].is_kw("else") {
+        return Ok(());
+    }
+    let mut depth = 0i32;
+    let mut after_if = false;
+    for t in &sig[..n - 2] {
+        match t.kind {
+            Tk::Open(_) => depth += 1,
+            Tk::Close(_) => depth -= 1,
+            _ => {}
+        }
+        if depth == 0 && t.is_kw("if") {
+            after_if = true;
+        }
+        if depth == 0 && after_if && t.kind == Tk::Colon {
+            return Err(LayoutError {
+                msg: "an `if` with an inline branch takes an inline `else` -- `if c: a else: b` -- and a block `else` takes a block `if`: `if c:` with its branch beneath, then `else:` with its own".into(),
+                span: t.span,
+            });
+        }
+    }
+    Ok(())
+}
+
+/// `<-` is written with a space on each side (the user, 2026-10-04): written
+/// tight, `x<-y` or `x<-1`, it is the comparison `x < -y` misspelt, and
+/// `x<-y` compiles silently as a field access when `x` has a field `y` of
+/// the comparison's type. A comparison with a negative is `x < -y`, as in
+/// Rust, which lexes `<-` as one token too.
+/// And a name follows it, always.
+fn check_arrow_spacing(sig: &[&Token]) -> Result<(), LayoutError> {
+    for (k, t) in sig.iter().enumerate() {
+        if t.kind != Tk::LArrow || t.synthetic {
+            continue;
+        }
+        let tight_left = t.line_start.is_none() && k > 0 && sig[k - 1].span.hi == t.span.lo && sig[k - 1].line == t.line;
+        let tight_right = sig.get(k + 1).map_or(false, |n| n.span.lo == t.span.hi && n.line == t.line);
+        if tight_left || tight_right {
+            return Err(LayoutError {
+                msg: "`<-` is written with a space on each side: `value <- method`; a comparison with a negative is `value < -x`, with a space between `<` and `-`".into(),
+                span: t.span,
+            });
+        }
+        // `<-` reaches into a value, so a name follows it -- a field or a
+        // method (the user, 2026-10-04). A number, a negative, a bracket
+        // never can: `x <- 3` is the tuple item `t.3` or the comparison
+        // `x < -3` misspelt, and `t <- 3` compiled silently as `t.3`.
+        if let Some(n) = sig.get(k + 1) {
+            if n.kind != Tk::Ident {
+                return Err(LayoutError {
+                    msg: "`<-` reaches a field or a method by its name; a tuple's item is `t.3`, and a comparison with a negative is `x < -3`".into(),
+                    span: n.span,
+                });
+            }
+        }
+    }
+    Ok(())
+}
+
 fn check_trailing_semi(sig: &[&Token], outer: BlockKind) -> Result<(), LayoutError> {
     let Some(last) = sig.last() else { return Ok(()) };
     if last.kind != Tk::Semi || matches!(outer, BlockKind::Macro | BlockKind::MacroRules) {
@@ -988,6 +1053,8 @@ fn check_old_marks(ln: &Line, outer: BlockKind) -> Result<(), LayoutError> {
     let Some(last) = sig.last() else { return Ok(()) };
     check_trailing_semi(&sig, outer)?;
     check_closure_params(&sig)?;
+    check_arrow_spacing(&sig)?;
+    check_inline_if_block_else(&sig)?;
     check_inline_old_marks(&sig)?;
     check_backslash_head(&sig)?;
     // A declaration or item header may end in neither `:` nor `do` (nor
@@ -1789,7 +1856,7 @@ const STATEMENT_KEYWORDS: [&str; 12] = [
 /// where the braces are not a block: a hole in markup or a tree (those lines
 /// are `dsl`-flagged and not read here; a hole's own fragment is), and a
 /// brace group handed as an argument, `json! ({ .. })`. And a struct is
-/// built with `Name: field = value`, so `Name { field: value }` is an error
+/// built with `Name\\ field = value`, so `Name { field: value }` is an error
 /// even on one line; a pattern, `let Name { x, y } = p`, keeps its braces.
 fn check_braces(lines: &[Line]) -> Result<(), LayoutError> {
     for l in lines {
@@ -1807,6 +1874,15 @@ fn check_braces(lines: &[Line]) -> Result<(), LayoutError> {
             // A struct literal, `Name { .. }`: a path before the brace, not
             // preceded by a keyword, and not a pattern (a `let`/`if let`/`for`
             // before it, or a `=>` or `:` after it).
+            // A struct pattern is written `P\ x, y` -- the braced pattern
+            // was a second spelling, accepted in some places and refused in
+            // others, and is removed (the user, 2026-10-04).
+            if let Some(name) = braced_pattern(t, i, j) {
+                return Err(LayoutError {
+                    msg: format!("a pattern is written with `\\`: `{name}\\ x, y`, `{name}\\ x: px, ..` for a rename; nested in another pattern it is isolated, `({name}\\ x)`"),
+                    span: t[i].span,
+                });
+            }
             let literal = !argument && literal_brace(t, i, j);
             // Over several lines when a token between the braces begins a
             // line -- the layout's own notion. A string continued with `\`
@@ -1818,9 +1894,42 @@ fn check_braces(lines: &[Line]) -> Result<(), LayoutError> {
             if literal {
                 let name: String = literal_path(t, i).iter().map(|k| t[*k].text.clone()).collect::<Vec<_>>().join("");
                 return Err(LayoutError {
-                    msg: format!("a struct is built with `{name}: field = value` (inline, comma-separated) or `{name}:` with one field per line; braces build nothing"),
+                    msg: format!("a struct is built with `{name}\\`: `{name}\\ x = 1, y = 2` inline, or `{name}\\` with one field per line beneath; braces build nothing"),
                     span: t[i].span,
                 });
+            }
+            // A block right after a name, `myfunc { let u = 3; u * u }`:
+            // Rust reads braces after a name as a struct literal, so it
+            // passed through broken. A block passed as an argument is
+            // isolated like any argument (the user, 2026-10-04).
+            if !literal && !argument {
+                if let Some(name) = block_after_name(t, i, j) {
+                    // Fields inside -- `name: value` at the top -- it is a
+                    // struct literal: say how Harsh builds one.
+                    let fields = {
+                        let mut d = 0i32;
+                        let mut found = false;
+                        for k in i + 1..j {
+                            match t[k].kind {
+                                Tk::Open(_) => d += 1,
+                                Tk::Close(_) => d -= 1,
+                                Tk::Colon if d == 0 && t[k - 1].kind == Tk::Ident => found = true,
+                                _ => {}
+                            }
+                        }
+                        found
+                    };
+                    if fields {
+                        return Err(LayoutError {
+                            msg: format!("a struct is built with `{name}\\`: `{name}\\ x = 1, y = 2` inline, or `{name}\\` with one field per line beneath; braces build nothing"),
+                            span: t[i].span,
+                        });
+                    }
+                    return Err(LayoutError {
+                        msg: format!("a block passed as an argument is isolated, like any argument: `{name} ({{ … }})` -- braces right after a name are a struct literal to Rust, and Harsh builds a struct with `\\`"),
+                        span: t[i].span,
+                    });
+                }
             }
             if spans_lines && !argument {
                 let form = match prev.map(|p| &p.kind) {
@@ -1863,6 +1972,88 @@ fn literal_path(t: &[Token], open: usize) -> Vec<usize> {
 }
 
 /// Is the brace at `open` (closing at `close`) a struct literal's?
+/// `name { … }` in an expression: a non-keyword name right before a brace
+/// that is not a block keyword's body (`if c {`, `while x {`), not a pattern
+/// (`let P { x, y } = p`, `P { x } =>`), not a declaration. Returns the name.
+/// `P { x, y }` as a pattern: a name right before non-empty braces, and after
+/// them -- past the brackets around them -- a `=`, `=>`, `in`, or a closure's
+/// `|`. Returns the name.
+fn braced_pattern(t: &[Token], open: usize, close: usize) -> Option<String> {
+    let prev = (0..open).rev().find(|&k| !t[k].is_comment())?;
+    let p = &t[prev];
+    if p.kind != Tk::Ident || crate::rules::is_keyword(&p.text) {
+        return None;
+    }
+    if t[open + 1..close].iter().all(|x| x.is_comment()) {
+        return None;
+    }
+    let mut d = 0i32;
+    for x in &t[close + 1..] {
+        match x.kind {
+            Tk::Open(_) => d += 1,
+            Tk::Close(_) => d -= 1,
+            Tk::Eq | Tk::FatArrow if d <= 0 => return Some(p.text.clone()),
+            Tk::Ident if d <= 0 && x.text == "in" => return Some(p.text.clone()),
+            Tk::Punct if d <= 0 && x.text == "|" => return Some(p.text.clone()),
+            Tk::Semi => return None,
+            Tk::Ident if d == 0 && matches!(x.text.as_str(), "else" | "if") => return None,
+            _ => {}
+        }
+        if d < -1 {
+            return None;
+        }
+    }
+    None
+}
+
+fn block_after_name(t: &[Token], open: usize, close: usize) -> Option<String> {
+    // `Empty {}` is a record with no fields -- a value, never a block.
+    if t[open + 1..close].iter().all(|x| x.is_comment()) {
+        return None;
+    }
+    let prev = (0..open).rev().find(|&k| !t[k].is_comment())?;
+    let p = &t[prev];
+    if p.kind != Tk::Ident || crate::rules::is_keyword(&p.text) || crate::rules::BLOCK_KEYWORDS.contains(&p.text.as_str()) {
+        return None;
+    }
+    if matches!(p.text.as_str(), "else" | "move" | "async" | "unsafe" | "loop" | "try" | "const" | "static" | "dyn" | "where" | "in") {
+        return None;
+    }
+    // A closure's parameter pattern, `|Point { x, y }| x + y`.
+    if t.get(close + 1).map_or(false, |a| a.kind == Tk::Punct && a.text == "|") {
+        return None;
+    }
+    if let Some(a) = t.get(close + 1) {
+        if matches!(a.kind, Tk::FatArrow | Tk::Colon | Tk::Eq) {
+            return None;
+        }
+    }
+    // A pattern at any depth: a `let` or `for` before the braces and its
+    // `=` or `in` after them -- `let ((a, b), Point { x, .. }) = q`.
+    if t[..open].iter().any(|x| x.is_kw("let") || x.is_kw("for"))
+        && t[close + 1..].iter().any(|x| x.kind == Tk::Eq || x.is_kw("in"))
+    {
+        return None;
+    }
+    let mut d = 0i32;
+    for k in (0..prev).rev() {
+        match t[k].kind {
+            Tk::Close(_) => d += 1,
+            Tk::Open(_) => {
+                if d == 0 {
+                    break;
+                }
+                d -= 1;
+            }
+            Tk::Ident if d == 0 && matches!(t[k].text.as_str(), "if" | "while" | "match" | "for" | "loop" | "unsafe" | "let" | "struct" | "enum" | "union" | "impl" | "trait" | "mod" | "fn" | "extern" | "macro_rules") => return None,
+            // `let a = myfunc {`: what precedes the `=` is the binding.
+            Tk::Semi | Tk::FatArrow | Tk::Eq if d == 0 => break,
+            _ => {}
+        }
+    }
+    Some(p.text.clone())
+}
+
 fn literal_brace(t: &[Token], open: usize, close: usize) -> bool {
     let path = literal_path(t, open);
     let Some(&first) = path.first() else { return false };
@@ -2465,6 +2656,8 @@ fn build_block(lines: &[Line], idx: &mut usize, min_indent: usize, outer: BlockK
                     check_backslash_head(&sig)?;
                     check_trailing_semi(&sig, outer)?;
                     check_closure_params(&sig)?;
+                    check_inline_if_block_else(&sig)?;
+                    check_arrow_spacing(&sig)?;
                 }
                 if inline_colon(&ln.toks, 0, ln.toks.len(), outer).is_some() {
                     let mut nodes = expand_item(&ln.toks, 0, ln.toks.len(), outer, ln)?;

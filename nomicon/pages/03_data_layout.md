@@ -32,12 +32,12 @@ fn main$:
     // Rust may reorder the fields to pack them; C's order pads.
     println!
         "Loose:   size {} align {}"
-        (mem.size_of<Loose>$)
-        (mem.align_of<Loose>$)
+        (mem.size_of.<Loose>$)
+        (mem.align_of.<Loose>$)
     println!
         "InOrder: size {} align {}"
-        (mem.size_of<InOrder>$)
-        (mem.align_of<InOrder>$)
+        (mem.size_of.<InOrder>$)
+        (mem.align_of.<InOrder>$)
 ```
 
 ```text
@@ -68,14 +68,14 @@ trait Shape
 
 fn main$:
     // Zero-sized: no space at all.
-    println! "()      {}" (mem.size_of<()>$)
-    println! "Nothing {}" (mem.size_of<Nothing>$)
-    println! "Void    {}" (mem.size_of<Void>$)
+    println! "()      {}" (mem.size_of.<()>$)
+    println! "Nothing {}" (mem.size_of.<Nothing>$)
+    println! "Void    {}" (mem.size_of.<Void>$)
     // A pointer to a dynamically sized type carries its length or vtable.
-    println! "&u8        {}" (mem.size_of<&u8>$)
-    println! "&[u8]      {}" (mem.size_of<&[u8]>$)
-    println! "&str       {}" (mem.size_of<&str>$)
-    println! "&dyn Shape {}" (mem.size_of<&dyn Shape>$)
+    println! "&u8        {}" (mem.size_of.<&u8>$)
+    println! "&[u8]      {}" (mem.size_of.<&[u8]>$)
+    println! "&str       {}" (mem.size_of.<&str>$)
+    println! "&dyn Shape {}" (mem.size_of.<&dyn Shape>$)
 ```
 
 ```text
@@ -122,9 +122,9 @@ struct Packed
     b: u32
 
 fn main$:
-    println! "{} {}" (mem.size_of<Color>$) (Color.Green as u8)
-    println! "{} {}" (mem.size_of<Meters>$) (mem.size_of<f64>$)
-    println! "{}" (mem.size_of<Packed>$)
+    println! "{} {}" (mem.size_of.<Color>$) (Color.Green as u8)
+    println! "{} {}" (mem.size_of.<Meters>$) (mem.size_of.<f64>$)
+    println! "{}" (mem.size_of.<Packed>$)
 ```
 
 ```text

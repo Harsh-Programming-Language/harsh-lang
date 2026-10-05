@@ -123,9 +123,9 @@ struct Celsius f64
 struct Fahrenheit f64
 
 fn to_f (c: Celsius) -> Fahrenheit:
-    Fahrenheit (c <- 0 * 9.0 / 5.0 + 32.0)
+    Fahrenheit (c.0 * 9.0 / 5.0 + 32.0)
 fn to_c (f: Fahrenheit) -> Celsius:
-    Celsius ((f <- 0 - 32.0) * 5.0 / 9.0)
+    Celsius ((f.0 - 32.0) * 5.0 / 9.0)
 
 // A poly iso: the same, for every element type.
 fn to_deque<T> (v: Vec<T>) -> VecDeque<T>:

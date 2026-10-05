@@ -38,7 +38,7 @@ pub fn App$ -> Element:
 fn Shell$ -> Element:
     // The home page's jumbotron spans the whole window: there, `main` drops
     // its width limit, and the page keeps its other sections to the width.
-    let home = use_route<Route>$ == Route.Home {}
+    let home = use_route.<Route>$ == Route.Home {}
     // The arrow shows once the page has scrolled past a screen or so.
     use_effect ||:
         let _ = document.eval SHOW_ARROW

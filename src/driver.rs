@@ -1782,7 +1782,13 @@ pub fn transpile_one(
     let toks = crate::procmac::lex(&work, &regs).map_err(|e| render_error(from, src, e.span, &e.msg))?;
     let (toks, expansions) = expand_harsh_macros(toks, from, src, &crate::mac::NoProcMacros)?;
     if let Some(text) = reread_expansion(&toks, src, &work1, &zs, &dz) {
-        return transpile_one(&text, from, rust, map);
+        // The map of the re-read text points into that text; carry it back
+        // to the file the user wrote (an open item since 0.1.26, closed
+        // 2026-10-04).
+        let anchors = reread_anchors(&toks, &work1, &dz);
+        let out = transpile_one(&text, from, rust, map)?;
+        remap_reread(map, &anchors);
+        return Ok(out);
     }
     let arities = crate::juxt::collect_arities(&toks);
     transpile_tokens(toks, &work, from, rust, map, &arities, &zs, src, &expansions, (&work1, &dz))
@@ -1890,6 +1896,105 @@ fn reread_expansion(
     Some(text)
 }
 
+/// Anchors from the re-read text back to the source: each rendered token
+/// found in order (its own span, a macro call's for an expansion), and each
+/// DSL body put back in place of its placeholder. `(text_lo, src_lo, len)`.
+fn reread_anchors(toks: &[crate::lex::Token], work1: &str, dz: &[crate::dslzone::Zone]) -> Vec<(u32, u32, u32)> {
+    let rendered = crate::mac::render_file(toks);
+    let mut raw = Vec::new();
+    let mut cur = 0usize;
+    for t in toks {
+        if t.text.is_empty() {
+            continue;
+        }
+        if let Some(p) = rendered[cur..].find(t.text.as_str()) {
+            let at = cur + p;
+            raw.push((at, t.span.lo as usize, t.text.len()));
+            cur = at + t.text.len();
+        }
+    }
+    // The placeholders `{/*Zn*/}` become the bodies: shift what follows, and
+    // anchor each body at its own place in the source.
+    let mut shifts: Vec<(usize, isize, usize, usize)> = Vec::new(); // at, delta, src, len
+    for (n, z) in dz.iter().enumerate() {
+        let ph = format!("{{/*Z{n}*/}}");
+        if let Some(at) = rendered.find(&ph) {
+            let body = z.close + 1 - z.open;
+            shifts.push((at, body as isize - ph.len() as isize, z.open, body));
+        }
+    }
+    let shift_of = |pos: usize| -> isize { shifts.iter().filter(|s| s.0 < pos).map(|s| s.1).sum() };
+    let mut out: Vec<(u32, u32, u32)> = raw
+        .into_iter()
+        .filter(|&(at, _, _)| !shifts.iter().any(|s| at >= s.0 && at < s.0 + 9))
+        .map(|(at, src, len)| (((at as isize) + shift_of(at)) as u32, src as u32, len as u32))
+        .collect();
+    let _ = work1;
+    for s in &shifts {
+        out.push((((s.0 as isize) + shift_of(s.0)) as u32, s.2 as u32, s.3 as u32));
+    }
+    out.sort();
+    out
+}
+
+/// Rewrite a map written for re-read text so its source offsets are the
+/// user's file's, through the anchors. The map is ours (written just above
+/// by `transpile_tokens`), so its JSON is edited as text: no JSON crate is
+/// needed where `harsh-lang` is a library.
+fn remap_reread(map: &Path, anchors: &[(u32, u32, u32)]) {
+    let Ok(raw) = fs::read_to_string(map) else { return };
+    let tr = |off: u64| -> u64 {
+        let off = off as u32;
+        match anchors.iter().rev().find(|a| a.0 <= off) {
+            Some(&(t, s, len)) => (s + (off - t).min(len)) as u64,
+            None => off as u64,
+        }
+    };
+    // Each `[n,n,n,n,n]` in "entries", and the two numbers after the name in
+    // each `[ctx,"name",lo,hi]` of "expansions".
+    let (Some(e0), Some(x0)) = (raw.find("\"entries\":["), raw.find("],\"expansions\":[")) else { return };
+    let head = &raw[..e0 + 11];
+    let entries = &raw[e0 + 11..x0];
+    let tail = &raw[x0..];
+    let mut out = String::from(head);
+    for (k, item) in entries.split("],[").enumerate() {
+        let inner = item.trim_start_matches('[').trim_end_matches(']');
+        let mut n: Vec<u64> = inner.split(',').filter_map(|x| x.trim().parse().ok()).collect();
+        if n.len() == 5 {
+            let lo = tr(n[2]);
+            let hi = tr(n[3].saturating_sub(1)) + 1;
+            n[2] = lo;
+            n[3] = hi.max(lo + 1);
+        }
+        if k > 0 {
+            out.push(',');
+        }
+        out.push('[');
+        out.push_str(&n.iter().map(|x| x.to_string()).collect::<Vec<_>>().join(","));
+        out.push(']');
+    }
+    let xs = &tail[16..tail.len().saturating_sub(2)];
+    out.push_str("],\"expansions\":[");
+    for (k, item) in xs.split("],[").enumerate().filter(|(_, it)| !it.is_empty()) {
+        let inner = item.trim_start_matches('[').trim_end_matches(']');
+        let parts: Vec<&str> = inner.rsplitn(3, ',').collect();
+        if k > 0 {
+            out.push(',');
+        }
+        if parts.len() == 3 {
+            let hi: u64 = parts[0].trim().parse().unwrap_or(0);
+            let lo: u64 = parts[1].trim().parse().unwrap_or(0);
+            out.push_str(&format!("[{},{},{}]", parts[2], tr(lo), tr(hi.saturating_sub(1)) + 1));
+        } else {
+            out.push('[');
+            out.push_str(inner);
+            out.push(']');
+        }
+    }
+    out.push_str("]}");
+    let _ = fs::write(map, out);
+}
+
 /// One hole of a brace body, Harsh to Rust.
 fn hole(code: &str) -> Result<String, String> {
     crate::dslzone::transpile_hole(code, &transpile_str)
@@ -1921,7 +2026,11 @@ pub fn transpile_one_procs(
     let toks = crate::procmac::lex(&work, &regs).map_err(|e| render_error(from, src, e.span, &e.msg))?;
     let (toks, expansions) = expand_harsh_macros(toks, from, src, procs)?;
     if let Some(text) = reread_expansion(&toks, src, &work1, &zs, &dz) {
-        return transpile_one_procs(&text, from, rust, map, arities, procs);
+        // Back to the user's file, as in `transpile_one_with`.
+        let anchors = reread_anchors(&toks, &work1, &dz);
+        let out = transpile_one_procs(&text, from, rust, map, arities, procs)?;
+        remap_reread(map, &anchors);
+        return Ok(out);
     }
     transpile_tokens(toks, &work, from, rust, map, arities, &zs, src, &expansions, (&work1, &dz))
 }

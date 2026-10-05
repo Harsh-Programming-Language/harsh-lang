@@ -9,6 +9,11 @@
 //! trait system can: `A * B` and `2.0 * A` pick different implementations at
 //! compile time -- the dispatch Julia does at run time.
 
+// No unsafe code, enforced (2026-10-04): views are values (`View`, `ViewMut`,
+// `VectorView`, `VectorViewMut`, 0.1.37), and the compiler keeps them sound --
+// the zero-sized-slice trick of 0.1.30 cannot come back by accident.
+#![forbid(unsafe_code)]
+
 use nalgebra::{DMatrix, DVector, Scalar};
 use std::fmt;
 use std::ops::{Add, Mul, Sub};

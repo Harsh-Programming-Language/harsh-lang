@@ -12,13 +12,13 @@ mod geo
 
 fn main$:
     // path separator
-    let m = HashMap<String, i32>.new$
-    let b = BTreeMap<i32, i32>.new$
-    let s = HashSet<i32>.new$
+    let m = HashMap.<String, i32>.new$
+    let b = BTreeMap.<i32, i32>.new$
+    let s = HashSet.<i32>.new$
     let v = geo.V\ x = 1.0
     let e = String.from "e"
     // a generic call needs no turbofish
-    let parsed = "42" <- parse<i32>$ <- unwrap$
+    let parsed = "42" <- parse.<i32>$ <- unwrap$
     let mut out = std.io.stdout$
     let _ = out <- flush$
     println!

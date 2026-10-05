@@ -797,7 +797,7 @@ at run time.</p>
 
 <span class="k">impl</span> fmt<span class="p">.</span><span class="t">Display</span> <span class="k">for</span> <span class="t">Password</span>
     <span class="k">fn</span> fmt <span class="p">(</span><span class="p">&amp;</span><span class="k">self</span><span class="p">)</span> <span class="p">(</span>f<span class="p">:</span> <span class="p">&amp;</span><span class="k">mut</span> fmt<span class="p">.</span><span class="t">Formatter</span><span class="p">)</span> <span class="op">-&gt;</span> fmt<span class="p">.</span><span class="t">Result</span><span class="p">:</span>
-        <span class="mac">write!</span> f <span class="str">"{}"</span> <span class="p">(</span><span class="str">"*"</span> <span class="op">&lt;-</span> repeat <span class="p">(</span><span class="k">self</span> <span class="op">&lt;-</span> <span class="num">0</span> <span class="op">&lt;-</span> len<span class="defer">$</span><span class="p">)</span><span class="p">)</span>
+        <span class="mac">write!</span> f <span class="str">"{}"</span> <span class="p">(</span><span class="str">"*"</span> <span class="op">&lt;-</span> repeat <span class="p">(</span><span class="k">self</span><span class="p">.</span><span class="num">0</span> <span class="op">&lt;-</span> len<span class="defer">$</span><span class="p">)</span><span class="p">)</span>
 
 <span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
     <span class="k">let</span> unsecured <span class="p">=</span> <span class="t">String</span><span class="p">.</span>from <span class="str">"ThisIsMyPassword"</span>
@@ -807,7 +807,7 @@ at run time.</p>
 <pre class="code"><code>unsecured: ThisIsMyPassword
 secured:   ****************</code></pre>
 <p><strong>In Harsh:</strong> a tuple struct's field juxtaposes, <code>struct Password String</code>, and
-is read with <code>&lt;- 0</code>.</p>
+is read with <code>.0</code>, as <code>self.0</code>.</p>
 <h3 id="3-4-raii-guards">3.4 RAII Guards</h3>
 <p><em>Original: <a href="https://rust-unofficial.github.io/patterns/patterns/behavioural/RAII.html">RAII Guards</a></em></p>
 <p>Tie a resource to a value's lifetime: acquiring it returns a <em>guard</em>, and
@@ -1262,19 +1262,14 @@ change made to one is missing from the other. First the refusal:</p>
     names <span class="op">&lt;-</span> push <span class="p">(</span><span class="t">String</span><span class="p">.</span>from <span class="str">"Grace"</span><span class="p">)</span>
     <span class="mac">println!</span> <span class="str">"{first}"</span></code></pre>
 <pre class="code"><code>error[E0502]: cannot borrow `names` as mutable because it is also borrowed as immutable
- --&gt; clone_refused.hrs:6:5
-  |
-4 |     let first = &amp;names[0];
-  |                  ----- immutable borrow occurs here
-5 |     // Refused: `names` is borrowed by `first` while we push.
-6 |     names.push(String::from("Grace"));
-  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ mutable borrow occurs here
-7 |     println!("{first}")
-  |               ------- immutable borrow later used here
-
-error: aborting due to previous error
-
-For more information about this error, try `rustc --explain E0502`.</code></pre>
+  --&gt; clone_refused.hrs:5:5
+   |
+ 3 |     let first = &amp;names[0]
+   |                  ----- immutable borrow occurs here
+ 5 |     names &lt;- push (String.from "Grace")
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ mutable borrow occurs here
+ 6 |     println! "{first}"
+   |               ------- immutable borrow later used here</code></pre>
 <p>then the fix that keeps one value, by ending the first borrow before the
 second begins, instead of cloning:</p>
 <pre class="code harsh"><code><span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
@@ -1441,9 +1436,9 @@ whose deserializer drives a visitor that may fail — a prism in all but name.</
 <span class="k">struct</span> <span class="t">Fahrenheit</span> f64
 
 <span class="k">fn</span> to_f <span class="p">(</span>c<span class="p">:</span> <span class="t">Celsius</span><span class="p">)</span> <span class="op">-&gt;</span> <span class="t">Fahrenheit</span><span class="p">:</span>
-    <span class="t">Fahrenheit</span> <span class="p">(</span>c <span class="op">&lt;-</span> <span class="num">0</span> <span class="p">*</span> <span class="num">9.0</span> <span class="p">/</span> <span class="num">5.0</span> <span class="p">+</span> <span class="num">32.0</span><span class="p">)</span>
+    <span class="t">Fahrenheit</span> <span class="p">(</span>c<span class="p">.</span><span class="num">0</span> <span class="p">*</span> <span class="num">9.0</span> <span class="p">/</span> <span class="num">5.0</span> <span class="p">+</span> <span class="num">32.0</span><span class="p">)</span>
 <span class="k">fn</span> to_c <span class="p">(</span>f<span class="p">:</span> <span class="t">Fahrenheit</span><span class="p">)</span> <span class="op">-&gt;</span> <span class="t">Celsius</span><span class="p">:</span>
-    <span class="t">Celsius</span> <span class="p">(</span><span class="p">(</span>f <span class="op">&lt;-</span> <span class="num">0</span> <span class="p">-</span> <span class="num">32.0</span><span class="p">)</span> <span class="p">*</span> <span class="num">5.0</span> <span class="p">/</span> <span class="num">9.0</span><span class="p">)</span>
+    <span class="t">Celsius</span> <span class="p">(</span><span class="p">(</span>f<span class="p">.</span><span class="num">0</span> <span class="p">-</span> <span class="num">32.0</span><span class="p">)</span> <span class="p">*</span> <span class="num">5.0</span> <span class="p">/</span> <span class="num">9.0</span><span class="p">)</span>
 
 <span class="com">// A poly iso: the same, for every element type.</span>
 <span class="k">fn</span> to_deque<span class="p">&lt;</span><span class="t">T</span><span class="p">&gt;</span> <span class="p">(</span>v<span class="p">:</span> <span class="t">Vec</span><span class="p">&lt;</span><span class="t">T</span><span class="p">&gt;</span><span class="p">)</span> <span class="op">-&gt;</span> <span class="t">VecDeque</span><span class="p">&lt;</span><span class="t">T</span><span class="p">&gt;</span><span class="p">:</span>

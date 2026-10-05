@@ -9,15 +9,15 @@ impl P
 fn main$:
     let p = P\ x = 3, y = 4
     let v = vec! 3 1 2
-    // spaced, tight, and mixed are identical
+    // `<-` has a space on each side
     let a = p <- x
-    let b = p<-y
-    let c = v <- len$<-to_string$
+    let b = p <- y
+    let c = v <- len$ <- to_string$
     // a vertical chain: each <- on its own line
     let d = v
         <- iter$
         <- map (|n| n * 2)
-        <- sum<i32>$
+        <- sum.<i32>$
     // horizontal chain
     let e =
         v <- iter$

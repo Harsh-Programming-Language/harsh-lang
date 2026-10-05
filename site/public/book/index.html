@@ -506,7 +506,7 @@ hrs new hello &amp;&amp; cd hello &amp;&amp; hrs run                            
 <ul>
 <li><code>use std.env</code> brings the <code>env</code> module of the standard library into scope. <code>std</code> is the standard library; <code>.</code> separates the parts of a path.</li>
 <li><code>env.args$</code> calls the function <code>args</code> in that module. The <code>$</code> means <em>call with no arguments</em>, and it is the same <code>$</code> that said <em>no parameters</em> on <code>fn main$</code>: without it, <code>env.args</code> would name the function without calling it. Hold on to that distinction; it matters in Rust more than in most languages. (<code>()</code> is not this. In Harsh <code>()</code> is a value — the empty tuple, called <em>unit</em> — and you will meet it in chapter 3.)</li>
-<li><code>&lt;- collect$</code> is a <strong>method call</strong> on the value to its left. The arrow is how you reach into a value, and it is the token you will write most. Read <code>&lt;-</code> as <em>then</em>: take the arguments, then collect them.</li>
+<li><code>&lt;- collect$</code> is a <strong>method call</strong> on the value to its left. The arrow is how you reach into a value, and it is the token you will write most. Read <code>&lt;-</code> as <em>then</em>: take the arguments, then collect them. It is written with a space on each side, <code>args &lt;- collect$</code>; written tight it is refused, because <code>x&lt;-y</code> is how a comparison with a negative would be misspelt — that is <code>x &lt; -y</code>, with a space between <code>&lt;</code> and <code>-</code>, as in Rust. And a name always follows the arrow, a field or a method: a tuple's item is reached with a dot, <code>pair.0</code>, never <code>pair &lt;- 0</code>.</li>
 <li><code>let words: Vec&lt;String&gt; = …</code> declares a variable and states its type: a vector (a growable list) of strings. Rust can usually infer types, but <code>collect</code> can produce many kinds of collection, so here you must say which. When this program is run with no arguments the vector holds exactly one item — the program's own name — which is why it prints <code>1</code>.</li>
 </ul>
 <p>Two things about <code>let</code> that will matter soon: a variable declared with <code>let</code> cannot be changed afterwards unless you say <code>let mut</code>, and the type after the colon is a promise the compiler will hold you to. Both are chapter 3.</p>
@@ -617,7 +617,7 @@ you have it: 37</code></pre>
         squared</code></pre>
 <pre class="code"><code>1 2 1 9</code></pre>
 <blockquote>
-<p><strong>Harsh —</strong> A block opens at a <code>:</code> that ends its line, and its body is the lines indented beneath it; the body ends where the indentation does. That is the one form you will write nearly everywhere. The same block may be written <em>inline</em>, with the body after the colon on the same line, when it is one expression and fits; and it may be written in braces, on one line only, when several statements have to share a line — <code>{ let u = 3; u * u }</code> — which is also the spelling you reach for when pasting a line written the other way. All three produce exactly the same program. A block that belongs to nothing — a scope opened for its own sake — is <code>do:</code>. Two rules follow from the idea. A line ending is the end of a statement, so you never write <code>;</code> between statements; the one <code>;</code> you write yourself goes at the end of a block's last line, to say <em>discard this value</em> (chapter 3 shows what that does). And a line indented deeper than the one above it, without a <code>:</code> to open a block, <em>continues</em> it — which is how a long line is broken.</p>
+<p><strong>Harsh —</strong> A block opens at a <code>:</code> that ends its line, and its body is the lines indented beneath it; the body ends where the indentation does. That is the one form you will write nearly everywhere. The same block may be written <em>inline</em>, with the body after the colon on the same line, when it is one expression and fits; and it may be written in braces, on one line only, when several statements have to share a line — <code>{ let u = 3; u * u }</code> — which is also the spelling you reach for when pasting a line written the other way. Passed as an argument, such a block is isolated like any argument, <code>f ({ let u = 3; u * u })</code>: braces right after a name, <code>f { … }</code>, are refused, since Rust would read them as a struct literal. All three produce exactly the same program. A block that belongs to nothing — a scope opened for its own sake — is <code>do:</code>. Two rules follow from the idea. A line ending is the end of a statement, so you never write <code>;</code> at all: a block whose last value is to be discarded ends with a line <code>()</code>, which says <em>this block is worth nothing</em> (chapter 3 shows what that does). And a line indented deeper than the one above it, without a <code>:</code> to open a block, <em>continues</em> it — which is how a long line is broken.</p>
 </blockquote>
 <p>There is one more shape on that page, and it is the one that looks least like other languages:</p>
 <pre class="code harsh"><code><span class="k">fn</span> greet name<span class="p">:</span> <span class="p">&amp;</span>str <span class="op">-&gt;</span> <span class="t">String</span><span class="p">:</span>
@@ -5135,7 +5135,7 @@ opt-level = 3</code></pre>
 running 1 test
 test target/hrs/lib.rs - add_one (line 10) ... ok
 
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.19s</code></pre>
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.17s</code></pre>
 <p><code>cargo doc --open</code> renders every <code>///</code> and <code>//!</code> in the crate as HTML, with the Markdown inside them — headings, code blocks, links — laid out. The conventional sections are <code># Examples</code>, <code># Panics</code> (when the function can), <code># Errors</code> (what <code>Err</code>s it returns) and <code># Safety</code> (for <code>unsafe</code> functions). The example in the <code>///</code> is Harsh, like everything else in the file, and <code>cargo test</code> <em>runs it</em> — every code block in a doc comment is a test, so documentation cannot drift from the code without failing the build.</p>
 <blockquote>
 <p><strong>Harsh —</strong> A fenced block in a doc comment is the one kind of comment the transpiler reads. The documentation tool lifts such a block out, compiles it and runs it — it is code, not prose — so it is written in Harsh and the transpiler writes out the Rust that tool expects, the same translation it does everywhere else. A fence tagged with another language — <code>text</code>, <code>toml</code> — is prose and is left exactly as you wrote it. A line beginning <code>#</code> inside the fence is the documentation tool's own mark for <em>compile this but do not show it</em>, and it survives the translation.</p>
@@ -5195,6 +5195,50 @@ cargo = "Cargo.toml"        # optional: the Cargo.toml beside this file is the d
 hrs_std = "0.1"
 mylib = { path = "../mylib" }</code></pre>
 <p>Paths in <code>Hrs.toml</code> are relative to its own folder. In a workspace, a member that inherits (<code>version.workspace = true</code>) gets the workspace's values. <code>hrs export</code> writes such a project as plain Rust, each Harsh crate it uses exported beside it and named with a path and a version, so <code>cargo publish</code> takes them in order. Harsh files inside a Rust project are transpiled together — <code>hrs src/parser.hrs src/lexer.hrs</code> — each <code>.rs</code> beside its <code>.hrs</code>, headed with the name of its source; <code>hrs --check src/*.hrs</code> in CI fails when a committed <code>.rs</code> has fallen behind. Each command speaks to one registry, so a name is never looked up in the wrong one: <code>hrs add serde</code> answers that <code>serde</code> is a Rust crate, for <code>cargo add</code>. The crates for writing procedural macros — <code>hrs_proc_macro</code>, <code>hrs_quote</code>, <code>hrs_syn</code> — are compile-time tools, as <code>syn</code> and <code>quote</code> are Rust's, and stay in <code>Cargo.toml</code>. A project from before 0.3.0, with <code>hrs_std</code> in its <code>Cargo.toml</code>, is stopped with a message; <code>hrs migrate</code> moves it. In the rare project that wants a Harsh crate and a Rust crate of the same name, Cargo's rename keeps both: <code>foo_rs = { version = "1", package = "foo" }</code>, and the Rust one is <code>foo_rs</code> in your code.</p>
+<p><strong>Three intents.</strong> How a project is made, and where its code is published, give three cases — and the commands for each already exist:</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>Published to Harsh's registry</th>
+<th>Published to crates.io</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>A Harsh project</strong> (<code>hrs new</code>)</td>
+<td>#1: a Harsh crate</td>
+<td>#2: a Rust crate written in Harsh</td>
+</tr>
+<tr>
+<td><strong>A Rust project</strong> (<code>cargo new</code>)</td>
+<td>—</td>
+<td>#3: Harsh files in a Rust crate</td>
+</tr>
+</tbody>
+</table>
+<p>A program is made with <code>hrs new app</code>; a library — a crate others use, with no <code>main</code> — with <code>hrs new --lib geometry</code> (or <code>hrs new geometry --lib</code>), which writes <code>src/lib.hrs</code> with one public function and a test, so <code>hrs test</code> passes at once. #1 and #2 start the same way: which one a library becomes is chosen when it is published, not when it is made, and the same library can be published both ways.</p>
+<p><em>#1, a Harsh crate,</em> is shared as Harsh, with its <code>~</code> macros, for Harsh users:</p>
+<pre class="code harsh"><code>hrs new <span class="p">-</span><span class="p">-</span>lib geometry
+hrs build
+hrs publish</code></pre>
+<p>Harsh's registry is not open yet, so <code>hrs publish</code> checks the package as a registry would — <code>name</code>, <code>version</code>, <code>description</code> and <code>license</code> in <code>Cargo.toml</code>, and every Harsh dependency named by version rather than by path, since a published crate cannot point at a folder on your disk — and then stops, saying how to share today. Until it opens, another project lists the library in its own <code>Hrs.toml</code> by path, and uses it as any crate, <code>geometry.add 2 3</code>:</p>
+<pre class="code"><code>[dependencies]
+geometry = { path = "../geometry" }</code></pre>
+<p><code>hrs add</code> adds the crates of Harsh's distribution, like <code>hrs_std</code>; a crate on a path is written into <code>Hrs.toml</code> by hand.</p>
+<p><em>#2, a Rust crate written in Harsh,</em> is shared with Rust users, who never need <code>hrs</code>. The project is written in Harsh, and published as the Rust <code>hrs export</code> writes:</p>
+<pre class="code harsh"><code>hrs new <span class="p">-</span><span class="p">-</span>lib geometry
+hrs export                <span class="p">#</span> target<span class="p">/</span>export<span class="p">:</span> plain <span class="t">Rust</span><span class="p">,</span> the <span class="t">Harsh</span> crates it uses beside it
+cd target<span class="p">/</span>export
+cargo build               <span class="p">#</span> check it builds without hrs
+cargo publish</code></pre>
+<p><code>hrs export</code> keeps a library a library, and warns when <code>description</code> or <code>license</code> is missing from <code>Cargo.toml</code>, which crates.io requires before <code>cargo publish</code>.</p>
+<p><em>#3, Harsh files in a Rust crate,</em> keeps a Rust project and writes some of its files in Harsh. Each <code>.hrs</code> file is transpiled to the <code>.rs</code> beside it, headed with the name of its source; files transpiled together see each other's functions; and <code>--check</code> lets CI fail when a <code>.rs</code> is stale:</p>
+<pre class="code harsh"><code>cargo new parser
+hrs src<span class="p">/</span>lexer<span class="p">.</span>hrs src<span class="p">/</span>grammar<span class="p">.</span>hrs      <span class="p">#</span> writes src<span class="p">/</span>lexer<span class="p">.</span>rs and src<span class="p">/</span>grammar<span class="p">.</span>rs
+hrs <span class="p">-</span><span class="p">-</span>check src<span class="p">/</span>lexer<span class="p">.</span>hrs src<span class="p">/</span>grammar<span class="p">.</span>hrs   <span class="p">#</span> <span class="k">in</span> <span class="t">CI</span><span class="p">:</span> writes nothing<span class="p">,</span> fails <span class="k">if</span> stale
+cargo publish</code></pre>
+<p>The edge cases: a procedural-macro crate stays in <code>Cargo.toml</code> in every case, as a Rust dependency; in #2 the Harsh crates a project uses are published first, in the order <code>hrs export</code> names them; and in #3 the <code>.rs</code> files are what Cargo builds, so they are committed with the <code>.hrs</code> they come from.</p>
 <h3 id="17-4-workspaces">17.4 Workspaces</h3>
 <p>A <em>workspace</em> is a set of packages sharing one <code>Cargo.lock</code> and one <code>target/</code> directory, for a project that has grown to several crates — a binary and the libraries it is split into, say. The root <code>Cargo.toml</code> lists the members:</p>
 <pre class="code"><code>[workspace]
@@ -5804,7 +5848,7 @@ tokio = { version = "1.40", features = ["rt", "macros", "time", "sync"] }</code>
     <span class="com">// CPU work or a blocking call goes to a thread, so the runtime keeps turning.</span>
     <span class="k">let</span> sum <span class="p">=</span> tokio<span class="p">.</span>task<span class="p">.</span>spawn_blocking <span class="op">||</span><span class="p">:</span>
         std<span class="p">.</span>thread<span class="p">.</span>sleep <span class="p">(</span><span class="t">Duration</span><span class="p">.</span>from_millis <span class="num">10</span><span class="p">)</span>
-        <span class="p">(</span><span class="num">1</span><span class="op">..=</span><span class="num">100u64</span><span class="p">)</span> <span class="op">&lt;-</span> sum<span class="p">&lt;</span>u64<span class="p">&gt;</span><span class="defer">$</span>
+        <span class="p">(</span><span class="num">1</span><span class="op">..=</span><span class="num">100u64</span><span class="p">)</span> <span class="op">&lt;-</span> sum<span class="p">.</span><span class="p">&lt;</span>u64<span class="p">&gt;</span><span class="defer">$</span>
 
     <span class="k">let</span> answer <span class="p">=</span> sum <span class="op">&lt;-</span> <span class="k">await</span> <span class="op">&lt;-</span> unwrap<span class="defer">$</span>
     <span class="mac">println!</span> <span class="str">"{answer}"</span></code></pre>
@@ -6265,7 +6309,7 @@ Move in the x direction 1 and in the y direction 2
 Text message: hi
 Change color to hue 0, saturation 160, value 255
 3 10 3 -10</code></pre>
-<p>A struct pattern is a field list like any other, marked with <code>\</code>: <code>Point\ x: a, y: b</code> binds the fields to new names — a rename keeps the colon, since here the field is not being given a value but matched — <code>Point\ x, y</code> is the shorthand for the same names, and a field may hold a literal to test it: <code>Point\ x, y: 0</code> matches only points on the x axis and binds <code>x</code>. Enum variants are matched by the shape that built them: <code>Message.Quit</code> bare, <code>Message.Move { x, y }</code> with the record's fields, <code>Message.Write text</code> with one juxtaposed name, and <code>Message.ChangeColor (Color.Hsv h s v)</code> with the inner variant's pattern <em>isolated in parentheses</em>, because it is one argument and it has structure. The isolating parentheses are Harsh's argument rule, applied to a pattern — the same rule as <code>Some (i + 1)</code> on the constructing side. And patterns nest to any depth: the last <code>let</code> takes a tuple of a tuple and a struct apart in one line.</p>
+<p>A struct pattern is a field list like any other, marked with <code>\</code>: <code>Point\ x: a, y: b</code> binds the fields to new names — a rename keeps the colon, since here the field is not being given a value but matched — <code>Point\ x, y</code> is the shorthand for the same names, and a field may hold a literal to test it: <code>Point\ x, y: 0</code> matches only points on the x axis and binds <code>x</code>. That is the one spelling: a braced pattern, <code>Point { x, y }</code>, is refused, as a braced literal is. Nested in another pattern, a struct pattern is isolated in parentheses, since its commas would otherwise be read as the outer pattern's: <code>for (i, (Point\ x, ..)) in points &lt;- iter$ &lt;- enumerate$</code>, and in a closure's parameters <code>|(Point\ x, ..)| x</code>. Enum variants are matched by the shape that built them: <code>Message.Quit</code> bare, <code>Message.Move\ x, y</code> with the record's fields, <code>Message.Write text</code> with one juxtaposed name, and <code>Message.ChangeColor (Color.Hsv h s v)</code> with the inner variant's pattern <em>isolated in parentheses</em>, because it is one argument and it has structure. The isolating parentheses are Harsh's argument rule, applied to a pattern — the same rule as <code>Some (i + 1)</code> on the constructing side. And patterns nest to any depth: the last <code>let</code> takes a tuple of a tuple and a struct apart in one line.</p>
 <h4 id="ignoring">Ignoring</h4>
 <pre class="code harsh"><code><span class="k">fn</span> foo <span class="p">(</span>_<span class="p">:</span> i32<span class="p">)</span> <span class="p">(</span>y<span class="p">:</span> i32<span class="p">)</span><span class="p">:</span>                <span class="com">// an unused parameter, by name</span>
     <span class="mac">println!</span> <span class="str">"This code only uses the y parameter: {y}"</span>
@@ -6357,8 +6401,8 @@ Some numbers: 2, 32</code></pre>
     <span class="k">let</span> msg <span class="p">=</span> <span class="t">Message</span><span class="p">.</span><span class="t">Hello</span>\ id <span class="p">=</span> <span class="num">5</span>
 
     <span class="k">match</span> msg\
-        <span class="t">Message</span><span class="p">.</span><span class="t">Hello</span> <span class="p">{</span> id<span class="p">:</span> id_variable <span class="p">@</span> <span class="num">3</span><span class="op">..=</span><span class="num">7</span> <span class="p">}</span> <span class="op">=&gt;</span> <span class="mac">println!</span> <span class="str">"Found an id in range: {id_variable}"</span>
-        <span class="t">Message</span><span class="p">.</span><span class="t">Hello</span> <span class="p">{</span> id<span class="p">:</span> <span class="num">10</span><span class="op">..=</span><span class="num">12</span> <span class="p">}</span> <span class="op">=&gt;</span> <span class="mac">println!</span> <span class="str">"Found an id in another range"</span>
+        <span class="t">Message</span><span class="p">.</span><span class="t">Hello</span>\ id<span class="p">:</span> id_variable <span class="p">@</span> <span class="num">3</span><span class="op">..=</span><span class="num">7</span> <span class="op">=&gt;</span> <span class="mac">println!</span> <span class="str">"Found an id in range: {id_variable}"</span>
+        <span class="t">Message</span><span class="p">.</span><span class="t">Hello</span>\ id<span class="p">:</span> <span class="num">10</span><span class="op">..=</span><span class="num">12</span> <span class="op">=&gt;</span> <span class="mac">println!</span> <span class="str">"Found an id in another range"</span>
         <span class="t">Message</span><span class="p">.</span><span class="t">Hello</span>\ id <span class="op">=&gt;</span> <span class="mac">println!</span> <span class="str">"Found some other id: {id}"</span></code></pre>
 <pre class="code"><code>The number 4 is even
 Default case, x = Some(5)
@@ -7003,7 +7047,7 @@ Hello, Macro! My name is Waffles!</code></pre>
     <span class="p">}</span>
     <span class="mac">println!</span> <span class="str">"rendered {count}"</span></code></pre>
 <pre class="code"><code>rendered 3</code></pre>
-<p>The markup's own <code>{count}</code> needs no mark — a name is the same in both languages — while the handler, written in Harsh, sits in a hole. A hole may span lines: <code>@:</code> on the line where it opens, the Harsh beneath at that line's indentation, <code>:@</code> where it ends. The same convention serves a tree of braces as it serves markup, because Harsh never learns either:</p>
+<p>The markup's own <code>{count}</code> needs no mark — a name is the same in both languages — while the handler, written in Harsh, sits in a hole. A hole may span lines: <code>@:</code> on the line where it opens, the Harsh beneath at that line's indentation, <code>:@</code> where it ends. The same convention serves a tree of braces as it serves markup, because Harsh never learns either: The rule is one: wherever the macro's own language takes Rust code, a hole holds the Harsh for it — so inside its strings too, where Dioxus takes a format slot: <code>strong { "count: {@: count$ :@}" }</code> becomes <code>strong { "count: {count()}" }</code>.</p>
 <pre class="code harsh"><code><span class="com">// A stand-in for Dioxus's `rsx!`, as `view!` above: it swallows the tree and</span>
 <span class="com">// yields unit.</span>
 <span class="mac">macro_rules!</span> rsx <span class="p">{</span>
@@ -7024,8 +7068,7 @@ Hello, Macro! My name is Waffles!</code></pre>
             <span class="t">Button</span> <span class="p">{</span>
                 onclick<span class="p">:</span> <span class="p">@</span><span class="p">:</span> <span class="k">move</span> <span class="p">|</span>_<span class="p">|</span><span class="p">:</span>
                     <span class="k">let</span> n <span class="p">=</span> count <span class="p">*</span> <span class="num">2</span>
-                    <span class="mac">println!</span> <span class="str">"{n}"</span>
-                <span class="p">:</span><span class="p">@</span><span class="p">,</span>
+                    <span class="mac">println!</span> <span class="str">"{n}"</span> <span class="p">:</span><span class="p">@</span><span class="p">,</span>
                 <span class="str">"Reset"</span>
             <span class="p">}</span>
         <span class="p">}</span>
@@ -7369,7 +7412,7 @@ worker 3 shut down
 <h3 id="layout-chapter-2">Layout — chapter 2</h3>
 <ul>
 <li>A block opens at a <code>:</code> that ends its line; its body is the lines indented beneath it, and ends where the indentation does. (§2.6)</li>
-<li>The same block may be written inline, the body after the colon on the same line when it is one expression; or in braces on one line only, <code>{ let u = 3; u * u }</code>, when several statements must share a line. A <code>{</code> and its <code>}</code> on different lines is an error. (§2.6)</li>
+<li>The same block may be written inline, the body after the colon on the same line when it is one expression; or in braces on one line only, <code>{ let u = 3; u * u }</code>, when several statements must share a line. A <code>{</code> and its <code>}</code> on different lines is an error. (§2.6) A block passed as an argument is isolated: <code>f ({ … })</code>.</li>
 <li><code>do:</code> opens a block that belongs to nothing — a scope of its own, a value, an operand in parentheses. (§2.6, §3.1)</li>
 <li>A line ending ends a statement. Harsh writes no <code>;</code>: a block whose last value is to be discarded ends with a line <code>()</code>, and a <code>;</code> ending a line is refused. A call whose last argument is an indented block takes its <code>()</code> on the line after the block. (§2.6, §3.4)</li>
 <li>A line indented deeper than the one above it, with no <code>:</code> to open a block, continues it. (§2.6)</li>
@@ -7385,7 +7428,7 @@ worker 3 shut down
 <li>Parentheses make a tuple (the comma does it), set precedence, or group — and nothing else. (§20.5)</li>
 <li>A block's opener says how its entries end: <strong>no mark</strong> after a header that ends itself (<code>struct</code>, <code>enum</code>, <code>union</code>, <code>impl</code>, <code>trait</code>, <code>mod</code>, <code>extern</code>, <code>macro_rules!</code>), <strong><code>\</code></strong> for a comma-separated list, <strong><code>:</code></strong> or <strong><code>do:</code></strong> for statements. A grammar of its author's own is a macro's, written in its braces, <code>m! { … }</code>. A construct that already has a spelling keeps it — <code>impl Point:</code> is refused. (§2.6, §5.1, §20)</li>
 <li>Brackets index, never apply: <code>arr[1]</code> is part of its atom (<code>f arr[1]</code> passes the element); <code>arr [1]</code> is the same index but is refused inside an application; an array argument is isolated, <code>f ([1, 2])</code>. (§2.6)</li>
-<li><code>&lt;-</code> reaches into a value: a field, a method. <code>.</code> walks a path: a module, a type, an item. A tuple index keeps its dot, <code>d.0</code>. (§2.6, §5.1)</li>
+<li><code>&lt;-</code> reaches into a value: a field, a method — always a name after it, and a space on each side, <code>s &lt;- len$</code>; a comparison with a negative is <code>x &lt; -1</code>. <code>.</code> walks a path: a module, a type, an item. A tuple index keeps its dot, <code>d.0</code>. (§2.6, §5.1)</li>
 <li>A macro applies like a function, its <code>!</code> glued to its name: <code>vec! 1 2</code>, <code>println! "{x}"</code>. (§2.6)</li>
 </ul>
 <h3 id="declaring-chapters-3-5-6-10">Declaring — chapters 3, 5, 6, 10</h3>
@@ -7402,6 +7445,7 @@ worker 3 shut down
 <h3 id="patterns-chapters-6-19">Patterns — chapters 6, 19</h3>
 <ul>
 <li>A pattern is an application: <code>Some n</code>, <code>Ok value</code>, <code>Circle r</code>, <code>Coin.Quarter state</code>. (§6.2)</li>
+<li>A struct pattern takes <code>\</code>, like its literal: <code>Point\ x, y</code>, <code>Point\ x: px, ..</code>; nested in another pattern it is isolated, <code>(Point\ x, ..)</code>. A braced pattern is refused. (§22)</li>
 <li>A record is taken apart with the mark that builds it: <code>Point\ x, y</code>, <code>Point\ x: a, y: b</code>, <code>Point\ x, ..</code>. (§19.1)</li>
 <li><code>match x\</code> with one arm per line, <code>pattern =&gt; body</code>, no commas; several arms on one line are comma-separated. An arm with several statements is <code>=&gt; do:</code>. (§6.2, §3.5)</li>
 </ul>

@@ -96,7 +96,7 @@ Each has its section below: [Pipes and partial application](#partial-application
 ## The mark
 
 ```text
-#[Ha<rs>.h]
+#[Ha.<rs>.h]
      │  │
      │  └── .h
      └───── rs
@@ -194,10 +194,13 @@ hrs test  [cargo args]     transpile, then cargo test
 hrs check [cargo args]     transpile, then cargo check
 hrs lint  [cargo args]     transpile, then cargo clippy
 hrs watch [subcommand]     rebuild on every save (default: check)
-hrs new   <name>           create a project laid out for Harsh
+hrs new   [--lib] <name>   create a project laid out for Harsh: a program,
+                           or with --lib a library
 hrs add   <crate>..         add Harsh crates to Hrs.toml (hrs_std, ...);
                            a Rust crate is added to Cargo.toml with cargo add
 hrs migrate                move Harsh's crates from Cargo.toml to Hrs.toml
+hrs publish                check the package for Harsh's registry (not open
+                           yet: it says how to share today)
 hrs <a.hrs> [b.hrs ..]     transpile files in a Rust project, each beside its
                            .hrs, seeing each other's functions; --check
                            writes nothing and fails on a stale .rs
@@ -395,13 +398,13 @@ An arm whose body needs several lines ends with `=>` and indents:
 
 ```rust harsh
     fn render (&self) (n: usize) -> String:
-        let mut out = Vec<String>.new$
+        let mut out = Vec.<String>.new$
         for (i, (w, c)) in self <- top n <- iter$ <- enumerate$:
             out <- push (self <- render_line i w (*c))
         out <- join "\n"
 ```
 
-`Vec<String>.new$` needs no turbofish; the transpiler inserts `::<>` because the generic list is followed by a path step. `(*c)` is isolated because `*c` is an operator expression.
+`Vec.<String>.new$` is Rust's `Vec::<String>::new()`, its `::` written `.` as everywhere. `(*c)` is isolated because `*c` is an operator expression.
 
 ## Putting it together
 
@@ -546,7 +549,7 @@ let d =
     a_name_too_long_to_chain_from
         <- iter$
         <- map (|n| n * 2)
-        <- sum<i32>$
+        <- sum.<i32>$
 ```
 
 - A logical line ends when the next line is at the same indentation or shallower.
@@ -560,10 +563,10 @@ fn parse_all<'a, I> (items: I) -> Result<Vec<i64>, ParseErr>
 
 ### Bracketed regions
 
-Inside `(`, `[`, or `{`, layout is suppressed entirely. Lines break freely and indentation carries no meaning until the bracket closes.
+Inside `(` or `[`, a line break continues the expression: a multi-line argument list or array literal needs no mark.
 
-- This is how multi-line argument lists, array literals, and brace-form struct literals work.
-- It is also why a closure body written inside a call cannot currently use indentation — use the brace form there.
+- Parentheses are transparent to layout for blocks: a closure body written inside a call may be indented beneath it, as *Parens are transparent to layout* shows.
+- Braces are not a region of free layout. In Harsh code they are Rust's one-line block, `{ let u = 3; u * u }`, and a `{` with its `}` on different lines is an error; in a Rust macro's own language they belong to the macro, which may break them as it likes.
 
 ### Layout style
 
@@ -878,6 +881,8 @@ A colon that is **not** the last token on a line opens an inline block. It ends 
 | statements | — | one expression: `do: a * 2`, `if c: f$ else: g$` |
 
 An inline block holds **one expression** — one rule, no separator. Several statements on one line are Rust's braces, `if c { f$; g$ } else { h$ }` or `{ let a = 1; a * 2 }` on its own, and a `;` inside an inline colon-block is an error. The reason is that an inline statement block nested in a comma-block has no end the layout can find: `A => do: f(); g(), B => 2` would put `g()` outside the arm. Braces say where a block ends; the colon form does not, on one line. The two are not combined: `if c: { .. }` is an error, since the braces open the block by themselves and the colon would open a second one inside it. Braces are for short blocks — Rust's line and Rust's judgement; anything longer takes the indented form. (A `;` that ends the whole line still discards the tail value, as everywhere.)
+
+A block passed as an argument is isolated like any argument: `myfunc ({ let u = 3; u * u })`. Braces right after a name are refused — `myfunc { … }` is a struct literal to Rust, and Harsh builds a struct with `\` (since 0.5.0).
 
 ```rust harsh
 if t: 1 else: 2              →  if t { 1 } else { 2 }
@@ -1238,7 +1243,8 @@ let name =
 ```
 
 - The arrow binds tightly, so whitespace around it is dropped in the output while line breaks are kept. This is what allows the vertical chain style.
-- `<-` is already a reserved token in rustc, so it never collides with a comparison against a negative value — Rust itself requires a space in `x < -1`.
+- `<-` is written with a space on each side, `value <- method`. Rust lexes `<-` as one token too, and so writes a comparison with a negative with a space between `<` and `-`: `x < -1`. Written tight, `x<-y` would be the field `x.y` — and compile, when `x` has a field `y` of the right type — so Harsh refuses `<-` without its spaces (since 0.5.0).
+- A name always follows `<-` — a field or a method; that is what the arrow means, reaching into a value. A number, a negative or a bracket after it is refused: `t <- 3` is the tuple item `t.3`, written with a dot, and `x <- -3` the comparison `x < -3` (since 0.5.1).
 
 The mapping is a plain substitution in both directions, with no context and no exceptions:
 
@@ -1257,12 +1263,12 @@ self <- field
 
 ### Chain forms
 
-- Spacing around `<-` is insignificant: spaced, tight and mixed produce identical Rust.
+- `<-` always has a space on each side. `p<-y`, `p <-y`, `p<- y` and `x<-1` are refused, the message naming both readings: a method step is `value <- method`, a comparison with a negative is `value < -x`.
 
 ```rust harsh
-let a = p <- x
-let b = p<-y
-let c = v <- len$<-to_string$
+let a = p <- x                         // a field
+let b = v <- len$ <- to_string$        // two steps
+let c = x < -1                         // a comparison with a negative
 ```
 
 - A horizontal chain and a vertical one are the same expression; the vertical form is the continuation rule with `<-` leading each line.
@@ -1277,10 +1283,10 @@ let e =
 let d =
     v <- iter$
       <- map (|n| n * 2)
-      <- sum<i32>$
+      <- sum.<i32>$
 ```
 
-- `sum<i32> ()` — a generic method call needs no turbofish; after `<-` the `<` is always generics.
+- `sum.<i32>$` — a generic method call takes its list with a dot, as Rust's `sum::<i32>()`.
 - A tuple index or float keeps its dot — `t.0`, `t.1`, `2.5` — and a tuple index is part of its atom, so `show t.0 t.1` is two arguments: `show(t.0, t.1)`.
 
 ### Where the dot is not a path separator
@@ -1299,11 +1305,11 @@ There is no accommodation for pasted Rust. Use `hrs-from`, which converts comple
 
 ## Generics
 
-Generic argument lists pass through unchanged in type position and are automatically turbofished when followed by a path separator.
+Rust's `::` is Harsh's `.` — everywhere, the turbofish included. A generic list applied in an expression is written `.<T>`, as Rust writes `::<T>`; in type position it is written as in Rust.
 
 ```rust harsh
-let v = Vec<i32>.new$
-let m = HashMap<String, usize>.new$
+let v = Vec.<i32>.new$
+let m = HashMap.<String, usize>.new$
 let counts: Vec<(String, usize)> =
     tally (&words) <- into_iter$
                    <- collect$
@@ -1315,8 +1321,9 @@ let m = HashMap::<String, usize>::new();
 let counts: Vec<(String, usize)> = tally(&words).into_iter().collect();
 ```
 
-- You never write turbofish yourself. `Vec<i32>::new()` is a parse error in Rust's expression position, so the transpiler inserts the `::`.
-- The substitution is safe without knowing type from expression position, because turbofish is legal in both.
+- One rule, no exception: a reader who knows Rust's `::<T>` knows Harsh's `.<T>`.
+- The mapping is exact: `.<` for `::<`, and `<` for `<`. Nothing is inserted and nothing guessed; rustc judges the result, so `Vec<i32>.new$` is Rust's `Vec<i32>::new()`, which rustc rejects.
+- A `<` opens a generic list in a definition's header (`fn f<T>`, `struct S<T>`); in a type — after an annotation's `:`, after `->`, after `as`, in `impl … for` and `where` bounds, up to the next `=`, `)`, `,`, `|`, `]` or block opener; after a `.`; and at the start of a qualified path, `<T as Trait>.f$`. Everywhere else it is a comparison: `s < to && a.lo > b`.
 
 ### Generics in every position
 
@@ -1327,12 +1334,12 @@ struct Generic<T>:                                                   struct
 impl<T: std.fmt.Debug> Generic<T>:                                   impl
     fn show (&self) -> String:
         format! "{:?}" (self <- inner)
-let m = HashMap<String, i32>.new$                                  call — turbofish inserted
-let parsed = "42" <- parse<i32>$ <- unwrap$                      method — turbofish inserted
+let m = HashMap.<String, i32>.new$                                 call — `.<T>`, Rust's `::<T>`
+let parsed = "42" <- parse.<i32>$ <- unwrap$                     method — `.<T>` after the method
 let v: Vec<i32> = q$                                               type — untouched
 ```
 
-- The turbofish is inserted only where a generic list is followed by a path step or a call. In type position it is left alone, so `let v: Vec<i32>` emits exactly that.
+- In type position a generic list is written as in Rust, so `let v: Vec<i32>` emits exactly that; in an expression it takes its dot, `Vec.<i32>`.
 
 ## Items
 
@@ -1484,7 +1491,7 @@ Written `(Point\ x = 1, msg)` when `Point` has no field `msg`, it is still one l
 
 ### Patterns
 
-A pattern destructures with the same mark: `Point\ x, y`, `Point\ x: px, ..` (a rename keeps Rust's `:`). The braced pattern is still accepted.
+A pattern destructures with the same mark: `Point\ x, y`, `Point\ x: px, ..` (a rename keeps Rust's `:`). It is the one spelling: a braced pattern, `Point { x, y }`, is refused (since 0.6.0). Nested in another pattern — a tuple's element, a closure's parameter — it is isolated like a nested literal: `for (i, (Point\ x, ..)) in v`, `|(Point\ x, ..)| x`.
 
 ```rust harsh
 let Point\ x, y = p
@@ -1776,11 +1783,11 @@ match parse_all items\
 - Guards and or-patterns pass through unchanged.
 - A `;` at the end of an arm is rejected. `;` discards a block's tail value, and an arm body is not a block. The same applies to struct fields, enum variants and use-tree entries.
 
-A struct literal may appear in a scrutinee or condition, which Rust itself forbids. Harsh has no ambiguity there, since the `:` ends the expression, so the expression is parenthesised on emission:
+A struct literal may appear in a scrutinee or condition, which Rust forbids unparenthesised. In Harsh it is isolated, as any argument with structure is, and the parentheses carry into the Rust; the arm's pattern takes `\\` like the literal:
 
 ```rust harsh
-match P { x: 1, y: 2 }\
-    P { x, y } => x + y
+match (P\ x = 1, y = 2)\
+    P\ x, y => x + y
 ```
 
 ```rust
@@ -1798,7 +1805,7 @@ match s\    // indented arms
     Shape.Rect w h =>    // block-bodied arm
         let area = w * h
         format! "rect {area}"
-    Shape.Named { name, sides } => format! "{name}/{sides}"
+    Shape.Named\ name, sides => format! "{name}/{sides}"
 
 match n\ 0 => "zero", _ => "other"    // inline arms
 
@@ -2209,6 +2216,27 @@ view! {                                   view! {
 
 - **A hole is Harsh; everything else is the macro's.** `{count}` needs no mark — a name reads the same in both languages — while a handler written in Harsh sits in a hole. A hole may span lines: `@:` where it opens, the Harsh beneath at that line's indentation, `:@` where it ends. It may hold a macro call with braces of its own, and holes inside those.
 - **Braces may span lines**, as in Rust: the body is the macro's, so Harsh's layout never applies to it. The formatter leaves it byte for byte.
+- **A hole goes wherever the macro's language takes Rust code** — one rule, with no positions to learn. Dioxus takes Rust code in a format slot inside its strings, so a hole goes there too:
+
+```rust harsh
+rsx! {                                    rsx! {
+    strong { "count: {@: n$ :@}" }            strong { "count: {n()}" }
+}                                         }
+```
+
+- **A hole of several lines** may start its code on the `@:` line or on the next, and close `:@` at the end of its last line or on a line of its own. Lines beneath align with the code as anywhere in Harsh — an `else:` under its `if`, a chain's `<-` under the first link — and a closure's body under `onclick: @: move |_|:` is indented from that line. `hrs fmt` writes the compact form, the code on the `@:` line and `:@` ending the last (unless that line ends in a `//` comment), with one space inside each mark and none between a mark and the DSL's brace; and Enter in an editor lands on these columns:
+
+```rust harsh
+rsx! {
+    p {
+        {@: if n > 2:
+                "many"
+            else:
+                "few" :@}
+    }
+}
+```
+
 - `@@:` is a literal `@:` in the body's text. `@:` anywhere else is refused.
 - **`hrs-from` writes the holes.** Converting a Leptos, Dioxus or Tokio file keeps each body's DSL as written and turns every piece of Rust code in it into a hole of Harsh: a `{ … }` group, an attribute's value (`name=value`, `name: value`), a `for`/`if` expression, a `select!` arm's pattern, future and handler. A literal stays as written. A piece it cannot write as Harsh stops the conversion, named by line — never silently left as Rust.
 - A block passed to a macro *as an argument* is isolated like any argument, `m! (do: …) x`. `m! do:` as the macro's body, and `#:`, are retired (2026-09-23); each is refused with the braces named.
@@ -2527,7 +2555,7 @@ The source map records one entry per token as byte offsets. The remapper rewrite
 | Path separator | `.` | `::` |
 | Field or method | `<-` | `.` |
 | Use group | `.( … )` | `::{ … }` |
-| Generic call | `Vec<i32>.new()` | `Vec::<i32>::new()` |
+| Generic call | `Vec.<i32>.new()` | `Vec::<i32>::new()` |
 | Tuple index | `t.0` | `t.0` |
 | Range | `0..3`, `1..=5` | same |
 | Bare block | `do:` | `{ … }` |

@@ -237,7 +237,7 @@ pub fn Editor (value: Signal<String>) (id: &'static str) (lang: &'static str) ->
 async fn keys id: &'static str:
     let mut eval = document.eval (&KEYS <- replace "__EDITOR_ID__" (&format! "{id:?}"))
     loop:
-        match eval <- recv<(String, usize)>$ <- await\
+        match eval <- recv.<(String, usize)>$ <- await\
             Ok (text, line) =>
                 let c = columns (&text) line
                 let closer =

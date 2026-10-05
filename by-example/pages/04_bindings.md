@@ -60,19 +60,13 @@ fn main$:
 
 ```text
 error[E0384]: cannot assign twice to immutable variable `x`
- --> immutable.hrs:4:5
-  |
-3 |     let x = 1;
-  |         -
-  |         |
-  |         first assignment to `x`
-  |         help: consider making this binding mutable: `mut x`
-4 |     x = 2;
-  |     ^^^^^ cannot assign twice to immutable variable
-
-error: aborting due to previous error
-
-For more information about this error, try `rustc --explain E0384`.
+  --> immutable.hrs:3:5
+   |
+ 2 |     let x = 1
+   |         - first assignment to `x`
+ 3 |     x = 2
+   |     ^^^^^ cannot assign twice to immutable variable
+   = help: consider making this binding mutable (hrs 2:9)
 ```
 
 ## 4.2 Types

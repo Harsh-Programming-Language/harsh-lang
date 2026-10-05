@@ -137,7 +137,7 @@ struct Password String
 
 impl fmt.Display for Password
     fn fmt (&self) (f: &mut fmt.Formatter) -> fmt.Result:
-        write! f "{}" ("*" <- repeat (self <- 0 <- len$))
+        write! f "{}" ("*" <- repeat (self.0 <- len$))
 
 fn main$:
     let unsecured = String.from "ThisIsMyPassword"
@@ -152,7 +152,7 @@ secured:   ****************
 ```
 
 **In Harsh:** a tuple struct's field juxtaposes, `struct Password String`, and
-is read with `<- 0`.
+is read with `.0`, as `self.0`.
 
 ## 3.4 RAII Guards
 

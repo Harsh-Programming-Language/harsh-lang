@@ -157,6 +157,7 @@ pub fn lex(src: &str) -> Result<Vec<Token>, LexError> {
     Ok(toks)
 }
 
+
 /// Rust 2021's reserved words with no meaning in Rust 2021 or in Harsh.
 /// (`gen` is reserved only from Rust 2024, and stays a plain name: the
 /// transpiler's own source uses it.)

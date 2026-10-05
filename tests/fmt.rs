@@ -339,8 +339,8 @@ fn fmt_shapes() {
         // A `=` value too long as one line but fitting alone: break after
         // `=`, chain horizontal.
         (
-            "fn main$:\n    let statuses: Vec<Status> = (0u32..3) <- map Status.Value <- collect<Vec<_>>$\n",
-            "fn main$:\n    let statuses: Vec<Status> =\n        (0u32..3) <- map Status.Value <- collect<Vec<_>>$\n",
+            "fn main$:\n    let statuses: Vec<Status> = (0u32..3) <- map Status.Value <- collect.<Vec<_>>$\n",
+            "fn main$:\n    let statuses: Vec<Status> =\n        (0u32..3) <- map Status.Value <- collect.<Vec<_>>$\n",
         ),
         // Three or more links: vertical, whatever their length, the
         // receiver on the line after `=`.

@@ -208,7 +208,7 @@ Change color to hue 0, saturation 160, value 255
 3 10 3 -10
 ```
 
-A struct pattern is a field list like any other, marked with `\`: `Point\ x: a, y: b` binds the fields to new names — a rename keeps the colon, since here the field is not being given a value but matched — `Point\ x, y` is the shorthand for the same names, and a field may hold a literal to test it: `Point\ x, y: 0` matches only points on the x axis and binds `x`. Enum variants are matched by the shape that built them: `Message.Quit` bare, `Message.Move { x, y }` with the record's fields, `Message.Write text` with one juxtaposed name, and `Message.ChangeColor (Color.Hsv h s v)` with the inner variant's pattern *isolated in parentheses*, because it is one argument and it has structure. The isolating parentheses are Harsh's argument rule, applied to a pattern — the same rule as `Some (i + 1)` on the constructing side. And patterns nest to any depth: the last `let` takes a tuple of a tuple and a struct apart in one line.
+A struct pattern is a field list like any other, marked with `\`: `Point\ x: a, y: b` binds the fields to new names — a rename keeps the colon, since here the field is not being given a value but matched — `Point\ x, y` is the shorthand for the same names, and a field may hold a literal to test it: `Point\ x, y: 0` matches only points on the x axis and binds `x`. That is the one spelling: a braced pattern, `Point { x, y }`, is refused, as a braced literal is. Nested in another pattern, a struct pattern is isolated in parentheses, since its commas would otherwise be read as the outer pattern's: `for (i, (Point\ x, ..)) in points <- iter$ <- enumerate$`, and in a closure's parameters `|(Point\ x, ..)| x`. Enum variants are matched by the shape that built them: `Message.Quit` bare, `Message.Move\ x, y` with the record's fields, `Message.Write text` with one juxtaposed name, and `Message.ChangeColor (Color.Hsv h s v)` with the inner variant's pattern *isolated in parentheses*, because it is one argument and it has structure. The isolating parentheses are Harsh's argument rule, applied to a pattern — the same rule as `Some (i + 1)` on the constructing side. And patterns nest to any depth: the last `let` takes a tuple of a tuple and a struct apart in one line.
 
 ### Ignoring
 
@@ -311,8 +311,8 @@ fn main$:
     let msg = Message.Hello\ id = 5
 
     match msg\
-        Message.Hello { id: id_variable @ 3..=7 } => println! "Found an id in range: {id_variable}"
-        Message.Hello { id: 10..=12 } => println! "Found an id in another range"
+        Message.Hello\ id: id_variable @ 3..=7 => println! "Found an id in range: {id_variable}"
+        Message.Hello\ id: 10..=12 => println! "Found an id in another range"
         Message.Hello\ id => println! "Found some other id: {id}"
 ```
 

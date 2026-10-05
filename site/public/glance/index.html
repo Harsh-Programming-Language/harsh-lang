@@ -225,7 +225,7 @@ pre.code:hover .copy,.copy:focus-visible{opacity:1}
 <h2 id="layout-chapter-2">Layout — chapter 2</h2>
 <ul>
 <li>A block opens at a <code>:</code> that ends its line; its body is the lines indented beneath it, and ends where the indentation does. (§2.6)</li>
-<li>The same block may be written inline, the body after the colon on the same line when it is one expression; or in braces on one line only, <code>{ let u = 3; u * u }</code>, when several statements must share a line. A <code>{</code> and its <code>}</code> on different lines is an error. (§2.6)</li>
+<li>The same block may be written inline, the body after the colon on the same line when it is one expression; or in braces on one line only, <code>{ let u = 3; u * u }</code>, when several statements must share a line. A <code>{</code> and its <code>}</code> on different lines is an error. (§2.6) A block passed as an argument is isolated: <code>f ({ … })</code>.</li>
 <li><code>do:</code> opens a block that belongs to nothing — a scope of its own, a value, an operand in parentheses. (§2.6, §3.1)</li>
 <li>A line ending ends a statement. Harsh writes no <code>;</code>: a block whose last value is to be discarded ends with a line <code>()</code>, and a <code>;</code> ending a line is refused. A call whose last argument is an indented block takes its <code>()</code> on the line after the block. (§2.6, §3.4)</li>
 <li>A line indented deeper than the one above it, with no <code>:</code> to open a block, continues it. (§2.6)</li>
@@ -241,7 +241,7 @@ pre.code:hover .copy,.copy:focus-visible{opacity:1}
 <li>Parentheses make a tuple (the comma does it), set precedence, or group — and nothing else. (§20.5)</li>
 <li>A block's opener says how its entries end: <strong>no mark</strong> after a header that ends itself (<code>struct</code>, <code>enum</code>, <code>union</code>, <code>impl</code>, <code>trait</code>, <code>mod</code>, <code>extern</code>, <code>macro_rules!</code>), <strong><code>\</code></strong> for a comma-separated list, <strong><code>:</code></strong> or <strong><code>do:</code></strong> for statements. A grammar of its author's own is a macro's, written in its braces, <code>m! { … }</code>. A construct that already has a spelling keeps it — <code>impl Point:</code> is refused. (§2.6, §5.1, §20)</li>
 <li>Brackets index, never apply: <code>arr[1]</code> is part of its atom (<code>f arr[1]</code> passes the element); <code>arr [1]</code> is the same index but is refused inside an application; an array argument is isolated, <code>f ([1, 2])</code>. (§2.6)</li>
-<li><code>&lt;-</code> reaches into a value: a field, a method. <code>.</code> walks a path: a module, a type, an item. A tuple index keeps its dot, <code>d.0</code>. (§2.6, §5.1)</li>
+<li><code>&lt;-</code> reaches into a value: a field, a method — always a name after it, and a space on each side, <code>s &lt;- len$</code>; a comparison with a negative is <code>x &lt; -1</code>. <code>.</code> walks a path: a module, a type, an item. A tuple index keeps its dot, <code>d.0</code>. (§2.6, §5.1)</li>
 <li>A macro applies like a function, its <code>!</code> glued to its name: <code>vec! 1 2</code>, <code>println! "{x}"</code>. (§2.6)</li>
 </ul>
 <h2 id="declaring-chapters-3-5-6-10">Declaring — chapters 3, 5, 6, 10</h2>
@@ -258,6 +258,7 @@ pre.code:hover .copy,.copy:focus-visible{opacity:1}
 <h2 id="patterns-chapters-6-19">Patterns — chapters 6, 19</h2>
 <ul>
 <li>A pattern is an application: <code>Some n</code>, <code>Ok value</code>, <code>Circle r</code>, <code>Coin.Quarter state</code>. (§6.2)</li>
+<li>A struct pattern takes <code>\</code>, like its literal: <code>Point\ x, y</code>, <code>Point\ x: px, ..</code>; nested in another pattern it is isolated, <code>(Point\ x, ..)</code>. A braced pattern is refused. (§22)</li>
 <li>A record is taken apart with the mark that builds it: <code>Point\ x, y</code>, <code>Point\ x: a, y: b</code>, <code>Point\ x, ..</code>. (§19.1)</li>
 <li><code>match x\</code> with one arm per line, <code>pattern =&gt; body</code>, no commas; several arms on one line are comma-separated. An arm with several statements is <code>=&gt; do:</code>. (§6.2, §3.5)</li>
 </ul>

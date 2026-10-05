@@ -23,19 +23,14 @@ fn main$:
 
 ```text
 error[E0502]: cannot borrow `names` as mutable because it is also borrowed as immutable
- --> clone_refused.hrs:6:5
-  |
-4 |     let first = &names[0];
-  |                  ----- immutable borrow occurs here
-5 |     // Refused: `names` is borrowed by `first` while we push.
-6 |     names.push(String::from("Grace"));
-  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ mutable borrow occurs here
-7 |     println!("{first}")
-  |               ------- immutable borrow later used here
-
-error: aborting due to previous error
-
-For more information about this error, try `rustc --explain E0502`.
+  --> clone_refused.hrs:5:5
+   |
+ 3 |     let first = &names[0]
+   |                  ----- immutable borrow occurs here
+ 5 |     names <- push (String.from "Grace")
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ mutable borrow occurs here
+ 6 |     println! "{first}"
+   |               ------- immutable borrow later used here
 ```
 
 then the fix that keeps one value, by ending the first borrow before the

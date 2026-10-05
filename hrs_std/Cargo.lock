@@ -25,7 +25,7 @@ checksum = "95832e849adfb21180ccb6826a99da14e5d266ae5c2e668e1602cf234f153797"
 
 [[package]]
 name = "hrs_std"
-version = "0.1.4"
+version = "0.1.5"
 dependencies = [
  "nalgebra",
  "num-traits",

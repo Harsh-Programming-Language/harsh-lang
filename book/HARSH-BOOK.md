@@ -153,7 +153,7 @@ fn main$:
 
 - `use std.env` brings the `env` module of the standard library into scope. `std` is the standard library; `.` separates the parts of a path.
 - `env.args$` calls the function `args` in that module. The `$` means *call with no arguments*, and it is the same `$` that said *no parameters* on `fn main$`: without it, `env.args` would name the function without calling it. Hold on to that distinction; it matters in Rust more than in most languages. (`()` is not this. In Harsh `()` is a value — the empty tuple, called *unit* — and you will meet it in chapter 3.)
-- `<- collect$` is a **method call** on the value to its left. The arrow is how you reach into a value, and it is the token you will write most. Read `<-` as *then*: take the arguments, then collect them.
+- `<- collect$` is a **method call** on the value to its left. The arrow is how you reach into a value, and it is the token you will write most. Read `<-` as *then*: take the arguments, then collect them. It is written with a space on each side, `args <- collect$`; written tight it is refused, because `x<-y` is how a comparison with a negative would be misspelt — that is `x < -y`, with a space between `<` and `-`, as in Rust. And a name always follows the arrow, a field or a method: a tuple's item is reached with a dot, `pair.0`, never `pair <- 0`.
 - `let words: Vec<String> = …` declares a variable and states its type: a vector (a growable list) of strings. Rust can usually infer types, but `collect` can produce many kinds of collection, so here you must say which. When this program is run with no arguments the vector holds exactly one item — the program's own name — which is why it prints `1`.
 
 Two things about `let` that will matter soon: a variable declared with `let` cannot be changed afterwards unless you say `let mut`, and the type after the colon is a promise the compiler will hold you to. Both are chapter 3.
@@ -320,7 +320,7 @@ fn main$:
 1 2 1 9
 ```
 
-> **Harsh —** A block opens at a `:` that ends its line, and its body is the lines indented beneath it; the body ends where the indentation does. That is the one form you will write nearly everywhere. The same block may be written *inline*, with the body after the colon on the same line, when it is one expression and fits; and it may be written in braces, on one line only, when several statements have to share a line — `{ let u = 3; u * u }` — which is also the spelling you reach for when pasting a line written the other way. All three produce exactly the same program. A block that belongs to nothing — a scope opened for its own sake — is `do:`. Two rules follow from the idea. A line ending is the end of a statement, so you never write `;` between statements; the one `;` you write yourself goes at the end of a block's last line, to say *discard this value* (chapter 3 shows what that does). And a line indented deeper than the one above it, without a `:` to open a block, *continues* it — which is how a long line is broken.
+> **Harsh —** A block opens at a `:` that ends its line, and its body is the lines indented beneath it; the body ends where the indentation does. That is the one form you will write nearly everywhere. The same block may be written *inline*, with the body after the colon on the same line, when it is one expression and fits; and it may be written in braces, on one line only, when several statements have to share a line — `{ let u = 3; u * u }` — which is also the spelling you reach for when pasting a line written the other way. Passed as an argument, such a block is isolated like any argument, `f ({ let u = 3; u * u })`: braces right after a name, `f { … }`, are refused, since Rust would read them as a struct literal. All three produce exactly the same program. A block that belongs to nothing — a scope opened for its own sake — is `do:`. Two rules follow from the idea. A line ending is the end of a statement, so you never write `;` at all: a block whose last value is to be discarded ends with a line `()`, which says *this block is worth nothing* (chapter 3 shows what that does). And a line indented deeper than the one above it, without a `:` to open a block, *continues* it — which is how a long line is broken.
 
 There is one more shape on that page, and it is the one that looks least like other languages:
 
@@ -6604,7 +6604,7 @@ $ hrs test
 running 1 test
 test target/hrs/lib.rs - add_one (line 10) ... ok
 
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.19s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.17s
 ```
 
 `cargo doc --open` renders every `///` and `//!` in the crate as HTML, with the Markdown inside them — headings, code blocks, links — laid out. The conventional sections are `# Examples`, `# Panics` (when the function can), `# Errors` (what `Err`s it returns) and `# Safety` (for `unsafe` functions). The example in the `///` is Harsh, like everything else in the file, and `cargo test` *runs it* — every code block in a doc comment is a test, so documentation cannot drift from the code without failing the build.
@@ -6683,6 +6683,55 @@ mylib = { path = "../mylib" }
 ```
 
 Paths in `Hrs.toml` are relative to its own folder. In a workspace, a member that inherits (`version.workspace = true`) gets the workspace's values. `hrs export` writes such a project as plain Rust, each Harsh crate it uses exported beside it and named with a path and a version, so `cargo publish` takes them in order. Harsh files inside a Rust project are transpiled together — `hrs src/parser.hrs src/lexer.hrs` — each `.rs` beside its `.hrs`, headed with the name of its source; `hrs --check src/*.hrs` in CI fails when a committed `.rs` has fallen behind. Each command speaks to one registry, so a name is never looked up in the wrong one: `hrs add serde` answers that `serde` is a Rust crate, for `cargo add`. The crates for writing procedural macros — `hrs_proc_macro`, `hrs_quote`, `hrs_syn` — are compile-time tools, as `syn` and `quote` are Rust's, and stay in `Cargo.toml`. A project from before 0.3.0, with `hrs_std` in its `Cargo.toml`, is stopped with a message; `hrs migrate` moves it. In the rare project that wants a Harsh crate and a Rust crate of the same name, Cargo's rename keeps both: `foo_rs = { version = "1", package = "foo" }`, and the Rust one is `foo_rs` in your code.
+
+**Three intents.** How a project is made, and where its code is published, give three cases — and the commands for each already exist:
+
+| | Published to Harsh's registry | Published to crates.io |
+| --- | --- | --- |
+| **A Harsh project** (`hrs new`) | #1: a Harsh crate | #2: a Rust crate written in Harsh |
+| **A Rust project** (`cargo new`) | — | #3: Harsh files in a Rust crate |
+
+A program is made with `hrs new app`; a library — a crate others use, with no `main` — with `hrs new --lib geometry` (or `hrs new geometry --lib`), which writes `src/lib.hrs` with one public function and a test, so `hrs test` passes at once. #1 and #2 start the same way: which one a library becomes is chosen when it is published, not when it is made, and the same library can be published both ways.
+
+*#1, a Harsh crate,* is shared as Harsh, with its `~` macros, for Harsh users:
+
+```console
+hrs new --lib geometry
+hrs build
+hrs publish
+```
+
+Harsh's registry is not open yet, so `hrs publish` checks the package as a registry would — `name`, `version`, `description` and `license` in `Cargo.toml`, and every Harsh dependency named by version rather than by path, since a published crate cannot point at a folder on your disk — and then stops, saying how to share today. Until it opens, another project lists the library in its own `Hrs.toml` by path, and uses it as any crate, `geometry.add 2 3`:
+
+```toml
+[dependencies]
+geometry = { path = "../geometry" }
+```
+
+`hrs add` adds the crates of Harsh's distribution, like `hrs_std`; a crate on a path is written into `Hrs.toml` by hand.
+
+*#2, a Rust crate written in Harsh,* is shared with Rust users, who never need `hrs`. The project is written in Harsh, and published as the Rust `hrs export` writes:
+
+```console
+hrs new --lib geometry
+hrs export                # target/export: plain Rust, the Harsh crates it uses beside it
+cd target/export
+cargo build               # check it builds without hrs
+cargo publish
+```
+
+`hrs export` keeps a library a library, and warns when `description` or `license` is missing from `Cargo.toml`, which crates.io requires before `cargo publish`.
+
+*#3, Harsh files in a Rust crate,* keeps a Rust project and writes some of its files in Harsh. Each `.hrs` file is transpiled to the `.rs` beside it, headed with the name of its source; files transpiled together see each other's functions; and `--check` lets CI fail when a `.rs` is stale:
+
+```console
+cargo new parser
+hrs src/lexer.hrs src/grammar.hrs      # writes src/lexer.rs and src/grammar.rs
+hrs --check src/lexer.hrs src/grammar.hrs   # in CI: writes nothing, fails if stale
+cargo publish
+```
+
+The edge cases: a procedural-macro crate stays in `Cargo.toml` in every case, as a Rust dependency; in #2 the Harsh crates a project uses are published first, in the order `hrs export` names them; and in #3 the `.rs` files are what Cargo builds, so they are committed with the `.hrs` they come from.
 
 ## 17.4 Workspaces
 
@@ -7554,7 +7603,7 @@ async fn main$:
     // CPU work or a blocking call goes to a thread, so the runtime keeps turning.
     let sum = tokio.task.spawn_blocking ||:
         std.thread.sleep (Duration.from_millis 10)
-        (1..=100u64) <- sum<u64>$
+        (1..=100u64) <- sum.<u64>$
 
     let answer = sum <- await <- unwrap$
     println! "{answer}"
@@ -8118,7 +8167,7 @@ Change color to hue 0, saturation 160, value 255
 3 10 3 -10
 ```
 
-A struct pattern is a field list like any other, marked with `\`: `Point\ x: a, y: b` binds the fields to new names — a rename keeps the colon, since here the field is not being given a value but matched — `Point\ x, y` is the shorthand for the same names, and a field may hold a literal to test it: `Point\ x, y: 0` matches only points on the x axis and binds `x`. Enum variants are matched by the shape that built them: `Message.Quit` bare, `Message.Move { x, y }` with the record's fields, `Message.Write text` with one juxtaposed name, and `Message.ChangeColor (Color.Hsv h s v)` with the inner variant's pattern *isolated in parentheses*, because it is one argument and it has structure. The isolating parentheses are Harsh's argument rule, applied to a pattern — the same rule as `Some (i + 1)` on the constructing side. And patterns nest to any depth: the last `let` takes a tuple of a tuple and a struct apart in one line.
+A struct pattern is a field list like any other, marked with `\`: `Point\ x: a, y: b` binds the fields to new names — a rename keeps the colon, since here the field is not being given a value but matched — `Point\ x, y` is the shorthand for the same names, and a field may hold a literal to test it: `Point\ x, y: 0` matches only points on the x axis and binds `x`. That is the one spelling: a braced pattern, `Point { x, y }`, is refused, as a braced literal is. Nested in another pattern, a struct pattern is isolated in parentheses, since its commas would otherwise be read as the outer pattern's: `for (i, (Point\ x, ..)) in points <- iter$ <- enumerate$`, and in a closure's parameters `|(Point\ x, ..)| x`. Enum variants are matched by the shape that built them: `Message.Quit` bare, `Message.Move\ x, y` with the record's fields, `Message.Write text` with one juxtaposed name, and `Message.ChangeColor (Color.Hsv h s v)` with the inner variant's pattern *isolated in parentheses*, because it is one argument and it has structure. The isolating parentheses are Harsh's argument rule, applied to a pattern — the same rule as `Some (i + 1)` on the constructing side. And patterns nest to any depth: the last `let` takes a tuple of a tuple and a struct apart in one line.
 
 ### Ignoring
 
@@ -8221,8 +8270,8 @@ fn main$:
     let msg = Message.Hello\ id = 5
 
     match msg\
-        Message.Hello { id: id_variable @ 3..=7 } => println! "Found an id in range: {id_variable}"
-        Message.Hello { id: 10..=12 } => println! "Found an id in another range"
+        Message.Hello\ id: id_variable @ 3..=7 => println! "Found an id in range: {id_variable}"
+        Message.Hello\ id: 10..=12 => println! "Found an id in another range"
         Message.Hello\ id => println! "Found some other id: {id}"
 ```
 
@@ -9117,7 +9166,7 @@ fn main$:
 rendered 3
 ```
 
-The markup's own `{count}` needs no mark — a name is the same in both languages — while the handler, written in Harsh, sits in a hole. A hole may span lines: `@:` on the line where it opens, the Harsh beneath at that line's indentation, `:@` where it ends. The same convention serves a tree of braces as it serves markup, because Harsh never learns either:
+The markup's own `{count}` needs no mark — a name is the same in both languages — while the handler, written in Harsh, sits in a hole. A hole may span lines: `@:` on the line where it opens, the Harsh beneath at that line's indentation, `:@` where it ends. The same convention serves a tree of braces as it serves markup, because Harsh never learns either: The rule is one: wherever the macro's own language takes Rust code, a hole holds the Harsh for it — so inside its strings too, where Dioxus takes a format slot: `strong { "count: {@: count$ :@}" }` becomes `strong { "count: {count()}" }`.
 
 ```rust harsh
 // A stand-in for Dioxus's `rsx!`, as `view!` above: it swallows the tree and
@@ -9140,8 +9189,7 @@ fn main$:
             Button {
                 onclick: @: move |_|:
                     let n = count * 2
-                    println! "{n}"
-                :@,
+                    println! "{n}" :@,
                 "Reset"
             }
         }
@@ -9548,7 +9596,7 @@ Point { x: 1.0, y: 2.0 } Size { w: 3.0, h: 4.0 } 1.5 9.14 5 12 8 big counts: 2 4
 ## Layout — chapter 2
 
 - A block opens at a `:` that ends its line; its body is the lines indented beneath it, and ends where the indentation does. (§2.6)
-- The same block may be written inline, the body after the colon on the same line when it is one expression; or in braces on one line only, `{ let u = 3; u * u }`, when several statements must share a line. A `{` and its `}` on different lines is an error. (§2.6)
+- The same block may be written inline, the body after the colon on the same line when it is one expression; or in braces on one line only, `{ let u = 3; u * u }`, when several statements must share a line. A `{` and its `}` on different lines is an error. (§2.6) A block passed as an argument is isolated: `f ({ … })`.
 - `do:` opens a block that belongs to nothing — a scope of its own, a value, an operand in parentheses. (§2.6, §3.1)
 - A line ending ends a statement. Harsh writes no `;`: a block whose last value is to be discarded ends with a line `()`, and a `;` ending a line is refused. A call whose last argument is an indented block takes its `()` on the line after the block. (§2.6, §3.4)
 - A line indented deeper than the one above it, with no `:` to open a block, continues it. (§2.6)
@@ -9564,7 +9612,7 @@ Point { x: 1.0, y: 2.0 } Size { w: 3.0, h: 4.0 } 1.5 9.14 5 12 8 big counts: 2 4
 - Parentheses make a tuple (the comma does it), set precedence, or group — and nothing else. (§20.5)
 - A block's opener says how its entries end: **no mark** after a header that ends itself (`struct`, `enum`, `union`, `impl`, `trait`, `mod`, `extern`, `macro_rules!`), **`\`** for a comma-separated list, **`:`** or **`do:`** for statements. A grammar of its author's own is a macro's, written in its braces, `m! { … }`. A construct that already has a spelling keeps it — `impl Point:` is refused. (§2.6, §5.1, §20)
 - Brackets index, never apply: `arr[1]` is part of its atom (`f arr[1]` passes the element); `arr [1]` is the same index but is refused inside an application; an array argument is isolated, `f ([1, 2])`. (§2.6)
-- `<-` reaches into a value: a field, a method. `.` walks a path: a module, a type, an item. A tuple index keeps its dot, `d.0`. (§2.6, §5.1)
+- `<-` reaches into a value: a field, a method — always a name after it, and a space on each side, `s <- len$`; a comparison with a negative is `x < -1`. `.` walks a path: a module, a type, an item. A tuple index keeps its dot, `d.0`. (§2.6, §5.1)
 - A macro applies like a function, its `!` glued to its name: `vec! 1 2`, `println! "{x}"`. (§2.6)
 
 ## Declaring — chapters 3, 5, 6, 10
@@ -9581,6 +9629,7 @@ Point { x: 1.0, y: 2.0 } Size { w: 3.0, h: 4.0 } 1.5 9.14 5 12 8 big counts: 2 4
 ## Patterns — chapters 6, 19
 
 - A pattern is an application: `Some n`, `Ok value`, `Circle r`, `Coin.Quarter state`. (§6.2)
+- A struct pattern takes `\`, like its literal: `Point\ x, y`, `Point\ x: px, ..`; nested in another pattern it is isolated, `(Point\ x, ..)`. A braced pattern is refused. (§22)
 - A record is taken apart with the mark that builds it: `Point\ x, y`, `Point\ x: a, y: b`, `Point\ x, ..`. (§19.1)
 - `match x\` with one arm per line, `pattern => body`, no commas; several arms on one line are comma-separated. An arm with several statements is `=> do:`. (§6.2, §3.5)
 

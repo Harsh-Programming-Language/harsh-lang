@@ -238,48 +238,11 @@ fn atom_end(toks: &[Token], i: usize, end: usize) -> Option<usize> {
                 }
                 break;
             }
-            // Generic arguments: `Vec<i32>`. Only when the matching `>` is
-            // followed by a call or a path step -- otherwise the `<` is a
-            // comparison, as in `s < to && a.lo > b`.
-            if k < end && toks[k].kind == Tk::Lt && !is_each_mark(toks, k) {
-                let mut d = 0i32;
-                let mut j = k;
-                while j < end {
-                    match toks[j].kind {
-                        Tk::Lt => d += 1,
-                        Tk::Gt => {
-                            d -= 1;
-                            if d == 0 {
-                                if matches!(
-                                    toks.get(j + 1).map(|t| &t.kind),
-                                    Some(Tk::Open('(')) | Some(Tk::Dot)
-                                ) {
-                                    k = j + 1;
-                                }
-                                break;
-                            }
-                        }
-                        // `>>` closes two lists at once: `Vec<Vec<_>>`.
-                        Tk::Punct if toks[j].text == ">>" => {
-                            d -= 2;
-                            if d <= 0 {
-                                if d == 0
-                                    && matches!(
-                                        toks.get(j + 1).map(|t| &t.kind),
-                                        Some(Tk::Open('(')) | Some(Tk::Dot)
-                                    )
-                                {
-                                    k = j + 1;
-                                }
-                                break;
-                            }
-                        }
-                        Tk::Semi | Tk::Open('{') | Tk::Punct => break,
-                        _ => {}
-                    }
-                    j += 1;
-                }
-            }
+            // No guess about a `<` (the user's rule, 2026-10-04): in an
+            // expression only `.<` opens a generic list, extending the atom
+            // in the loop above; a plain `<` is mapped as written, and rustc
+            // judges. (A block here extended the atom over `Vec<i32>` when a
+            // call or a path step followed its `>` -- the old turbofish.)
             // Macro bang. A macro is not a value, so nothing after its bang
             // indexes it: a bracket there, tight or spaced, is its first
             // argument, an array literal -- `vec! [1, 2]` is `vec!([1, 2])`
@@ -1294,7 +1257,10 @@ fn check_region(toks: &[Token], a: usize, b: usize) -> Result<(), JuxtError> {
             let is_arg = prev.map_or(false, |p| match p.kind {
                 Tk::Ident => !NOT_CALLABLE.contains(&p.text.as_str()),
                 Tk::Int | Tk::Float | Tk::Str | Tk::Char | Tk::TupleIdx | Tk::Close(_) => true,
-                Tk::Punct => p.text == "!" || p.text == "$",
+                Tk::Punct => p.text == "!" || p.text == "$" || (p.text == ">>" && closes_turbofish(toks, a, i)),
+                // The `>` of a turbofish ends its atom: `f.<u8> 1 2` applies
+                // (found 2026-10-04). A comparison's `>` does not.
+                Tk::Gt => closes_turbofish(toks, a, i),
                 _ => false,
             });
             if !is_arg {
@@ -2127,3 +2093,28 @@ pub fn collect_arities(toks: &[Token]) -> std::collections::HashMap<String, usiz
     }
     m
 }
+
+/// Does the last `>` (or `>>`) before `at` close a generic list opened by
+/// `.<` -- Harsh's turbofish? Walks back to its `<` and looks for the dot.
+fn closes_turbofish(toks: &[Token], from: usize, at: usize) -> bool {
+    let Some(k) = (from..at).rev().find(|&k| !toks[k].is_comment()) else { return false };
+    let mut d = 0i32;
+    let mut j = k + 1;
+    while j > from {
+        j -= 1;
+        match toks[j].kind {
+            Tk::Gt => d += 1,
+            Tk::Punct if toks[j].text == ">>" => d += 2,
+            Tk::Lt => {
+                d -= 1;
+                if d == 0 {
+                    return j > from && toks[j - 1].kind == Tk::Dot;
+                }
+            }
+            Tk::Semi | Tk::Open('{') | Tk::Close('}') => return false,
+            _ => {}
+        }
+    }
+    false
+}
+

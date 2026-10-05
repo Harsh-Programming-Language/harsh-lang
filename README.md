@@ -3,7 +3,7 @@
 Development, issues and merge requests live at [gitlab.com/bahiminin.benoit.dah.opensource/harsh-lang](https://gitlab.com/bahiminin.benoit.dah.opensource/harsh-lang); [github.com/Harsh-Programming-Language/harsh-lang](https://github.com/Harsh-Programming-Language/harsh-lang) is a read-only mirror; the website, written in Harsh, is `site/` and is published from the mirror to [harsh-lang.com](https://harsh-lang.com/).
 
 ```text
-#[Ha<rs>.h]
+#[Ha.<rs>.h]
      │  │
      │  └── .h
      └───── rs

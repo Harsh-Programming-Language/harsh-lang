@@ -1,6 +1,6 @@
 [package]
 name = "hrs_std"
-version = "0.1.4"
+version = "0.1.5"
 edition = "2021"
 authors = ["Bahiminin Benoit Dah"]
 license = "MPL-2.0"

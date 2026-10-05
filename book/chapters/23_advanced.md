@@ -872,7 +872,7 @@ fn main$:
 rendered 3
 ```
 
-The markup's own `{count}` needs no mark — a name is the same in both languages — while the handler, written in Harsh, sits in a hole. A hole may span lines: `@:` on the line where it opens, the Harsh beneath at that line's indentation, `:@` where it ends. The same convention serves a tree of braces as it serves markup, because Harsh never learns either:
+The markup's own `{count}` needs no mark — a name is the same in both languages — while the handler, written in Harsh, sits in a hole. A hole may span lines: `@:` on the line where it opens, the Harsh beneath at that line's indentation, `:@` where it ends. The same convention serves a tree of braces as it serves markup, because Harsh never learns either: The rule is one: wherever the macro's own language takes Rust code, a hole holds the Harsh for it — so inside its strings too, where Dioxus takes a format slot: `strong { "count: {@: count$ :@}" }` becomes `strong { "count: {count()}" }`.
 
 ```rust harsh
 // A stand-in for Dioxus's `rsx!`, as `view!` above: it swallows the tree and
@@ -895,8 +895,7 @@ fn main$:
             Button {
                 onclick: @: move |_|:
                     let n = count * 2
-                    println! "{n}"
-                :@,
+                    println! "{n}" :@,
                 "Reset"
             }
         }

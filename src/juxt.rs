@@ -2222,6 +2222,12 @@ fn closes_turbofish(toks: &[Token], from: usize, at: usize) -> bool {
 /// `Point`, `Route.Home`'s `Home`) is one the files declare, or the
 /// prelude's. Any other name -- a function, a constant, a constructor from
 /// another crate -- keeps the isolation rule: `f (&x)`.
+/// Is `name` a constructor -- declared by the files read so far, or the
+/// prelude's? (The formatter's layout of `&` asks too.)
+pub fn is_constructor_name(name: &str) -> bool {
+    matches!(name, "Some" | "Ok" | "Err") || CONSTRUCTORS.lock().map_or(false, |c| c.iter().any(|n| n == name))
+}
+
 fn is_constructor_head(toks: &[Token], i: usize, head_end: usize) -> bool {
     let Some(last) = (i..head_end).rev().find(|&k| toks[k].kind == Tk::Ident) else { return false };
     let name = toks[last].text.as_str();

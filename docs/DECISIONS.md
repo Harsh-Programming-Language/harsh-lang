@@ -361,6 +361,21 @@ let events =
     ]
 ```
 
+## Layout of `&` (decided 2026-10-06)
+
+A reference is written tight, bit-and spaced, so the two never look alike:
+
+```text
+myfunc (&arg)          // a reference passed to a function: isolated, tight
+myfunc (&mut arg)
+Some &arg              // after a constructor, a single argument: bare
+operand & operand      // bit-and: spaced, like every binary operator
+```
+
+`hrs-from` writes this layout and `hrs fmt` normalizes to it -- `& arg` is
+`&arg`, `a&b` is `a & b`. The transpiler accepts any spacing: meaning never
+depends on it.
+
 ## Open for review
 
 - **`a[i, j]` beside `a[(i, j)]`.** As built, `a[i, j]` reads one element of a

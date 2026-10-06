@@ -37,4 +37,4 @@ fn main$:
             println! "odd {i}"
     println!
         "{}"
-        (describe (& Shape.Rect (p <- clone$) (Point.new 1 1)))
+        (describe (&Shape.Rect (p <- clone$) (Point.new 1 1)))

@@ -118,3 +118,23 @@ fn an_indexed_group_argument_is_isolated() {
     assert!(r.contains("show(pair(\"x\").0)") && r.contains("println!(\"{}\", pair(\"x\").0)"), "{r}");
 }
 
+/// The layout of `&` (the user's convention, 2026-10-06): a reference tight,
+/// `&arg`; bit-and spaced, `a & b`; after a constructor, a single argument
+/// bare, `Some &arg`. `hrs-from` writes it, `hrs fmt` normalizes to it, and
+/// the transpiler accepts any spacing, since meaning never depends on it.
+#[test]
+fn the_layout_of_ampersand() {
+    let rust = "fn myfunc(x: &i32) -> i32 { *x }\nfn bump(x: &mut i32) { *x += 1; }\nfn main() {\n    let mut arg = 1;\n    let operand = 2;\n    let a = myfunc(& arg);\n    bump(& mut arg);\n    let c = Some(&arg);\n    let d = operand&operand;\n}\n";
+    let h = harsh_lang::driver::convert_str(rust).unwrap();
+    for want in ["let a = myfunc (&arg)", "bump (&mut arg)", "let c = Some &arg", "let d = operand & operand"] {
+        assert!(h.contains(want), "{want} in:\n{h}");
+    }
+    let messy = "fn myfunc x: &i32 -> i32: *x\nfn main$:\n    let mut arg = 1\n    let operand = 2\n    let a = myfunc (& arg)\n    let c = Some & arg\n    let d = operand&operand\n";
+    let f = harsh_lang::fmt::format(messy);
+    for want in ["myfunc (&arg)", "Some &arg", "operand & operand"] {
+        assert!(f.contains(want), "{want} in:\n{f}");
+    }
+    let (a, b) = (t(messy).unwrap(), t(&f).unwrap());
+    assert_eq!(flat(&a), flat(&b), "the spacing changed the Rust");
+}
+

@@ -248,6 +248,7 @@ fn format_harsh_checked(src: &str) -> (String, bool) {
     if std::env::var("HRS_FMT_DEBUG").is_ok() {
         eprintln!("--- planned ---\n{out}--- end ---");
     }
+    let out = amp_layout(&out);
     match (rust_tokens(src), rust_tokens(&out)) {
         (Some(a), Some(b)) if a == b => (out, false),
         (None, _) => (out, false),
@@ -1764,3 +1765,67 @@ fn emit(src: &str, plan: &Plan) -> String {
     }
     out
 }
+
+/// The layout of `&` (the user's convention, 2026-10-06): a reference is
+/// tight, `&arg`, `&mut arg`; bit-and is spaced, `a & b`. Which one a `&` is
+/// follows from the token before it, as the transpiler reads it: an operand
+/// -- a name, a literal, a closing bracket, a tuple index -- makes it
+/// bit-and, unless that name is a constructor (`Some &x`). Only the spaces
+/// beside a `&` on its own line change; Rule 0 checks the Rust is the same.
+fn amp_layout(src: &str) -> String {
+    let Ok(toks) = lex::lex(src) else { return src.to_string() };
+    let _ = crate::juxt::collect_arities(&toks);
+    let sig: Vec<&Token> = toks.iter().filter(|t| !t.is_comment()).collect();
+    let mut edits: Vec<(usize, usize, &str)> = Vec::new();
+    let same_line_gap = |a: usize, b: usize| a <= b && src[a..b].chars().all(|c| c == ' ' || c == '\t');
+    for k in 0..sig.len() {
+        let t = sig[k];
+        if !(t.kind == Tk::Punct && t.text == "&") {
+            continue;
+        }
+        let prev = if k > 0 { Some(sig[k - 1]) } else { None };
+        // A `&` that starts its line begins an expression: a reference,
+        // whatever ended the line before.
+        let starts_line = prev.map_or(true, |p| src[p.span.hi as usize..t.span.lo as usize].contains('\n'));
+        let operand = !starts_line && prev.map_or(false, |p| match p.kind {
+            Tk::Ident => !crate::rules::is_keyword(&p.text) && !crate::juxt::is_constructor_name(&p.text),
+            Tk::Int | Tk::Float | Tk::Str | Tk::Char | Tk::TupleIdx => true,
+            Tk::Close(')') | Tk::Close(']') => true,
+            _ => p.text == "$",
+        });
+        let (lo, hi) = (t.span.lo as usize, t.span.hi as usize);
+        let next = sig.get(k + 1).map(|n| n.span.lo as usize);
+        if operand {
+            let p = prev.unwrap().span.hi as usize;
+            if same_line_gap(p, lo) && &src[p..lo] != " " {
+                edits.push((p, lo, " "));
+            }
+            if let Some(n) = next {
+                if same_line_gap(hi, n) && &src[hi..n] != " " {
+                    edits.push((hi, n, " "));
+                }
+            }
+        } else if let Some(n) = next {
+            if same_line_gap(hi, n) && hi < n {
+                edits.push((hi, n, ""));
+            }
+        }
+    }
+    if edits.is_empty() {
+        return src.to_string();
+    }
+    edits.sort();
+    let mut out = String::with_capacity(src.len());
+    let mut at = 0;
+    for (a, b, w) in edits {
+        if a < at {
+            continue;
+        }
+        out.push_str(&src[at..a]);
+        out.push_str(w);
+        at = b;
+    }
+    out.push_str(&src[at..]);
+    out
+}
+

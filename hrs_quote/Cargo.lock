@@ -4,7 +4,7 @@ version = 3
 
 [[package]]
 name = "harsh-lang"
-version = "0.7.0+2026.10.06"
+version = "0.7.1+2026.10.06"
 dependencies = [
  "proc-macro2",
  "syn",
@@ -35,9 +35,9 @@ dependencies = [
 
 [[package]]
 name = "syn"
-version = "2.0.119"
+version = "3.0.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "872831b642d1a07999a962a351ed35b955ea2cfc8f3862091e2a240a84f17297"
+checksum = "8593e8e72159ed2257d083c7a454a85cbf854f37a0966d8d483aff8c8a3ebcee"
 dependencies = [
  "proc-macro2",
  "unicode-ident",

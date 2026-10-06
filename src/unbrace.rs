@@ -86,6 +86,8 @@ fn convert_inner(src: &str) -> Result<String, String> {
         return convert_inner(&cleaned);
     }
     let classes = classify_all(&toks);
+    mark_binary_amps(&toks);
+    mark_constructors(&toks);
     let pc = param_commas(&toks);
     let ep = empty_params(&toks);
     let mut w = Writer { out: String::new(), restart_at: None, level: 0, at_line_start: true, param_commas: pc, empty_params: ep, src, brace_depth: 0, in_enum_body: false, errors: Vec::new() };
@@ -2802,7 +2804,13 @@ impl<'a> Writer<'a> {
                                 // `Option<T>` is isolated.
                                 let simple_type = toks[*a..*b].iter().all(|x| x.kind == Tk::Ident || x.kind == Tk::PathSep);
                                 let type_list = type_app || self.in_enum_body || (i > 0 && toks[i - 1].is_kw("struct"));
-                                let atomic = meta || (!brace
+                                // After a constructor, a single argument
+                                // is bare (the user's convention,
+                                // 2026-10-06): `Some(&arg)` is `Some &arg`.
+                                // A prefix -- `&`, `&mut`, `mut`, `ref` --
+                                // then a name, a path or a literal.
+                                let ctor_single = args.len() == 1 && !type_list && is_ctor_callee(toks, i, ae) && prefixed_atom(toks, *a, *b);
+                                let atomic = ctor_single || meta || (!brace
                                     && (!type_list || simple_type)
                                     && (ae2 == Some(*b)
                                         || (ae2 == Some(*b - 2)
@@ -3600,6 +3608,123 @@ fn is_macro_rules_open(toks: &[Token], o: usize) -> bool {
     o >= 3 && toks[o - 1].kind == Tk::Ident && toks[o - 2].text == "!" && toks[o - 3].is_kw("macro_rules")
 }
 
+thread_local! {
+    /// The `&` tokens of the file being converted that are bit-and, by their
+    /// offset: Harsh's layout spaces a binary operator, `a & b`, and writes a
+    /// reference tight, `&x` (the user's convention, 2026-10-06).
+    static BINARY_AMPS: std::cell::RefCell<std::collections::HashSet<u32>> = std::cell::RefCell::new(std::collections::HashSet::new());
+}
+
+/// Record which `&` are binary: Rust's grammar decides by the token before --
+/// an operand (a name, a literal, a closing bracket, a tuple index, a `?`)
+/// makes it bit-and; anything else, a reference.
+fn mark_binary_amps(toks: &[Token]) {
+    let mut set = std::collections::HashSet::new();
+    for (i, t) in toks.iter().enumerate() {
+        if !(t.kind == Tk::Punct && t.text == "&") {
+            continue;
+        }
+        let Some(p) = toks[..i].iter().rev().find(|q| !q.is_comment()) else { continue };
+        let operand = match p.kind {
+            Tk::Ident => !crate::rules::is_keyword(&p.text) || p.text == "self" || p.text == "Self",
+            Tk::Int | Tk::Float | Tk::Str | Tk::Char | Tk::TupleIdx => true,
+            Tk::Close(')') | Tk::Close(']') => true,
+            _ => p.text == "?",
+        };
+        if operand {
+            set.insert(t.span.lo);
+        }
+    }
+    BINARY_AMPS.with(|b| *b.borrow_mut() = set);
+}
+
+thread_local! {
+    /// The constructors the Rust file declares, with `Some`, `Ok`, `Err`.
+    static CTORS: std::cell::RefCell<std::collections::HashSet<String>> = std::cell::RefCell::new(std::collections::HashSet::new());
+}
+
+/// Record the constructors a Rust file declares: `struct Name`, and each
+/// variant of `enum Name { … }` -- a name right after the enum's `{` or a
+/// top-level `,` in it, attributes skipped.
+fn mark_constructors(toks: &[Token]) {
+    let mut set: std::collections::HashSet<String> = ["Some", "Ok", "Err"].iter().map(|s| s.to_string()).collect();
+    let mut i = 0;
+    while i + 1 < toks.len() {
+        if toks[i].is_kw("struct") && toks[i + 1].kind == Tk::Ident {
+            set.insert(toks[i + 1].text.clone());
+        }
+        if toks[i].is_kw("enum") && toks[i + 1].kind == Tk::Ident {
+            let Some(o) = (i + 2..toks.len()).find(|&k| toks[k].kind == Tk::Open('{')) else { break };
+            let mut d = 0i32;
+            let mut expect = true;
+            let mut k = o;
+            while k < toks.len() {
+                let t = &toks[k];
+                match t.kind {
+                    Tk::Open(_) => {
+                        d += 1;
+                    }
+                    Tk::Close(_) => {
+                        d -= 1;
+                        if d == 0 {
+                            break;
+                        }
+                    }
+                    Tk::Comma if d == 1 => expect = true,
+                    Tk::Ident if d == 1 && expect && !t.is_comment() => {
+                        set.insert(t.text.clone());
+                        expect = false;
+                    }
+                    Tk::Hash if d == 1 => {}
+                    _ => {}
+                }
+                k += 1;
+            }
+            i = k;
+            continue;
+        }
+        i += 1;
+    }
+    CTORS.with(|c| *c.borrow_mut() = set);
+}
+
+/// The callee `toks[i..ae]` is a constructor: its last name is declared one.
+fn is_ctor_callee(toks: &[Token], i: usize, ae: usize) -> bool {
+    let Some(n) = toks[i..ae].iter().rev().find(|t| t.kind == Tk::Ident) else { return false };
+    CTORS.with(|c| c.borrow().contains(&n.text))
+}
+
+/// `toks[a..b]` is a prefix -- `&`, `&mut`, `mut`, `ref`, `ref mut` -- then a
+/// name, a path or a literal.
+fn prefixed_atom(toks: &[Token], a: usize, b: usize) -> bool {
+    let mut k = a;
+    if k < b && toks[k].kind == Tk::Punct && toks[k].text == "&" && !is_binary_amp(&toks[k]) {
+        k += 1;
+        if k < b && toks[k].is_kw("mut") {
+            k += 1;
+        }
+    } else if k < b && toks[k].is_kw("mut") {
+        k += 1;
+    } else if k < b && toks[k].is_kw("ref") {
+        k += 1;
+        if k < b && toks[k].is_kw("mut") {
+            k += 1;
+        }
+    } else {
+        return false;
+    }
+    if k >= b {
+        return false;
+    }
+    let rest = &toks[k..b];
+    (rest.len() == 1 && matches!(rest[0].kind, Tk::Int | Tk::Float | Tk::Str | Tk::Char))
+        || (rest.iter().all(|t| t.kind == Tk::Ident || t.kind == Tk::PathSep) && rest[0].kind == Tk::Ident && !crate::rules::is_keyword(&rest[0].text))
+}
+
+fn is_binary_amp(t: &Token) -> bool {
+    t.kind == Tk::Punct && t.text == "&" && BINARY_AMPS.with(|b| b.borrow().contains(&t.span.lo))
+}
+
 /// Whether a space is written between `p` and `t`.
 ///
 /// Purely cosmetic -- every variant below is valid Rust either way -- but the
@@ -3614,6 +3739,10 @@ fn needs_space(prev: Option<&Token>, t: &Token) -> bool {
     // `!` is a macro bang or a negation, both tight -- except after
     // `macro_rules!`, where a name follows.
     if p.text == "!" && t.kind == Tk::Ident {
+        return true;
+    }
+    // Bit-and is spaced like every binary operator; a reference is tight.
+    if is_binary_amp(p) || is_binary_amp(t) {
         return true;
     }
     if p.text == "&" || p.text == "!" || p.text == "?" {

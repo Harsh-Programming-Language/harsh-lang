@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.7.1 — 2026-10-06  (`hrs_std` 0.1.5, the Jupyter kernel 0.1.3 and Harshlings 0.1.9, unchanged)
+
+0.7.0's language, unchanged; a release of record, and one convention.
+
+- **`RELEASE.md` names its own release.** 0.7.0's sheet kept 0.6.4's commands -- the archive's name, the commit message and the tag `v0.2.1` -- and they were run. Step 2 now reads the version from the tree's `Cargo.toml` for the message and the tag, and packing a delivery refuses a sheet that names another release.
+- **The layout of `&`** (the user's convention): a reference tight, `&arg`, `&mut arg`; bit-and spaced, `operand & operand`; after a constructor a single argument bare, `Some &arg`. `hrs-from` writes it -- it wrote `operand &operand`, which looked like a reference -- and `hrs fmt` normalizes to it. Any spacing still transpiles the same.
+- **One `syn`:** the converter's expression check uses `syn` 3, the version the language server's dependencies already bring, so `cargo install harsh-lang` compiles one `syn`, not two.
+
 ## 0.7.0 — 2026-10-06  (`hrs_std` 0.1.5 and the Jupyter kernel 0.1.3, unchanged)
 
 Breaking: ranges are atoms, and the generated project moved to `target/src/`. Run `hrs migrate` once in each project. Most of what follows came from building ShopBill, and from the rulings it led to; `docs/DECISIONS.md` records them all.

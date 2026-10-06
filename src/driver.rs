@@ -137,6 +137,7 @@ impl Project {
         // Arities of every `fn` in the project, so `$` works across modules.
         // A partial application is a whole-project question, so a change to
         // any file's signatures means every file is checked again.
+        crate::juxt::reset_constructors();
         let mut arities = std::collections::HashMap::new();
         let mut sources = Vec::new();
         for u in &units {
@@ -453,6 +454,7 @@ impl Project {
             Some(r) => r,
             None => &crate::mac::NoProcMacros,
         };
+        crate::juxt::reset_constructors();
         let mut arities = std::collections::HashMap::new();
         let mut sources = Vec::new();
         for u in &units {
@@ -1947,6 +1949,7 @@ pub fn format_if_sound(harsh: String) -> String {
 /// or a source map. Used for the holes of a Rust macro's brace body, which
 /// may hold brace bodies with holes of their own.
 pub fn transpile_str(src: &str) -> Result<String, String> {
+    crate::juxt::reset_constructors();
     let (work1, zs) = crate::rawzone::prepare(src);
     let (work, dz) = crate::dslzone::prepare(&work1);
     let (work, regs) = crate::procmac::prepare(&work).map_err(|e| e.msg)?;

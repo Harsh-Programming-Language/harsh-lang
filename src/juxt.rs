@@ -2077,9 +2077,18 @@ impl<'a> Pipes<'a> {
 /// 2026-10-05: Rust does not care how a name is spelt). The set only grows.
 static CONSTRUCTORS: std::sync::Mutex<Vec<String>> = std::sync::Mutex::new(Vec::new());
 
-/// Record the constructors `toks` declare: `struct Name`, and each variant
-/// of `enum Name` -- the first name on each line of its block.
-fn collect_constructors(toks: &[Token]) {
+/// Forget the constructors recorded so far: a transpilation reads its own
+/// files' declarations, never another's (the table only grew, and a name one
+/// file declared leaked into the next, 2026-10-06).
+pub fn reset_constructors() {
+    if let Ok(mut c) = CONSTRUCTORS.lock() {
+        c.clear();
+    }
+}
+
+/// The constructors `toks` declare: `struct Name`, and each variant of
+/// `enum Name` -- the first name on each line of its block.
+pub fn declared_constructors(toks: &[Token]) -> Vec<String> {
     let mut found: Vec<String> = Vec::new();
     let mut i = 0usize;
     while i + 1 < toks.len() {
@@ -2107,6 +2116,13 @@ fn collect_constructors(toks: &[Token]) {
         }
         i += 1;
     }
+    found
+}
+
+/// Record the constructors `toks` declare, beside those of the transpilation's
+/// other files.
+fn collect_constructors(toks: &[Token]) {
+    let found = declared_constructors(toks);
     if let Ok(mut c) = CONSTRUCTORS.lock() {
         for f in found {
             if !c.contains(&f) {

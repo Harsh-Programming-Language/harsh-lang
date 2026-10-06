@@ -138,3 +138,13 @@ fn the_layout_of_ampersand() {
     assert_eq!(flat(&a), flat(&b), "the spacing changed the Rust");
 }
 
+/// `hrs fmt` writes a constructor's single prefixed argument bare, `Some &1`,
+/// and keeps the parentheses of a declaration and of several arguments.
+#[test]
+fn fmt_writes_a_constructors_single_argument_bare() {
+    let src = "struct P\n    v: i32\n\nimpl P\n    fn x (&self) -> &i32:\n        &self <- v\n\nfn main$:\n    let x = 1\n    let a = Some (&x)\n    assert_eq! (Some (&1)) (Some (&1))\n    let f = Some (&x) (&x)\n    ()\n";
+    let f = harsh_lang::fmt::format(src);
+    assert!(f.contains("let a = Some &x") && f.contains("assert_eq! (Some &1) (Some &1)"), "{f}");
+    assert!(f.contains("fn x (&self) -> &i32:") && f.contains("Some (&x) (&x)"), "{f}");
+}
+

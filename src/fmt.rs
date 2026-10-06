@@ -248,7 +248,7 @@ fn format_harsh_checked(src: &str) -> (String, bool) {
     if std::env::var("HRS_FMT_DEBUG").is_ok() {
         eprintln!("--- planned ---\n{out}--- end ---");
     }
-    let out = amp_layout(&out);
+    let out = amp_layout(&ctor_bare(&out));
     match (rust_tokens(src), rust_tokens(&out)) {
         (Some(a), Some(b)) if a == b => (out, false),
         (None, _) => (out, false),
@@ -1774,7 +1774,8 @@ fn emit(src: &str, plan: &Plan) -> String {
 /// beside a `&` on its own line change; Rule 0 checks the Rust is the same.
 fn amp_layout(src: &str) -> String {
     let Ok(toks) = lex::lex(src) else { return src.to_string() };
-    let _ = crate::juxt::collect_arities(&toks);
+    let ctors = crate::juxt::declared_constructors(&toks);
+    let is_ctor = |n: &str| matches!(n, "Some" | "Ok" | "Err") || ctors.iter().any(|c| c == n);
     let sig: Vec<&Token> = toks.iter().filter(|t| !t.is_comment()).collect();
     let mut edits: Vec<(usize, usize, &str)> = Vec::new();
     let same_line_gap = |a: usize, b: usize| a <= b && src[a..b].chars().all(|c| c == ' ' || c == '\t');
@@ -1788,7 +1789,7 @@ fn amp_layout(src: &str) -> String {
         // whatever ended the line before.
         let starts_line = prev.map_or(true, |p| src[p.span.hi as usize..t.span.lo as usize].contains('\n'));
         let operand = !starts_line && prev.map_or(false, |p| match p.kind {
-            Tk::Ident => !crate::rules::is_keyword(&p.text) && !crate::juxt::is_constructor_name(&p.text),
+            Tk::Ident => !crate::rules::is_keyword(&p.text) && !is_ctor(&p.text),
             Tk::Int | Tk::Float | Tk::Str | Tk::Char | Tk::TupleIdx => true,
             Tk::Close(')') | Tk::Close(']') => true,
             _ => p.text == "$",
@@ -1823,6 +1824,82 @@ fn amp_layout(src: &str) -> String {
         }
         out.push_str(&src[at..a]);
         out.push_str(w);
+        at = b;
+    }
+    out.push_str(&src[at..]);
+    out
+}
+
+/// After a constructor, a single argument is bare (the user's convention,
+/// 2026-10-06): `Some (&1)` is `Some &1`, `Ok (mut v)` is `Ok mut v`. Only a
+/// constructor -- one the files declare, or `Some`, `Ok`, `Err` -- whose
+/// only argument is an isolated prefix (`&`, `&mut`, `mut`, `ref`) and a
+/// name, path or literal; anything after it that could be another argument
+/// keeps the parentheses. Rule 0 checks the Rust is the same.
+fn ctor_bare(src: &str) -> String {
+    let Ok(toks) = lex::lex(src) else { return src.to_string() };
+    let ctors = crate::juxt::declared_constructors(&toks);
+    let is_ctor = |n: &str| matches!(n, "Some" | "Ok" | "Err") || ctors.iter().any(|c| c == n);
+    let sig: Vec<&Token> = toks.iter().filter(|t| !t.is_comment()).collect();
+    let mut drops: Vec<(usize, usize)> = Vec::new();
+    let mut k = 0;
+    while k + 3 < sig.len() {
+        let c = sig[k];
+        // An application, not a declaration: `fn x (&self)` is a header.
+        let declared = k > 0 && sig[k - 1].is_kw("fn");
+        if declared || !(c.kind == Tk::Ident && is_ctor(&c.text) && sig[k + 1].kind == Tk::Open('(')) {
+            k += 1;
+            continue;
+        }
+        let mut j = k + 2;
+        if sig[j].kind == Tk::Punct && sig[j].text == "&" {
+            j += 1;
+            if j < sig.len() && sig[j].is_kw("mut") {
+                j += 1;
+            }
+        } else if sig[j].is_kw("mut") {
+            j += 1;
+        } else if sig[j].is_kw("ref") {
+            j += 1;
+            if j < sig.len() && sig[j].is_kw("mut") {
+                j += 1;
+            }
+        } else {
+            k += 1;
+            continue;
+        }
+        // The atom: a literal, or a name or path.
+        let start = j;
+        if j < sig.len() && matches!(sig[j].kind, Tk::Int | Tk::Float | Tk::Str | Tk::Char) {
+            j += 1;
+        } else {
+            while j < sig.len() && (sig[j].kind == Tk::Ident || sig[j].kind == Tk::Dot) && !(sig[j].kind == Tk::Ident && crate::rules::is_keyword(&sig[j].text)) {
+                j += 1;
+            }
+        }
+        if j == start || j >= sig.len() || sig[j].kind != Tk::Close(')') {
+            k += 1;
+            continue;
+        }
+        // Nothing after it may be another argument.
+        let more = sig.get(j + 1).map_or(false, |n| {
+            n.span.lo as usize >= sig[j].span.hi as usize
+                && !src[sig[j].span.hi as usize..n.span.lo as usize].contains('\n')
+                && (matches!(n.kind, Tk::Ident | Tk::Int | Tk::Float | Tk::Str | Tk::Char | Tk::Open(_)) && !(n.kind == Tk::Ident && crate::rules::is_keyword(&n.text)))
+        });
+        if !more {
+            drops.push((sig[k + 1].span.lo as usize, sig[k + 1].span.hi as usize));
+            drops.push((sig[j].span.lo as usize, sig[j].span.hi as usize));
+        }
+        k = j + 1;
+    }
+    if drops.is_empty() {
+        return src.to_string();
+    }
+    let mut out = String::with_capacity(src.len());
+    let mut at = 0;
+    for (a, b) in drops {
+        out.push_str(&src[at..a]);
         at = b;
     }
     out.push_str(&src[at..]);

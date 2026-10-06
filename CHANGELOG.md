@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.7.2 — 2026-10-06  (`hrs_std` 0.1.5, the Jupyter kernel 0.1.3 and Harshlings 0.1.9, unchanged)
+
+- **`hrs fmt` writes a constructor's single argument bare** (the user's convention): `Some (&1)` is `Some &1`, `Ok (mut v)` is `Ok mut v`, as `hrs-from` writes it since 0.7.1. Only when that argument is the only one; `Some (&x) (&y)` keeps its parentheses. The Book's iterator example reads `assert_eq! (v1_iter <- next$) (Some &1)`.
+- **The constructor table belongs to the files being read.** It only grew, so in one process -- a test run, the language server -- a name one file declared counted as a constructor in the next; the formatter took `fn x (&self)` for one. `hrs fmt` now reads its own file's declarations, a transpilation starts a fresh table, and a function's declaration is never an application.
+
 ## 0.7.1 — 2026-10-06  (`hrs_std` 0.1.5, the Jupyter kernel 0.1.3 and Harshlings 0.1.9, unchanged)
 
 0.7.0's language, unchanged; a release of record, and one convention.

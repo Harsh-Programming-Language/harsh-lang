@@ -8,9 +8,9 @@ below are this release's.
 **Nothing is published until you decide to.** A version is spent the moment
 it is uploaded anywhere: a fix afterwards gets the next number.
 
-**Verified for this delivery (0.7.1):** 340 tests, 0 ignored, no warnings;
+**Verified for this delivery (0.7.2):** 341 tests, 0 ignored, no warnings;
 `check.sh`, with the self-host, the books and the website's four gates; the
-public tree's own 340 tests; Harshlings 0.1.9's 65 exercises, 0 problems.
+public tree's own 341 tests; Harshlings 0.1.9's 65 exercises, 0 problems.
 
 ## Version numbers
 
@@ -28,7 +28,7 @@ Cargo's promise for versions below 1.0 (the user's rule, 2026-09-30):
 
 In the delivery bundle, this file sits in `_Installation & Deployment/` with
 `TESTING.md` (what is new, and how to try it) and `DEPLOY-WEBSITE.md` (a copy
-of `site/DEPLOY.md`). Beside that folder: `harsh-public-0.7.1.tar.gz` (the public tree: the
+of `site/DEPLOY.md`). Beside that folder: `harsh-public-0.7.2.tar.gz` (the public tree: the
 crate, the kernel's sources in `kernel/`, the website in `site/`),
 `harshlings-0.1.9.tar.gz`, `editors/` (the VS Code `.vsix`, the Zed
 repositories), `jupyter/` (the kernel's wheel). Everything else is in the
@@ -39,7 +39,7 @@ public tree: what is new in `CHANGELOG.md`; the website's full guide in
 
 | Product | Version | Where it is published | From |
 |---|---|---|---|
-| `harsh-lang` -- `hrs`, `hrs-from`, `hrs-remap`, `hrs-lsp` | **0.7.1** | crates.io | this repository |
+| `harsh-lang` -- `hrs`, `hrs-from`, `hrs-remap`, `hrs-lsp` | **0.7.2** | crates.io | this repository |
 | Harsh's standard distribution -- `hrs_std` 0.1.5, `hrs_proc_macro` 0.2.0, `hrs_quote` 0.1.0, `hrs_syn` 0.1.0 | inside `hrs` | nowhere: shipped inside `harsh-lang` | this repository |
 | The Jupyter kernel, `harsh-kernel` | **0.1.3** | PyPI | `kernel/` |
 | The VS Code extension, `harsh-lang.harsh-lang` | **0.1.5** | the VS Code Marketplace (Open VSX: not yet) | `editors/vscode-harsh/`; the `.vsix` in the bundle |
@@ -77,9 +77,9 @@ From a fresh copy of the public tree:
 
 ```sh
 mkdir -p ~/harsh-release && cd ~/harsh-release
-tar -xzf /path/to/bundle/harsh-public-0.7.1.tar.gz        # makes harsh/
+tar -xzf /path/to/bundle/harsh-public-0.7.2.tar.gz        # makes harsh/
 cd harsh
-cargo test                                          # 340 passed, 0 ignored
+cargo test                                          # 341 passed, 0 ignored
 ./check.sh                                          # the examples, the self-host, the site's gates (the editor's needs node)
 ```
 
@@ -112,7 +112,7 @@ From the same `harsh/` folder, your own build first:
 
 ```sh
 cargo install --path . --force                      # hrs and its tools, from this tree
-hrs --version                                       # 0.7.1
+hrs --version                                       # 0.7.2
 ```
 
 **The website, locally:**
@@ -170,18 +170,18 @@ carries `.github/workflows/pages.yml`, which GitHub refuses otherwise.
 
 ```sh
 cd harsh-lang                                       # your clone of the GitLab home
-tar -xzf /path/to/bundle/harsh-public-0.7.1.tar.gz --strip-components=1
-test ! -d harsh && grep '^version' Cargo.toml       # version = "0.7.1", and no harsh/ folder
+tar -xzf /path/to/bundle/harsh-public-0.7.2.tar.gz --strip-components=1
+test ! -d harsh && grep '^version' Cargo.toml       # version = "0.7.2", and no harsh/ folder
 V=$(grep -m1 '^version' Cargo.toml | cut -d'"' -f2 | cut -d+ -f1)
-echo "$V"                                           # 0.7.1 -- the tag and message below use it
+echo "$V"                                           # 0.7.2 -- the tag and message below use it
 git status
 git add -A
-git commit -m "$V: the release sheet names its own release; one syn"
+git commit -m "$V: a constructor's single argument is bare; one constructor table per transpilation"
 git tag -a "v$V" -m "$V"
 git push origin main "v$V"                          # if it times out: push main, then the tag
 ```
 
-**For 0.7.1, once:** GitLab's last commit carries 0.7.0's push under the
+**If 0.7.1 was not pushed:** GitLab's last commit carries 0.7.0's push under the
 message "0.6.4: …" -- this commit supersedes it; nothing is rewritten. If the
 tree there already matches 0.7.0, the diff is small; `git status` shows it.
 
@@ -298,8 +298,8 @@ repositories, when the two known Enter issues are settled. When you decide:
 
 ### 10. Check it all landed
 
-- `cargo search harsh-lang` shows 0.7.1
-- GitLab: the `v0.7.1` tag, a green pipeline; GitHub: the same commit
+- `cargo search harsh-lang` shows 0.7.2
+- GitLab: the `v0.7.2` tag, a green pipeline; GitHub: the same commit
 - GitHub → Actions: *Publish the site* green; the site passes the checks of step 8
 - `pip index versions harsh-kernel` shows 0.1.3
 - the Marketplace shows the extension at 0.1.5
@@ -320,7 +320,7 @@ What anyone does, once the products are published.
 
 ```sh
 cargo install harsh-lang          # hrs, hrs-from, hrs-remap, hrs-lsp
-hrs --version                     # 0.7.1
+hrs --version                     # 0.7.2
 hrs new hello && cd hello && hrs run
 ```
 

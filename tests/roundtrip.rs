@@ -1380,7 +1380,7 @@ fn leptos_build_findings() {
         ".into_iter().map(|line| view! {\n                <span class=\"x\">{line}</span>\n        }",
     )]);
     // Include paths: relative to the source, re-based to where the Rust is
-    // written (`src/content.hrs` -> `target/hrs/content.rs` adds one `../`).
+    // written (`src/content.hrs` -> `target/src/content.rs` adds one `../`).
     let dir = std::env::temp_dir().join(format!("hrs-inc-{}", std::process::id()));
     let src_dir = dir.join("src");
     let gen_dir = dir.join("target").join("hrs");
@@ -1826,36 +1826,36 @@ fn a_matrix_literal_follows_julias_grammar() {
 
 /// A panic names the Harsh line, not the generated one (2026-09-21): `hrs
 /// run` and `hrs test` read the program's stderr and put every
-/// `target/hrs/main.rs:L:C` back through the source map. Here through the
+/// `target/src/main.rs:L:C` back through the source map. Here through the
 /// real binary and a real map; the position is the same token Rust named.
 #[test]
 fn a_panic_is_put_back_on_its_harsh_line() {
     let dir = std::env::temp_dir().join(format!("hrs-panic-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
     std::fs::create_dir_all(dir.join("src")).unwrap();
-    std::fs::create_dir_all(dir.join("target/hrs")).unwrap();
+    std::fs::create_dir_all(dir.join("target/src")).unwrap();
     std::fs::write(dir.join("src/main.hrs"), "fn main$:\n    let v: Vec<i32> = vec!$\n    println! \"{}\" v[3]\n").unwrap();
     let ok = std::process::Command::new(env!("CARGO_BIN_EXE_hrs"))
         // Absolute paths, as the driver writes them into its maps.
         .arg(dir.join("src/main.hrs"))
         .arg("-o")
-        .arg(dir.join("target/hrs/main.rs"))
+        .arg(dir.join("target/src/main.rs"))
         .arg("--map")
-        .arg(dir.join("target/hrs/main.map.json"))
+        .arg(dir.join("target/src/main.map.json"))
         .current_dir(&dir)
         .status()
         .unwrap()
         .success();
     assert!(ok);
-    let generated = std::fs::read_to_string(dir.join("target/hrs/main.rs")).unwrap();
+    let generated = std::fs::read_to_string(dir.join("target/src/main.rs")).unwrap();
     let line = generated.lines().position(|l| l.contains("v[3]")).unwrap() + 1;
     let col = generated.lines().nth(line - 1).unwrap().find("v[3]").unwrap() + 1;
-    let places = harsh_lang::driver::PanicPlaces::load(&dir, &[dir.join("target/hrs/main.map.json")]);
-    let said = format!("thread 'main' panicked at target/hrs/main.rs:{line}:{col}:");
+    let places = harsh_lang::driver::PanicPlaces::load(&dir, &[dir.join("target/src/main.map.json")]);
+    let said = format!("thread 'main' panicked at target/src/main.rs:{line}:{col}:");
     assert_eq!(places.rewrite(&said), "thread 'main' panicked at src/main.hrs:3:19:");
     // A backtrace frame, with Rust's `./` prefix, and text the maps do not
     // cover, are handled and left alone respectively.
-    assert!(places.rewrite(&format!("  at ./target/hrs/main.rs:{line}:{col}")).contains("./src/main.hrs:3:19"));
+    assert!(places.rewrite(&format!("  at ./target/src/main.rs:{line}:{col}")).contains("./src/main.hrs:3:19"));
     assert_eq!(places.rewrite("no place here: main.rs"), "no place here: main.rs");
     let _ = std::fs::remove_dir_all(&dir);
 }
@@ -2674,8 +2674,8 @@ fn hrs_toml_reads_migrates_and_generates() {
     assert_eq!(moved, vec!["hrs_std".to_string()]);
     assert!(!c.contains("hrs_std") && c.contains("serde") && c.contains("hrs_proc_macro"), "{c}");
     assert!(h.contains("[dependencies]\nhrs_std = \"0.1\""), "{h}");
-    let g = generated_manifest("[package]\nname = \"a\"\n\n[[bin]]\nname = \"a\"\npath = \"target/hrs/main.rs\"\n\n[dependencies]\nserde = \"1\"\n", std::path::Path::new("/p"), &["hrs_std = \"0.1\"".to_string()]);
-    assert!(g.contains("path = \"/p/target/hrs/main.rs\""), "{g}");
+    let g = generated_manifest("[package]\nname = \"a\"\n\n[[bin]]\nname = \"a\"\npath = \"target/src/main.rs\"\n\n[dependencies]\nserde = \"1\"\n", std::path::Path::new("/p"), &["hrs_std = \"0.1\"".to_string()]);
+    assert!(g.contains("path = \"/p/target/src/main.rs\""), "{g}");
     assert!(g.contains("[dependencies]\nhrs_std = \"0.1\"\nserde = \"1\""), "{g}");
     assert!(g.trim_end().ends_with("[workspace]"), "{g}");
 }

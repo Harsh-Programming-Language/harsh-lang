@@ -1,1 +1,0 @@
-{"rustc":7406310014293102430,"features":"","declared_features":"","target":0,"profile":0,"path":0,"deps":[[3898968403338799906,"build_script_build",false,1870547957354784976]],"local":[{"RerunIfChanged":{"output":"aarch64-apple-darwin/debug/build/matrixmultiply/e9a9f6e9fee1c0bd/run/stdout","paths":["build.rs"]}}],"rustflags":[],"config":0,"compile_kind":0}

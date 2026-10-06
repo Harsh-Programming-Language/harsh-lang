@@ -5,12 +5,12 @@
 //! The build driver.
 //!
 //! Layout: Harsh sources live in `src/**.hrs`; generated Rust and its source
-//! maps go to `target/hrs/`, and `Cargo.toml` points its targets at that tree:
+//! maps go to `target/src/`, and `Cargo.toml` points its targets at that tree:
 //!
 //! ```toml
 //! [[bin]]
 //! name = "myapp"
-//! path = "target/hrs/main.rs"
+//! path = "target/src/main.rs"
 //! ```
 //!
 //! One manifest, dependencies untouched, and nothing extra to gitignore since
@@ -27,7 +27,7 @@ use std::process::Command;
 use std::process::Stdio;
 use std::time::SystemTime;
 
-pub const GEN_DIR: &str = "target/hrs";
+pub const GEN_DIR: &str = "target/src";
 pub const SRC_DIR: &str = "src";
 
 pub struct Project {
@@ -74,6 +74,12 @@ impl Project {
     pub fn check_manifest(&self) -> Result<(), String> {
         let path = self.root.join("Cargo.toml");
         let text = fs::read_to_string(&path).map_err(|e| format!("{}: {}", path.display(), e))?;
+        if text.contains("target/hrs/") {
+            return Err(format!(
+                "{}: points at `target/hrs/`, which is `target/src/` since 0.7.0 -- run `hrs migrate` once to update it",
+                path.display()
+            ));
+        }
         if text.contains(GEN_DIR) {
             #[cfg(feature = "remap")]
             {
@@ -161,6 +167,16 @@ impl Project {
         // changed). A stamp, not the files' times: `hrs` rewrites a generated
         // file only when its content changes, so a file the new `hrs` writes
         // identically would stay "older" for ever.
+        // Before 0.7.0 the generated tree was `target/hrs/`. Left behind, it
+        // fooled Cargo: a path package is the same package wherever its
+        // manifest lies, and the old build's recorded source -- the stale
+        // `target/hrs/main.rs`, unchanged -- made every later build look
+        // fresh, so edits were silently ignored (found 2026-10-06, by
+        // Harshlings' shared project). It is `hrs`'s own output: removed.
+        let old_gen = self.root.join("target").join("hrs");
+        if old_gen.is_dir() {
+            let _ = fs::remove_dir_all(&old_gen);
+        }
         let stamp_path = self.root.join(GEN_DIR).join(".hrs-stamp");
         let stamp = hrs_stamp();
         let new_hrs = fs::read_to_string(&stamp_path).ok().as_deref() != Some(stamp.as_str());
@@ -257,7 +273,7 @@ impl Project {
 
     /// Build the runner of the proc macros this project uses, if it uses
     /// any: each listed crate transpiled, the runner's sources written under
-    /// `target/hrs/proc-macros/` when they change, and cargo run over it --
+    /// `target/src/proc-macros/` when they change, and cargo run over it --
     /// cargo's own freshness check is the cache (decision P4).
     /// Transpile each Harsh project this one depends on by path, deepest
     /// first; `seen` guards against visiting one twice.
@@ -417,7 +433,7 @@ impl Project {
     /// its targets pointed at `src/`, every `.hrs` transpiled to `src/**.rs`,
     /// no source maps, and `cargo fmt` run over the result when rustfmt is
     /// installed. This is the hand-off artifact -- what a Rust reader, a
-    /// reviewer, or a crates.io upload sees. `target/hrs/` is not for
+    /// reviewer, or a crates.io upload sees. `target/src/` is not for
     /// reading: it keeps the source layout so diagnostics map back, and
     /// formatting it would break that map.
     pub fn export(&self, dir: &Path) -> Result<Export, String> {
@@ -667,7 +683,7 @@ impl Project {
     /// Before Cargo, the Harsh level (the user's design, 2026-10-03): with
     /// an `Hrs.toml`, each Harsh crate it names by path is transpiled and
     /// prepared in turn (its own Harsh crates first), and the generated
-    /// `target/hrs/Cargo.toml` -- the user's `Cargo.toml` plus the Harsh
+    /// `target/src/Cargo.toml` -- the user's `Cargo.toml` plus the Harsh
     /// dependencies -- is written. Its path, for `--manifest-path`; `None`
     /// for a project without `Hrs.toml`, built from its `Cargo.toml` as ever.
     #[cfg(feature = "remap")]
@@ -716,18 +732,53 @@ impl Project {
             extra.push(format!("{name} = {value}"));
         }
         let cargo_text = resolve_workspace(&cargo_text, &cargo_dir);
+        // A Harsh crate belongs in Hrs.toml only (0.3.0): named in Cargo.toml
+        // too, it would be a duplicate key in the generated manifest. Said
+        // plainly, rather than merged (ShopBill's S3, 2026-10-06).
+        let in_cargo = cargo_dependency_names(&cargo_text);
+        for line in &extra {
+            let name = line.split('=').next().unwrap_or("").trim();
+            if in_cargo.iter().any(|n| n == name) {
+                return Err(format!("`{name}` is in both Cargo.toml and {HRS_MANIFEST}: a Harsh crate belongs in {HRS_MANIFEST} only -- remove it from Cargo.toml"));
+            }
+        }
         let text = generated_manifest(&cargo_text, &cargo_dir, &extra);
         let gen = self.root.join(GEN_DIR).join("Cargo.toml");
         fs::create_dir_all(gen.parent().unwrap()).map_err(|e| format!("{}: {e}", gen.display()))?;
         if fs::read_to_string(&gen).ok().as_deref() != Some(text.as_str()) {
             fs::write(&gen, &text).map_err(|e| format!("{}: {e}", gen.display()))?;
         }
+        link_project_dirs(&self.root, gen.parent().unwrap());
         // The lockfile stays the project's: copied in here, back after Cargo.
         let lock = cargo_dir.join("Cargo.lock");
         if lock.is_file() {
             let _ = fs::copy(&lock, gen.with_file_name("Cargo.lock"));
         }
         Ok(Some(gen))
+    }
+
+    /// Run another tool -- `dx`, Dioxus's -- on the Rust project after pass
+    /// 1 (S3, 2026-10-06). A tool that reads the `Cargo.toml` of the folder
+    /// it runs in is run in the generated project, `target/src/`, where every
+    /// dependency is named; without an `Hrs.toml`, in the project itself.
+    pub fn tool(&self, prog: &str, args: &[String]) -> Result<i32, String> {
+        #[cfg(feature = "remap")]
+        let generated = self.prepare(&mut Vec::new())?;
+        #[cfg(not(feature = "remap"))]
+        let generated: Option<PathBuf> = None;
+        let dir = generated.as_ref().and_then(|g| g.parent().map(|d| d.to_path_buf())).unwrap_or_else(|| self.root.clone());
+        let status = Command::new(prog)
+            .args(args)
+            .current_dir(&dir)
+            .status()
+            .map_err(|e| format!("cannot run `{prog}`: {e} -- is it installed?"))?;
+        if let Some(g) = &generated {
+            let back = g.with_file_name("Cargo.lock");
+            if back.is_file() {
+                let _ = fs::copy(&back, self.root.join("Cargo.lock"));
+            }
+        }
+        Ok(status.code().unwrap_or(1))
     }
 
     #[cfg(feature = "remap")]
@@ -799,7 +850,7 @@ impl Project {
             .stdout(Stdio::piped())
             .stderr(Stdio::inherit());
         // A program that panics names the generated file,
-        // `target/hrs/main.rs:4:20`. For `run` and `test` its stderr is read
+        // `target/src/main.rs:4:20`. For `run` and `test` its stderr is read
         // here and every such place is put back on the Harsh line,
         // `src/main.hrs:4:9`, through the same maps as the compiler's
         // errors (2026-09-21). Cargo keeps its colours when the terminal
@@ -891,7 +942,7 @@ impl Project {
 }
 
 /// The generated files of a project, each with its map, for putting a
-/// panic's `target/hrs/main.rs:4:20` back on its Harsh line.
+/// panic's `target/src/main.rs:4:20` back on its Harsh line.
 #[cfg(feature = "remap")]
 pub struct PanicPlaces {
     files: Vec<(String, String, crate::remap::SourceMap)>, // (generated, source), relative to the root
@@ -1087,7 +1138,7 @@ fn reexports_of(src: &str, lib: &str) -> Vec<String> {
 /// The crates of Harsh's standard distribution, which ship inside `hrs`
 /// (the user, 2026-09-25): named in a `Cargo.toml` as Rust names `syn` or
 /// `quote` -- `hrs_quote = "0.1"` -- and never fetched: `hrs` writes them
-/// under `target/hrs/dist/` and patches them in.
+/// under `target/src/dist/` and patches them in.
 #[cfg(feature = "remap")]
 pub const DISTRIBUTION: [&str; 4] = ["hrs_std", "hrs_proc_macro", "hrs_quote", "hrs_syn"];
 
@@ -1194,8 +1245,16 @@ pub fn migrate(cargo: &str, hrs: Option<&str>) -> (String, String, Vec<String>) 
                 continue;
             }
         }
+        // The generated tree's old place (0.7.0: `target/hrs/` is
+        // `target/src/`, mirroring the project's `src/`).
+        if raw.contains("target/hrs/") {
+            names.push("target/src".to_string());
+            kept.push(raw.replace("target/hrs/", "target/src/"));
+            continue;
+        }
         kept.push(raw.to_string());
     }
+    names.dedup();
     let mut hrs = hrs
         .map(|t| t.to_string())
         .unwrap_or_else(|| "# Hrs.toml -- Harsh's dependencies; Cargo.toml beside it keeps Rust's\n[package]\ncargo = \"Cargo.toml\"\n\n[dependencies]\n".to_string());
@@ -1208,7 +1267,7 @@ pub fn migrate(cargo: &str, hrs: Option<&str>) -> (String, String, Vec<String>) 
     (kept.join("\n") + "\n", hrs, names)
 }
 
-/// The generated `Cargo.toml` (`target/hrs/Cargo.toml`): the user's, with
+/// The generated `Cargo.toml` (`target/src/Cargo.toml`): the user's, with
 /// every relative `path`/`build` made absolute (the file moved), its own
 /// `[workspace]` (so a workspace above it does not claim it), and `extra`
 /// dependency lines added to `[dependencies]`.
@@ -1316,6 +1375,51 @@ pub fn resolve_workspace(cargo_text: &str, cargo_dir: &Path) -> String {
 /// on every platform.
 pub fn manifest_path_str(p: &Path) -> String {
     p.display().to_string().replace('\\', "/")
+}
+
+#[cfg(feature = "remap")]
+/// The names under `[dependencies]` (and the dev / build tables) of a
+/// manifest's text.
+fn cargo_dependency_names(text: &str) -> Vec<String> {
+    let mut table = String::new();
+    let mut names = Vec::new();
+    for raw in text.lines() {
+        let line = raw.trim();
+        if line.starts_with('[') {
+            table = line.to_string();
+        } else if table.contains("dependencies") && !line.is_empty() && !line.starts_with('#') {
+            let key = line.split(['=', '.']).next().unwrap_or("").trim();
+            if !key.is_empty() {
+                names.push(key.to_string());
+            }
+        }
+    }
+    names
+}
+
+#[cfg(feature = "remap")]
+/// The project's own folders, linked into the generated project (S3,
+/// 2026-10-06): Cargo builds there, so `CARGO_MANIFEST_DIR` is `target/src/`,
+/// and `asset!("/assets/main.css")` or `env!("CARGO_MANIFEST_DIR")` paths
+/// must find the project's real `assets/`, `migrations/`, … Every top-level
+/// folder but `src`, `target` and hidden ones; an existing link is kept.
+fn link_project_dirs(root: &Path, gen: &Path) {
+    let Ok(entries) = fs::read_dir(root) else { return };
+    for e in entries.flatten() {
+        let name = e.file_name();
+        let n = name.to_string_lossy();
+        if n.starts_with('.') || n == "src" || n == "target" || !e.path().is_dir() {
+            continue;
+        }
+        let link = gen.join(&name);
+        if link.exists() || link.symlink_metadata().is_ok() {
+            continue;
+        }
+        #[cfg(unix)]
+        let _ = std::os::unix::fs::symlink(e.path(), &link);
+        #[cfg(windows)]
+        let _ = std::os::windows::fs::symlink_dir(e.path(), &link);
+    }
 }
 
 pub fn generated_manifest(cargo_text: &str, cargo_dir: &Path, extra: &[String]) -> String {
@@ -1442,7 +1546,7 @@ pub fn missing_std(root: &Path) -> Option<String> {
     if listed {
         return None;
     }
-    let mut stack = vec![root.join("target").join("hrs")];
+    let mut stack = vec![root.join("target").join("src")];
     while let Some(dir) = stack.pop() {
         for e in std::fs::read_dir(&dir).ok()?.flatten() {
             let p = e.path();
@@ -1460,7 +1564,7 @@ pub fn missing_std(root: &Path) -> Option<String> {
     None
 }
 
-/// Write the standard distribution under `root/target/hrs/dist/` (a file
+/// Write the standard distribution under `root/target/src/dist/` (a file
 /// only when its text differs, so cargo rebuilds nothing needlessly), and
 /// return the `--config` arguments that patch crates.io's requests for its
 /// crates to those copies -- only those the `manifests` name, and what they
@@ -1539,7 +1643,7 @@ pub fn distribution(root: &Path, manifests: &[PathBuf]) -> Result<Vec<String>, S
 
 /// Write Harsh's standard distribution -- `hrs_std`, `hrs_proc_macro`,
 /// `hrs_quote`, `hrs_syn` -- into `dir`, one folder per crate, as `hrs build`
-/// writes it under a project's `target/hrs/dist/`: a file only when its text
+/// writes it under a project's `target/src/dist/`: a file only when its text
 /// differs, so cargo rebuilds nothing needlessly. Also `hrs dist <dir>`, for
 /// what builds outside a Harsh project and still wants `hrs_std` -- the
 /// Jupyter kernel, whose evcxr takes it by `:dep hrs_std = { path = … }`

@@ -4,7 +4,7 @@
 The site highlights code with `src/highlight.hrs`, a port of the highlighter
 in `docs/build.py` (the user's choice, 2026-09-26: the books' highlights,
 everywhere). This builds the port -- as `hrs` transpiled it, in
-`site/target/hrs/highlight.rs` -- into a small program, runs it on every code
+`site/target/src/highlight.rs` -- into a small program, runs it on every code
 block of the Book, By Example and the guide, and compares its HTML with
 `build.py`'s own function, byte for byte. Run from the repository root,
 after the site is transpiled. Needs cargo and the `regex` crate.
@@ -30,7 +30,7 @@ blocks = [m.group(2) for f in files for m in fence.finditer(open(f, encoding="ut
 
 work = os.path.join(tempfile.gettempdir(), "hrs-site-highlight")
 os.makedirs(os.path.join(work, "src"), exist_ok=True)
-shutil.copy("site/target/hrs/highlight.rs", os.path.join(work, "src/highlight.rs"))
+shutil.copy("site/target/src/highlight.rs", os.path.join(work, "src/highlight.rs"))
 open(os.path.join(work, "Cargo.toml"), "w").write(
     '[package]\nname = "hl"\nversion = "0.1.0"\nedition = "2021"\n[dependencies]\nregex = "1"\n')
 open(os.path.join(work, "src/main.rs"), "w").write(r'''

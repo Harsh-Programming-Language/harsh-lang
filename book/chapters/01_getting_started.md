@@ -24,10 +24,10 @@ Read the three blocks top to bottom.
 
 `hrs run` is two steps that you will do a thousand times, so it is worth seeing them once.
 
-1. **Transpile.** `hrs` reads `src/main.hrs` and writes `target/hrs/main.rs`, the same program in Rust's own spelling. It also writes a *source map*: which byte of the Rust came from which byte of the Harsh.
+1. **Transpile.** `hrs` reads `src/main.hrs` and writes `target/src/main.rs`, the same program in Rust's own spelling. It also writes a *source map*: which byte of the Rust came from which byte of the Harsh.
 2. **Compile and run.** `cargo`, Rust's build tool, compiles the Rust and runs the binary. If the compiler complains, `hrs` uses the source map to turn every line number in the complaint into a line of your `.hrs` file.
 
-You never read `target/hrs/main.rs` unless you want to; in daily use it is an intermediate file.
+You never read `target/src/main.rs` unless you want to; in daily use it is an intermediate file.
 
 ## 1.3 Arguments
 

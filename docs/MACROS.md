@@ -205,7 +205,7 @@ version = "0.1.0"
 edition = "2021"
 
 [lib]
-path = "target/hrs/lib.rs"
+path = "target/src/lib.rs"
 
 [dependencies]
 hrs_proc_macro = "0.2"
@@ -255,7 +255,7 @@ fn main$:
   `src/lib.hrs`. A crate marked `proc-macro = true` registers at least one;
   an unmarked crate registers none.
 - **How it runs:** `hrs build`, `hrs run` and `hrs expand` transpile the
-  listed crates and build a small runner under `target/hrs/proc-macros/`
+  listed crates and build a small runner under `target/src/proc-macros/`
   (cargo's own freshness check makes later builds a no-op), then run it
   once per call. Changing a macro retranspiles its callers.
 - **Not yet:** the attribute form; tokens with spans; a proc-macro crate
@@ -492,12 +492,31 @@ tokio.select! {                           tokio::select! {
 - A hole may hold a macro call with braces of its own, and holes in those.
 - `@@:` is a literal `@:` in the body's text; `@:` outside a body is refused.
 - The body may span lines, as in Rust; the formatter never touches it.
+- **A hole is one expression, not a block** (decided 2026-10-06). It adds
+  nothing around its Rust: no braces, no `;`. What the macro's syntax needs
+  around it -- `thread_local!`'s `;` between items, an attribute's `,` -- is
+  written outside, `static FLAG: Cell<bool> = @: Cell.new false :@;`.
+  Several statements in a hole's place are an explicit block:
+  `@: { let v = Cell.new false; v } :@`.
+- **A hole's code is read as Harsh**, so a mark inside one of its strings,
+  characters or comments is text: `{@: format! "a:@b" :@}` closes at the
+  last `:@`.
 - Holes have two writers: the author, writing Harsh, and `hrs-from`,
-  converting Rust -- which finds each piece of Rust code in a body by shape
-  (a `{ … }` group; a value after `name=` or `name: `; a `for`/`if`
-  expression; a `select!` arm's pattern, future and handler), keeps a
-  literal as written, and writes the rest as holes. A piece it cannot write
-  as Harsh stops it, named by line.
+  converting Rust. What looks like Rust in a macro is the macro's language
+  written in Rust's syntax, so the converter judges only shape, by a rule a
+  reader can apply by eye:
+  1. a hole may start after a top-level `:` or `=`, inside a brace pair by
+     itself, or in a format string's slot;
+  2. it ends at the segment's end -- the next top-level `,` or `;`, the end
+     of the line, or the closing bracket;
+  3. it covers the longest stretch from such a start that Rust's own parser
+     reads as one expression.
+
+  So `static FLAG: Cell<bool> = Cell::new(false);` gets its hole after the
+  `=` (`Cell<bool> = …` is no expression), `onclick: move |_| n.set(0),`
+  after the `:`, and `quick_error!`'s clauses -- `from()`,
+  `display("…", err)` -- none. Everything else is copied verbatim, so a
+  macro's body always survives the round trip.
 - A `~` call's stream is its macro's too, but holes have no meaning in it: a
   Harsh macro's fragments land in a Harsh transcriber.
 - **A `~` macro's author expands to valid Harsh** (the user's rule,

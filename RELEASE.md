@@ -80,9 +80,9 @@ From a fresh copy of the public tree:
 
 ```sh
 mkdir -p ~/harsh-release && cd ~/harsh-release
-tar -xzf /path/to/bundle/harsh-public-0.6.4.tar.gz        # makes harsh/
+tar -xzf /path/to/bundle/harsh-public-0.7.0.tar.gz        # makes harsh/
 cd harsh
-cargo test                                          # 277 passed, 0 ignored
+cargo test                                          # 338 passed, 0 ignored
 ./check.sh                                          # the examples, the self-host, the site's gates (the editor's needs node)
 ```
 

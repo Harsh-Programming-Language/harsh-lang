@@ -17,13 +17,16 @@ usage:
   hrs lint  [cargo args]     transpile, then cargo clippy
   hrs cargo <sub> [args]     transpile, then any cargo subcommand (cargo leptos build, ..)
   hrs watch [subcommand]     rebuild on every save (default: check)
+  hrs dx    [dx args]        transpile, then Dioxus's dx in target/src/
+                             (dx serve, dx bundle)
   hrs new   [--lib] <name>   create a project laid out for Harsh -- a program,
                              or with --lib a library
   hrs add   <crate>..        add Harsh crates to Hrs.toml -- hrs_std and the
                              rest of Harsh's distribution; a Rust crate is
                              added to Cargo.toml with cargo add
-  hrs migrate                move Harsh's crates from Cargo.toml to Hrs.toml
-                             (0.3.0: Hrs.toml lists Harsh's dependencies)
+  hrs migrate                bring a project up to date: Harsh's crates from
+                             Cargo.toml to Hrs.toml (0.3.0); paths from
+                             target/hrs/ to target/src/ (0.7.0)
   hrs export [dir]           write the project as a plain Rust crate,
                              formatted with cargo fmt (default: target/export)
   hrs publish                check the package for Harsh's registry (not open
@@ -37,7 +40,7 @@ usage:
   hrs <input.hrs> [-o out.rs] [--map out.map.json]
                              transpile a single file
 
-Sources live in src/**.hrs; generated Rust goes to target/hrs/, and
+Sources live in src/**.hrs; generated Rust goes to target/src/, and
 Cargo.toml points its targets at that tree.";
 
 fn main() -> ExitCode {
@@ -62,6 +65,7 @@ fn main() -> ExitCode {
         // `hrs cargo <subcommand> [args]`: transpile, then any cargo
         // subcommand -- `hrs cargo leptos build`, `hrs cargo doc`.
         "cargo" if !rest.is_empty() => cargo_cmd(&rest[0], &rest[1..]),
+        "dx" => tool_cmd("dx", &rest),
         "watch" => watch(&rest),
         "new" => new_project(&rest),
         "publish" => publish(&rest),
@@ -141,14 +145,21 @@ fn migrate() -> ExitCode {
     let hrs = std::fs::read_to_string(&hrs_path).ok();
     let (cargo2, hrs2, moved) = driver::migrate(&cargo, hrs.as_deref().or(Some(NEW_HRS_TOML)));
     if moved.is_empty() {
-        eprintln!("hrs: nothing to move; Cargo.toml names none of Harsh's crates");
+        eprintln!("hrs: nothing to migrate; the project is up to date");
         return ExitCode::SUCCESS;
     }
     if std::fs::write(&cargo_path, cargo2).is_err() || std::fs::write(&hrs_path, hrs2).is_err() {
         eprintln!("hrs: cannot write the manifests");
         return ExitCode::FAILURE;
     }
-    eprintln!("hrs: moved {} from Cargo.toml to Hrs.toml", moved.iter().map(|n| format!("`{n}`")).collect::<Vec<_>>().join(", "));
+    // The generated tree's new place is a path update, not a move.
+    if moved.iter().any(|n| n == "target/src") {
+        eprintln!("hrs: Cargo.toml now points at target/src/ (it was target/hrs/, before 0.7.0)");
+    }
+    let crates: Vec<&String> = moved.iter().filter(|n| *n != "target/src").collect();
+    if !crates.is_empty() {
+        eprintln!("hrs: moved {} from Cargo.toml to Hrs.toml", crates.iter().map(|n| format!("`{n}`")).collect::<Vec<_>>().join(", "));
+    }
     ExitCode::SUCCESS
 }
 
@@ -275,6 +286,7 @@ fn fmt(args: &[String]) -> ExitCode {
         }
     }
     let mut changed = 0usize;
+    let mut skipped = 0usize;
     for f in &files {
         let src = match std::fs::read_to_string(f) {
             Ok(s) => s,
@@ -283,7 +295,17 @@ fn fmt(args: &[String]) -> ExitCode {
                 return ExitCode::FAILURE;
             }
         };
-        let out = harsh_lang::fmt::format(&src);
+        let (out, backed_out) = harsh_lang::fmt::format_checked(&src);
+        if backed_out {
+            // Rule 0 refused the formatter's own result: never silent, and
+            // never counted as formatted (S4, 2026-10-05).
+            skipped += 1;
+            eprintln!(
+                "hrs fmt: {}: left as written -- its formatted form would not transpile to the same Rust; this is a formatter bug, please report the file",
+                f.display()
+            );
+            continue;
+        }
         if out != src {
             changed += 1;
             if check {
@@ -295,13 +317,16 @@ fn fmt(args: &[String]) -> ExitCode {
         }
     }
     if check {
-        if changed > 0 {
-            eprintln!("hrs fmt: {} of {} files would change", changed, files.len());
+        if changed > 0 || skipped > 0 {
+            eprintln!("hrs fmt: {} of {} files would change{}", changed, files.len(), if skipped > 0 { format!(", {skipped} could not be formatted") } else { String::new() });
             return ExitCode::FAILURE;
         }
         eprintln!("hrs fmt: {} files, all formatted", files.len());
     } else {
-        eprintln!("hrs fmt: {} of {} files reformatted", changed, files.len());
+        eprintln!("hrs fmt: {} of {} files reformatted{}", changed, files.len(), if skipped > 0 { format!(", {skipped} left as written") } else { String::new() });
+        if skipped > 0 {
+            return ExitCode::FAILURE;
+        }
     }
     ExitCode::SUCCESS
 }
@@ -354,6 +379,33 @@ fn build_tree(p: &Project) -> Result<Vec<PathBuf>, String> {
     let (rebuilt, maps) = p.transpile(false)?;
     report(rebuilt.len(), maps.len());
     Ok(maps)
+}
+
+/// `hrs dx …`: pass 1, then `dx` in the generated project (S3, 2026-10-06).
+fn tool_cmd(prog: &str, args: &[String]) -> ExitCode {
+    let p = match Project::find() {
+        Ok(p) => p,
+        Err(e) => {
+            eprintln!("hrs: {}", e);
+            return ExitCode::FAILURE;
+        }
+    };
+    if let Err(e) = build_tree(&p) {
+        eprintln!("{}", e);
+        return ExitCode::FAILURE;
+    }
+    if let Some(msg) = driver::missing_std(&p.root) {
+        eprintln!("hrs: {msg}");
+        return ExitCode::FAILURE;
+    }
+    match p.tool(prog, args) {
+        Ok(0) => ExitCode::SUCCESS,
+        Ok(_) => ExitCode::FAILURE,
+        Err(e) => {
+            eprintln!("hrs: {}", e);
+            ExitCode::FAILURE
+        }
+    }
 }
 
 fn cargo_cmd(sub: &str, args: &[String]) -> ExitCode {
@@ -493,9 +545,9 @@ fn new_project(args: &[String]) -> ExitCode {
         return ExitCode::FAILURE;
     }
     let target = if lib {
-        "[lib]\npath = \"target/hrs/lib.rs\"\n".to_string()
+        "[lib]\npath = \"target/src/lib.rs\"\n".to_string()
     } else {
-        format!("[[bin]]\nname = \"{name}\"\npath = \"target/hrs/main.rs\"\n")
+        format!("[[bin]]\nname = \"{name}\"\npath = \"target/src/main.rs\"\n")
     };
     let _ = mk(
         root.join("Cargo.toml"),

@@ -35,7 +35,7 @@ fn new_lib_makes_a_library_either_way_round() {
         assert!(hrs().args(args).current_dir(&d).status().unwrap().success());
         let root = d.join(name);
         let cargo = std::fs::read_to_string(root.join("Cargo.toml")).unwrap();
-        assert!(cargo.contains("[lib]\npath = \"target/hrs/lib.rs\"") && !cargo.contains("[[bin]]"), "{cargo}");
+        assert!(cargo.contains("[lib]\npath = \"target/src/lib.rs\"") && !cargo.contains("[[bin]]"), "{cargo}");
         let lib = std::fs::read_to_string(root.join("src/lib.hrs")).unwrap();
         assert!(lib.contains("pub fn add") && lib.contains("#[test]"), "{lib}");
         assert!(!root.join("src/main.hrs").exists());

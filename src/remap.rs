@@ -5,7 +5,7 @@
 //! Remaps rustc and clippy diagnostics from generated Rust back to Harsh source.
 //!
 //! Usage:
-//!     cargo build --message-format=json 2>&1 | hrs-remap --map target/hrs.map.json
+//!     cargo build --message-format=json 2>&1 | hrs-remap --map target/src.map.json
 //!
 //! rustc's `rendered` field is discarded and the diagnostic is re-rendered from
 //! the structured spans, because `rendered` has the generated file's paths and

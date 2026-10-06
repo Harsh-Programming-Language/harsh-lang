@@ -1,7 +1,7 @@
 # Build the website in site/, every page pre-rendered as HTML (static
 # generation), and publish it to GitHub Pages on every push to main. The site is written in Harsh, so the build has one step a Dioxus app
 # does not: `hrs`, built from this very checkout, transpiles site/src/**.hrs
-# to site/target/hrs/ before `dx` builds the Rust. The Converter's
+# to site/target/src/ before `dx` builds the Rust. The Converter's
 # transpiler is the same checkout, as a library.
 name: Publish the site
 

@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.7.0 — 2026-10-06  (`hrs_std` 0.1.5 and the Jupyter kernel 0.1.3, unchanged)
+
+Breaking: ranges are atoms, and the generated project moved to `target/src/`. Run `hrs migrate` once in each project. Most of what follows came from building ShopBill, and from the rulings it led to; `docs/DECISIONS.md` records them all.
+
+- **One argument, one atom — taught whole.** The Book's new §2.7 states the rule with its reason: spaces separate arguments, so an argument of several tokens is isolated, and where nothing needs separating nothing is. The guide, the cheat sheet and `DECISIONS.md` say the same.
+- **After a constructor, a single argument needs no parentheses:** `Some &x`, `Some &mut x`, `let Some mut line = row$ else:`, `Some ref x`. A constructor is one the files declare — every `struct` and enum variant — or `Some`, `Ok`, `Err`; never judged by a name's case. After any other name `&` stays bit-and, so `f (&x)`.
+- **Ranges of atoms are atoms (breaking):** `f 0..3` is `f(0..3)`; it was `f(0)..3`. Ends that are not atoms keep `..` an operator: `f (a + 1..n)`. A leading `-` is isolated everywhere: `f (-1)`, `Celsius (-40)`.
+- **A tuple index applies to one atom:** a call's result is indexed isolated, `(f src).0`, written `f(src).0` in Rust; the converter writes it so (it wrote `f src.0`, which is `src`'s `.0`). As an argument, the indexed group is isolated in turn, `show ((f src).0)`; `show (f src).0` is refused, since its index would apply to `show`'s result — it could compile with another meaning.
+- **The generated project is `target/src/` (breaking),** mirroring `src/`, with its own `Cargo.toml` — pass 2 of `hrs build` is Cargo working there, and never sees `Hrs.toml`. The project's top-level folders are linked into it, so `asset!` and `env!("CARGO_MANIFEST_DIR")` paths find the real files; `hrs dx …` runs Dioxus's `dx` there; a crate named in both manifests is refused with a message. `hrs build` refuses a `Cargo.toml` still pointing at `target/hrs/`; `hrs migrate` updates it. A leftover `target/hrs/` is removed by the first build: left behind, its stale `main.rs` made Cargo take every later build for fresh, ignoring edits.
+- **Holes:** a hole is one expression, not a block — it adds nothing around its Rust. Its code is read as Harsh, so `:@` inside one of its strings is text. The converter places holes by one rule a reader can apply by eye, judged by Rust's own parser (`syn`): `static FLAG: Cell<bool> = @: Cell.new false :@;`, and none in `quick_error!`'s clauses. `thread_local! { … }` converts and returns.
+- **`hrs fmt` formats record variants** written with their fields beneath. It moved the fields out to the variants' column, its safety check refused, and the file was silently left as written — the website's `app.hrs` and By Example's `enums.hrs` among them. A list after `=` that does not fit goes beneath, bracket included (`DECISIONS.md`).
+- **Fixed:** a literal in a tuple argument across a block lost its `)` (`f (1, (P\ x = 1))`); a bare parameter before `do:` lost its `)`; `hrs fmt` placed a broken chain at its line's old column after moving a `let x = match` header — and now names any file it leaves as written, which `--check` counts as a failure; the converter left a statement's calls as comma lists after an attribute.
+
 ## 0.6.4 — 2026-10-04  (`hrs_std` 0.1.5; the Jupyter kernel 0.1.3, unchanged)
 
 - **`hrs_std` forbids unsafe code** (`#![forbid(unsafe_code)]`). Matrix views have been values since 0.1.37 (`a <- view rows cols`, `a <- view_mut rows cols`), sound with no `unsafe` behind them; the compiler now guarantees it stays so. No change in behaviour.

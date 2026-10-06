@@ -52,7 +52,7 @@ fn macro_crate(dir: &Path, lib: &str, marked: bool) -> PathBuf {
         &root.join("Cargo.toml"),
         &format!(
             "[package]\nname = \"hello\"\nversion = \"0.1.0\"\nedition = \"2021\"\n\n\
-             [lib]\npath = \"target/hrs/lib.rs\"\n\n\
+             [lib]\npath = \"target/src/lib.rs\"\n\n\
              [dependencies]\nhrs_proc_macro = {{ path = \"{}\" }}\n{meta}",
             runtime()
         ),
@@ -70,7 +70,7 @@ fn consumer(dir: &Path, main: &str, uses: bool) -> PathBuf {
         &root.join("Cargo.toml"),
         &format!(
             "[package]\nname = \"app\"\nversion = \"0.1.0\"\nedition = \"2021\"\n\n\
-             [[bin]]\nname = \"app\"\npath = \"target/hrs/main.rs\"\n{meta}"
+             [[bin]]\nname = \"app\"\npath = \"target/src/main.rs\"\n{meta}"
         ),
     );
     write(&root.join("src/main.hrs"), main);
@@ -114,7 +114,7 @@ fn hello_macro_prints_hello_world() {
     let out = hrs("run", &app);
     assert!(out.status.success(), "{}", text(&out));
     assert_eq!(String::from_utf8_lossy(&out.stdout).trim_end(), "Hello, world!");
-    let rust = fs::read_to_string(app.join("target/hrs/main.rs")).unwrap();
+    let rust = fs::read_to_string(app.join("target/src/main.rs")).unwrap();
     assert_eq!(rust, "fn main() {\n    println!(\"{}\", \"Hello, world!\")\n}\n");
 
     // `hrs expand` finds the file's project from the file, not from where it
@@ -234,7 +234,7 @@ fn a_derive_written_in_harsh_adds_its_impl_and_consumes_its_helper() {
     let out = hrs("run", &app);
     assert!(out.status.success(), "{}", text(&out));
     assert_eq!(String::from_utf8_lossy(&out.stdout), "Point { x, y }\nPoint { x: 1, secret: 7, y: 2 }\n10\n");
-    let rust = fs::read_to_string(app.join("target/hrs/main.rs")).unwrap();
+    let rust = fs::read_to_string(app.join("target/src/main.rs")).unwrap();
     assert!(rust.starts_with("#[derive(Debug)]\n\nstruct Point {\n    x: i32,\n\n    secret: i32,\n    y: i32,\n}\nimpl Point {\n"), "{rust}");
     assert!(!rust.contains("describe skip") && !rust.contains("derive!"), "{rust}");
 
@@ -294,7 +294,7 @@ fn the_hello_macro_derive_written_with_quote() {
     write(
         &root.join("Cargo.toml"),
         &format!(
-            "[package]\nname = \"hello\"\nversion = \"0.1.0\"\nedition = \"2021\"\n\n[lib]\npath = \"target/hrs/lib.rs\"\n\n\
+            "[package]\nname = \"hello\"\nversion = \"0.1.0\"\nedition = \"2021\"\n\n[lib]\npath = \"target/src/lib.rs\"\n\n\
              [dependencies]\nhrs_proc_macro = {{ path = \"{}\" }}\nhrs_quote = {{ path = \"{}/hrs_quote\" }}\n\n\
              [package.metadata.harsh]\nproc-macro = true\n",
             runtime(),
@@ -318,7 +318,7 @@ fn a_derive_repeats_inline_and_as_lines() {
     write(
         &root.join("Cargo.toml"),
         &format!(
-            "[package]\nname = \"hello\"\nversion = \"0.1.0\"\nedition = \"2021\"\n\n[lib]\npath = \"target/hrs/lib.rs\"\n\n\
+            "[package]\nname = \"hello\"\nversion = \"0.1.0\"\nedition = \"2021\"\n\n[lib]\npath = \"target/src/lib.rs\"\n\n\
              [dependencies]\nhrs_proc_macro = {{ path = \"{}\" }}\nhrs_quote = {{ path = \"{}/hrs_quote\" }}\n\n\
              [package.metadata.harsh]\nproc-macro = true\n",
             runtime(),
@@ -343,7 +343,7 @@ fn the_rust_books_hello_macro_with_hrs_syn() {
     write(
         &root.join("Cargo.toml"),
         &format!(
-            "[package]\nname = \"hello\"\nversion = \"0.1.0\"\nedition = \"2021\"\n\n[lib]\npath = \"target/hrs/lib.rs\"\n\n\
+            "[package]\nname = \"hello\"\nversion = \"0.1.0\"\nedition = \"2021\"\n\n[lib]\npath = \"target/src/lib.rs\"\n\n\
              [dependencies]\nhrs_proc_macro = {{ path = \"{}\" }}\nhrs_quote = {{ path = \"{m}/hrs_quote\" }}\nhrs_syn = {{ path = \"{m}/hrs_syn\" }}\n\n\
              [package.metadata.harsh]\nproc-macro = true\n",
             runtime(),
@@ -355,7 +355,7 @@ fn the_rust_books_hello_macro_with_hrs_syn() {
     let out = hrs("run", &app);
     assert!(out.status.success(), "{}", text(&out));
     assert_eq!(String::from_utf8_lossy(&out.stdout), "Hello, Macro! My name is Pancakes!\nHello, Macro! My name is Wrapper!\n1\n");
-    let rust = fs::read_to_string(app.join("target/hrs/main.rs")).unwrap();
+    let rust = fs::read_to_string(app.join("target/src/main.rs")).unwrap();
     assert!(rust.contains("impl<T: Clone> HelloMacro for Wrapper<T> {"), "{rust}");
 }
 
@@ -370,7 +370,7 @@ fn an_attribute_macro_written_in_harsh_replaces_its_function() {
     write(
         &root.join("Cargo.toml"),
         &format!(
-            "[package]\nname = \"hello\"\nversion = \"0.1.0\"\nedition = \"2021\"\n\n[lib]\npath = \"target/hrs/lib.rs\"\n\n\
+            "[package]\nname = \"hello\"\nversion = \"0.1.0\"\nedition = \"2021\"\n\n[lib]\npath = \"target/src/lib.rs\"\n\n\
              [dependencies]\nhrs_proc_macro = {{ path = \"{}\" }}\nhrs_quote = {{ path = \"{m}/hrs_quote\" }}\nhrs_syn = {{ path = \"{m}/hrs_syn\" }}\n\n\
              [package.metadata.harsh]\nproc-macro = true\n",
             runtime(),
@@ -385,13 +385,13 @@ fn an_attribute_macro_written_in_harsh_replaces_its_function() {
         String::from_utf8_lossy(&out.stdout),
         "[ROUTE LOG] Dispatched handler 'handle_submit' for POST \"/api/v1/submit\"\nProcessing payload...\n"
     );
-    let rust = fs::read_to_string(app.join("target/hrs/main.rs")).unwrap();
+    let rust = fs::read_to_string(app.join("target/src/main.rs")).unwrap();
     assert!(!rust.contains("route"), "{rust}");
 }
 
 /// A different `hrs` retranspiles a project once (found 2026-09-24: after an
 /// upgrade, a project kept the old version's Rust until its sources
-/// changed). `target/hrs/.hrs-stamp` records which `hrs` last transpiled it;
+/// changed). `target/src/.hrs-stamp` records which `hrs` last transpiled it;
 /// a stamp from another makes every file stale once.
 #[test]
 fn a_different_hrs_retranspiles_once() {
@@ -403,7 +403,7 @@ fn a_different_hrs_retranspiles_once() {
     let first = |o: &Output| text(o).lines().find(|l| l.starts_with("hrs:")).unwrap_or("").to_string();
     assert!(first(&hrs("build", &app)).contains("transpiled 1 of 1"));
     assert!(first(&hrs("build", &app)).contains("up to date"));
-    fs::write(app.join("target/hrs/.hrs-stamp"), "0.0.1 0").unwrap();
+    fs::write(app.join("target/src/.hrs-stamp"), "0.0.1 0").unwrap();
     assert!(first(&hrs("build", &app)).contains("transpiled 1 of 1"));
     assert!(first(&hrs("build", &app)).contains("up to date"));
 }
@@ -455,7 +455,7 @@ fn the_standard_distribution_needs_no_registry() {
     let root = s.0.join("hello");
     write(
         &root.join("Cargo.toml"),
-        "[package]\nname = \"hello\"\nversion = \"0.1.0\"\nedition = \"2021\"\n\n[lib]\npath = \"target/hrs/lib.rs\"\n\n\
+        "[package]\nname = \"hello\"\nversion = \"0.1.0\"\nedition = \"2021\"\n\n[lib]\npath = \"target/src/lib.rs\"\n\n\
          [dependencies]\nhrs_proc_macro = \"0.2\"\nhrs_quote = \"0.1\"\nhrs_syn = \"0.1\"\n\n[package.metadata.harsh]\nproc-macro = true\n",
     );
     write(&root.join("src/lib.hrs"), "use hrs_proc_macro.TokenStream\nuse hrs_quote.quote\nuse hrs_syn.{parse_macro_input, DeriveInput}\n\n#[proc_macro_derive~ HelloMacro]\npub fn hello_macro_derive (input: TokenStream) -> TokenStream:\n    // Construct a representation of Harsh code as a syntax tree\n    // that we can manipulate.\n    let ast = parse_macro_input! { input as DeriveInput }\n\n    // Build the trait implementation.\n    impl_hello_macro (&ast)\n\nfn impl_hello_macro (ast: &DeriveInput) -> TokenStream:\n    let name = &ast <- ident\n    let generated = quote~ do:\n        impl HelloMacro for #name\n            fn hello_macro$:\n                println! \"Hello, Macro! My name is {}!\" (stringify! #name)\n    generated\n");
@@ -479,7 +479,7 @@ fn a_version_the_distribution_cannot_serve_says_what_it_ships() {
     let root = s.0.join("hello");
     write(
         &root.join("Cargo.toml"),
-        "[package]\nname = \"hello\"\nversion = \"0.1.0\"\nedition = \"2021\"\n\n[lib]\npath = \"target/hrs/lib.rs\"\n\n\
+        "[package]\nname = \"hello\"\nversion = \"0.1.0\"\nedition = \"2021\"\n\n[lib]\npath = \"target/src/lib.rs\"\n\n\
          [dependencies]\nhrs_proc_macro = \"0.1\"\n\n[package.metadata.harsh]\nproc-macro = true\n",
     );
     write(&root.join("src/lib.hrs"), HELLO);
@@ -497,9 +497,9 @@ fn a_version_the_distribution_cannot_serve_says_what_it_ships() {
 #[test]
 fn a_harsh_app_uses_a_harsh_library_by_path() {
     let s = Scratch::new("pathdep");
-    write(&s.0.join("add_one/Cargo.toml"), "[package]\nname = \"add_one\"\nversion = \"0.1.0\"\nedition = \"2021\"\n\n[lib]\npath = \"target/hrs/lib.rs\"\n");
+    write(&s.0.join("add_one/Cargo.toml"), "[package]\nname = \"add_one\"\nversion = \"0.1.0\"\nedition = \"2021\"\n\n[lib]\npath = \"target/src/lib.rs\"\n");
     write(&s.0.join("add_one/src/lib.hrs"), "pub fn add_one (x: i32) -> i32:\n    x + 1\n");
-    write(&s.0.join("adder/Cargo.toml"), "[package]\nname = \"adder\"\nversion = \"0.1.0\"\nedition = \"2021\"\n\n[[bin]]\nname = \"adder\"\npath = \"target/hrs/main.rs\"\n\n[dependencies]\nadd_one = { path = \"../add_one\" }\n");
+    write(&s.0.join("adder/Cargo.toml"), "[package]\nname = \"adder\"\nversion = \"0.1.0\"\nedition = \"2021\"\n\n[[bin]]\nname = \"adder\"\npath = \"target/src/main.rs\"\n\n[dependencies]\nadd_one = { path = \"../add_one\" }\n");
     write(&s.0.join("adder/src/main.hrs"), "fn main$:\n    println! \"{}\" (add_one.add_one 41)\n");
     let out = hrs("run", &s.0.join("adder"));
     assert!(out.status.success(), "{}", text(&out));
@@ -514,16 +514,16 @@ fn a_harsh_app_uses_a_harsh_library_by_path() {
 #[test]
 fn a_library_reexports_a_harsh_derive_to_its_users() {
     let s = Scratch::new("reexport");
-    write(&s.0.join("hello_macro_derive/Cargo.toml"), "[package]\nname = \"hello_macro_derive\"\nversion = \"0.1.0\"\nedition = \"2021\"\n\n[lib]\npath = \"target/hrs/lib.rs\"\n\n[dependencies]\nhrs_proc_macro = \"0.2\"\nhrs_quote = \"0.1\"\nhrs_syn = \"0.1\"\n\n[package.metadata.harsh]\nproc-macro = true\n");
+    write(&s.0.join("hello_macro_derive/Cargo.toml"), "[package]\nname = \"hello_macro_derive\"\nversion = \"0.1.0\"\nedition = \"2021\"\n\n[lib]\npath = \"target/src/lib.rs\"\n\n[dependencies]\nhrs_proc_macro = \"0.2\"\nhrs_quote = \"0.1\"\nhrs_syn = \"0.1\"\n\n[package.metadata.harsh]\nproc-macro = true\n");
     write(&s.0.join("hello_macro_derive/src/lib.hrs"), "use hrs_proc_macro.TokenStream\nuse hrs_quote.quote\nuse hrs_syn.{parse_macro_input, DeriveInput}\n\n#[proc_macro_derive~ HelloMacro]\npub fn hello_macro_derive (input: TokenStream) -> TokenStream:\n    // Construct a representation of Harsh code as a syntax tree\n    // that we can manipulate.\n    let ast = parse_macro_input! { input as DeriveInput }\n\n    // Build the trait implementation.\n    impl_hello_macro (&ast)\n\nfn impl_hello_macro (ast: &DeriveInput) -> TokenStream:\n    let name = &ast <- ident\n    let generated = quote~ do:\n        impl HelloMacro for #name\n            fn hello_macro$:\n                println! \"Hello, Macro! My name is {}!\" (stringify! #name)\n    generated\n");
-    write(&s.0.join("hello_macro/Cargo.toml"), "[package]\nname = \"hello_macro\"\nversion = \"0.1.0\"\nedition = \"2021\"\n\n[lib]\npath = \"target/hrs/lib.rs\"\n\n[package.metadata.harsh]\nproc-macros = [\"../hello_macro_derive\"]\n");
+    write(&s.0.join("hello_macro/Cargo.toml"), "[package]\nname = \"hello_macro\"\nversion = \"0.1.0\"\nedition = \"2021\"\n\n[lib]\npath = \"target/src/lib.rs\"\n\n[package.metadata.harsh]\nproc-macros = [\"../hello_macro_derive\"]\n");
     write(&s.0.join("hello_macro/src/lib.hrs"), "pub trait HelloMacro\n    fn hello_macro$\n\npub use hello_macro_derive.HelloMacro\n");
-    write(&s.0.join("app/Cargo.toml"), "[package]\nname = \"app\"\nversion = \"0.1.0\"\nedition = \"2021\"\n\n[[bin]]\nname = \"app\"\npath = \"target/hrs/main.rs\"\n\n[dependencies]\nhello_macro = { path = \"../hello_macro\" }\n");
+    write(&s.0.join("app/Cargo.toml"), "[package]\nname = \"app\"\nversion = \"0.1.0\"\nedition = \"2021\"\n\n[[bin]]\nname = \"app\"\npath = \"target/src/main.rs\"\n\n[dependencies]\nhello_macro = { path = \"../hello_macro\" }\n");
     write(&s.0.join("app/src/main.hrs"), "use hello_macro.HelloMacro\n\n#[derive~ HelloMacro]\nstruct Pancakes\n\nfn main$:\n    Pancakes.hello_macro$\n");
     let out = hrs("run", &s.0.join("app"));
     assert!(out.status.success(), "{}", text(&out));
     assert_eq!(String::from_utf8_lossy(&out.stdout), "Hello, Macro! My name is Pancakes!\n");
-    let rust = fs::read_to_string(s.0.join("hello_macro/target/hrs/lib.rs")).unwrap();
+    let rust = fs::read_to_string(s.0.join("hello_macro/target/src/lib.rs")).unwrap();
     assert!(!rust.contains("hello_macro_derive"), "{rust}");
 }
 

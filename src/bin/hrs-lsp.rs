@@ -462,11 +462,11 @@ impl Ra {
     }
 
     /// Hand rust-analyzer the text of every generated Rust file of the
-    /// project (`target/hrs/**/*.rs`, the distribution's crates included, the
+    /// project (`target/src/**/*.rs`, the distribution's crates included, the
     /// completion side-file not), opening the new and updating the changed.
     fn give(&mut self, root: &Path) {
         let mut files = Vec::new();
-        let mut stack = vec![root.join("target/hrs")];
+        let mut stack = vec![root.join("target/src")];
         while let Some(dir) = stack.pop() {
             let Ok(entries) = std::fs::read_dir(&dir) else { continue };
             for e in entries.flatten() {
@@ -559,10 +559,10 @@ fn root_of(file: &Path) -> Option<PathBuf> {
 }
 
 /// Where `hrs` writes a source's Rust and its map: `src/a/b.hrs` ->
-/// `target/hrs/a/b.rs` and `target/hrs/a/b.map.json`.
+/// `target/src/a/b.rs` and `target/src/a/b.map.json`.
 fn generated(root: &Path, file: &Path) -> Option<(PathBuf, PathBuf)> {
     let rel = file.strip_prefix(root.join("src")).ok()?;
-    let gen = root.join("target/hrs").join(rel);
+    let gen = root.join("target/src").join(rel);
     Some((gen.with_extension("rs"), gen.with_extension("map.json")))
 }
 
@@ -781,7 +781,7 @@ impl Bridge {
         let one = |loc: Value| -> Value {
             let (uri_key, range_key) = if loc.get("targetUri").is_some() { ("targetUri", "targetRange") } else { ("uri", "range") };
             let Some(path) = loc[uri_key].as_str().and_then(|u| Url::parse(u).ok()).and_then(|u| u.to_file_path().ok()) else { return loc };
-            if !path.starts_with(root.join("target/hrs")) || path.extension().map_or(true, |e| e != "rs") {
+            if !path.starts_with(root.join("target/src")) || path.extension().map_or(true, |e| e != "rs") {
                 return loc;
             }
             let Ok(m) = harsh_lang::remap::SourceMap::load(path.with_extension("map.json").to_str().unwrap_or("")) else { return loc };
@@ -823,7 +823,7 @@ impl Bridge {
         let start = now.split_inclusive('\n').take(line).map(str::len).sum::<usize>();
         let at = start + now[start..].chars().take(col).map(char::len_utf8).sum::<usize>();
         let marked = format!("{}{MARK}{}", &now[..at], &now[at..]);
-        let side = root.join("target/hrs/.complete");
+        let side = root.join("target/src/.complete");
         std::fs::create_dir_all(&side).ok()?;
         let (hrs, rs_side, map) = (side.join("cell.hrs"), side.join("cell.rs"), side.join("cell.map.json"));
         std::fs::write(&hrs, &marked).ok()?;

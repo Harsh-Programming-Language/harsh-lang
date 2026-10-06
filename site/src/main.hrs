@@ -1,5 +1,5 @@
 //! The Harsh website: a Dioxus app written in Harsh. `hrs build` writes the
-//! Rust to `target/hrs/`; `dx` builds that as any Dioxus web app.
+//! Rust to `target/src/`; `dx` builds that as any Dioxus web app.
 //!
 //! With the `ssg` feature -- the deploy's `dx bundle --web --ssg --features
 //! ssg` -- it is also a Dioxus fullstack app, so the CLI pre-renders every page

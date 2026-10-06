@@ -127,7 +127,7 @@ The project-layout question stayed open for most of the project. It was settled 
 ```toml
 [[bin]]
 name = "myapp"
-path = "target/hrs/main.rs"
+path = "target/src/main.rs"
 ```
 
 Cargo accepts arbitrary target paths, `/target` is already gitignored, dependencies stay in one manifest, and `mod` works across generated files. Five minutes of testing replaced weeks of intermittent deliberation.

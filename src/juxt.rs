@@ -89,6 +89,8 @@ fn is_atom_start(toks: &[Token], i: usize, end: usize) -> bool {
         Tk::Ident => !NOT_CALLABLE.contains(&t.text.as_str()),
         Tk::Int | Tk::Float | Tk::Str | Tk::Char => true,
         Tk::Open('(') => true,
+        // `..n`: a range with no start is an atom when an atom follows.
+        Tk::DotDot => i + 1 < end && toks[i + 1].kind != Tk::DotDot && is_atom_start(toks, i + 1, end),
         // `$x` -- a macro metavariable -- and `$( .. )*`, a repetition, are
         // atoms in a transcriber. A `$` that reaches this pass is always one
         // of those: the apply-to-nothing suffix became `()` before it.
@@ -168,7 +170,29 @@ pub fn macro_brace_end(toks: &[Token], i: usize, end: usize) -> Option<usize> {
 ///
 /// An atom is an identifier (optionally a path `a.b.c`, optionally with
 /// generics, optionally a macro `name!`), a literal, or a parenthesised group.
+/// Ranges are atoms (the user, 2026-10-05): a range whose ends are atoms is
+/// itself one -- `0..3`, `a..=b`, `..n`, `start..` -- so `f 0..3` applies,
+/// `f(0..3)`. Ends that are not atoms (`a + 1..n`, `-40..=0`) leave `..` an
+/// operator, isolated as any argument: `f (a + 1..n)`.
 fn atom_end(toks: &[Token], i: usize, end: usize) -> Option<usize> {
+    // `..n` / `..=n`: a range with no start.
+    if i < end && toks[i].kind == Tk::DotDot {
+        let e = atom_end_base(toks, i + 1, end)?;
+        return Some(e);
+    }
+    let base = atom_end_base(toks, i, end)?;
+    if base < end && toks[base].kind == Tk::DotDot {
+        if base + 1 >= end {
+            return Some(base + 1); // `start..`, ending the arguments
+        }
+        if let Some(e) = atom_end_base(toks, base + 1, end) {
+            return Some(e);
+        }
+    }
+    Some(base)
+}
+
+fn atom_end_base(toks: &[Token], i: usize, end: usize) -> Option<usize> {
     // A closure is an argument atom only where it is unambiguous: when its
     // parameter list ends the region, as in a block header `map |n|:`. A
     // bitwise or cannot be followed by the block colon, so nothing else can
@@ -693,6 +717,17 @@ fn apply_region(toks: &[Token], from: usize, to: usize, out: &mut Vec<(usize, Jx
                     continue;
                 }
             }
+            // After a constructor, a single argument needs no parentheses
+            // (the user, 2026-10-05): `Some &x`, `Some &mut x`, `Some mut x`,
+            // `Some ref x`. A constructor is never an operand of bit-and, and
+            // `mut` / `ref` are never operators.
+            if k == head_end && args.is_empty() && is_constructor_head(toks, i, head_end) {
+                if let Some(e) = prefixed_single_arg(toks, k, to) {
+                    args.push((k, e));
+                    k = e;
+                    break;
+                }
+            }
             match atom_end(toks, k, to) {
                 Some(e) => {
                     rep_fixups(toks, k, to, out);
@@ -713,6 +748,18 @@ fn apply_region(toks: &[Token], from: usize, to: usize, out: &mut Vec<(usize, Jx
         // The head may itself be a group -- `(add 10) 7` applies the closure
         // that `add 10` returns.
         if toks[i].kind == Tk::Open('(') {
+            // A call isolated so that a tuple index applies to its result,
+            // `(f src).0`: Harsh's isolation, which Rust's call syntax does
+            // not need -- `f(src).0` (2026-10-05). An operation keeps them:
+            // `(a + b).0` needs them in Rust too.
+            if let Some(c) = matching_close_idx(toks, i, head_end) {
+                let indexed = toks.get(c + 1).map_or(false, |t| t.kind == Tk::TupleIdx);
+                let call = c > i + 1 && toks[i + 1].kind == Tk::Ident && atom_end(toks, i + 1, c).map_or(false, |e| e < c && is_application(toks, e, c));
+                if indexed && call {
+                    out.push((i, Jx::Drop));
+                    out.push((c, Jx::Drop));
+                }
+            }
             split_group(toks, i + 1, head_end - 1, out);
         }
         if args.is_empty() {
@@ -743,6 +790,11 @@ fn apply_region(toks: &[Token], from: usize, to: usize, out: &mut Vec<(usize, Jx
             let last_open = args[args.len() - 1].0;
             if !has_top_comma(toks, last_open + 1, to) {
                 out.push((last_open, Jx::Drop));
+            } else {
+                // The tuple's `)` in the tail is the tuple's own, so the
+                // list's `)` is owed after the block: `f (1, (P\ x = 1))` is
+                // `f((1, P { x: 1 }))` (ShopBill's S1, 2026-10-05).
+                out.push((to - 1, Jx::CloseAfterBlock));
             }
             // The open group's inside is Harsh too: `Some (if toks <- get c:`.
             apply_region(toks, last_open + 1, to, out);
@@ -2017,9 +2069,57 @@ impl<'a> Pipes<'a> {
     }
 }
 
+/// The constructors the files being transpiled declare -- every `struct` and
+/// every enum variant -- beside the prelude's `Some`, `Ok`, `Err`. Filled by
+/// `collect_arities`, which reads each file's declarations before
+/// juxtaposition; read by `is_constructor_head`. A name is a constructor
+/// because it is declared one, never because of its case (the user,
+/// 2026-10-05: Rust does not care how a name is spelt). The set only grows.
+static CONSTRUCTORS: std::sync::Mutex<Vec<String>> = std::sync::Mutex::new(Vec::new());
+
+/// Record the constructors `toks` declare: `struct Name`, and each variant
+/// of `enum Name` -- the first name on each line of its block.
+fn collect_constructors(toks: &[Token]) {
+    let mut found: Vec<String> = Vec::new();
+    let mut i = 0usize;
+    while i + 1 < toks.len() {
+        if toks[i].is_kw("struct") && toks[i + 1].kind == Tk::Ident {
+            found.push(toks[i + 1].text.clone());
+        }
+        if toks[i].is_kw("enum") && toks[i + 1].kind == Tk::Ident {
+            // The enum's line indentation; its variants are the first names
+            // of the deeper lines that follow, until the block ends.
+            let ind = (0..=i).rev().find_map(|k| toks[k].line_start).unwrap_or(0);
+            let mut k = i + 2;
+            while k < toks.len() {
+                if let Some(li) = toks[k].line_start {
+                    if li <= ind {
+                        break;
+                    }
+                    if toks[k].kind == Tk::Ident && !toks[k].is_comment() {
+                        found.push(toks[k].text.clone());
+                    }
+                }
+                k += 1;
+            }
+            i = k;
+            continue;
+        }
+        i += 1;
+    }
+    if let Ok(mut c) = CONSTRUCTORS.lock() {
+        for f in found {
+            if !c.contains(&f) {
+                c.push(f);
+            }
+        }
+    }
+}
+
 /// Parameter counts of every `fn` in a token stream, by name. Arity is the
 /// number of parameters, whichever of Harsh's declaration forms was used.
 pub fn collect_arities(toks: &[Token]) -> std::collections::HashMap<String, usize> {
+    collect_constructors(toks);
     let mut m = std::collections::HashMap::new();
     let mut i = 0usize;
     while i < toks.len() {
@@ -2116,5 +2216,59 @@ fn closes_turbofish(toks: &[Token], from: usize, at: usize) -> bool {
         }
     }
     false
+}
+
+/// The head `toks[i..head_end]` is a constructor: its last name (`Some`,
+/// `Point`, `Route.Home`'s `Home`) is one the files declare, or the
+/// prelude's. Any other name -- a function, a constant, a constructor from
+/// another crate -- keeps the isolation rule: `f (&x)`.
+fn is_constructor_head(toks: &[Token], i: usize, head_end: usize) -> bool {
+    let Some(last) = (i..head_end).rev().find(|&k| toks[k].kind == Tk::Ident) else { return false };
+    let name = toks[last].text.as_str();
+    matches!(name, "Some" | "Ok" | "Err") || CONSTRUCTORS.lock().map_or(false, |c| c.iter().any(|n| n == name))
+}
+
+/// `&x`, `& x`, `&mut x`, `& mut x`, `mut x`, `ref x`, `ref mut x` starting at
+/// `k`, as the only argument: the prefix, one atom, then nothing that could be
+/// a further argument. Returns the argument's end.
+fn prefixed_single_arg(toks: &[Token], k: usize, to: usize) -> Option<usize> {
+    let mut j = k;
+    let amp = toks[j].kind == Tk::Punct && toks[j].text == "&";
+    if amp {
+        j += 1;
+        if j < to && toks[j].is_kw("mut") {
+            j += 1;
+        }
+    } else if toks[j].is_kw("mut") {
+        j += 1;
+    } else if toks[j].is_kw("ref") {
+        j += 1;
+        if j < to && toks[j].is_kw("mut") {
+            j += 1;
+        }
+    } else {
+        return None;
+    }
+    if j >= to {
+        return None;
+    }
+    let e = atom_end(toks, j, to)?;
+    if e < to && atom_end(toks, e, to).is_some() {
+        return None; // more arguments: each is isolated, `Rgb (mut r) g b`
+    }
+    Some(e)
+}
+
+/// After a callee ending at `e`, do the tokens up to `c` form its arguments
+/// alone -- atoms, one after another -- so that `toks[..c]` is one call?
+fn is_application(toks: &[Token], e: usize, c: usize) -> bool {
+    let mut k = e;
+    while k < c {
+        match atom_end(toks, k, c) {
+            Some(n) if n > k => k = n,
+            _ => return false,
+        }
+    }
+    true
 }
 

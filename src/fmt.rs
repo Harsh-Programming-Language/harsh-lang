@@ -37,6 +37,16 @@ use crate::lex::{self, Tk, Token};
 
 pub const UNIT: usize = 4;
 
+/// Format, and report whether the formatter backed out of its own result
+/// (Rule 0): `(text, backed_out)`. A backed-out file is left as written.
+pub fn format_checked(src: &str) -> (String, bool) {
+    let dz = crate::dslzone::zones(src);
+    if !dz.is_empty() {
+        return format_around_bodies(src, &dz);
+    }
+    format_harsh_checked(src)
+}
+
 /// Format Harsh source. Returns the source unchanged on a lex error: a file
 /// that does not lex has nothing to format, and the transpiler will report it.
 pub fn format(src: &str) -> String {
@@ -45,7 +55,8 @@ pub fn format(src: &str) -> String {
     // may move the call; it never touches what is inside the braces.
     let dz = crate::dslzone::zones(src);
     if !dz.is_empty() {
-        return format_around_bodies(src, &dz);
+        let (out, _) = format_around_bodies(src, &dz);
+        return out;
     }
     format_harsh(src)
 }
@@ -54,16 +65,16 @@ pub fn format(src: &str) -> String {
 /// the source, line for line, so this only applies when the formatter kept
 /// the file's line structure; otherwise the file is left as it is -- the
 /// conservative choice Rule 0 makes too.
-fn format_around_bodies(src: &str, dz: &[crate::dslzone::Zone]) -> String {
+fn format_around_bodies(src: &str, dz: &[crate::dslzone::Zone]) -> (String, bool) {
     let work = crate::dslzone::blank_out(src, dz);
-    let out = format_harsh(&work);
+    let (out, backed) = format_harsh_checked(&work);
     let (wl, ol): (Vec<&str>, Vec<&str>) = (work.split('\n').collect(), out.split('\n').collect());
     if wl.len() != ol.len() {
         // The rest of the file keeps its lines (the conservative choice), but
         // its holes are still laid out -- inside the bodies only, checked
         // token for token (found 2026-10-04: a multi-line body's blanked
         // lines collapse, and no hole in such a file was ever formatted).
-        return format_holes_only(src, dz);
+        return (format_holes_only(src, dz), backed);
     }
     let sl: Vec<&str> = src.split('\n').collect();
     let line_of = |at: usize| src[..at].matches('\n').count();
@@ -73,7 +84,7 @@ fn format_around_bodies(src: &str, dz: &[crate::dslzone::Zone]) -> String {
     for (n, z) in dz.iter().enumerate() {
         let (first, last) = (line_of(z.open), line_of(z.close));
         let ph = format!("{{/*Z{n}*/}}");
-        let Some(at) = lines[first].find(&ph) else { return src.to_string() };
+        let Some(at) = lines[first].find(&ph) else { return (src.to_string(), backed) };
         // The first line: the formatter's text up to the call, the source's
         // from the body's `{` to the end of that line.
         let col = z.open - (src[..z.open].rfind('\n').map_or(0, |k| k + 1));
@@ -94,9 +105,9 @@ fn format_around_bodies(src: &str, dz: &[crate::dslzone::Zone]) -> String {
     let plain = lines.join("\n");
     let spaced = holes.join("\n");
     if spaced != plain && ((rust_tokens(&spaced).is_some() && rust_tokens(&spaced) == rust_tokens(&plain)) || same_rust(&spaced, &plain)) {
-        return spaced;
+        return (spaced, backed);
     }
-    plain
+    (plain, backed)
 }
 
 /// Only the holes, in a file left otherwise as written: the bodies' lines
@@ -215,12 +226,18 @@ fn hole_layout(mut lines: Vec<String>) -> Vec<String> {
 }
 
 fn format_harsh(src: &str) -> String {
+    let (out, _) = format_harsh_checked(src);
+    out
+}
+
+/// `format_harsh`, and whether Rule 0 refused the result (S4, 2026-10-05).
+fn format_harsh_checked(src: &str) -> (String, bool) {
     // Two passes: re-break (adds line breaks, never joins), then indent.
     let broken = rebreak(src);
     if std::env::var("HRS_FMT_DEBUG").is_ok() {
         eprintln!("--- rebroken ---\n{broken}--- end ---");
     }
-    let Ok(toks) = lex::lex(&broken) else { return src.to_string() };
+    let Ok(toks) = lex::lex(&broken) else { return (src.to_string(), false) };
     let lines = layout::lines(toks);
     let plan = plan(&broken, &lines);
     let out = emit(&broken, &plan);
@@ -232,9 +249,9 @@ fn format_harsh(src: &str) -> String {
         eprintln!("--- planned ---\n{out}--- end ---");
     }
     match (rust_tokens(src), rust_tokens(&out)) {
-        (Some(a), Some(b)) if a == b => out,
-        (None, _) => out,
-        _ => src.to_string(),
+        (Some(a), Some(b)) if a == b => (out, false),
+        (None, _) => (out, false),
+        _ => (src.to_string(), true),
     }
 }
 
@@ -345,6 +362,10 @@ fn rebreak(src: &str) -> String {
         // Where an earlier break moved this line's block, the columns the
         // rules below set are counted from the line's new place.
         let sh: isize = t.first().map_or(0, |f| shifts.iter().filter(|&&(from, to, _)| f.span.lo > from && f.span.lo <= to).map(|&(_, _, d)| d).sum());
+        // Every break below is placed from here: the line's continuation
+        // column *after* any earlier move of its block (S4, 2026-10-05: a
+        // chain broken inside a moved `let x = match` block was placed from
+        // the old column, and the result failed Rule 0 silently).
         let cont_s = (cont as isize + sh).max(0) as usize;
         // A moved part of a header moves its whole block: every following
         // line deeper than the header (body, `else`, the `)` tail).
@@ -385,7 +406,7 @@ fn rebreak(src: &str) -> String {
                 if t[o].kind == Tk::Open('(') && o + 1 < t.len() && t[o + 1].line_start.is_none() {
                     let is_proto = (t[o + 1].kind == Tk::Punct && t[o + 1].text.starts_with('|')) || t[o + 1].is_kw("move");
                     if is_proto && closer_on_own_line(&all, &t[o]) {
-                        note(&t[o + 1], cont, &mut breaks);
+                        note(&t[o + 1], cont_s, &mut breaks);
                     }
                 }
             }
@@ -438,11 +459,11 @@ fn rebreak(src: &str) -> String {
             if run.len() + tail_links >= 3 {
                 for &a in rest {
                     if t[a].line_start.is_none() {
-                        breaks.insert(t[a].span.lo, cont);
+                        breaks.insert(t[a].span.lo, cont_s);
                     }
                 }
                 if (receiver_long || l.tail_of_block) && t[first].line_start.is_none() {
-                    breaks.insert(t[first].span.lo, cont);
+                    breaks.insert(t[first].span.lo, cont_s);
                 }
                 continue;
             }
@@ -458,22 +479,22 @@ fn rebreak(src: &str) -> String {
             }
             let eq_before = recv > 0 && t[recv - 1].kind == Tk::Eq && t[recv].line_start.is_none();
             let whole = joined_width(src, t, receiver_line, end);
-            let own = if eq_before { cont + span_width(src, t, recv, end) } else { whole };
+            let own = if eq_before { cont_s + span_width(src, t, recv, end) } else { whole };
             if own > CHAIN_WIDTH {
                 for &a in rest {
                     if t[a].line_start.is_none() {
-                        breaks.insert(t[a].span.lo, cont);
+                        breaks.insert(t[a].span.lo, cont_s);
                     }
                 }
                 if receiver_long && t[first].line_start.is_none() {
-                    breaks.insert(t[first].span.lo, cont);
+                    breaks.insert(t[first].span.lo, cont_s);
                 }
                 if eq_before {
-                    note(&t[recv], cont, &mut breaks);
+                    note(&t[recv], cont_s, &mut breaks);
                 }
             } else if joinable(t, receiver_line, end) {
                 if eq_before && whole > CHAIN_WIDTH {
-                    note(&t[recv], cont, &mut breaks);
+                    note(&t[recv], cont_s, &mut breaks);
                 }
                 for &a in &run {
                     if t[a].line_start.is_some() && !in_stream(&streams, &t[a]) {
@@ -499,7 +520,7 @@ fn rebreak(src: &str) -> String {
                                 let receiver_long = span_width(src, t, recv, run[0]) > LINK_ALIGN;
                                 for (n, &a) in run.iter().enumerate() {
                                     if t[a].line_start.is_none() && (n > 0 || receiver_long) {
-                                        breaks.insert(t[a].span.lo, cont + UNIT);
+                                        breaks.insert(t[a].span.lo, cont_s + UNIT);
                                     }
                                 }
                             }
@@ -690,7 +711,7 @@ fn rebreak(src: &str) -> String {
                     let block_literal = layout::opens(t).is_some()
                         && (first..line_end).rev().find(|&i| !t[i].is_comment()).map_or(false, |i| t[i].kind == Tk::Backslash);
                     if open_past_line || vertical_chain || vertical_args || block_literal {
-                        note(&t[first], cont, &mut breaks);
+                        note(&t[first], cont_s, &mut breaks);
                     }
                 }
             }
@@ -1355,10 +1376,16 @@ fn plan(src: &str, lines: &[Line]) -> Plan {
     // The frame the last tail line closed.
     let mut closed: Option<Frame>;
 
-    for l in lines.iter() {
+    for (li, l) in lines.iter().enumerate() {
         if l.toks.is_empty() {
             continue;
         }
+        // The next line with tokens: deeper, and not merged into this one by
+        // the layout, it is this line's body -- a header that opens by its
+        // grammar, not its tokens: a record variant's bare name in an enum
+        // (found 2026-10-06; the plan moved its fields out to the variants'
+        // column, and Rule 0 refused it, silently until 0.7.0).
+        let next_deeper = lines[li + 1..].iter().find(|n| !n.toks.is_empty()).map_or(false, |n| n.indent > l.indent);
         // Close blocks this line has stepped out of.
         closed = None;
         while let Some(f) = stack.last() {
@@ -1549,8 +1576,8 @@ fn plan(src: &str, lines: &[Line]) -> Plan {
             prev_new = Some(col);
         }
 
-        // Does this line open a block?
-        if layout::opens(&l.toks).is_some() {
+        // Does this line open a block -- by its tokens, or by its grammar?
+        if layout::opens(&l.toks).is_some() || (next_deeper && !l.tail_of_block && innermost_open(&l.toks, l.toks.len()).is_none()) {
             let last_phys = *phys.last().unwrap_or(&0);
             let opener_idx = opener_token(&l.toks).unwrap_or(last_phys);
             let opener_new = new_col[opener_idx];

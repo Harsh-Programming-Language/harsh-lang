@@ -1829,7 +1829,7 @@ readme = "README.md"
 # The transpiler's own lexer: one grammar for Harsh, never a second parser
 # (the user's ruling, 2026-09-24). Without default features it has no
 # dependencies. `path` for the tree; `version` for crates.io.
-harsh-lang = { version = "0.6", path = "..", default-features = false }
+harsh-lang = { version = "0.7", path = "..", default-features = false }
 "########),
     ("hrs_proc_macro/README.md", r########"# hrs_proc_macro
 

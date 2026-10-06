@@ -283,6 +283,16 @@ fn fill_holes(src: &str, lo: usize, hi: usize, hole: &dyn Fn(&str) -> Result<Str
                     j += 3;
                     continue;
                 }
+                // Rule 1 (the user, 2026-10-05): a hole's code is Harsh, read
+                // as Harsh -- a mark inside its strings, characters or
+                // comments is text (`{@: format! "a:@b" :@}` closed inside
+                // the string).
+                if d == 1 {
+                    if let Some(k) = skip_harsh_literal(b, j) {
+                        j = k;
+                        continue;
+                    }
+                }
                 if b[j..].starts_with(b"@:") {
                     d += 1;
                     j += 2;
@@ -301,7 +311,7 @@ fn fill_holes(src: &str, lo: usize, hi: usize, hole: &dyn Fn(&str) -> Result<Str
             }
             let Some(e) = end else {
                 let line = src[..lo + i].matches('\n').count() + 1;
-                return Err(format!("line {line}: `@:` opens a hole that is never closed; a hole always ends in `:@`"));
+                return Err(format!("line {line}: `@:` opens a hole that is never closed; a hole always ends in `:@` -- to write `@:` itself in the macro's text, write `@@:`"));
             };
             // The hole's baseline: the indentation of the line it opens on.
             let line_start = src[..lo + i].rfind('\n').map_or(0, |k| k + 1);
@@ -402,6 +412,49 @@ pub fn normalize_hole_line(line: &str) -> String {
         i += ch.len_utf8();
     }
     out
+}
+
+/// At `j`, a Harsh string (`"…"`, `r#"…"#`), a character (`'x'`, `'\n'`),
+/// or a line comment: the index just past it. A lifetime (`'a`) is not one.
+fn skip_harsh_literal(b: &[u8], j: usize) -> Option<usize> {
+    match b[j] {
+        b'"' => {
+            let mut k = j + 1;
+            while k < b.len() {
+                match b[k] {
+                    b'\\' => k += 2,
+                    b'"' => return Some(k + 1),
+                    _ => k += 1,
+                }
+            }
+            Some(b.len())
+        }
+        b'r' if b.get(j + 1).map_or(false, |c| *c == b'"' || *c == b'#') && (j == 0 || !(b[j - 1].is_ascii_alphanumeric() || b[j - 1] == b'_')) => {
+            let hashes = b[j + 1..].iter().take_while(|c| **c == b'#').count();
+            if b.get(j + 1 + hashes) != Some(&b'"') {
+                return None;
+            }
+            let close: Vec<u8> = std::iter::once(b'"').chain(std::iter::repeat(b'#').take(hashes)).collect();
+            let start = j + 2 + hashes;
+            let at = b[start..].windows(close.len()).position(|w| w == close.as_slice())?;
+            Some(start + at + close.len())
+        }
+        b'\'' => {
+            if b.get(j + 1) == Some(&b'\\') {
+                let end = b[j + 2..].iter().position(|c| *c == b'\'')?;
+                Some(j + 3 + end)
+            } else if b.get(j + 2) == Some(&b'\'') {
+                Some(j + 3)
+            } else {
+                None
+            }
+        }
+        b'/' if b.get(j + 1) == Some(&b'/') => {
+            let end = b[j..].iter().position(|c| *c == b'\n').map_or(b.len(), |e| j + e);
+            Some(end)
+        }
+        _ => None,
+    }
 }
 
 /// B2 (the user, 2026-10-04): code may start on the `@:` line with the lines

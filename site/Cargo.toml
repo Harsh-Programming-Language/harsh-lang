@@ -6,11 +6,11 @@ publish = false
 description = "The Harsh language website, written in Harsh with Dioxus"
 
 # A Harsh project: the sources are `src/**.hrs`, `hrs build` writes the Rust
-# to `target/hrs/`, and the target below points at it. `dx` then builds the
+# to `target/src/`, and the target below points at it. `dx` then builds the
 # Rust as any Dioxus app. See docs/HANDOVER.md.
 [[bin]]
 name = "harsh-site"
-path = "target/hrs/main.rs"
+path = "target/src/main.rs"
 
 [dependencies]
 dioxus = { version = "0.7", features = ["router"] }

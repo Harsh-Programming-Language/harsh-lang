@@ -381,7 +381,7 @@ Three files. `src/main.hrs` declares `pub mod garden` with no body — just the 
 
 Only the crate root ever needs to know the tree's shape; a file that declares a child module does not say where the child's file is, because there is only one place it can be. And nothing in the calling code changes when a module moves from inline to its own file — the path `crate.garden.vegetables.Asparagus` is the same either way. Moving code into files is a filing decision, and the module system keeps it from being anything more.
 
-> **Harsh —** The file layout is not Harsh's invention and Harsh does not touch it: `hrs build` transpiles every file under `src/` into `target/hrs/`, tree for tree and name for name, so the compiler finds each module exactly where the declaration says it is.
+> **Harsh —** The file layout is not Harsh's invention and Harsh does not touch it: `hrs build` transpiles every file under `src/` into `target/src/`, tree for tree and name for name, so the compiler finds each module exactly where the declaration says it is.
 
 ## 7.6 What you have
 

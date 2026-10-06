@@ -88,7 +88,7 @@ fn convert_inner(src: &str) -> Result<String, String> {
     let classes = classify_all(&toks);
     let pc = param_commas(&toks);
     let ep = empty_params(&toks);
-    let mut w = Writer { out: String::new(), level: 0, at_line_start: true, param_commas: pc, empty_params: ep, src, brace_depth: 0, in_enum_body: false, errors: Vec::new() };
+    let mut w = Writer { out: String::new(), restart_at: None, level: 0, at_line_start: true, param_commas: pc, empty_params: ep, src, brace_depth: 0, in_enum_body: false, errors: Vec::new() };
     w.emit(&toks, &classes, 0, toks.len(), Kind::Items);
     // A piece of Rust in a DSL body that could not be written as Harsh stops
     // the conversion (the user's ruling, 2026-09-23: no silent failure).
@@ -768,6 +768,10 @@ fn classify_brace(toks: &[Token], open: usize, brace: &[Brace]) -> Brace {
 
 struct Writer<'a> {
     out: String,
+    /// Where a statement restarted inside the current run: after a brace
+    /// body that ended its line (`thread_local! { … }`, which takes no `;`).
+    /// What precedes it is a finished item, not part of the next one.
+    restart_at: Option<usize>,
     /// Pieces of Rust in a DSL body that could not be written as Harsh.
     errors: Vec<String>,
     level: usize,
@@ -1689,9 +1693,29 @@ impl<'a> Writer<'a> {
         // or two atoms meeting with nothing between them.
         let value_end = |v: usize, body_brace: bool| -> usize {
             let (mut dd, mut bars, mut last, mut j) = (0i32, false, v, v);
+            // Angle brackets open: once a `<` is not a comparison -- it
+            // follows a name, as in `Cell<bool>` -- it is a bracket, and it
+            // is counted like the others (the user, 2026-10-05). Only a `>`
+            // with none open ends a markup tag.
+            let mut angles = 0i32;
             while j < close {
                 let u = &toks[j];
                 if u.is_comment() {
+                    j += 1;
+                    continue;
+                }
+                if u.kind == Tk::Lt && j > v && matches!(toks[last].kind, Tk::Ident) {
+                    angles += 1;
+                    dd += 1;
+                    last = j;
+                    j += 1;
+                    continue;
+                }
+                if angles > 0 && (u.kind == Tk::Gt || u.text == ">>") {
+                    let n = if u.text == ">>" { 2.min(angles) } else { 1 };
+                    angles -= n;
+                    dd -= n;
+                    last = j;
                     j += 1;
                     continue;
                 }
@@ -1829,6 +1853,15 @@ impl<'a> Writer<'a> {
         let mut out = String::new();
         let mut at = lo;
         for (a, b) in holes {
+            // Step 3 of the rule (the user, 2026-10-06): the hole covers the
+            // longest stretch, from its start or after a top-level `=` or `:`
+            // in it, that Rust's parser reads as one expression; what precedes
+            // is the macro's text, copied as written. None: no hole at all.
+            let Some(a) = expression_start(&src[a..b]).map(|d| a + d) else {
+                out.push_str(&src[at..b]);
+                at = b;
+                continue;
+            };
             out.push_str(&src[at..a]);
             let frag = &src[a..b];
             let line_start = src[..a].rfind('\n').map_or(0, |n| n + 1);
@@ -2334,9 +2367,47 @@ impl<'a> Writer<'a> {
     /// Juxtaposition must not touch patterns, signatures or declarations --
     /// `Some(p)` is a pattern in `if let`, and `Block(Kind)` is an enum variant.
     fn expr_start(toks: &[Token], from: usize, to: usize, kind: Kind) -> Option<usize> {
-        let first = toks[from..to].iter().find(|t| !t.is_comment())?;
+        let first_at = (from..to).find(|&k| !toks[k].is_comment())?;
+        let first = &toks[first_at];
+        // Attributes before a statement or item are not its expression: the
+        // region after them is judged as it would be without them. Taking
+        // any region that starts with `#` for having no expression left the
+        // calls of `#[cfg(unix)] let _ = f(a, b);` as a comma list -- one
+        // tuple argument in Harsh (found by the self-round-trip, 2026-10-06).
         if first.kind == Tk::Hash {
-            return None;
+            let mut k = first_at;
+            while k < to && toks[k].kind == Tk::Hash {
+                let mut j = k + 1;
+                if j < to && toks[j].kind == Tk::Punct && toks[j].text == "!" {
+                    j += 1;
+                }
+                if j >= to || toks[j].kind != Tk::Open('[') {
+                    return None;
+                }
+                let mut d = 0i32;
+                let mut close = None;
+                for m in j..to {
+                    match toks[m].kind {
+                        Tk::Open(_) => d += 1,
+                        Tk::Close(_) => {
+                            d -= 1;
+                            if d == 0 {
+                                close = Some(m);
+                                break;
+                            }
+                        }
+                        _ => {}
+                    }
+                }
+                k = close? + 1;
+                while k < to && toks[k].is_comment() {
+                    k += 1;
+                }
+            }
+            if k >= to {
+                return None;
+            }
+            return Self::expr_start(toks, k, to, kind);
         }
         let top = |pred: &dyn Fn(&Token) -> bool| -> Option<usize> {
             let mut d = 0i32;
@@ -2667,6 +2738,14 @@ impl<'a> Writer<'a> {
                             {
                                 self.out.push(' ');
                             }
+                            // A tuple index on the call's result -- `f(src).0`
+                            // -- needs the call isolated: a tuple index is part
+                            // of its atom, so `f src.0` is `f(src.0)`. Written
+                            // `(f src).0` (found 2026-10-05).
+                            let indexed = ce < to && toks[ce].kind == Tk::TupleIdx && !Self::args_of(toks, ae, close).is_empty();
+                            if indexed {
+                                self.out.push('(');
+                            }
                             self.run_span(toks, cl, i, ae, false);
                             let args = Self::args_of(toks, ae, close);
                             // `f()` applies to nothing: `f$`, tight. `f(())`
@@ -2767,6 +2846,12 @@ impl<'a> Writer<'a> {
                                     }
                                     self.out.push(')');
                                 }
+                            }
+                            if indexed {
+                                while self.out.ends_with(' ') {
+                                    self.out.pop();
+                                }
+                                self.out.push(')');
                             }
                             i = ce;
                             prev = Some(&toks[ce - 1]);
@@ -3124,6 +3209,16 @@ impl<'a> Writer<'a> {
                             self.at_line_start = false;
                             prev = Some(&toks[close]);
                             i = close + 1;
+                            // A brace body that ends its line in the source --
+                            // an item like `thread_local! { … }`, which takes no
+                            // `;` -- ends it here too: what follows starts its
+                            // own line (it was glued to the `}`, 2026-10-05).
+                            if let Some(next) = toks[i..to].iter().find(|t| !t.is_comment() || t.line > toks[close].line) {
+                                if next.line > toks[close].line {
+                                    self.newline();
+                                    self.restart_at = Some(i);
+                                }
+                            }
                             continue;
                         }
                         // (`hm!{ 1 => "a" }` was written `hm!\\ 1 => "a"` from
@@ -3471,7 +3566,8 @@ impl<'a> Writer<'a> {
                     // Whole attributes before it do not begin the statement:
                     // `#[inline]` then `/// Second.` then the item put the
                     // item one level too deep (found 2026-09-24).
-                    let mid_statement = (!only_attributes(&toks[from..i])
+                    let start = self.restart_at.filter(|&r| r > from && r <= i).unwrap_or(from);
+                    let mid_statement = (!only_attributes(&toks[start..i])
                         || (from > 0 && matches!(toks[from - 1].kind, Tk::Comma | Tk::Open('(') | Tk::Open('[')) && innermost_open_char(toks, from).map_or(false, |c| c != '{')))
                         && toks[i + 1..to].iter().any(|n| !n.is_comment());
                     self.indent();
@@ -3609,5 +3705,33 @@ fn simple_if_else(toks: &[Token], from: usize, to: usize) -> Option<(usize, usiz
         return None;
     }
     Some((o1, c1, o2, c2))
+}
+
+/// Where in `frag` the longest stretch that Rust parses as one expression
+/// begins: at its start, or after one of its top-level `=` or `:` (outside
+/// brackets, strings and comments), tried in order. `None` when no such
+/// stretch is an expression. The parser is Rust's own (`syn`).
+fn expression_start(frag: &str) -> Option<usize> {
+    let is_expr = |t: &str| !t.trim().is_empty() && syn::parse_str::<syn::Expr>(t).is_ok();
+    if is_expr(frag) {
+        return Some(frag.len() - frag.trim_start().len());
+    }
+    let toks = crate::lex::lex_rust(frag).ok()?;
+    let mut d = 0i32;
+    for t in &toks {
+        match t.kind {
+            Tk::Open(_) => d += 1,
+            Tk::Close(_) => d -= 1,
+            Tk::Eq | Tk::Colon if d == 0 => {
+                let from = t.span.hi as usize;
+                let rest = &frag[from..];
+                if is_expr(rest) {
+                    return Some(from + (rest.len() - rest.trim_start().len()));
+                }
+            }
+            _ => {}
+        }
+    }
+    None
 }
 

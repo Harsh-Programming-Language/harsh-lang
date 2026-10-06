@@ -12,7 +12,7 @@ hrs run"#
 const MAIN: &str = r#"fn main$:
     println! "Hello, world!""#
 
-const COMMANDS: &str = r#"hrs build      transpile src/**.hrs to target/hrs/, then cargo build
+const COMMANDS: &str = r#"hrs build      transpile src/**.hrs to target/src/, then cargo build
 hrs run        build and run, diagnostics on the .hrs lines
 hrs test       cargo test, remapped
 hrs check      cargo check, remapped
@@ -50,7 +50,7 @@ pub fn Install$ -> Element:
             h2 { "A first project" }
             p {
                 code { "hrs new" } " writes a project whose " code { "Cargo.toml" }
-                " points at " code { "target/hrs/" } ", where the generated Rust goes. "
+                " points at " code { "target/src/" } ", where the generated Rust goes. "
                 "Your sources are " code { "src/**.hrs" } "; dependencies are Cargo's, unchanged."
             }
             Code { code: NEW, lang: "shell" }

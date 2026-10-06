@@ -24,6 +24,10 @@ page is transpiled by `check.sh`, so none of it can fall behind the language.
 | Call a function | `let s = add 2 3` |
 | Call with no arguments | `let t = now$` |
 | A non-atom argument | `let s = add (n * 2) (-1)` |
+| A reference argument | `let n = count (&w)` |
+| One argument after a constructor | `let r = Some &x` |
+| A range argument | `let s = total 0..n` |
+| A call's tuple item | `let first = (split_pair text).0` |
 | A method | `let n = text <- len$` |
 | A method with arguments | `let parts = line <- split ","` |
 | A comparison with a negative | `let low = n < -1` |

@@ -1,0 +1,4 @@
+pub enum R
+    A
+    B
+        x: i32

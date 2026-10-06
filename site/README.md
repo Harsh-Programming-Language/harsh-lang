@@ -22,7 +22,7 @@ the wasm target (`rustup target add wasm32-unknown-unknown`):
 
 ```sh
 cd site
-hrs cargo metadata --no-deps > /dev/null    # transpile src/**.hrs to target/hrs/
+hrs cargo metadata --no-deps > /dev/null    # transpile src/**.hrs to target/src/
 dx serve                                    # then http://localhost:8080
 ```
 

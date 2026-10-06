@@ -135,7 +135,7 @@ cp examples/general.hrs "$WORK/exp/src/main.hrs"
 (cd "$WORK/exp" && "$BIN/hrs" export > "$WORK/export.log" 2>&1) || { cat "$WORK/export.log"; exit 1; }
 grep -q "exported 1 file" "$WORK/export.log" || { cat "$WORK/export.log"; exit 1; }
 [ -f "$WORK/exp/target/export/src/main.rs" ] || { echo "no exported main.rs"; exit 1; }
-grep -q "target/hrs" "$WORK/exp/target/export/Cargo.toml" && { echo "exported manifest still points at target/hrs"; exit 1; }
+grep -q "target/src" "$WORK/exp/target/export/Cargo.toml" && { echo "exported manifest still points at target/src"; exit 1; }
 (cd "$WORK/exp/target/export" && cargo run --quiet > "$WORK/export.out" 2>&1) || { cat "$WORK/export.out"; exit 1; }
 if diff -q "$WORK/export.out" "$WORK/general.out" > /dev/null 2>&1; then
     echo "  exported crate builds with cargo alone and matches general's output"

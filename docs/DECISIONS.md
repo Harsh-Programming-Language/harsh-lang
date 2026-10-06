@@ -130,15 +130,46 @@ let z =
 Arguments are juxtaposed; parentheses isolate any argument that is not an
 atom. Parentheses are Harsh's one isolation tool.
 
+**The reason, which explains every case** (decided 2026-10-05): Harsh
+separates arguments with spaces, so an argument of several tokens would read
+as several arguments. Where spaces separate, a multi-token argument is
+isolated; where nothing needs separating, nothing is. Taught whole in the
+Book, §2.7 *One argument, one atom*.
+
 ```rust harsh
 let s = add (n * 2) (-1)                  // add(n * 2, -1)
 let r = show pair.0 pair.1                // a tuple's item is an atom
 let q = f ({ let u = 3; u * u })          // a block passed as an argument
 ```
 
+- **A tuple index applies to one atom.** To index a tuple produced by several
+  tokens, isolate them: `(f src).0`, `(p <- pair$).1`. An atom needs nothing:
+  `t.0`, `v[0].1`, `f$.0`. In `f src.0` the `.0` is `src`'s. As an argument,
+  the indexed group is isolated in turn, `show ((f src).0)`; `show (f src).0`
+  is refused, since its index would apply to `show`'s result (2026-10-06). The Rust drops
+  the isolation around a call, `f(src).0`, and keeps it where Rust needs it,
+  `(a + b).0` (decided 2026-10-05).
 - **A lone parameter may drop its parentheses**, since nothing needs
   separating: `fn double n: i32 -> i32: n * 2`. Two or more are each isolated:
   `fn add (a: i32) (b: i32) -> i32: a + b`.
+- **After a constructor, a single argument needs no parentheses**:
+  `Some &x`, `Some &mut x`, `Some mut line`, `Some ref x`, in patterns and
+  expressions alike. A constructor is a `struct` or enum variant the files
+  declare, or the prelude's `Some`, `Ok`, `Err` -- known from the
+  declarations, never from a name's case (Rust does not care how a name is
+  spelt). After any other name `&` is bit-and, so a reference argument is
+  isolated: `f (&x)`, `read_line (&mut buf)`. Several arguments are each
+  isolated: `Rgb (mut r) g b` (decided 2026-10-05).
+- **A leading `-` is isolated, everywhere**: `f (-1)`, `Celsius (-40)` --
+  `f -1` is subtraction, and a pattern follows the same rule (decided
+  2026-10-05).
+- **A range of atoms is an atom**: `f 0..3` is `f(0..3)`, `g 0..=n`. Ends
+  that are not atoms leave `..` an operator: `f (a + 1..n)`,
+  `Celsius (-40..=0)`. Spacing never matters, so `f ..n` is the range from
+  `f` to `n`; a range with no start, as an argument, is isolated: `h (..n)`
+  (decided 2026-10-05; it changed `f 0..3` from `f(0)..3`).
+- **Commas separate as spaces do**: a literal inside a tuple is isolated,
+  `(1, (P\ x = 1, y = 2))`, or its fields would read as the tuple's items.
 - **A block passed as an argument is isolated**, `f ({ … })`. Braces right
   after a name, `f { … }`, are refused: Rust reads them as a struct literal.
   An empty record keeps its braces, `Empty {}`.
@@ -212,6 +243,38 @@ brace — `{@: n$ + 1 :@}` — except that a `:@` stays on its own line when the
 line above ends in a `//` comment. Editors' Enter and Tab follow the same
 columns.
 
+**What a hole is** (decided 2026-10-06): a place where one Rust expression is
+written in Harsh. It is not a block: it adds nothing around its Rust — no
+braces, no `;`. Whatever the macro's syntax needs around it — a `;` between
+`thread_local!`'s items, a `,` between attributes, braces — is the macro's
+text, written outside the hole as its documentation shows. Several statements
+in a hole's place are an explicit block, as anywhere a value is expected:
+`@: { let v = Cell.new false; v } :@`.
+
+**How the converter finds Rust in a macro's body** (decided 2026-10-06). What
+looks like Rust in a macro is the macro's own language, written in Rust's
+syntax; the converter cannot know its meaning, only its shape. Its rule, one a
+reader can apply by eye:
+
+1. A hole may start after a top-level `:` or `=`, inside a brace pair by
+   itself, or in a format string's slot — where macros put values.
+2. It ends at the segment's end: the next top-level `,` or `;`, the end of the
+   line, or the closing bracket.
+3. It covers the longest stretch from such a start to that end that Rust's own
+   parser reads as one expression.
+
+| Rust | Harsh |
+| --- | --- |
+| `static FLAG: Cell<bool> = Cell::new(false);` | `static FLAG: Cell<bool> = @: Cell.new false :@;` |
+| `onclick: move \|_\| n.set(0),` | `onclick: @: move \|_\| n <- set 0 :@,` |
+| `p { {n() * 2} }` | `p { {@: n$ * 2 :@} }` |
+| `quick_error!`'s `from()`, `display("…", err)` | unchanged: no `:` or `=` before them |
+
+In the first row, `Cell<bool> = Cell::new(false)` after the `:` is not an
+expression, so the hole starts after the `=`. A hole whose Rust would not come
+back identical is never written: the converter copies that piece verbatim, so
+a macro's body always survives the round trip.
+
 Braces delimit a macro's token stream; parentheses isolate Harsh. Inside a
 stream, the braces belong to the macro: in `strong { {@: n$ :@} }` the inner
 braces are Dioxus's own, and the hole only replaces the Rust inside them.
@@ -265,6 +328,38 @@ The commands (decided 2026-10-04):
   ways to share today.
 - **`hrs export` keeps a library's `[lib]`** and warns when `description` or
   `license` is missing, which crates.io requires.
+
+### Two passes; the generated project is `target/src/` (decided 2026-10-06)
+
+`hrs` builds in two passes. **Pass 1** reads `Hrs.toml` and the `.hrs` files
+and writes an ordinary Rust project into `target/src/`, mirroring `src/`
+(`src/server/db.hrs` is `target/src/server/db.rs`), with its own
+`Cargo.toml`. **Pass 2** is Cargo, or any Rust tool, working there; it never
+sees `Hrs.toml`, which is pass 1's alone.
+
+- `Hrs.toml` lists Harsh's dependencies only; everything Cargo installs stays
+  in `Cargo.toml`. A crate named in both is refused with a message.
+- The project's top-level folders (`assets/`, `migrations/`, …; not `src`,
+  `target` or hidden ones) are linked into `target/src/`, so paths rooted at
+  `CARGO_MANIFEST_DIR` -- `asset!`, `include_str!(concat!(env!(…)))` -- find
+  the real files.
+- `hrs dx …` runs pass 1, then Dioxus's `dx` inside `target/src/`.
+- Before 0.7.0 the folder was `target/hrs/`; `hrs build` refuses a
+  `Cargo.toml` still pointing there, and `hrs migrate` updates it once.
+
+## Layout of a list after `=` (decided 2026-10-06)
+
+A list that does not fit after `=` goes on the lines beneath, bracket
+included, one unit in -- as `hrs fmt` places any value that does not fit
+after `=`:
+
+```rust harsh
+let events =
+    [
+        Event.PageLoad,
+        Event.Click 20 80,
+    ]
+```
 
 ## Open for review
 

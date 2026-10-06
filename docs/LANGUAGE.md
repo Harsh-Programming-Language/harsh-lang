@@ -122,7 +122,7 @@ Every snippet in both parts was transpiled, compiled and run before it was writt
 Three rules do most of the work in Harsh, and everything else follows from them:
 
 - A colon ending a logical line opens a block; a more-indented line anywhere else continues the current line.
-- Application is by juxtaposition, `f a b`, and parentheses isolate **one** argument — a parenthesised group with commas is a tuple, always.
+- Application is by juxtaposition, `f a b`, and parentheses isolate **one** argument — a parenthesised group with commas is a tuple, always. The reason explains every case: spaces separate arguments, so an argument of several tokens is isolated, `f (n * 2) (-1) (&x)`, and where nothing needs separating nothing is — a lone parameter, `fn greet name: &str`, or a single argument after a constructor the program declares or `Some`, `Ok`, `Err`: `Some &x`, `let Some mut line = row$ else:`. A range of atoms is an atom, `f 0..3`; a tuple index applies to one atom, so a call's result is indexed isolated, `(f src).0`, and passed as an argument isolated again, `show ((f src).0)`.
 - `.` is the path separator and `<-` is member access, both directions, no exceptions.
 
 ## Setting up
@@ -178,10 +178,10 @@ hello/
 ```toml
 [[bin]]
 name = "hello"
-path = "target/hrs/main.rs"
+path = "target/src/main.rs"
 ```
 
-That is the whole arrangement. You write `src/**.hrs`; `hrs build` transpiles each one to `target/hrs/**.rs` beside a source map; cargo compiles what is in `target/hrs/`; errors come back pointing at your `.hrs` line and column. `target/` is ignored by git, so the generated Rust is never committed.
+That is the whole arrangement. You write `src/**.hrs`; `hrs build` transpiles each one to `target/src/**.rs` beside a source map; cargo compiles what is in `target/src/`; errors come back pointing at your `.hrs` line and column. `target/` is ignored by git, so the generated Rust is never committed.
 
 To convert an existing cargo project, add that `[[bin]]` section (with the package's name) and move `src/main.rs` aside. If the `[[bin]]` entry is missing, `hrs` refuses to build and says so — otherwise cargo would silently compile `src/main.rs` and run the wrong program.
 
@@ -217,7 +217,7 @@ hrs <input.hrs> [-o out.rs] [--map out.map.json]
 
 Anything after the subcommand goes to cargo unchanged: `hrs run --release`, `hrs test -- --nocapture`. Each command first reports what the transpile step did — `hrs: transpiled 1 of 3 file(s)` or `hrs: 3 file(s) up to date` — so a build that does nothing says so.
 
-The generated Rust under `target/hrs/` is not meant to be read. It keeps the `.hrs` file's line breaks so that every diagnostic maps back to the right line, and it is not formatted, because formatting would move every byte the source map depends on. When a Rust reader needs the code — a reviewer, a collaborator without `hrs`, a crates.io upload — `hrs export` writes the project as an ordinary cargo crate: `Cargo.toml` with its targets under `src/`, every module transpiled, no source maps, and `cargo fmt` run over the result (when rustfmt is installed; `rustup component add rustfmt`). The exported crate builds with `cargo build` alone. Nothing in it points back at the `.hrs` files, so it is a copy, not a link: export again after changes.
+The generated Rust under `target/src/` is not meant to be read. It keeps the `.hrs` file's line breaks so that every diagnostic maps back to the right line, and it is not formatted, because formatting would move every byte the source map depends on. When a Rust reader needs the code — a reviewer, a collaborator without `hrs`, a crates.io upload — `hrs export` writes the project as an ordinary cargo crate: `Cargo.toml` with its targets under `src/`, every module transpiled, no source maps, and `cargo fmt` run over the result (when rustfmt is installed; `rustup component add rustfmt`). The exported crate builds with `cargo build` alone. Nothing in it points back at the `.hrs` files, so it is a copy, not a link: export again after changes.
 
 ### Bringing existing Rust in
 

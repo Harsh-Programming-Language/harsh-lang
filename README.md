@@ -121,12 +121,12 @@ hrs run                transpile, then cargo run
 hrs watch              rebuild on every save
 ```
 
-Harsh sources live in `src/**.hrs`. Generated Rust and its source maps go to `target/hrs/`, and `Cargo.toml` points its targets at that tree:
+Harsh sources live in `src/**.hrs`. Generated Rust and its source maps go to `target/src/`, and `Cargo.toml` points its targets at that tree:
 
 ```toml
 [[bin]]
 name = "myapp"
-path = "target/hrs/main.rs"
+path = "target/src/main.rs"
 ```
 
 One manifest, dependencies untouched, and nothing extra to gitignore since Cargo already ignores `/target`. Plain `cargo build` works once the tree has been transpiled.
@@ -140,7 +140,7 @@ One manifest, dependencies untouched, and nothing extra to gitignore since Cargo
 | `hrs lint` | …then `cargo clippy` |
 | `hrs watch [sub]` | rebuild on save; defaults to `check` |
 | `hrs new <name>` | scaffold a project |
-| `hrs export [dir]` | write the project as a plain Rust crate, formatted with `cargo fmt` — the hand-off artifact; `target/hrs/` is for the compiler, not for reading |
+| `hrs export [dir]` | write the project as a plain Rust crate, formatted with `cargo fmt` — the hand-off artifact; `target/src/` is for the compiler, not for reading |
 
 Transpiling is incremental by modification time. Every diagnostic — from rustc or clippy — is remapped onto your `.hrs` source with the correct line and column; Harsh's own syntax errors are rendered the same way.
 
@@ -178,7 +178,7 @@ To run one:
 
 ```sh
 cargo new --bin demo
-hrs examples/general.hrs -o demo/src/main.rs --map demo/target/hrs.map.json
+hrs examples/general.hrs -o demo/src/main.rs --map demo/target/src.map.json
 cd demo && cargo run
 ```
 

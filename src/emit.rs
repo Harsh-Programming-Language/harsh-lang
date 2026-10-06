@@ -448,6 +448,10 @@ impl<'a> Emitter<'a> {
             // unconverted, `(a: A)(b: B)` (found 2026-09-28, `qsort`).
             let last = toks.iter().rposition(|t| !t.is_comment());
             end = match last {
+                // `do:` opens the block as `:` does: the `do` is the
+                // opener's, not the last parameter's (its `)` went with the
+                // dropped `do`, found 2026-10-05).
+                Some(k) if toks[k].kind == Tk::Colon && k > 0 && toks[k - 1].is_kw("do") => k - 1,
                 Some(k) if toks[k].kind == Tk::Colon => k,
                 _ => toks.len(),
             };

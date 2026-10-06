@@ -14,7 +14,7 @@ Sizing is relative: XS, S, M, L. "Blocked by" matters more than the estimate.
 - Harsh's own proc macros, the function-like form (0.1.28, ruling 17): a Harsh function marked `#[proc_macro~]`, called `name~ stream`, run by a generated runner when the caller is transpiled; `hrs_proc_macro` 0.1.0
 - Harsh derives (0.1.29), mirroring Rust's: `#[proc_macro_derive~ Name]` with optional helper attributes, called `#[derive~ Name]`
 - Language guide doubled — tutorial plus every construct in every form — with every snippet transpiled, compiled and run
-- Driver verified on a Mac with rustc 1.97 and current cargo: `new`, `build`, `run`, remapping. Manifest guard (refuses to build without a target under `target/hrs/`), always-on transpile report, equal-mtime staleness, progress bar suppressed; remapper locates zero-width insertion spans; application-vs-`<-` precedence stated in the guide and pinned by a test
+- Driver verified on a Mac with rustc 1.97 and current cargo: `new`, `build`, `run`, remapping. Manifest guard (refuses to build without a target under `target/src/`), always-on transpile report, equal-mtime staleness, progress bar suppressed; remapper locates zero-width insertion spans; application-vs-`<-` precedence stated in the guide and pinned by a test
 
 ## Open, in order (2026-09-25)
 
@@ -57,8 +57,8 @@ mylib = { path = "../mylib" }
 - `Cargo.toml` lists Rust's dependencies only. `hrs_std` moves to `Hrs.toml`.
 - `hrs build`: (1) the Harsh level -- for each dependency in `Hrs.toml`,
   read its Harsh surface (macros, signatures) and transpile it, then the
-  crate itself, into `target/hrs/`; (2) the Rust level -- write a generated
-  `Cargo.toml` in `target/hrs/`, the user's plus one path dependency per
+  crate itself, into `target/src/`; (2) the Rust level -- write a generated
+  `Cargo.toml` in `target/src/`, the user's plus one path dependency per
   transpiled Harsh crate, and run Cargo on it. The user's `Cargo.toml` is
   never edited.
 - `hrs add` writes to `Hrs.toml`; `cargo add` to `Cargo.toml`.
@@ -187,6 +187,7 @@ check); the matcher ruling's leftovers (the kernel's test).
   (`dx build --ssg`) for SEO; a custom domain; the logo as an SVG.
 
 ### Open, needing no decision
+
 
 
 
@@ -325,7 +326,7 @@ items done since -- is kept in the handover and the changelog.)*
   `is_stale` compared the `hrs` binary's time with each generated file's, so
   after an upgrade a file whose Rust did not change -- and so was not
   rewritten -- was retranspiled on *every* build. **Fixed 2026-09-24**:
-  `target/hrs/.hrs-stamp` records the `hrs` (version and binary time) that
+  `target/src/.hrs-stamp` records the `hrs` (version and binary time) that
   last transpiled a project; a different one makes every file stale once
   (`a_different_hrs_retranspiles_once`). A stamp rather than file times,
   since `hrs` rewrites a generated file only when its content changes.

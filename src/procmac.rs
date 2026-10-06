@@ -512,7 +512,7 @@ pub struct MacroCrate {
 }
 
 /// The runner's `Cargo.toml` and `main.rs` (decision P4: generated per
-/// consumer, under `target/hrs/proc-macros/`). `runtime` is the macro
+/// consumer, under `target/src/proc-macros/`). `runtime` is the macro
 /// crates' own `hrs_proc_macro` dependency line, so the runner and the
 /// macros share one `TokenStream` type. The empty `[workspace]` keeps the
 /// runner out of any workspace the consumer belongs to.
@@ -646,9 +646,9 @@ mod runner_tests {
 
     #[test]
     fn a_panic_reads_as_the_macros_message() {
-        let new = "thread 'main' panicked at target/hrs/lib.rs:7:5:\nnot yet\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\n";
+        let new = "thread 'main' panicked at target/src/lib.rs:7:5:\nnot yet\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\n";
         assert_eq!(runner_error(new), "panicked: not yet");
-        let old = "thread 'main' panicked at 'not yet', target/hrs/lib.rs:7:5\nnote: run with `RUST_BACKTRACE=1` …\n";
+        let old = "thread 'main' panicked at 'not yet', target/src/lib.rs:7:5\nnote: run with `RUST_BACKTRACE=1` …\n";
         assert_eq!(runner_error(old), "panicked: not yet");
         assert_eq!(runner_error("no proc macro `x` in this crate\n"), "no proc macro `x` in this crate");
         assert_eq!(runner_error(""), "it failed without a message");

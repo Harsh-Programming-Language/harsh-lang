@@ -1,6 +1,6 @@
 [package]
 name = "harsh-lang"
-version = "0.6.4"
+version = "0.7.0"
 edition = "2021"
 authors = ["Bahiminin Benoit Dah"]
 # `examples/` holds Harsh sources and their generated Rust, not Cargo example
@@ -69,6 +69,11 @@ remap = ["dep:serde_json"]
 lsp = ["dep:serde_json", "dep:serde", "dep:lsp-server", "dep:lsp-types"]
 
 [dependencies]
+# The converter asks Rust's own parser whether a stretch of a macro's body is
+# one expression -- the rule for where it writes a hole (the user, 2026-10-06:
+# "Rust parses it as one expression", by Rust's parser, not an approximation).
+syn = { version = "2", default-features = false, features = ["full", "parsing"] }
+proc-macro2 = { version = "1", default-features = false }
 serde_json = { version = "1", optional = true }
 serde = { version = "1", features = ["derive"], optional = true }
 lsp-server = { version = "0.7", optional = true }

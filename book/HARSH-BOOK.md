@@ -128,10 +128,10 @@ Read the three blocks top to bottom.
 
 `hrs run` is two steps that you will do a thousand times, so it is worth seeing them once.
 
-1. **Transpile.** `hrs` reads `src/main.hrs` and writes `target/hrs/main.rs`, the same program in Rust's own spelling. It also writes a *source map*: which byte of the Rust came from which byte of the Harsh.
+1. **Transpile.** `hrs` reads `src/main.hrs` and writes `target/src/main.rs`, the same program in Rust's own spelling. It also writes a *source map*: which byte of the Rust came from which byte of the Harsh.
 2. **Compile and run.** `cargo`, Rust's build tool, compiles the Rust and runs the binary. If the compiler complains, `hrs` uses the source map to turn every line number in the complaint into a line of your `.hrs` file.
 
-You never read `target/hrs/main.rs` unless you want to; in daily use it is an intermediate file.
+You never read `target/src/main.rs` unless you want to; in daily use it is an intermediate file.
 
 ## 1.3 Arguments
 
@@ -2547,7 +2547,7 @@ Three files. `src/main.hrs` declares `pub mod garden` with no body — just the 
 
 Only the crate root ever needs to know the tree's shape; a file that declares a child module does not say where the child's file is, because there is only one place it can be. And nothing in the calling code changes when a module moves from inline to its own file — the path `crate.garden.vegetables.Asparagus` is the same either way. Moving code into files is a filing decision, and the module system keeps it from being anything more.
 
-> **Harsh —** The file layout is not Harsh's invention and Harsh does not touch it: `hrs build` transpiles every file under `src/` into `target/hrs/`, tree for tree and name for name, so the compiler finds each module exactly where the declaration says it is.
+> **Harsh —** The file layout is not Harsh's invention and Harsh does not touch it: `hrs build` transpiles every file under `src/` into `target/src/`, tree for tree and name for name, so the compiler finds each module exactly where the declaration says it is.
 
 ## 7.6 What you have
 
@@ -6602,7 +6602,7 @@ $ hrs test
    Doc-tests my_crate
 
 running 1 test
-test target/hrs/lib.rs - add_one (line 10) ... ok
+test target/src/lib.rs - add_one (line 10) ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.17s
 ```
@@ -6670,7 +6670,7 @@ That is the way to share Harsh code *with Rust users*: they get readable Rust, f
 
 To share a library *as Harsh*, macros and all, share its Harsh: another project depends on it by path, as the next section shows, and `hrs` transpiles it first — its `~` macros, and those it re-exports with `pub use`, reach the program that uses it. A registry of Harsh's own is planned, so that a Harsh library can be published and added by name as a Rust crate is; until it exists, a path is how Harsh travels as Harsh.
 
-**Adding dependencies.** A Harsh project has two manifests side by side. `Cargo.toml` is Cargo's, and lists Rust's crates: `cargo add serde` writes there, as in Rust. `Hrs.toml` is Harsh's, and lists Harsh's dependencies — `hrs_std`, and Harsh crates — which `hrs` handles before Cargo runs: it reads each one's Harsh macros and signatures, transpiles it, and builds the project from a `Cargo.toml` it generates in `target/hrs/`, yours plus them. `hrs add hrs_std` writes to `Hrs.toml`. A Harsh crate of your own, in a folder beside the project, is one line:
+**Adding dependencies.** A Harsh project has two manifests side by side. `Cargo.toml` is Cargo's, and lists Rust's crates: `cargo add serde` writes there, as in Rust. `Hrs.toml` is Harsh's, and lists Harsh's dependencies — `hrs_std`, and Harsh crates — which `hrs` handles before Cargo runs: it reads each one's Harsh macros and signatures, transpiles it, and builds the project from a `Cargo.toml` it generates in `target/src/`, yours plus them. `hrs add hrs_std` writes to `Hrs.toml`. A Harsh crate of your own, in a folder beside the project, is one line:
 
 ```toml
 # Hrs.toml

@@ -14,11 +14,11 @@ Harsh is a transpiler, so the tools are a thin layer over cargo's.
     hrs export DIR        the project as a plain Rust crate
 
 A project keeps its Harsh in `src/**.hrs`. The generated Rust goes to
-`target/hrs/`, and `Cargo.toml` points at it:
+`target/src/`, and `Cargo.toml` points at it:
 
     [[bin]]
     name = "myapp"
-    path = "target/hrs/main.rs"
+    path = "target/src/main.rs"
 
 One manifest, ordinary dependencies, nothing extra to ignore — cargo already
 ignores `/target`.

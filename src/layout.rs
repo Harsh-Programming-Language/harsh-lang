@@ -1025,6 +1025,54 @@ fn check_arrow_spacing(sig: &[&Token]) -> Result<(), LayoutError> {
     Ok(())
 }
 
+/// `show (pair s).0`: a group as an argument, with a tuple index after it.
+/// The index would apply to the call's result -- `show(pair(s)).0` -- which
+/// may compile with another meaning, so the form is refused, naming the
+/// isolated one (the user, 2026-10-06).
+fn check_indexed_group_argument(sig: &[&Token]) -> Result<(), LayoutError> {
+    for c in 0..sig.len().saturating_sub(1) {
+        if sig[c].kind != Tk::Close(')') || sig[c + 1].kind != Tk::TupleIdx || sig[c + 1].span.lo != sig[c].span.hi {
+            continue;
+        }
+        let mut d = 0i32;
+        let mut open = None;
+        for k in (0..=c).rev() {
+            match sig[k].kind {
+                Tk::Close(_) => d += 1,
+                Tk::Open(_) => {
+                    d -= 1;
+                    if d == 0 {
+                        open = Some(k);
+                        break;
+                    }
+                }
+                _ => {}
+            }
+        }
+        let Some(o) = open else { continue };
+        // An empty group is a call with no arguments, `unwrap$.1` -- an atom
+        // with its index, never an argument group.
+        if o == 0 || o + 1 == c {
+            continue;
+        }
+        let p = sig[o - 1];
+        let argument = match p.kind {
+            Tk::Ident => !crate::rules::is_keyword(&p.text),
+            Tk::Int | Tk::Float | Tk::Str | Tk::Char | Tk::Close(_) => true,
+            _ => p.text == "$",
+        };
+        if argument {
+            let src_group: String = sig[o..=c + 1].iter().map(|t| t.text.as_str()).collect::<Vec<_>>().join(" ");
+            let shown = src_group.replace("( ", "(").replace(" )", ")").replace(" .", ".");
+            return Err(LayoutError {
+                msg: format!("`{shown}` as an argument: the index would apply to the call's result. Isolate the whole argument: `({shown})`"),
+                span: sig[c + 1].span,
+            });
+        }
+    }
+    Ok(())
+}
+
 fn check_trailing_semi(sig: &[&Token], outer: BlockKind) -> Result<(), LayoutError> {
     let Some(last) = sig.last() else { return Ok(()) };
     if last.kind != Tk::Semi || matches!(outer, BlockKind::Macro | BlockKind::MacroRules) {
@@ -1054,6 +1102,7 @@ fn check_old_marks(ln: &Line, outer: BlockKind) -> Result<(), LayoutError> {
     check_trailing_semi(&sig, outer)?;
     check_closure_params(&sig)?;
     check_arrow_spacing(&sig)?;
+                    check_indexed_group_argument(&sig)?;
     check_inline_if_block_else(&sig)?;
     check_inline_old_marks(&sig)?;
     check_backslash_head(&sig)?;
@@ -2658,6 +2707,7 @@ fn build_block(lines: &[Line], idx: &mut usize, min_indent: usize, outer: BlockK
                     check_closure_params(&sig)?;
                     check_inline_if_block_else(&sig)?;
                     check_arrow_spacing(&sig)?;
+                    check_indexed_group_argument(&sig)?;
                 }
                 if inline_colon(&ln.toks, 0, ln.toks.len(), outer).is_some() {
                     let mut nodes = expand_item(&ln.toks, 0, ln.toks.len(), outer, ln)?;

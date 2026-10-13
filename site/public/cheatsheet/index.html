@@ -241,6 +241,22 @@ page is transpiled by <code>check.sh</code>, so none of it can fall behind the l
 <td><code>let s = add (n * 2) (-1)</code></td>
 </tr>
 <tr>
+<td>A reference argument</td>
+<td><code>let n = count (&amp;w)</code></td>
+</tr>
+<tr>
+<td>One argument after a constructor</td>
+<td><code>let r = Some &amp;x</code></td>
+</tr>
+<tr>
+<td>A range argument</td>
+<td><code>let s = total 0..n</code></td>
+</tr>
+<tr>
+<td>A call's tuple item</td>
+<td><code>let first = (split_pair text).0</code></td>
+</tr>
+<tr>
 <td>A method</td>
 <td><code>let n = text &lt;- len$</code></td>
 </tr>
@@ -288,7 +304,7 @@ in parentheses. <code>f$</code> calls with no arguments.</p>
 </tr>
 <tr>
 <td>Bitwise</td>
-<td><code>let m = (a &amp; b) \| (c ^ d) &lt;&lt; 2</code></td>
+<td><code>let m = (a &amp; b) | (c ^ d) &lt;&lt; 2</code></td>
 </tr>
 <tr>
 <td>Compound assignment</td>
@@ -533,7 +549,7 @@ dereferences the field <code>x</code>, not <code>p</code>.</p>
 </tr>
 <tr>
 <td>Sort by a key</td>
-<td><code>v &lt;- sort_by_key (\|p\| p &lt;- age)</code></td>
+<td><code>v &lt;- sort_by_key (|p| p &lt;- age)</code></td>
 </tr>
 <tr>
 <td>Reverse</td>
@@ -745,7 +761,7 @@ dereferences the field <code>x</code>, not <code>p</code>.</p>
 </tr>
 <tr>
 <td>Destructure in a closure's parameter</td>
-<td><code>let xs: Vec&lt;f64&gt; = ps &lt;- iter$ &lt;- map (\|(Point\ x, ..)\| *x) &lt;- collect$</code></td>
+<td><code>let xs: Vec&lt;f64&gt; = ps &lt;- iter$ &lt;- map (|(Point\ x, ..)| *x) &lt;- collect$</code></td>
 </tr>
 <tr>
 <td><code>matches!</code></td>
@@ -788,19 +804,19 @@ dereferences the field <code>x</code>, not <code>p</code>.</p>
 </tr>
 <tr>
 <td>Early return</td>
-<td><code>fn first_even (v: &amp;[i32]) -&gt; Option&lt;i32&gt;: v &lt;- iter$ &lt;- find (\|x\| *x % 2 == 0) &lt;- copied$</code></td>
+<td><code>fn first_even (v: &amp;[i32]) -&gt; Option&lt;i32&gt;: v &lt;- iter$ &lt;- find (|x| *x % 2 == 0) &lt;- copied$</code></td>
 </tr>
 <tr>
 <td>A closure</td>
-<td><code>let inc = \|x\| x + 1</code></td>
+<td><code>let inc = |x| x + 1</code></td>
 </tr>
 <tr>
 <td>Annotated closure</td>
-<td><code>let add = \|a: i32, b: i32\| -&gt; i32: a + b</code></td>
+<td><code>let add = |a: i32, b: i32| -&gt; i32: a + b</code></td>
 </tr>
 <tr>
 <td>Capturing by value</td>
-<td><code>let show = move \|\| println! "{name}"</code></td>
+<td><code>let show = move || println! "{name}"</code></td>
 </tr>
 <tr>
 <td>Call a closure</td>
@@ -808,19 +824,19 @@ dereferences the field <code>x</code>, not <code>p</code>.</p>
 </tr>
 <tr>
 <td>Pipe forward</td>
-<td><code>let r = 5 \|&gt; double \|&gt; inc</code></td>
+<td><code>let r = 5 |&gt; double |&gt; inc</code></td>
 </tr>
 <tr>
 <td>Pipe backward</td>
-<td><code>let r = inc &lt;\| double &lt;\| 5</code></td>
+<td><code>let r = inc &lt;| double &lt;| 5</code></td>
 </tr>
 <tr>
 <td>Several values into one call</td>
-<td><code>let s = 2 3 \|&gt; add</code></td>
+<td><code>let s = 2 3 |&gt; add</code></td>
 </tr>
 <tr>
 <td>Partial application</td>
-<td><code>let add10 = 10 \|&gt; add</code></td>
+<td><code>let add10 = 10 |&gt; add</code></td>
 </tr>
 </tbody>
 </table>
@@ -870,6 +886,10 @@ room:</p>
 <tr>
 <td>Struct update</td>
 <td><code>let q = Point\ x = 5.0, ..p</code></td>
+</tr>
+<tr>
+<td>A struct as an argument</td>
+<td><code>cards &lt;- push (Card\ id = 1)</code>, <code>Ok (Card\ id = 1)</code> — isolated; bare, it is refused. Over several lines: the fields one unit past <code>Card</code>, the closing paren under the opening one</td>
 </tr>
 <tr>
 <td>Tuple struct value</td>
@@ -1063,7 +1083,7 @@ with more than two fields goes one field per line:</p>
 </tr>
 <tr>
 <td>Transform the value</td>
-<td><code>let doubled = found &lt;- map (\|x\| x * 2)</code></td>
+<td><code>let doubled = found &lt;- map (|x| x * 2)</code></td>
 </tr>
 <tr>
 <td>Panic</td>
@@ -1105,11 +1125,11 @@ with more than two fields goes one field per line:</p>
 <tbody>
 <tr>
 <td>Map</td>
-<td><code>let doubled: Vec&lt;i32&gt; = v &lt;- iter$ &lt;- map (\|x\| x * 2) &lt;- collect$</code></td>
+<td><code>let doubled: Vec&lt;i32&gt; = v &lt;- iter$ &lt;- map (|x| x * 2) &lt;- collect$</code></td>
 </tr>
 <tr>
 <td>Filter</td>
-<td><code>let big: Vec&lt;&amp;i32&gt; = v &lt;- iter$ &lt;- filter (\|x\| **x &gt; 10) &lt;- collect$</code></td>
+<td><code>let big: Vec&lt;&amp;i32&gt; = v &lt;- iter$ &lt;- filter (|x| **x &gt; 10) &lt;- collect$</code></td>
 </tr>
 <tr>
 <td>Sum</td>
@@ -1117,19 +1137,19 @@ with more than two fields goes one field per line:</p>
 </tr>
 <tr>
 <td>Count</td>
-<td><code>let n = v &lt;- iter$ &lt;- filter (\|x\| **x &gt; 0) &lt;- count$</code></td>
+<td><code>let n = v &lt;- iter$ &lt;- filter (|x| **x &gt; 0) &lt;- count$</code></td>
 </tr>
 <tr>
 <td>Any, all</td>
-<td><code>let any_neg = v &lt;- iter$ &lt;- any (\|x\| *x &lt; 0)</code></td>
+<td><code>let any_neg = v &lt;- iter$ &lt;- any (|x| *x &lt; 0)</code></td>
 </tr>
 <tr>
 <td>Find</td>
-<td><code>let first = v &lt;- iter$ &lt;- find (\|x\| **x &gt; 3)</code></td>
+<td><code>let first = v &lt;- iter$ &lt;- find (|x| **x &gt; 3)</code></td>
 </tr>
 <tr>
 <td>Fold</td>
-<td><code>let product = v &lt;- iter$ &lt;- fold 1 (\|acc, x\| acc * x)</code></td>
+<td><code>let product = v &lt;- iter$ &lt;- fold 1 (|acc, x| acc * x)</code></td>
 </tr>
 <tr>
 <td>Zip</td>
@@ -1254,7 +1274,7 @@ with more than two fields goes one field per line:</p>
 <tbody>
 <tr>
 <td>Spawn a thread</td>
-<td><code>let h = thread.spawn (\|\| work$)</code></td>
+<td><code>let h = thread.spawn (|| work$)</code></td>
 </tr>
 <tr>
 <td>Wait for it</td>
@@ -1412,6 +1432,10 @@ Rust. A macro's own language — an <code>rsx!</code> tree, <code>view!</code> m
 <td>lay out the files by Harsh's rules</td>
 </tr>
 <tr>
+<td><code>hrs test</code> at a workspace's root</td>
+<td>each member in turn: a Harsh member by <code>hrs</code>, a Rust one by cargo (also <code>build</code>, <code>check</code>, <code>lint</code>, <code>fmt</code>)</td>
+</tr>
+<tr>
 <td><code>hrs add hrs_std</code></td>
 <td>add Harsh's crates, to <code>Hrs.toml</code> (Rust crates: <code>cargo add</code>, to <code>Cargo.toml</code>)</td>
 </tr>
@@ -1492,6 +1516,8 @@ Rust. A macro's own language — an <code>rsx!</code> tree, <code>view!</code> m
 <li>An <code>if</code> with three branches or more goes on several lines.</li>
 <li>A literal inside a literal on one line is parenthesised:
   <code>Dog\ inner = (Animal\ name = n), good = true</code>.</li>
+<li>An inline <code>if c: a else: b</code> is left as written; too long, write a block
+  <code>if</code> with each value beneath its branch.</li>
 <li>A <code>match</code> with more than two arms goes one arm per line.</li>
 <li>A call made long by a long argument goes vertical, one argument per line.</li>
 <li>No semicolons: a block that discards its last value ends with a line <code>()</code>.</li>

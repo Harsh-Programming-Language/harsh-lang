@@ -1269,7 +1269,7 @@ change made to one is missing from the other. First the refusal:</p>
  5 |     names &lt;- push (String.from "Grace")
    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ mutable borrow occurs here
  6 |     println! "{first}"
-   |               ------- immutable borrow later used here</code></pre>
+   |                ----- immutable borrow later used here</code></pre>
 <p>then the fix that keeps one value, by ending the first borrow before the
 second begins, instead of cloning:</p>
 <pre class="code harsh"><code><span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>

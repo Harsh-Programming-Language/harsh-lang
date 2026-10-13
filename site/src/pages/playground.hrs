@@ -63,21 +63,23 @@ pub fn Playground$ -> Element:
 fn run (src: Signal<String>) (mut console: Signal<String>) (mut running: Signal<bool>):
     // With the part of `hrs_std` the program uses, when it uses any: the
     // Rust Playground has nalgebra and num-traits, but not `hrs_std`.
-    let rust = match transpile_str (&src <- read$)\
-        Ok rust => single_file (&rust)
-        Err message =>
-            console <- set message
-            return
+    let rust =
+        match transpile_str (&src <- read$)\
+            Ok rust => single_file (&rust)
+            Err message =>
+                console <- set message
+                return
     running <- set true
     console <- set ("Compiling and running…" <- to_string$)
     // The task runs on its own; its handle is not needed.
     let _ = spawn async move:
         let eval = document.eval EVALUATE
-        let out = match eval <- send rust\
-            Ok _ =>
-                eval <- join.<String>$
-                     <- await
-                     <- unwrap_or_else (|e| format! "{e}")
-            Err e => format! "{e}"
+        let out =
+            match eval <- send rust\
+                Ok _ =>
+                    eval <- join.<String>$
+                         <- await
+                         <- unwrap_or_else (|e| format! "{e}")
+                Err e => format! "{e}"
         console <- set out
         running <- set false

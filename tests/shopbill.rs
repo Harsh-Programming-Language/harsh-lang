@@ -1,5 +1,10 @@
-//! What building ShopBill found (HARSH-ISSUES.md, S1-S6), and the rulings of
-//! 2026-10-05 that came from it: one test each, so they stay fixed.
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
+//! What building ShopBill found (HARSH-ISSUES.md, S1-S7), and the rulings of
+//! 2026-10-05 and 2026-10-12 that came from it: one test each, so they stay
+//! fixed.
 
 fn t(src: &str) -> Result<String, String> {
     harsh_lang::driver::transpile_str(src).map_err(|e| e.to_string())
@@ -148,3 +153,102 @@ fn fmt_writes_a_constructors_single_argument_bare() {
     assert!(f.contains("fn x (&self) -> &i32:") && f.contains("Some (&x) (&x)"), "{f}");
 }
 
+
+/// S2, ruled 2026-10-12 (0.8.2): a literal as an argument is isolated, and
+/// the bare form is refused with the isolated one named -- it became
+/// `push(Card) { .. }`, rustc pointing at the generated brace. A constructor's
+/// single argument is no exception: `Ok (View\ ..)`.
+#[test]
+fn s2_a_bare_literal_argument_is_refused() {
+    let decl = "struct Card\n    id: u32\n\nstruct P<T>\n    x: T\n\n";
+    for (body, want) in [
+        ("fn main$:\n    let mut v = Vec.new$\n    v <- push Card\\\n        id = 1\n", "`push (Card\\ …)`"),
+        ("fn f$ -> Result<Card, String>:\n    Ok Card\\\n        id = 1\n", "`Ok (Card\\ …)`"),
+        ("fn f$ -> Option<Card>: Some Card\\ id = 1\n", "`Some (Card\\ …)`"),
+        ("fn main$:\n    let v = vec! Card\\ id = 1\n", "`vec! (Card\\ …)`"),
+        ("fn main$:\n    let mut v = Vec.new$\n    v <- push P.<i32>\\ x = 1\n", "`push (P.<i32>\\ …)`"),
+    ] {
+        let e = t(&format!("{decl}{body}")).unwrap_err();
+        assert!(e.contains("a literal as an argument is isolated") && e.contains(want), "{want}\n{e}");
+    }
+    // The isolated forms, and a literal that is no argument, are accepted.
+    let r = t(&format!("{decl}fn f$ -> Option<Card>:\n    let a = Card\\ id = 1\n    let mut v = Vec.new$\n    v <- push (Card\\\n        id = 2\n    )\n    v <- push (P.<i32>\\ x = 3)\n    let w = vec! (Card\\ id = 4) (Card\\ id = 5)\n    return Some (Card\\ id = 6)\n")).unwrap();
+    assert!(flat(&r).contains("v.push(Card{id:2,})") && flat(&r).contains("returnSome(Card{id:6,})"), "{r}");
+}
+
+/// S7: the project's folders are mirrored into `target/src/` -- real
+/// folders, each file a hard link -- not linked: Dioxus's `asset!` resolves a
+/// symbolic link back to the project, outside `CARGO_MANIFEST_DIR`, and
+/// refuses the file. The mirror follows the project at every pass 1.
+#[cfg(unix)]
+#[test]
+fn s7_the_projects_folders_are_mirrored_not_linked() {
+    use std::os::unix::fs::MetadataExt;
+    use std::process::Command;
+    let d = std::env::temp_dir().join(format!("harsh-shopbill-s7-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&d);
+    std::fs::create_dir_all(&d).unwrap();
+    let hrs = env!("CARGO_BIN_EXE_hrs");
+    assert!(Command::new(hrs).args(["new", "app"]).current_dir(&d).output().unwrap().status.success());
+    let app = d.join("app");
+    std::fs::create_dir_all(app.join("assets/img")).unwrap();
+    std::fs::write(app.join("assets/main.css"), "body{}").unwrap();
+    std::fs::write(app.join("assets/img/a.png"), "x").unwrap();
+    std::fs::write(app.join("Hrs.toml"), "[dependencies]\n").unwrap();
+    let pass1 = || assert!(Command::new(hrs).args(["cargo", "version"]).current_dir(&app).output().unwrap().status.success());
+    // A symbolic link left by an earlier `hrs` is replaced.
+    std::fs::create_dir_all(app.join("target/src")).unwrap();
+    std::os::unix::fs::symlink(app.join("assets"), app.join("target/src/assets")).unwrap();
+    pass1();
+    let m = app.join("target/src/assets");
+    assert!(!std::fs::symlink_metadata(&m).unwrap().file_type().is_symlink() && m.is_dir());
+    let ino = |p: &std::path::Path| std::fs::metadata(p).unwrap().ino();
+    assert_eq!(ino(&app.join("assets/main.css")), ino(&m.join("main.css")));
+    // Replaced by an editor, added, removed: followed at the next pass.
+    std::fs::write(app.join("assets/main.css.new"), "body{color:red}").unwrap();
+    std::fs::rename(app.join("assets/main.css.new"), app.join("assets/main.css")).unwrap();
+    std::fs::write(app.join("assets/b.js"), "y").unwrap();
+    std::fs::remove_file(app.join("assets/img/a.png")).unwrap();
+    pass1();
+    assert_eq!(std::fs::read_to_string(m.join("main.css")).unwrap(), "body{color:red}");
+    assert_eq!(ino(&app.join("assets/main.css")), ino(&m.join("main.css")));
+    assert!(m.join("b.js").is_file() && !m.join("img/a.png").exists());
+    let _ = std::fs::remove_dir_all(&d);
+}
+
+/// S2's layout, ruled 2026-10-13: a multi-line literal argument has its
+/// fields one unit past the literal's name and its `)` under its `(`. When
+/// the fields would pass the width, the `(` goes beneath the callee, one
+/// unit past it; and when even that is too far, a long link goes to its own
+/// line first. One run is enough, and the Rust is the same.
+#[test]
+fn s2_a_literal_argument_is_laid_out_past_its_name() {
+    let head = "struct Card\n    id: u32\n    title: String\n\nfn main$:\n";
+    let cases = [
+        (
+            "    cards <- push (Card\\\n        id = 2\n        title = String.from \"Review\"\n    )\n",
+            "    cards <- push (Card\\\n                       id = 2\n                       title = String.from \"Review\"\n                  )\n",
+        ),
+        (
+            "    cards <- very_long_method_called_push (Card\\\n        id = 2\n        title = String.from \"Review\"\n    )\n",
+            "    cards <- very_long_method_called_push\n                 (Card\\\n                      id = 2\n                      title = String.from \"Review\"\n                 )\n",
+        ),
+        (
+            "    very_extremely_long_struct_called_cards <- very_extremely_long_method_called_push (Card\\\n        id = 2\n        title = String.from \"Review\"\n    )\n",
+            "    very_extremely_long_struct_called_cards\n        <- very_extremely_long_method_called_push\n               (Card\\\n                    id = 2\n                    title = String.from \"Review\"\n               )\n",
+        ),
+        // Beside a short receiver the link stays, even when the fields
+        // still pass the width: a line of its own would gain two columns.
+        (
+            "    cards <- extend_from_a_rather_long_method_name (Card\\\n        id = 2\n        title = String.from \"Review, with a title long enough\"\n    )\n",
+            "    cards <- extend_from_a_rather_long_method_name\n                 (Card\\\n                      id = 2\n                      title = String.from \"Review, with a title long enough\"\n                 )\n",
+        ),
+    ];
+    for (src, want) in cases {
+        let src = format!("{head}{src}");
+        let got = harsh_lang::fmt::format(&src);
+        assert_eq!(got, format!("{head}{want}"), "\n{got}");
+        assert_eq!(harsh_lang::fmt::format(&got), got, "a second run changed it");
+        assert_eq!(flat(&t(&got).unwrap()), flat(&t(&src).unwrap()));
+    }
+}

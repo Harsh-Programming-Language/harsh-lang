@@ -329,7 +329,7 @@ pre.code:hover .copy,.copy:focus-visible{opacity:1}
 <p>Three rules do most of the work in Harsh, and everything else follows from them:</p>
 <ul>
 <li>A colon ending a logical line opens a block; a more-indented line anywhere else continues the current line.</li>
-<li>Application is by juxtaposition, <code>f a b</code>, and parentheses isolate <strong>one</strong> argument — a parenthesised group with commas is a tuple, always.</li>
+<li>Application is by juxtaposition, <code>f a b</code>, and parentheses isolate <strong>one</strong> argument — a parenthesised group with commas is a tuple, always. The reason explains every case: spaces separate arguments, so an argument of several tokens is isolated, <code>f (n * 2) (-1) (&amp;x)</code>, and where nothing needs separating nothing is — a lone parameter, <code>fn greet name: &amp;str</code>, or a single argument after a constructor the program declares or <code>Some</code>, <code>Ok</code>, <code>Err</code>: <code>Some &amp;x</code>, <code>let Some mut line = row$ else:</code>. The constructors a program declares are its structs and its enums' variants — those one level under the <code>enum</code>, and those written inline after its <code>\</code> — never a record variant's fields: with a variant <code>Email</code> holding <code>first: u8</code>, a local <code>first</code> is a name and <code>first &amp; 0x7f</code> a bit-and. A range of atoms is an atom, <code>f 0..3</code>; a tuple index or a tight index applies to one atom, so a call's result is indexed isolated, <code>(f src).0</code>, <code>(f src)[i]</code>, and passed as an argument isolated again, <code>show ((f src).0)</code>.</li>
 <li><code>.</code> is the path separator and <code>&lt;-</code> is member access, both directions, no exceptions.</li>
 </ul>
 <h3 id="setting-up">Setting up</h3>
@@ -384,8 +384,8 @@ hrs run</code></pre>
 <p><code>Cargo.toml</code> is a normal manifest with one addition — the binary target points at the <em>generated</em> tree, not at <code>src/</code>:</p>
 <pre class="code"><code>[[bin]]
 name = "hello"
-path = "target/hrs/main.rs"</code></pre>
-<p>That is the whole arrangement. You write <code>src/**.hrs</code>; <code>hrs build</code> transpiles each one to <code>target/hrs/**.rs</code> beside a source map; cargo compiles what is in <code>target/hrs/</code>; errors come back pointing at your <code>.hrs</code> line and column. <code>target/</code> is ignored by git, so the generated Rust is never committed.</p>
+path = "target/src/main.rs"</code></pre>
+<p>That is the whole arrangement. You write <code>src/**.hrs</code>; <code>hrs build</code> transpiles each one to <code>target/src/**.rs</code> beside a source map; cargo compiles what is in <code>target/src/</code>; errors come back pointing at your <code>.hrs</code> line and column. <code>target/</code> is ignored by git, so the generated Rust is never committed.</p>
 <p>To convert an existing cargo project, add that <code>[[bin]]</code> section (with the package's name) and move <code>src/main.rs</code> aside. If the <code>[[bin]]</code> entry is missing, <code>hrs</code> refuses to build and says so — otherwise cargo would silently compile <code>src/main.rs</code> and run the wrong program.</p>
 <h4 id="the-commands">The commands</h4>
 <pre class="code"><code>hrs build [cargo args]     transpile, then cargo build
@@ -411,9 +411,10 @@ hrs dist  &lt;dir&gt;            write Harsh's standard distribution (hrs_std an
                            outside a Harsh project -- the Jupyter kernel's use
 hrs &lt;input.hrs&gt; [-o out.rs] [--map out.map.json]
                            transpile a single file</code></pre>
+<p>At a workspace's root, a <code>Cargo.toml</code> with <code>[workspace]</code> and no <code>[package]</code>, <code>hrs build</code>, <code>check</code>, <code>test</code>, <code>lint</code>, <code>fmt</code> and <code>hrs cargo …</code> go through the members in the order <code>members</code> lists them: a Harsh member is built by <code>hrs</code> in its folder, a Rust member by cargo, and the first failure stops the run. <code>hrs run</code> acts on one program, so there it names the members instead.</p>
 <p><code>hrs export</code> is how Harsh code is shared with Rust users -- publish the exported crate to crates.io, and they get Rust. Harsh's <code>~</code> macros unfold before transpiling, so they are not in the export; to share a library with Harsh users, macros included, share its Harsh (a path dependency, for now; a Harsh registry is planned). The Book's chapter 17 has both.</p>
 <p>Anything after the subcommand goes to cargo unchanged: <code>hrs run --release</code>, <code>hrs test -- --nocapture</code>. Each command first reports what the transpile step did — <code>hrs: transpiled 1 of 3 file(s)</code> or <code>hrs: 3 file(s) up to date</code> — so a build that does nothing says so.</p>
-<p>The generated Rust under <code>target/hrs/</code> is not meant to be read. It keeps the <code>.hrs</code> file's line breaks so that every diagnostic maps back to the right line, and it is not formatted, because formatting would move every byte the source map depends on. When a Rust reader needs the code — a reviewer, a collaborator without <code>hrs</code>, a crates.io upload — <code>hrs export</code> writes the project as an ordinary cargo crate: <code>Cargo.toml</code> with its targets under <code>src/</code>, every module transpiled, no source maps, and <code>cargo fmt</code> run over the result (when rustfmt is installed; <code>rustup component add rustfmt</code>). The exported crate builds with <code>cargo build</code> alone. Nothing in it points back at the <code>.hrs</code> files, so it is a copy, not a link: export again after changes.</p>
+<p>The generated Rust under <code>target/src/</code> is not meant to be read. It keeps the <code>.hrs</code> file's line breaks so that every diagnostic maps back to the right line, and it is not formatted, because formatting would move every byte the source map depends on. When a Rust reader needs the code — a reviewer, a collaborator without <code>hrs</code>, a crates.io upload — <code>hrs export</code> writes the project as an ordinary cargo crate: <code>Cargo.toml</code> with its targets under <code>src/</code>, every module transpiled, no source maps, and <code>cargo fmt</code> run over the result (when rustfmt is installed; <code>rustup component add rustfmt</code>). The exported crate builds with <code>cargo build</code> alone. Nothing in it points back at the <code>.hrs</code> files, so it is a copy, not a link: export again after changes.</p>
 <h4 id="bringing-existing-rust-in">Bringing existing Rust in</h4>
 <pre class="code"><code>hrs-from src/old.rs -o src/old.hrs</code></pre>
 <p>The converter writes Harsh from Rust: braces become indentation, <code>::</code> becomes <code>.</code>, <code>.method()</code> becomes <code>&lt;- method$</code>, a <code>fn</code>'s parameter list becomes one group per parameter, <code>use a::{b, c}</code> becomes <code>use a.(b, c)</code>. Its output is valid Harsh that transpiles back to token-identical Rust — the transpiler's own source goes through this round trip in the test suite — and it is the fastest way to see what a file of your own looks like in Harsh.</p>
@@ -759,7 +760,17 @@ They are for people writing Harsh. The transpiler accepts every form;
 <code>hrs fmt</code> applies what can be counted -- chains, lists and <code>if</code> chains of
 three or more, and calls made long by long arguments -- and leaves the rest
 to the writer: a literal inside a literal, an <code>if</code> of three clauses as a
-<code>let</code>'s value (it takes <code>do:</code>), and a call deep inside another.</p>
+<code>let</code>'s value (it takes <code>do:</code>), a call deep inside another, and an inline
+<code>if c: a else: b</code> -- too long, write it as a block <code>if</code>, each value beneath
+its branch:</p>
+<pre class="code harsh"><code><span class="k">let</span> what <span class="p">=</span>
+    <span class="k">if</span> s <span class="op">&lt;-</span> subject <span class="op">&lt;-</span> is_empty<span class="defer">$</span><span class="p">:</span>
+        s <span class="op">&lt;-</span> body <span class="op">&lt;-</span> clone<span class="defer">$</span>
+    <span class="k">else</span><span class="p">:</span>
+        s <span class="op">&lt;-</span> subject <span class="op">&lt;-</span> clone<span class="defer">$</span></code></pre>
+<p>Never break an inline <code>if</code> at its <code>&lt;-</code>: the condition and both values end up
+on one column, and a link after <code>else:</code> reads as if it applied to the whole
+<code>if</code> when it applies to the <code>else</code> value only.</p>
 <ul>
 <li><strong>A chain of more than two steps</strong> — three or more <code>&lt;-</code> in one chain — is
   broken: the value goes on the line after the <code>=</code>, and each step beneath the
@@ -814,6 +825,21 @@ to the writer: a literal inside a literal, an <code>if</code> of three clauses a
         <span class="str">"{} ({})"</span>
         name                                    <span class="com">// on the fence: short</span>
         <span class="p">(</span><span class="k">if</span> good<span class="p">:</span> <span class="str">"good dog"</span> <span class="k">else</span><span class="p">:</span> <span class="str">"dog"</span><span class="p">)</span>       <span class="com">// a long argument</span></code></pre>
+<ul>
+<li><strong>A chain of one link is never broken</strong>, however long:
+  <code>let label = message &lt;- subject_line_for_privilege_log_with_redactions_applied$</code>
+  stays as it is. When long arguments make it long, the long-call rule applies
+  to the method: the chain moves to the line after its <code>=</code>, and its arguments
+  go beneath the method, one unit past it — both at once. Without a <code>=</code>, the
+  arguments go beneath (the user's ruling, 2026-10-12).</li>
+</ul>
+<pre class="code harsh"><code><span class="k">let</span> label <span class="p">=</span>
+    message <span class="op">&lt;-</span> subject_line_for_privilege_log
+                   <span class="p">(</span>first_custodian_name_argument<span class="p">)</span>
+                   <span class="p">(</span>second_matter_reference<span class="p">)</span>
+message <span class="op">&lt;-</span> send_to_reviewer_queue_for_second_pass
+               first_custodian_name_argument
+               second_matter_reference</code></pre>
 <ul>
 <li><strong>A literal holding another literal</strong>: on one line the inner one is
   parenthesised — the transpiler refuses it otherwise, since where it ends
@@ -1278,9 +1304,9 @@ params <span class="op">&lt;-</span> name
 </ul>
 <h4 id="generics-in-every-position">Generics in every position</h4>
 <pre class="code harsh"><code><span class="k">fn</span> generic<span class="p">&lt;</span><span class="t">T</span><span class="p">:</span> std<span class="p">.</span>fmt<span class="p">.</span><span class="t">Debug</span><span class="p">&gt;</span> <span class="p">(</span>label<span class="p">:</span> <span class="p">&amp;</span>str<span class="p">)</span> <span class="p">(</span>item<span class="p">:</span> <span class="t">T</span><span class="p">)</span> <span class="op">-&gt;</span> <span class="t">String</span><span class="p">:</span>     function
-<span class="k">struct</span> <span class="t">Generic</span><span class="p">&lt;</span><span class="t">T</span><span class="p">&gt;</span><span class="p">:</span>                                                   <span class="k">struct</span>
+<span class="k">struct</span> <span class="t">Generic</span><span class="p">&lt;</span><span class="t">T</span><span class="p">&gt;</span>                                                    <span class="k">struct</span>
     inner<span class="p">:</span> <span class="t">T</span>
-<span class="k">impl</span><span class="p">&lt;</span><span class="t">T</span><span class="p">:</span> std<span class="p">.</span>fmt<span class="p">.</span><span class="t">Debug</span><span class="p">&gt;</span> <span class="t">Generic</span><span class="p">&lt;</span><span class="t">T</span><span class="p">&gt;</span><span class="p">:</span>                                   <span class="k">impl</span>
+<span class="k">impl</span><span class="p">&lt;</span><span class="t">T</span><span class="p">:</span> std<span class="p">.</span>fmt<span class="p">.</span><span class="t">Debug</span><span class="p">&gt;</span> <span class="t">Generic</span><span class="p">&lt;</span><span class="t">T</span><span class="p">&gt;</span>                                    <span class="k">impl</span>
     <span class="k">fn</span> show <span class="p">(</span><span class="p">&amp;</span><span class="k">self</span><span class="p">)</span> <span class="op">-&gt;</span> <span class="t">String</span><span class="p">:</span>
         <span class="mac">format!</span> <span class="str">"{:?}"</span> <span class="p">(</span><span class="k">self</span> <span class="op">&lt;-</span> inner<span class="p">)</span>
 <span class="k">let</span> m <span class="p">=</span> <span class="t">HashMap</span><span class="p">.</span><span class="p">&lt;</span><span class="t">String</span><span class="p">,</span> i32<span class="p">&gt;</span><span class="p">.</span>new<span class="defer">$</span>                                 call — `<span class="p">.</span><span class="p">&lt;</span><span class="t">T</span><span class="p">&gt;</span>`<span class="p">,</span> <span class="t">Rust</span>'s `<span class="op">::</span><span class="p">&lt;</span><span class="t">T</span><span class="p">&gt;</span>`
@@ -1380,6 +1406,20 @@ params <span class="op">&lt;-</span> name
 <span class="k">if</span> p <span class="op">==</span> <span class="p">(</span><span class="t">Point</span>\ x <span class="p">=</span> <span class="num">1.0</span><span class="p">)</span><span class="p">:</span>                   <span class="k">if</span> p <span class="op">==</span> <span class="p">(</span><span class="t">Point</span> <span class="p">{</span> x<span class="p">:</span> <span class="num">1.0</span> <span class="p">}</span><span class="p">)</span> <span class="p">{</span>
 <span class="k">let</span> v <span class="p">=</span> <span class="mac">vec!</span> <span class="p">(</span><span class="t">Point</span>\ x <span class="p">=</span> <span class="num">1</span><span class="p">)</span> <span class="p">(</span><span class="t">Point</span>\ x <span class="p">=</span> <span class="num">2</span><span class="p">)</span>
 <span class="p">(</span><span class="t">Point</span>\ x <span class="p">=</span> <span class="num">1</span><span class="p">,</span> y <span class="p">=</span> <span class="num">0</span><span class="p">)</span> <span class="p">+</span> <span class="p">(</span><span class="t">Point</span>\ x <span class="p">=</span> <span class="num">2</span><span class="p">,</span> y <span class="p">=</span> <span class="num">3</span><span class="p">)</span></code></pre>
+<p>A literal passed as an argument is isolated like any argument of several tokens -- inline, or with its fields beneath and the <code>)</code> after them -- and a constructor's argument is no exception (since 0.8.2; the bare form, <code>push Card\</code>, is refused with the isolated one named -- it became <code>push(Card) { … }</code>):</p>
+<pre class="code harsh"><code>cards <span class="op">&lt;-</span> push <span class="p">(</span><span class="t">Card</span>\ id <span class="p">=</span> <span class="num">1</span><span class="p">,</span> number <span class="p">=</span> <span class="num">2</span><span class="p">)</span>    cards<span class="p">.</span>push<span class="p">(</span><span class="t">Card</span> <span class="p">{</span> id<span class="p">:</span> <span class="num">1</span><span class="p">,</span> number<span class="p">:</span> <span class="num">2</span> <span class="p">}</span><span class="p">)</span><span class="p">;</span>
+<span class="t">Ok</span> <span class="p">(</span><span class="t">View</span>\ title <span class="p">=</span> t<span class="p">)</span>                         <span class="t">Ok</span><span class="p">(</span><span class="t">View</span> <span class="p">{</span> title<span class="p">:</span> t <span class="p">}</span><span class="p">)</span></code></pre>
+<p>With its fields beneath, the literal's fields stand one unit past its name and its <code>)</code> under its <code>(</code>; when that is too far for the line, the <code>(</code> goes beneath the callee, one unit past it (<code>hrs fmt</code> lays it out so, 0.8.4):</p>
+<pre class="code harsh"><code>cards <span class="op">&lt;-</span> push <span class="p">(</span><span class="t">Card</span>\                        cards<span class="p">.</span>push<span class="p">(</span><span class="t">Card</span> <span class="p">{</span>
+                   id <span class="p">=</span> <span class="num">2</span>                       id<span class="p">:</span> <span class="num">2</span><span class="p">,</span>
+                   title <span class="p">=</span> t                    title<span class="p">:</span> t<span class="p">,</span>
+              <span class="p">)</span>                             <span class="p">}</span><span class="p">)</span><span class="p">;</span>
+
+cards <span class="op">&lt;-</span> very_long_method_called_push        cards<span class="p">.</span>very_long_method_called_push<span class="p">(</span><span class="t">Card</span> <span class="p">{</span>
+             <span class="p">(</span><span class="t">Card</span>\                              id<span class="p">:</span> <span class="num">2</span><span class="p">,</span>
+                  id <span class="p">=</span> <span class="num">2</span>                         title<span class="p">:</span> t<span class="p">,</span>
+                  title <span class="p">=</span> t                  <span class="p">}</span><span class="p">)</span><span class="p">;</span>
+             <span class="p">)</span></code></pre>
 <p>Because the field list reaches its group's <code>)</code>, a name after the last <code>=</code> field is a shorthand field, never something outside the literal — the transpiler reads no type to decide, so the line says what it means on its own, and rustc says whether the fields fit:</p>
 <pre class="code harsh"><code><span class="k">struct</span> <span class="t">Point</span>                                <span class="k">struct</span> <span class="t">Point</span> <span class="p">{</span>
     x<span class="p">:</span> i32                                      x<span class="p">:</span> i32<span class="p">,</span>
@@ -1524,7 +1564,7 @@ show <span class="p">(</span><span class="str">"abc"</span> <span class="op">&lt
 </tr>
 <tr>
 <td><code>(a + 1)</code>, <code>(g b)</code>, <code>t.0</code> — a group, or a tuple index</td>
-<td><code>\|x\| body</code> — a closure with an inline body</td>
+<td><code>|x| body</code> — a closure with an inline body</td>
 </tr>
 <tr>
 <td><code>m~</code> — a macro name</td>
@@ -1816,7 +1856,7 @@ f <span class="defer">$</span>                     `<span class="defer">$</span>
 <span class="p">}</span><span class="p">;</span></code></pre>
 <p><code>do</code> is therefore not available as an identifier in hrs. It is the only keyword the language adds.</p>
 <h3 id="struct-literals">Struct literals</h3>
-<p>Struct literals keep Rust's brace form. Braces remain legal everywhere they are in Rust, and inside them layout is suppressed.</p>
+<p>A struct literal is the name with <code>\</code>, its fields after it as <code>name = value</code>; Rust's brace form, <code>Point { x: 1 }</code>, is refused (one spelling per construct).</p>
 <pre class="code harsh"><code><span class="k">let</span> c <span class="p">=</span> <span class="t">Circle</span>\ r <span class="p">=</span> <span class="num">2.0</span>
 <span class="k">let</span> p <span class="p">=</span> <span class="t">Point</span>\ x <span class="p">=</span> <span class="num">3</span><span class="p">,</span> y <span class="p">=</span> <span class="num">4</span></code></pre>
 <p>Struct literals: <code>Point\</code> with the fields beneath, or inline; the mark is what distinguishes a value from a bare name (see "Building a struct").</p>
@@ -1996,7 +2036,8 @@ expanded.</p>
 <span class="p">}</span></code></pre>
 <ul>
 <li><code>@@:</code> is a literal <code>@:</code> in the body's text. <code>@:</code> anywhere else is refused.</li>
-<li><strong><code>hrs-from</code> writes the holes.</strong> Converting a Leptos, Dioxus or Tokio file keeps each body's DSL as written and turns every piece of Rust code in it into a hole of Harsh: a <code>{ … }</code> group, an attribute's value (<code>name=value</code>, <code>name: value</code>), a <code>for</code>/<code>if</code> expression, a <code>select!</code> arm's pattern, future and handler. A literal stays as written. A piece it cannot write as Harsh stops the conversion, named by line — never silently left as Rust.</li>
+<li>A hole's code is Harsh, so a mark inside one of its strings, characters or comments is text: in <code>@: format! "from:@{domain}" :@</code> the hole ends at the last <code>:@</code>, and <code>hrs fmt</code> spaces only the marks that open and close it (fixed in 0.7.3; it had written <code>"from :@{domain}"</code>).</li>
+<li><strong><code>hrs-from</code> writes the holes.</strong> Converting a Leptos, Dioxus or Tokio file keeps each body's DSL as written and turns every piece of Rust code in it into a hole of Harsh: a <code>{ … }</code> group, an attribute's value (<code>name=value</code>, <code>name: value</code>), a <code>for</code>/<code>if</code> expression, a paren splice (Maud's <code>(items.len())</code>), a <code>select!</code> arm's pattern, future and handler. A stretch becomes a hole when it is more than a single word and calls on a binding -- a variable, a function, a name the DSL binds -- or uses an operator, <code>.</code> and <code>::</code> included (2026-10-12): <code>{count}</code> stays, <code>{items.len()}</code> is a hole. The guide to macros catalogues where the holes go in the DSLs of popular libraries -- Leptos, Dioxus, Yew, Maud, serde_json, Tokio, <code>thread_local!</code>, <code>lazy_static!</code>, <code>bitflags!</code>, <code>tracing</code>. A literal stays as written. Inside the DSL's own strings, the Rust in a format slot becomes a hole too: <code>"Hello {name.to_uppercase()}"</code> is written <code>"Hello {@: name &lt;- to_uppercase$ :@}"</code>, and <code>{v.len():&gt;4}</code> keeps its spec outside, <code>{@: v &lt;- len$ :@:&gt;4}</code>; a plain name <code>{count}</code>, a position <code>{0}</code> and <code>{{</code> stay as written (2026-10-12). A piece it cannot write as Harsh stops the conversion, named by line — never silently left as Rust; a slot that does not come back identical is the string's text, and stays.</li>
 <li>A block passed to a macro <em>as an argument</em> is isolated like any argument, <code>m! (do: …) x</code>. <code>m! do:</code> as the macro's body, and <code>#:</code>, are retired (2026-09-23); each is refused with the braces named.</li>
 </ul>
 <h3 id="generator-comprehensions">Generator comprehensions</h3>
@@ -2262,7 +2303,7 @@ hrs-from existing.rs -o existing.hrs</code></pre>
 </tr>
 <tr>
 <td>Generic call</td>
-<td><code>Vec.&lt;i32&gt;.new()</code></td>
+<td><code>Vec.&lt;i32&gt;.new$</code></td>
 <td><code>Vec::&lt;i32&gt;::new()</code></td>
 </tr>
 <tr>
@@ -2282,8 +2323,8 @@ hrs-from existing.rs -o existing.hrs</code></pre>
 </tr>
 <tr>
 <td>Struct literal</td>
+<td><code>Point\ x = 1</code></td>
 <td><code>Point { x: 1 }</code></td>
-<td>same</td>
 </tr>
 <tr>
 <td>Curried parameters</td>
@@ -2307,37 +2348,37 @@ hrs-from existing.rs -o existing.hrs</code></pre>
 </tr>
 <tr>
 <td>Pipe back</td>
-<td><code>f &lt;\| x</code></td>
+<td><code>f &lt;| x</code></td>
 <td><code>f(x)</code></td>
 </tr>
 <tr>
 <td>Pipe forward</td>
-<td><code>x \|&gt; f</code></td>
+<td><code>x |&gt; f</code></td>
 <td><code>f(x)</code></td>
 </tr>
 <tr>
 <td>Pipe, several values</td>
-<td><code>3 5 10 \|&gt; sub</code></td>
+<td><code>3 5 10 |&gt; sub</code></td>
 <td><code>sub(3, 5, 10)</code></td>
 </tr>
 <tr>
 <td>Partial, from the left</td>
-<td><code>3 \|&gt; sub</code></td>
-<td><code>move \|p1, p2\| sub(3, p1, p2)</code></td>
+<td><code>3 |&gt; sub</code></td>
+<td><code>move |p1, p2| sub(3, p1, p2)</code></td>
 </tr>
 <tr>
 <td>Partial, from the right</td>
-<td><code>sub &lt;\| 3</code></td>
-<td><code>move \|p1, p2\| sub(p1, p2, 3)</code></td>
+<td><code>sub &lt;| 3</code></td>
+<td><code>move |p1, p2| sub(p1, p2, 3)</code></td>
 </tr>
 <tr>
 <td>Partial, middle hole</td>
-<td><code>1 \|&gt; sub &lt;\| 3</code></td>
-<td><code>move \|p1\| sub(1, p1, 3)</code></td>
+<td><code>1 |&gt; sub &lt;| 3</code></td>
+<td><code>move |p1| sub(1, p1, 3)</code></td>
 </tr>
 <tr>
 <td>Pipe a result</td>
-<td><code>(f a) \|&gt; g</code></td>
+<td><code>(f a) |&gt; g</code></td>
 <td><code>g(f(a))</code></td>
 </tr>
 <tr>
@@ -2347,8 +2388,8 @@ hrs-from existing.rs -o existing.hrs</code></pre>
 </tr>
 <tr>
 <td>Trailing closure</td>
-<td><code>map \|n\|:</code> + indent</td>
-<td><code>map(\|n\| { … })</code></td>
+<td><code>map |n|:</code> + indent</td>
+<td><code>map(|n| { … })</code></td>
 </tr>
 <tr>
 <td>Statement end</td>
@@ -2357,8 +2398,8 @@ hrs-from existing.rs -o existing.hrs</code></pre>
 </tr>
 <tr>
 <td>Discard tail value</td>
-<td>explicit <code>;</code></td>
-<td><code>;</code></td>
+<td>a last line <code>()</code></td>
+<td><code>expr;</code></td>
 </tr>
 </tbody>
 </table>
@@ -2449,12 +2490,17 @@ hrs-from existing.rs -o existing.hrs</code></pre>
 </tr>
 <tr>
 <td>Tuple struct</td>
-<td><code>struct T (i32, i32)</code> / <code>T 3 4</code></td>
+<td><code>struct T i32 i32</code> / <code>T 3 4</code></td>
 <td><code>struct T(i32, i32);</code> / <code>T(3, 4)</code></td>
 </tr>
 <tr>
+<td>Tuple struct holding a tuple</td>
+<td><code>struct U (i32, i32)</code></td>
+<td><code>struct U((i32, i32));</code></td>
+</tr>
+<tr>
 <td>Record variant</td>
-<td><code>Rec:</code> + fields</td>
+<td><code>Rec</code> + fields beneath</td>
 <td><code>Rec { … }</code></td>
 </tr>
 <tr>
@@ -2463,19 +2509,24 @@ hrs-from existing.rs -o existing.hrs</code></pre>
 <td><code>vec! { 0; 4 }</code></td>
 </tr>
 <tr>
-<td>Macro definition</td>
-<td><code>macro_rules~ m:</code></td>
-<td><code>macro_rules~ m {</code></td>
+<td>Harsh macro definition</td>
+<td><code>macro_rules~ m</code> + arms beneath</td>
+<td>none: <code>hrs</code> expands its calls</td>
+</tr>
+<tr>
+<td>Rust macro definition</td>
+<td><code>macro_rules! m { … }</code></td>
+<td>the same, copied as written</td>
 </tr>
 <tr>
 <td>Pipe into closure</td>
-<td><code>x \|&gt; (\|w\| f w)</code></td>
-<td><code>(\|w\| f(w))(x)</code></td>
+<td><code>x |&gt; (|w| f w)</code></td>
+<td><code>(|w| f(w))(x)</code></td>
 </tr>
 <tr>
 <td>Isolated closure, chained</td>
-<td><code>map (\|x\|:</code> + body + <code>) &lt;- f$</code></td>
-<td><code>map(\|x\| { … }).f()</code></td>
+<td><code>map (|x|:</code> + body + <code>) &lt;- f$</code></td>
+<td><code>map(|x| { … }).f()</code></td>
 </tr>
 <tr>
 <td>Block opener synonym</td>

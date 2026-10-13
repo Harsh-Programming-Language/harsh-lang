@@ -16,25 +16,25 @@ pub struct Tok
 /// `build.py`'s `KW`.
 const KEYWORDS: &[&str] =
     &[
-         "as", "async", "await", "break", "const", "continue", "crate", "do", "dyn", "else",
-         "enum", "extern", "false", "fn", "for", "if", "impl", "in", "let", "loop", "match",
-         "mod", "move", "mut", "pub", "ref", "return", "self", "Self", "static", "struct",
-         "super", "trait", "true", "type", "unsafe", "use", "where", "while", "union",
-     ]
+        "as", "async", "await", "break", "const", "continue", "crate", "do", "dyn", "else",
+        "enum", "extern", "false", "fn", "for", "if", "impl", "in", "let", "loop", "match",
+        "mod", "move", "mut", "pub", "ref", "return", "self", "Self", "static", "struct",
+        "super", "trait", "true", "type", "unsafe", "use", "where", "while", "union",
+    ]
 
 /// `build.py`'s `OPS`, in the order its `sorted(…, key=len, reverse=True)`
 /// leaves them: longest first, ties in their written order.
 const OPS: &[&str] =
     &[
-         "..=", "<-", "->", "=>", "<|", "|>", "::", "..", "&&", "||", "==", "!=", "<=", ">=",
-         "+=", "-=", "*=", "/=",
-     ]
+        "..=", "<-", "->", "=>", "<|", "|>", "::", "..", "&&", "||", "==", "!=", "<=", ">=",
+        "+=", "-=", "*=", "/=",
+    ]
 
 /// The groups, in `build.py`'s order: the first that matches names the text.
 const GROUPS: &[&str] =
     &[
-         "com", "str", "attr", "num", "mac", "life", "id", "defer", "op", "p", "ws", "other",
-     ]
+        "com", "str", "attr", "num", "mac", "life", "id", "defer", "op", "p", "ws", "other",
+    ]
 
 fn pattern$ -> &'static Regex:
     static TOK: OnceLock<Regex> = OnceLock.new$

@@ -9,6 +9,7 @@
 //! deliberate: the two directions must agree on the carve-out list and the
 //! block-kind table, and separate crates would let those drift silently.
 
+pub mod bindings;
 pub mod columns;
 pub mod fmt;
 pub mod docex;

@@ -122,7 +122,7 @@ Every snippet in both parts was transpiled, compiled and run before it was writt
 Three rules do most of the work in Harsh, and everything else follows from them:
 
 - A colon ending a logical line opens a block; a more-indented line anywhere else continues the current line.
-- Application is by juxtaposition, `f a b`, and parentheses isolate **one** argument — a parenthesised group with commas is a tuple, always. The reason explains every case: spaces separate arguments, so an argument of several tokens is isolated, `f (n * 2) (-1) (&x)`, and where nothing needs separating nothing is — a lone parameter, `fn greet name: &str`, or a single argument after a constructor the program declares or `Some`, `Ok`, `Err`: `Some &x`, `let Some mut line = row$ else:`. A range of atoms is an atom, `f 0..3`; a tuple index applies to one atom, so a call's result is indexed isolated, `(f src).0`, and passed as an argument isolated again, `show ((f src).0)`.
+- Application is by juxtaposition, `f a b`, and parentheses isolate **one** argument — a parenthesised group with commas is a tuple, always. The reason explains every case: spaces separate arguments, so an argument of several tokens is isolated, `f (n * 2) (-1) (&x)`, and where nothing needs separating nothing is — a lone parameter, `fn greet name: &str`, or a single argument after a constructor the program declares or `Some`, `Ok`, `Err`: `Some &x`, `let Some mut line = row$ else:`. The constructors a program declares are its structs and its enums' variants — those one level under the `enum`, and those written inline after its `\` — never a record variant's fields: with a variant `Email` holding `first: u8`, a local `first` is a name and `first & 0x7f` a bit-and. A range of atoms is an atom, `f 0..3`; a tuple index or a tight index applies to one atom, so a call's result is indexed isolated, `(f src).0`, `(f src)[i]`, and passed as an argument isolated again, `show ((f src).0)`.
 - `.` is the path separator and `<-` is member access, both directions, no exceptions.
 
 ## Setting up
@@ -212,6 +212,8 @@ hrs dist  <dir>            write Harsh's standard distribution (hrs_std and
 hrs <input.hrs> [-o out.rs] [--map out.map.json]
                            transpile a single file
 ```
+
+At a workspace's root, a `Cargo.toml` with `[workspace]` and no `[package]`, `hrs build`, `check`, `test`, `lint`, `fmt` and `hrs cargo …` go through the members in the order `members` lists them: a Harsh member is built by `hrs` in its folder, a Rust member by cargo, and the first failure stops the run. `hrs run` acts on one program, so there it names the members instead.
 
 `hrs export` is how Harsh code is shared with Rust users -- publish the exported crate to crates.io, and they get Rust. Harsh's `~` macros unfold before transpiling, so they are not in the export; to share a library with Harsh users, macros included, share its Harsh (a path dependency, for now; a Harsh registry is planned). The Book's chapter 17 has both.
 
@@ -689,7 +691,21 @@ They are for people writing Harsh. The transpiler accepts every form;
 `hrs fmt` applies what can be counted -- chains, lists and `if` chains of
 three or more, and calls made long by long arguments -- and leaves the rest
 to the writer: a literal inside a literal, an `if` of three clauses as a
-`let`'s value (it takes `do:`), and a call deep inside another.
+`let`'s value (it takes `do:`), a call deep inside another, and an inline
+`if c: a else: b` -- too long, write it as a block `if`, each value beneath
+its branch:
+
+```rust harsh
+let what =
+    if s <- subject <- is_empty$:
+        s <- body <- clone$
+    else:
+        s <- subject <- clone$
+```
+
+Never break an inline `if` at its `<-`: the condition and both values end up
+on one column, and a link after `else:` reads as if it applied to the whole
+`if` when it applies to the `else` value only.
 
 - **A chain of more than two steps** — three or more `<-` in one chain — is
   broken: the value goes on the line after the `=`, and each step beneath the
@@ -753,6 +769,23 @@ fn describe (good: bool) (name: &str) -> String:
         "{} ({})"
         name                                    // on the fence: short
         (if good: "good dog" else: "dog")       // a long argument
+```
+
+- **A chain of one link is never broken**, however long:
+  `let label = message <- subject_line_for_privilege_log_with_redactions_applied$`
+  stays as it is. When long arguments make it long, the long-call rule applies
+  to the method: the chain moves to the line after its `=`, and its arguments
+  go beneath the method, one unit past it — both at once. Without a `=`, the
+  arguments go beneath (the user's ruling, 2026-10-12).
+
+```rust harsh
+let label =
+    message <- subject_line_for_privilege_log
+                   (first_custodian_name_argument)
+                   (second_matter_reference)
+message <- send_to_reviewer_queue_for_second_pass
+               first_custodian_name_argument
+               second_matter_reference
 ```
 
 - **A literal holding another literal**: on one line the inner one is
@@ -1329,9 +1362,9 @@ let counts: Vec<(String, usize)> = tally(&words).into_iter().collect();
 
 ```rust fragment
 fn generic<T: std.fmt.Debug> (label: &str) (item: T) -> String:     function
-struct Generic<T>:                                                   struct
+struct Generic<T>                                                    struct
     inner: T
-impl<T: std.fmt.Debug> Generic<T>:                                   impl
+impl<T: std.fmt.Debug> Generic<T>                                    impl
     fn show (&self) -> String:
         format! "{:?}" (self <- inner)
 let m = HashMap.<String, i32>.new$                                 call — `.<T>`, Rust's `::<T>`
@@ -1462,6 +1495,28 @@ match (Point\ x = 1.0, y = 4.0)\            match (Point { x: 1.0, y: 4.0 }) {
 if p == (Point\ x = 1.0):                   if p == (Point { x: 1.0 }) {
 let v = vec! (Point\ x = 1) (Point\ x = 2)
 (Point\ x = 1, y = 0) + (Point\ x = 2, y = 3)
+```
+
+A literal passed as an argument is isolated like any argument of several tokens -- inline, or with its fields beneath and the `)` after them -- and a constructor's argument is no exception (since 0.8.2; the bare form, `push Card\`, is refused with the isolated one named -- it became `push(Card) { … }`):
+
+```rust fragment
+cards <- push (Card\ id = 1, number = 2)    cards.push(Card { id: 1, number: 2 });
+Ok (View\ title = t)                         Ok(View { title: t })
+```
+
+With its fields beneath, the literal's fields stand one unit past its name and its `)` under its `(`; when that is too far for the line, the `(` goes beneath the callee, one unit past it (`hrs fmt` lays it out so, 0.8.4):
+
+```rust fragment
+cards <- push (Card\                        cards.push(Card {
+                   id = 2                       id: 2,
+                   title = t                    title: t,
+              )                             });
+
+cards <- very_long_method_called_push        cards.very_long_method_called_push(Card {
+             (Card\                              id: 2,
+                  id = 2                         title: t,
+                  title = t                  });
+             )
 ```
 
 Because the field list reaches its group's `)`, a name after the last `=` field is a shorthand field, never something outside the literal — the transpiler reads no type to decide, so the line says what it means on its own, and rustc says whether the fields fit:
@@ -1997,7 +2052,7 @@ let scoped = {
 
 ## Struct literals
 
-Struct literals keep Rust's brace form. Braces remain legal everywhere they are in Rust, and inside them layout is suppressed.
+A struct literal is the name with `\`, its fields after it as `name = value`; Rust's brace form, `Point { x: 1 }`, is refused (one spelling per construct).
 
 ```rust harsh
 let c = Circle\ r = 2.0
@@ -2238,7 +2293,8 @@ rsx! {
 ```
 
 - `@@:` is a literal `@:` in the body's text. `@:` anywhere else is refused.
-- **`hrs-from` writes the holes.** Converting a Leptos, Dioxus or Tokio file keeps each body's DSL as written and turns every piece of Rust code in it into a hole of Harsh: a `{ … }` group, an attribute's value (`name=value`, `name: value`), a `for`/`if` expression, a `select!` arm's pattern, future and handler. A literal stays as written. A piece it cannot write as Harsh stops the conversion, named by line — never silently left as Rust.
+- A hole's code is Harsh, so a mark inside one of its strings, characters or comments is text: in `@: format! "from:@{domain}" :@` the hole ends at the last `:@`, and `hrs fmt` spaces only the marks that open and close it (fixed in 0.7.3; it had written `"from :@{domain}"`).
+- **`hrs-from` writes the holes.** Converting a Leptos, Dioxus or Tokio file keeps each body's DSL as written and turns every piece of Rust code in it into a hole of Harsh: a `{ … }` group, an attribute's value (`name=value`, `name: value`), a `for`/`if` expression, a paren splice (Maud's `(items.len())`), a `select!` arm's pattern, future and handler. A stretch becomes a hole when it is more than a single word and calls on a binding -- a variable, a function, a name the DSL binds -- or uses an operator, `.` and `::` included (2026-10-12): `{count}` stays, `{items.len()}` is a hole. The guide to macros catalogues where the holes go in the DSLs of popular libraries -- Leptos, Dioxus, Yew, Maud, serde_json, Tokio, `thread_local!`, `lazy_static!`, `bitflags!`, `tracing`. A literal stays as written. Inside the DSL's own strings, the Rust in a format slot becomes a hole too: `"Hello {name.to_uppercase()}"` is written `"Hello {@: name <- to_uppercase$ :@}"`, and `{v.len():>4}` keeps its spec outside, `{@: v <- len$ :@:>4}`; a plain name `{count}`, a position `{0}` and `{{` stay as written (2026-10-12). A piece it cannot write as Harsh stops the conversion, named by line — never silently left as Rust; a slot that does not come back identical is the string's text, and stays.
 - A block passed to a macro *as an argument* is isolated like any argument, `m! (do: …) x`. `m! do:` as the macro's body, and `#:`, are retired (2026-09-23); each is refused with the braces named.
 
 ## Generator comprehensions
@@ -2555,11 +2611,11 @@ The source map records one entry per token as byte offsets. The remapper rewrite
 | Path separator | `.` | `::` |
 | Field or method | `<-` | `.` |
 | Use group | `.( … )` | `::{ … }` |
-| Generic call | `Vec.<i32>.new()` | `Vec::<i32>::new()` |
+| Generic call | `Vec.<i32>.new$` | `Vec::<i32>::new()` |
 | Tuple index | `t.0` | `t.0` |
 | Range | `0..3`, `1..=5` | same |
 | Bare block | `do:` | `{ … }` |
-| Struct literal | `Point { x: 1 }` | same |
+| Struct literal | `Point\ x = 1` | `Point { x: 1 }` |
 | Curried parameters | `(a: T) (b: U)` | `(a: T, b: U)` |
 | Bare parameter | `name: &str` | `(name: &str)` |
 | Application | `f a b` | `f(a, b)` |
@@ -2574,7 +2630,7 @@ The source map records one entry per token as byte offsets. The remapper rewrite
 | Inline block | `if t: 1 else: 2` | `if t { 1 } else { 2 }` |
 | Trailing closure | `map \|n\|:` + indent | `map(\|n\| { … })` |
 | Statement end | newline | `;` |
-| Discard tail value | explicit `;` | `;` |
+| Discard tail value | a last line `()` | `expr;` |
 
 ### Extended quick reference
 
@@ -2595,10 +2651,12 @@ The source map records one entry per token as byte offsets. The remapper rewrite
 | Try | `f n ?` | `f(n)?` |
 | Unsafe | `unsafe:` | `unsafe {` |
 | Type alias | `type P = (i32, i32)` | `type P = (i32, i32);` |
-| Tuple struct | `struct T (i32, i32)` / `T 3 4` | `struct T(i32, i32);` / `T(3, 4)` |
-| Record variant | `Rec:` + fields | `Rec { … }` |
+| Tuple struct | `struct T i32 i32` / `T 3 4` | `struct T(i32, i32);` / `T(3, 4)` |
+| Tuple struct holding a tuple | `struct U (i32, i32)` | `struct U((i32, i32));` |
+| Record variant | `Rec` + fields beneath | `Rec { … }` |
 | Macro, a stream that is not a list | `vec! { 0; 4 }` | `vec! { 0; 4 }` |
-| Macro definition | `macro_rules~ m:` | `macro_rules~ m {` |
+| Harsh macro definition | `macro_rules~ m` + arms beneath | none: `hrs` expands its calls |
+| Rust macro definition | `macro_rules! m { … }` | the same, copied as written |
 | Pipe into closure | `x \|> (\|w\| f w)` | `(\|w\| f(w))(x)` |
 | Isolated closure, chained | `map (\|x\|:` + body + `) <- f$` | `map(\|x\| { … }).f()` |
 | Block opener synonym | `fn f$ do:` | `fn f() {` |

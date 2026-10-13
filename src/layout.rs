@@ -45,27 +45,29 @@ pub enum BlockKind {
 pub enum Node {
     Line(Line),
     Block(Block),
-    /// A delimited Harsh fragment inside a macro body: a `{ .. }` hole in
-    /// markup, or a repetition `$( .. )*` that is the whole of its line. The
-    /// body is laid out on its own, with the line holding the opener as its
-    /// baseline.
+    /// A delimited Harsh fragment inside a macro body: a repetition
+    /// `$( .. )*` that is the whole of its line (`repetition` is the only
+    /// builder). The body is laid out on its own, with the line holding the
+    /// opener as its baseline.
     Group(Group),
 }
 
 #[derive(Debug, Clone)]
 pub struct Group {
-    /// `{`, or `$` `(`.
+    /// `$` `(`.
     pub open: Vec<Token>,
     pub body: Vec<Node>,
-    /// `}`, or `)` and the repetition operator.
+    /// `)` and the repetition operator.
     pub close: Vec<Token>,
-    /// `Stmts` for a hole, `Rep` for a repetition.
+    /// `Rep` inside statements or a macro body; otherwise the kind of the
+    /// enclosing block (arms, fields).
     pub kind: BlockKind,
     /// The body starts on the line after the opener (and so is written as
     /// indented lines) rather than on the opener's line.
     pub body_own_line: bool,
     /// An attribute value isolated in parens, `on:click=(|| body)`: the
-    /// parens are optional grouping and are not emitted.
+    /// parens are optional grouping and are not emitted. Left from the
+    /// markup form; nothing sets it any more.
     pub bare: bool,
 }
 
@@ -88,8 +90,6 @@ pub struct Block {
     pub arrow_opener: bool,
     pub kind: BlockKind,
     pub body: Vec<Node>,
-    /// Tokens after the body that belong to the same statement, when the
-    /// block was opened inside a paren: `) <- filter (..) <- count ()`.
     /// The rest of the statement after a block opened inside a paren: begins
     /// with the `)` that closed the group. Nodes, because the tail may open
     /// another such block -- `(|p|: a) <- filter (|q|: b)`.
@@ -659,6 +659,63 @@ fn check_backslash_head(sig: &[&Token]) -> Result<(), LayoutError> {
         if i >= 1 && sig[i - 1].text == "!" {
             continue;
         }
+        // A literal as an argument is isolated, as any argument of several
+        // tokens: `push (Card\ id = 1)`, `Ok (View\ title = t)` (ShopBill's
+        // S2, refused since 0.8.2; it became `push(Card) { .. }`, rustc's
+        // error pointing at the generated brace). A constructor's single
+        // argument needs no parentheses only when it is one atom with a
+        // prefix (`Some &x`); a literal is not one (the user, 2026-10-12).
+        // Its head -- a path, perhaps with generics -- is an argument when
+        // what precedes it ends an atom: a name that is not a keyword, a
+        // literal, a `)`, a `$`, a macro's `!`. Not inside a `~` call's
+        // stream, which is its macro's.
+        {
+            let mut h = i - 1;
+            if sig[h].kind == Tk::Gt {
+                let mut d = 0i32;
+                while h > 0 {
+                    match sig[h].kind {
+                        Tk::Gt => d += 1,
+                        Tk::Lt => {
+                            d -= 1;
+                            if d == 0 {
+                                break;
+                            }
+                        }
+                        _ => {}
+                    }
+                    h -= 1;
+                }
+                h = h.saturating_sub(1);
+                // `P.<i32>\`: the generic call's `.` belongs to the head.
+                if h > 0 && matches!(sig[h].kind, Tk::Dot | Tk::PathSep) {
+                    h -= 1;
+                }
+            }
+            while h >= 2 && matches!(sig[h - 1].kind, Tk::Dot | Tk::PathSep) && sig[h - 2].kind == Tk::Ident {
+                h -= 2;
+            }
+            let in_stream = sig[..h].iter().any(|t| t.tilde);
+            let prev = if h > 0 { Some(sig[h - 1]) } else { None };
+            let is_arg = !in_stream
+                && prev.map_or(false, |p| match p.kind {
+                    Tk::Ident => !crate::rules::is_keyword(&p.text),
+                    Tk::Int | Tk::Float | Tk::Str | Tk::Char | Tk::TupleIdx | Tk::Close(_) => true,
+                    Tk::Punct => p.text == "$" || (p.text == "!" && !p.tilde),
+                    _ => false,
+                });
+            if is_arg {
+                let callee = prev.map(|p| if p.kind == Tk::Ident || p.text == "!" { p.text.clone() } else { String::new() }).unwrap_or_default();
+                let head: String = sig[h..i].iter().map(|t| t.text.as_str()).collect::<Vec<_>>().join("").replace("::", ".");
+                let call = if callee.is_empty() { "f".to_string() } else if callee == "!" { format!("{}!", sig[h.saturating_sub(2)].text) } else { callee };
+                return Err(LayoutError {
+                    msg: format!(
+                        "a literal as an argument is isolated, as any argument of several tokens: `{call} ({head}\\ …)`, with its fields on the same line or beneath it and the `)` after them"
+                    ),
+                    span: sig[h].span,
+                });
+            }
+        }
         // The list this `\` opens on its line: to the end of the line, or
         // to the `)` closing a group opened before it; a pattern after `let`
         // (`let P\ x, y = ..`) ends at the binding's `=`.
@@ -908,11 +965,6 @@ fn check_inline_old_marks(sig: &[&Token]) -> Result<(), LayoutError> {
     Ok(())
 }
 
-/// A `;` ending a line (the user's rule, 2026-09-30): Harsh writes no
-/// semicolons; a block whose last value is to be discarded ends with a line
-/// `()`, which says so where the block's value goes. A macro's body and a
-/// `macro_rules!` arm are Rust's own syntax and keep theirs; a `;` inside
-/// brackets (`[u8; 4]`, a Rust block in braces) is not at a line's end.
 /// A closure's parameters are one list, separated by commas, `|a: A, b: B|`:
 /// `|a: A| (b: B)|` -- function-style groups after the closing `|` -- was
 /// transpiled into broken Rust (H7, found building Docreview, 2026-09-30).
@@ -1073,6 +1125,11 @@ fn check_indexed_group_argument(sig: &[&Token]) -> Result<(), LayoutError> {
     Ok(())
 }
 
+/// A `;` ending a line (the user's rule, 2026-09-30): Harsh writes no
+/// semicolons; a block whose last value is to be discarded ends with a line
+/// `()`, which says so where the block's value goes. A macro's body and a
+/// `macro_rules!` arm are Rust's own syntax and keep theirs; a `;` inside
+/// brackets (`[u8; 4]`, a Rust block in braces) is not at a line's end.
 fn check_trailing_semi(sig: &[&Token], outer: BlockKind) -> Result<(), LayoutError> {
     let Some(last) = sig.last() else { return Ok(()) };
     if last.kind != Tk::Semi || matches!(outer, BlockKind::Macro | BlockKind::MacroRules) {
@@ -1158,8 +1215,9 @@ fn check_old_marks(ln: &Line, outer: BlockKind) -> Result<(), LayoutError> {
             });
         }
     }
-    // A header ending in `#:` is the pseudo-block mark, not an old `:`:
-    // `check_hash_colon_head` reports it, with the message that fits.
+    // A header ending in `#:` is the retired pseudo-block mark, not an old
+    // `:`: `check_inline_old_marks` (called above) reports it, with the
+    // message that fits.
     if sig.len() >= 2 && sig[sig.len() - 2].text == "#" && sig[sig.len() - 2].span.hi == last.span.lo {
         return Ok(());
     }
@@ -1403,11 +1461,6 @@ fn opener_kw(toks: &[Token], from: usize, colon: usize, _outer: BlockKind) -> Op
     None
 }
 
-/// The first colon in `[from, to)` that opens an inline block: it is not the
-/// item's last token, a block keyword or a closure prototype governs it, and
-/// it sits at bracket depth zero or inside parens only. Parens isolate; they
-/// neither open nor close a block, so a block may be written inside one and
-/// ends where the group ends. `[ .. ]` and `{ .. }` are Rust's.
 /// Is the `:` at `i` part of a function's header -- inside its generic list,
 /// or a bare parameter's own (`fn double n: i32`)?
 fn fn_header_colon(toks: &[Token], from: usize, i: usize) -> bool {
@@ -1436,6 +1489,11 @@ fn fn_header_colon(toks: &[Token], from: usize, i: usize) -> bool {
     toks.get(p).map_or(false, |t| t.kind == Tk::Ident) && p + 1 == i
 }
 
+/// The first colon in `[from, to)` that opens an inline block: it is not the
+/// item's last token, a block keyword or a closure prototype governs it, and
+/// it sits at bracket depth zero or inside parens only. Parens isolate; they
+/// neither open nor close a block, so a block may be written inside one and
+/// ends where the group ends. `[ .. ]` and `{ .. }` are Rust's.
 fn inline_colon(toks: &[Token], from: usize, to: usize, outer: BlockKind) -> Option<(usize, &str)> {
     let last = (from..to).rev().find(|&i| !toks[i].is_comment());
     let mut stack: Vec<char> = Vec::new();
@@ -1446,8 +1504,8 @@ fn inline_colon(toks: &[Token], from: usize, to: usize, outer: BlockKind) -> Opt
                 stack.pop();
             }
             // At depth zero, or inside a paren -- the innermost bracket must
-            // be a paren, so `vec! [(Point: x = 1), (Point: x = 2)]` reads
-            // each literal to its `)`.
+            // be a paren, so `[(|x|: x + 1), (|x|: x * 2)]` reads each
+            // closure's block to its `)`.
             Tk::Colon if stack.last().map_or(true, |c| *c == '(') => {
                 if Some(i) == last {
                     return None;
@@ -1723,14 +1781,13 @@ fn sub_line(toks: &[Token], from: usize, to: usize, proto: &Line) -> Line {
 /// point for tools that read structure from a buffer that may be mid-edit --
 /// the language server -- and must see the same lines the transpiler sees.
 pub fn lines(toks: Vec<Token>) -> Vec<Line> {
-    let lines = logical_lines(physical_lines(toks));
-    // Markup and brace-tree bodies are flagged here too, so the formatter
-    // and the editor leave them alone.
-    lines
+    logical_lines(physical_lines(toks))
 }
 
-/// Whether a logical line opens a block: `Some(false)` for a trailing `:`,
-/// `Some(true)` for a trailing `=>`, `None` otherwise.
+/// Whether a logical line opens a block: `Some(true)` for a trailing `=>`;
+/// `Some(false)` for a trailing `:`, a line-final `\` (a literal's field
+/// list beneath) or a declaration header with no mark (`struct Point`);
+/// `None` otherwise.
 pub fn opens(toks: &[Token]) -> Option<bool> {
     opens_block(toks)
 }
@@ -1877,7 +1934,6 @@ pub fn build_with(
             .map_err(|e| LayoutError { msg: e.msg, span: e.span })?;
     }
     let lines = lines;
-    let lines = lines;
     check_braces(&lines)?;
     check_group_lines(&lines)?;
     check_continuations(&lines)?;
@@ -1982,7 +2038,7 @@ fn check_braces(lines: &[Line]) -> Result<(), LayoutError> {
             }
             if spans_lines && !argument {
                 let form = match prev.map(|p| &p.kind) {
-                    Some(Tk::Punct) if prev.map_or(false, |p| p.text == "!") => "a macro body over several lines is `name! do:` with the body beneath",
+                    Some(Tk::Punct) if prev.map_or(false, |p| p.text == "!") => "a Rust macro's body stays on its braces, `name! { … }`, as the macro reads it, with Harsh in holes `@: … :@`; a Harsh block is `:` or `do:` with the body beneath",
                     Some(Tk::FatArrow) => "an arm's block over several lines is `=> do:` with the body beneath",
                     _ => "a block over several lines is written with `:` or `do:` and the body beneath; braces hold a block on one line",
                 };
@@ -2020,10 +2076,6 @@ fn literal_path(t: &[Token], open: usize) -> Vec<usize> {
     path
 }
 
-/// Is the brace at `open` (closing at `close`) a struct literal's?
-/// `name { … }` in an expression: a non-keyword name right before a brace
-/// that is not a block keyword's body (`if c {`, `while x {`), not a pattern
-/// (`let P { x, y } = p`, `P { x } =>`), not a declaration. Returns the name.
 /// `P { x, y }` as a pattern: a name right before non-empty braces, and after
 /// them -- past the brackets around them -- a `=`, `=>`, `in`, or a closure's
 /// `|`. Returns the name.
@@ -2055,6 +2107,10 @@ fn braced_pattern(t: &[Token], open: usize, close: usize) -> Option<String> {
     None
 }
 
+/// A block written right after a name, `name { … }` in an expression: a
+/// non-keyword name right before non-empty braces that are not a block
+/// keyword's body (`if c {`, `while x {`), not a pattern (`let P { x, y } =
+/// p`, `P { x } =>`), not a declaration. Returns the name.
 fn block_after_name(t: &[Token], open: usize, close: usize) -> Option<String> {
     // `Empty {}` is a record with no fields -- a value, never a block.
     if t[open + 1..close].iter().all(|x| x.is_comment()) {
@@ -2103,6 +2159,9 @@ fn block_after_name(t: &[Token], open: usize, close: usize) -> Option<String> {
     Some(p.text.clone())
 }
 
+/// Is the brace at `open` (closing at `close`) a struct literal's?
+/// `Name { field: value }` where a value can stand, with no block keyword
+/// earlier on the line and nothing after the brace that makes it a pattern.
 fn literal_brace(t: &[Token], open: usize, close: usize) -> bool {
     let path = literal_path(t, open);
     let Some(&first) = path.first() else { return false };
@@ -2258,18 +2317,6 @@ fn check_continuations(lines: &[Line]) -> Result<(), LayoutError> {
     Ok(())
 }
 
-/// `;` means "discard this block's tail value". A struct field, an enum
-/// variant, a match arm and a use-tree entry are not blocks and have no tail,
-/// so a trailing `;` there is meaningless -- and would collide with the `,`
-/// this position inserts.
-/// An `else` must follow a block whose *header* opens an if-chain. Mixing the
-/// inline and multi-line forms otherwise orphans it:
-///
-/// ```text
-/// if n == 1: 10
-/// else: if n == 2: 20     <- the inner if closes at end of line
-/// else: 30                <- nothing left for this to attach to
-/// ```
 /// A block opened by a bare closure header -- `map |x|:` with no isolating
 /// paren -- ends its statement. A following line that begins `<-` was meant to
 /// continue the chain, but there is nothing left to attach it to. The fix is
@@ -2328,6 +2375,14 @@ fn check_bare_closure_chain(nodes: &[Node]) -> Result<(), LayoutError> {
     Ok(())
 }
 
+/// An `else` must follow a block whose *header* opens an if-chain. Mixing the
+/// inline and multi-line forms otherwise orphans it:
+///
+/// ```text
+/// if n == 1: 10
+/// else: if n == 2: 20     <- the inner if closes at end of line
+/// else: 30                <- nothing left for this to attach to
+/// ```
 fn check_else(nodes: &[Node]) -> Result<(), LayoutError> {
     // The header opens an `if` when an `if` stands at its effective top
     // level: depth zero, or the depth of a group left open at the header's
@@ -2523,6 +2578,10 @@ fn check_bare_param(toks: &[Token]) -> Result<(), LayoutError> {
     Ok(())
 }
 
+/// `;` means "discard this block's tail value". A struct field, an enum
+/// variant, a match arm and a use-tree entry are not blocks and have no tail,
+/// so a trailing `;` there is meaningless -- and would collide with the `,`
+/// this position inserts.
 fn check_semis(nodes: &[Node], kind: BlockKind) -> Result<(), LayoutError> {
     let named = match kind {
         BlockKind::Fields => "a field or variant",
@@ -2708,6 +2767,13 @@ fn build_block(lines: &[Line], idx: &mut usize, min_indent: usize, outer: BlockK
                     check_inline_if_block_else(&sig)?;
                     check_arrow_spacing(&sig)?;
                     check_indexed_group_argument(&sig)?;
+                }
+                // A `fn` with its body on the same line is checked as one
+                // with the body beneath: `fn f (a: i32, b: i32) -> i32: a`
+                // was accepted and written as Rust's comma list (found
+                // writing the developer book, 0.7.3).
+                if inline_colon(&ln.toks, 0, ln.toks.len(), outer).is_some() {
+                    check_fn_params(&ln.toks)?;
                 }
                 if inline_colon(&ln.toks, 0, ln.toks.len(), outer).is_some() {
                     let mut nodes = expand_item(&ln.toks, 0, ln.toks.len(), outer, ln)?;

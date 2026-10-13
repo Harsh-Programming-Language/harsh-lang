@@ -56,6 +56,16 @@ the opener starts its own line after the `=`. Taking one apart is the mirror
 image — `let Pair x y = pair` — which is the general rule that **matching is
 constructing**, read backwards.
 
+Handed to a function, a literal is isolated like any argument of several
+tokens, a constructor's included: `people <- push (Person\ name = n, age = 27)`,
+`Some (Person\ …)`; written bare, it is refused. Over several lines, its
+fields stand one unit past its name and its `)` under its `(`:
+
+    people <- push (Person\
+                        name = String.from "Ada"
+                        age = 36
+                   )
+
 ## 3.2 Enums
 
 ```rust harsh
@@ -77,12 +87,13 @@ fn describe (e: Event) -> String:
         Event.Paste\ text, at => format! "pasted {:?} at {}" text at
 
 fn main$:
-    let events = [
-        Event.PageLoad,
-        Event.Click 20 80,
-        Event.KeyPress 'q',
-        Event.Paste\ text = String.from "hi", at = 3,
-    ]
+    let events =
+        [
+            Event.PageLoad,
+            Event.Click 20 80,
+            Event.KeyPress 'q',
+            Event.Paste\ text = String.from "hi", at = 3,
+        ]
     for e in events:
         println! "{}" (describe e)
 ```

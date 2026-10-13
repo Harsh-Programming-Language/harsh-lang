@@ -24,14 +24,14 @@ fn main$:
 
 ```text
 error[E0381]: used binding `x` is possibly-uninitialized
-  --> checked.hrs:7:15
+  --> checked.hrs:7:16
    |
  2 |     let x: i32
    |         - binding declared here but left uninitialized
  5 |         x = 1
    |         ----- binding initialized here in some conditions
  7 |     println! "{x}"
-   |               ^^^ `x` used here but it is possibly-uninitialized
+   |                ^ `x` used here but it is possibly-uninitialized
 ```
 
 **In Harsh:** the error points at the `.hrs` line of the read.

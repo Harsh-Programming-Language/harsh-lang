@@ -52,14 +52,14 @@ fn main$:
 
 ```text
 error[E0382]: borrow of moved value: `a`
-  --> use_after_move.hrs:7:15
+  --> use_after_move.hrs:7:16
    |
  5 |     let a = String.from "hello"
    |         - move occurs because `a` has type `String`, which does not implement the `Copy` trait
  6 |     consume a
    |             - value moved here
  7 |     println! "{a}"
-   |               ^^^ value borrowed here after move
+   |                ^ value borrowed here after move
    = note: consider changing this parameter type in function `consume` to borrow instead if owning the value isn't necessary (hrs 1:16)
    = help: consider cloning the value if the performance cost is acceptable (hrs 6:14)
 ```

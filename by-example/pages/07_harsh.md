@@ -202,6 +202,69 @@ Imported from Rust libraries, called by Harsh's rules: `vec! 1 2 3`,
 `#[derive Debug Serialize]`, `#[tokio.main]`; a stream that is a language of
 its own goes in braces, with Harsh in holes, `@: … :@` (23.8).
 
+A hole is an expression that calls on a variable, a function or a name the
+DSL binds, or uses an operator (`.` and `::` too); a single word is exempt,
+`{count}`. Look in the strings' format slots, after a key's `:` in `json!`,
+in a splice `( … )` in Maud, after an attribute's `:` or `=`, in a brace pair
+of its own, after the DSL's `for … in` and `if`. The Book's 23.8 and the
+guide to macros have the full catalogue.
+
+```toml
+[dependencies]
+serde_json = "1"
+```
+
+```rust harsh
+use serde_json.json
+
+fn main$:
+    let name = "Ada"
+    let langs = vec! "Rust" "Harsh"
+    let v = json! {{
+        "name": @: name <- to_uppercase$ :@,
+        "age": 36,
+        "langs": langs,
+        "count": @: langs <- len$ + 1 :@,
+        "tags": [{ "id": 1, "main": @: langs <- first$ :@ }]
+    }}
+    println! "{v}"
+```
+
+```text
+{"age":36,"count":3,"langs":["Rust","Harsh"],"name":"ADA","tags":[{"id":1,"main":"Rust"}]}
+```
+
+```toml
+[dependencies]
+maud = "0.27"
+```
+
+```rust harsh
+use maud.(html, Markup)
+
+fn page (title: &str) (items: &[&str]) -> Markup:
+    html! {
+        h1 { (title) }
+        p.intro { "Items: " (@: items <- len$ :@) }
+        a href=(@: format! "/items/{}" (items <- len$) :@) { "next" }
+        ul {
+            @for item in items {
+                li { (@: item <- to_uppercase$ :@) }
+            }
+        }
+        @if @: items <- is_empty$ :@ {
+            p { "none" }
+        }
+    }
+
+fn main$:
+    println! "{}" (page "Fruit" (&["apple", "pear"]) <- into_string$)
+```
+
+```text
+<h1>Fruit</h1><p class="intro">Items: 2</p><a href="/items/2">next</a><ul><li>APPLE</li><li>PEAR</li></ul>
+```
+
 ## Precedence
 
 Application binds tighter than anything but an atom: `add 1 2 * 10` adds,

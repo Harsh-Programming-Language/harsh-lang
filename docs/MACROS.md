@@ -506,17 +506,25 @@ tokio.select! {                           tokio::select! {
   written in Rust's syntax, so the converter judges only shape, by a rule a
   reader can apply by eye:
   1. a hole may start after a top-level `:` or `=`, inside a brace pair by
-     itself, or in a format string's slot;
+     itself, in a format string's slot, in a paren splice among the DSL's
+     text, after the DSL's own `for … in` or `if`, or in an arm's pattern,
+     future or handler -- wherever the library's documentation writes a
+     Rust expression (the table below);
   2. it ends at the segment's end -- the next top-level `,` or `;`, the end
      of the line, or the closing bracket;
   3. it covers the longest stretch from such a start that Rust's own parser
-     reads as one expression.
+     reads as one expression;
+  4. and it is a hole only when that stretch is more than a single word and
+     calls on a binding or uses an operator (2026-10-12; the catalogue
+     below has the rule and the binding table).
 
   So `static FLAG: Cell<bool> = Cell::new(false);` gets its hole after the
   `=` (`Cell<bool> = …` is no expression), `onclick: move |_| n.set(0),`
   after the `:`, and `quick_error!`'s clauses -- `from()`,
-  `display("…", err)` -- none. Everything else is copied verbatim, so a
-  macro's body always survives the round trip.
+  `display("…", err)` -- none. Everything else is the macro's text, copied
+  as written; a hole that would not come back identical stops the
+  conversion, named by line, so a macro's body always survives the round
+  trip or is not converted at all.
 - A `~` call's stream is its macro's too, but holes have no meaning in it: a
   Harsh macro's fragments land in a Harsh transcriber.
 - **A `~` macro's author expands to valid Harsh** (the user's rule,
@@ -531,6 +539,513 @@ body as Harsh on one line) and 6 (a brace tree written with Harsh's layout),
 and the `#:` block. `m! do:` and `#:` are refused with the braces named. They
 put Harsh inside a macro's language by guessing its grammar; Harsh no longer
 guesses.
+
+### Where the holes go: the DSLs of popular libraries
+
+**A hole is a Rust expression in a macro's body that calls on something bound
+outside the DSL's own language -- a variable, a function, a name the DSL
+binds -- or uses an operator, which is a function too (`+` is `Add::add`),
+the access operators `.` and `::` included. A single word is exempt** (the
+user's rule, 2026-10-12): `{count}`, `(title)` and `=> n` read the same in
+both languages. So `user.id`, `Duration::ZERO`, `3 + 5`, `&x` and
+`items.len()` are holes; `count`, `x` and `4` are not.
+
+Where to look -- the places a library takes a Rust expression, string slots
+first:
+
+| Where | Seen in | In Harsh |
+|---|---|---|
+| a format slot in the DSL's strings | `rsx!` | `"Twice: {@: count$ * 2 :@}"` |
+| a brace pair of its own, `{…}` | `view!`, Yew's `html!`, `rsx!` | `{@: *counter :@}` |
+| a value after `name:` or `name =` | `rsx!`, `view!`, `json!`, `thread_local!`, `lazy_static!`, `bitflags!` | `disabled: @: count$ <= 0 :@` |
+| a splice in parentheses, `(…)` | Maud's `html!` | `(@: items <- len$ :@)` |
+| the DSL's control flow: `for … in ITER {`, `if COND {` | `rsx!`, Yew, Maud (`@for`, `@if`) | `if @: count$ > 3 :@ {` |
+| an arm: pattern, future, handler | `select!` | `@: Some v :@ = @: rx <- recv$ :@ => @: v * 2 :@,` |
+
+Who is bound, for `hrs-from`, is a table, never a guess from a name's case:
+the standard prelude, the file's items, the names its `use`s import, the
+bindings in scope at the macro call (the function's parameters, its `let`s,
+`for`s and patterns), the names the DSL binds itself (Leptos's `let:item`,
+`for item in …`, `select!`'s `Some(v)`), and an expression's own closure
+parameters. A glob import, `use leptos::prelude::*`, brings names nobody can
+list without the crate: a stretch built only from them -- Leptos's
+`fallback=|| view! { … }` below, Yew's `classes!("btn", "big")` -- is left
+as written, and `hrs-from` says so, naming the line. An author may still
+write a hole there. Text the DSL owns stays as written however Rust-like it
+looks: `quick_error!`'s `display("…", err)` binds nothing outside; but SQL's
+`WHERE total = price * 2` becomes a hole, through its operator.
+
+A macro whose stream is a list of values is no DSL at all: it is juxtaposed,
+`vec! 1 2 3`.
+
+Each example below is the library's own Rust, compiled against the crate
+named, and the Harsh an author writes for it, which `hrs` turns back into
+that Rust; `hrs-from` puts its holes in exactly the same places. All of them
+are in the repository, `examples/dsl/`, and tested
+(`tests/dsl_libraries.rs`).
+
+#### Leptos `view!`
+
+*leptos 0.8.* Markup. Rust goes in an attribute's value after `=` (`on:click=`, `when=`), in a brace pair of its own (`{move || …}`), and in a `{…}` value that holds a comparison -- in markup a bare `>` ends the tag, so Leptos itself wants `class:big={move || count.get() > 10}`. `{count}` and `{double}` are single words; `fallback=|| view! { … }` names only the glob's `view!`, so `hrs-from` leaves it as written and says so.
+
+```rust harsh
+use leptos.prelude.*
+
+#[component]
+fn Counter initial: i32 -> impl IntoView:
+    let (count, set_count) = signal initial
+    let double = move || count <- get$ * 2
+    view! {
+        <button
+            on:click=@: move |_| set_count <- update (|n| *n += 1) :@
+            class:big={@: move || count <- get$ > 10 :@}
+        >
+            "Clicked " {count} " times"
+        </button>
+        <p>"Double: " {double} " / next: " {@: move || count <- get$ + 1 :@}</p>
+        <Show when=@: move || count <- get$ % 2 == 0 :@ fallback=|| view! { <p>"odd"</p> }>
+            <p>"even"</p>
+        </Show>
+    }
+
+fn main$:
+    mount_to_body (|| view! { <Counter initial=3/> })
+```
+
+```rust
+use leptos::prelude::*;
+
+#[component]
+fn Counter(initial: i32) -> impl IntoView {
+    let (count, set_count) = signal(initial);
+    let double = move || count.get() * 2;
+    view! {
+        <button
+            on:click=move |_| set_count.update(|n| *n += 1)
+            class:big={move || count.get() > 10}
+        >
+            "Clicked " {count} " times"
+        </button>
+        <p>"Double: " {double} " / next: " {move || count.get() + 1}</p>
+        <Show when=move || count.get() % 2 == 0 fallback=|| view! { <p>"odd"</p> }>
+            <p>"even"</p>
+        </Show>
+    }
+}
+
+fn main() {
+    mount_to_body(|| view! { <Counter initial=3/> })
+}
+```
+
+#### Dioxus `rsx!`
+
+*dioxus 0.6.* A tree. Rust goes after an attribute's `:` (`onclick:`, `disabled:`, `class:`), in a string's format slot (`"Twice: {count() * 2}"`), and in the tree's own control flow, after `for … in` and `if`, up to the body's `{`.
+
+```rust harsh
+use dioxus.prelude.*
+
+fn main$:
+    dioxus.launch App
+    ()
+
+#[component]
+fn App$ -> Element:
+    let mut count = use_signal (|| 0)
+    let items = vec! "apple" "pear"
+    rsx! {
+        h1 { "High-five counter: {count}" }
+        button { onclick: @: move |_| count += 1 :@, "Up high!" }
+        button { onclick: @: move |_| count -= 1 :@, disabled: @: count$ <= 0 :@, "Down low!" }
+        p { "Twice: {@: count$ * 2 :@}" }
+        for item in @: items <- iter$ :@ {
+            li { key: "{item}", "{item}" }
+        }
+        if @: count$ > 3 :@ {
+            p { class: @: if count$ > 10: "hot" else: "warm" :@, "Getting big" }
+        }
+    }
+```
+
+```rust
+use dioxus::prelude::*;
+
+fn main() {
+    dioxus::launch(App);
+}
+
+#[component]
+fn App() -> Element {
+    let mut count = use_signal(|| 0);
+    let items = vec!["apple", "pear"];
+    rsx! {
+        h1 { "High-five counter: {count}" }
+        button { onclick: move |_| count += 1, "Up high!" }
+        button { onclick: move |_| count -= 1, disabled: count() <= 0, "Down low!" }
+        p { "Twice: {count() * 2}" }
+        for item in items.iter() {
+            li { key: "{item}", "{item}" }
+        }
+        if count() > 3 {
+            p { class: if count() > 10 { "hot" } else { "warm" }, "Getting big" }
+        }
+    }
+}
+```
+
+#### Yew `html!`
+
+*yew 0.21.* Markup with Rust in braces: an attribute's `{…}` value, a child `{ … }`, Yew's `{ for ITER }` (its `for` is Yew's, the iterator Rust) and `if COND { … }`. `{onclick}` and `{ "+1" }` are a name and a literal: no hole.
+
+```rust harsh
+use yew.prelude.*
+
+#[function_component App]
+fn app$ -> Html:
+    let counter = use_state (|| 0)
+    let onclick = do:
+        let counter = counter <- clone$
+        move |_| counter <- set (*counter + 1)
+    html! {
+        <div class={@: classes! "app" ((*counter > 5) <- then (|| "big")) :@}>
+            <button {onclick}>{ "+1" }</button>
+            <p>{@: *counter :@}</p>
+            <p>{@: format! "Twice: {}" (*counter * 2) :@}</p>
+            { for @: (0..*counter) <- map (|i| html! { <span key={i}>{ i }</span> }) :@ }
+            if @: *counter > 3 :@ { <p>{ "big" }</p> }
+        </div>
+    }
+
+fn main$:
+    yew.Renderer.<App>.new$ <- render$
+    ()
+```
+
+```rust
+use yew::prelude::*;
+
+#[function_component(App)]
+fn app() -> Html {
+    let counter = use_state(|| 0);
+    let onclick = {
+        let counter = counter.clone();
+        move |_| counter.set(*counter + 1)
+    };
+    html! {
+        <div class={classes!("app", (*counter > 5).then(|| "big"))}>
+            <button {onclick}>{ "+1" }</button>
+            <p>{ *counter }</p>
+            <p>{ format!("Twice: {}", *counter * 2) }</p>
+            { for (0..*counter).map(|i| html! { <span key={i}>{ i }</span> }) }
+            if *counter > 3 { <p>{ "big" }</p> }
+        </div>
+    }
+}
+
+fn main() {
+    yew::Renderer::<App>::new().render();
+}
+```
+
+#### Maud `html!`
+
+*maud 0.27.* Splices. Rust goes in a paren group among the text, `(items.len())`, as an attribute's value, `href=(…)` -- the parens are Maud's, the hole inside them -- and after Maud's `@for … in` and `@if`.
+
+```rust harsh
+use maud.(html, Markup)
+
+fn page (title: &str) (items: &[&str]) -> Markup:
+    html! {
+        h1 { (title) }
+        p.intro { "Items: " (@: items <- len$ :@) }
+        a href=(@: format! "/items/{}" (items <- len$) :@) { "next" }
+        ul {
+            @for item in items {
+                li { (@: item <- to_uppercase$ :@) }
+            }
+        }
+        @if @: items <- is_empty$ :@ {
+            p { "none" }
+        }
+    }
+
+fn main$:
+    println! "{}" (page "Fruit" (&["apple", "pear"]) <- into_string$)
+```
+
+```rust
+use maud::{html, Markup};
+
+fn page(title: &str, items: &[&str]) -> Markup {
+    html! {
+        h1 { (title) }
+        p.intro { "Items: " (items.len()) }
+        a href=(format!("/items/{}", items.len())) { "next" }
+        ul {
+            @for item in items {
+                li { (item.to_uppercase()) }
+            }
+        }
+        @if items.is_empty() {
+            p { "none" }
+        }
+    }
+}
+
+fn main() {
+    println!("{}", page("Fruit", &["apple", "pear"]).into_string());
+}
+```
+
+#### serde_json `json!`
+
+*serde_json 1.* JSON with Rust values: after each key's `:`. Literals, arrays of literals and nested objects stay as written; a value inside a nested object is a hole like any other.
+
+```rust harsh
+use serde_json.json
+
+fn main$:
+    let name = "Ada"
+    let langs = vec! "Rust" "Harsh"
+    let v = json! {{
+        "name": @: name <- to_uppercase$ :@,
+        "age": 36,
+        "langs": langs,
+        "count": @: langs <- len$ + 1 :@,
+        "tags": [{ "id": 1, "main": @: langs <- first$ :@ }]
+    }}
+    println! "{v}"
+```
+
+```rust
+use serde_json::json;
+
+fn main() {
+    let name = "Ada";
+    let langs = vec!["Rust", "Harsh"];
+    let v = json!({
+        "name": name.to_uppercase(),
+        "age": 36,
+        "langs": langs,
+        "count": langs.len() + 1,
+        "tags": [{ "id": 1, "main": langs.first() }]
+    });
+    println!("{v}");
+}
+```
+
+#### Tokio `select!`
+
+*tokio 1.* Arms, `pattern = future => handler,`: the pattern (unless it is `_`), the future and the handler are each Rust. A handler that is a block is one value, an explicit block: `=> @: do: … :@`.
+
+```rust harsh
+use tokio.sync.mpsc
+use tokio.time.(sleep, Duration)
+
+#[tokio.main]
+async fn main$:
+    let (tx, mut rx) = mpsc.channel.<u32> 4
+    tokio.spawn (async move:
+        tx <- send 7 <- await <- unwrap$
+        ()
+    )
+    let got = tokio.select! {
+        @: Some v :@ = @: rx <- recv$ :@ => @: v * 2 :@,
+        _ = @: sleep (Duration.from_secs 1) :@ => @: do:
+            println! "timeout"
+            0 :@
+    }
+    println! "got {got}"
+```
+
+```rust
+use tokio::sync::mpsc;
+use tokio::time::{sleep, Duration};
+
+#[tokio::main]
+async fn main() {
+    let (tx, mut rx) = mpsc::channel::<u32>(4);
+    tokio::spawn(async move {
+        tx.send(7).await.unwrap();
+    });
+    let got = tokio::select! {
+        Some(v) = rx.recv() => v * 2,
+        _ = sleep(Duration::from_secs(1)) => {
+            println!("timeout");
+            0
+        }
+    };
+    println!("got {got}");
+}
+```
+
+#### std `thread_local!`
+
+*the standard library.* Declarations: the value after `=`. The type before it, `RefCell<Vec<String>>`, is the macro's text -- `Cell<bool> = …` is no expression -- and so is the `;` after the hole.
+
+```rust harsh
+use std.cell.RefCell
+
+thread_local! {
+    static LOG: RefCell<Vec<String>> = @: RefCell.new (Vec.with_capacity 8) :@;
+}
+
+fn main$:
+    LOG <- with (|l| l <- borrow_mut$ <- push ("start" <- to_string$))
+    LOG <- with (|l| println! "{:?}" (l <- borrow$))
+    ()
+```
+
+```rust
+use std::cell::RefCell;
+
+thread_local! {
+    static LOG: RefCell<Vec<String>> = RefCell::new(Vec::with_capacity(8));
+}
+
+fn main() {
+    LOG.with(|l| l.borrow_mut().push("start".to_string()));
+    LOG.with(|l| println!("{:?}", l.borrow()));
+}
+```
+
+#### `lazy_static!`
+
+*lazy_static 1.* As `thread_local!`: the value after `=`, a block when it takes several statements.
+
+```rust harsh
+use lazy_static.lazy_static
+use std.collections.HashMap
+
+lazy_static! {
+    static ref NAMES: HashMap<u32, &'static str> = @: do:
+        let mut m = HashMap.new$
+        m <- insert 0 "zero"
+        m <- insert 1 "one"
+        m :@;
+    static ref COUNT: usize = @: NAMES <- len$ * 2 :@;
+}
+
+fn main$:
+    println! "{} {}" (NAMES[&1]) (*COUNT)
+```
+
+```rust
+use lazy_static::lazy_static;
+use std::collections::HashMap;
+
+lazy_static! {
+    static ref NAMES: HashMap<u32, &'static str> = {
+        let mut m = HashMap::new();
+        m.insert(0, "zero");
+        m.insert(1, "one");
+        m
+    };
+    static ref COUNT: usize = NAMES.len() * 2;
+}
+
+fn main() {
+    println!("{} {}", NAMES[&1], *COUNT);
+}
+```
+
+#### `bitflags!`
+
+*bitflags 2.* A declaration in the macro's own grammar: `struct Perms: u32 { const … }` and the `#[derive(…)]` above it are the macro's text; only a constant's value after `=` is Rust, and a literal stays as written.
+
+```rust harsh
+use bitflags.bitflags
+
+bitflags! {
+    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+    pub struct Perms: u32 {
+        const READ = 0b001;
+        const WRITE = 0b010;
+        const ALL = @: Self.READ <- bits$ | Self.WRITE <- bits$ :@;
+    }
+}
+
+fn main$:
+    let p = Perms.READ | Perms.WRITE
+    println! "{:?} {}" p (p == Perms.ALL)
+```
+
+```rust
+use bitflags::bitflags;
+
+bitflags! {
+    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+    pub struct Perms: u32 {
+        const READ = 0b001;
+        const WRITE = 0b010;
+        const ALL = Self::READ.bits() | Self::WRITE.bits();
+    }
+}
+
+fn main() {
+    let p = Perms::READ | Perms::WRITE;
+    println!("{:?} {}", p, p == Perms::ALL);
+}
+```
+
+#### `tracing`'s `info!` and `debug!`
+
+*tracing 0.1.* Not a DSL in braces: the stream is a list -- fields, a message, its arguments -- so it is juxtaposed like any call, each field isolated: `(user = %user)`, `(?items)`, `(target: "app")`.
+
+```rust harsh
+use tracing.(debug, info)
+
+fn main$:
+    tracing_subscriber.fmt$
+        <- without_time$
+        <- with_ansi false
+        <- with_max_level tracing.Level.DEBUG
+        <- init$
+    let user = "ada"
+    let items = vec! 1 2 3
+    info!
+        (user = %user)
+        (count = items <- len$)
+        "processed {} items"
+        (items <- len$)
+    debug! (target: "app") (?items) "starting"
+    ()
+```
+
+```rust
+use tracing::{debug, info};
+
+fn main() {
+    tracing_subscriber::fmt().without_time().with_ansi(false).with_max_level(tracing::Level::DEBUG).init();
+    let user = "ada";
+    let items = vec![1, 2, 3];
+    info!(user = %user, count = items.len(), "processed {} items", items.len());
+    debug!(target: "app", ?items, "starting");
+}
+```
+
+#### Lists: `vec!`, `format!`, `assert_eq!`, `matches!`
+
+*the standard library.* Macros whose stream is a list of values are applied like functions -- juxtaposed, no braces, no holes. This is most macros.
+
+```rust harsh
+fn main$:
+    let v = vec! 1 2 3
+    let s = format! "{} items, first {:?}" (v <- len$) (v <- first$)
+    assert_eq! (v <- iter$ <- sum.<i32>$) 6 "sum of {:?}" v
+    let big = matches! (v <- last$) (Some n if *n > 2)
+    println! "{s} {big}"
+```
+
+```rust
+fn main() {
+    let v = vec![1, 2, 3];
+    let s = format!("{} items, first {:?}", v.len(), v.first());
+    assert_eq!(v.iter().sum::<i32>(), 6, "sum of {:?}", v);
+    let big = matches!(v.last(), Some(n) if *n > 2);
+    println!("{s} {big}");
+}
+```
 
 ## What does not change
 

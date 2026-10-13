@@ -70,17 +70,31 @@ fn format_around_bodies(src: &str, dz: &[crate::dslzone::Zone]) -> (String, bool
     let (out, backed) = format_harsh_checked(&work);
     let (wl, ol): (Vec<&str>, Vec<&str>) = (work.split('\n').collect(), out.split('\n').collect());
     if wl.len() != ol.len() {
-        // The rest of the file keeps its lines (the conservative choice), but
-        // its holes are still laid out -- inside the bodies only, checked
-        // token for token (found 2026-10-04: a multi-line body's blanked
-        // lines collapse, and no hole in such a file was ever formatted).
+        // The formatter added or removed lines: each body goes back where
+        // its placeholder now stands, its lines moved with the line that
+        // holds its call (0.8.1: such a file was left with its holes
+        // formatted only, so a file of `rsx!` views never took the layout
+        // -- seven of Docreview's). Checked whole against the source (Rule
+        // 0); if a body cannot be placed, the conservative choice stays: the
+        // file keeps its lines and only its holes are laid out.
+        if !backed {
+            if let Some(placed) = place_bodies(src, dz, &out) {
+                if same_rust(&placed, src) {
+                    let pz = crate::dslzone::zones(&placed);
+                    return (format_holes_only(&placed, &pz), backed);
+                }
+                if std::env::var("HRS_FMT_DEBUG").is_ok() {
+                    eprintln!("place_bodies: placed, but not the same Rust\n{placed}");
+                }
+            }
+        }
         return (format_holes_only(src, dz), backed);
     }
     let sl: Vec<&str> = src.split('\n').collect();
     let line_of = |at: usize| src[..at].matches('\n').count();
     let mut lines: Vec<String> = ol.iter().map(|l| l.to_string()).collect();
     let mut holes = lines.clone();
-    let norm = crate::dslzone::normalize_hole_line;
+    let norm = crate::dslzone::normalize_holes;
     for (n, z) in dz.iter().enumerate() {
         let (first, last) = (line_of(z.open), line_of(z.close));
         let ph = format!("{{/*Z{n}*/}}");
@@ -89,11 +103,16 @@ fn format_around_bodies(src: &str, dz: &[crate::dslzone::Zone]) -> (String, bool
         // from the body's `{` to the end of that line.
         let col = z.open - (src[..z.open].rfind('\n').map_or(0, |k| k + 1));
         let tail = &sl[first][col..];
-        holes[first] = format!("{}{}", &lines[first][..at], norm(tail));
+        // The body normalised whole, its lines together (H11).
+        let body: Vec<String> = norm(&std::iter::once(tail).chain(sl[first + 1..=last].iter().copied()).collect::<Vec<_>>().join("\n"))
+            .split('\n')
+            .map(|l| l.to_string())
+            .collect();
+        holes[first] = format!("{}{}", &lines[first][..at], body[0]);
         lines[first] = format!("{}{}", &lines[first][..at], tail);
         for k in first + 1..=last {
             lines[k] = sl[k].to_string();
-            holes[k] = norm(sl[k]);
+            holes[k] = body[k - first].clone();
         }
     }
     // B7 (a): the holes' marks with one space inside (the user, 2026-09-25),
@@ -110,6 +129,63 @@ fn format_around_bodies(src: &str, dz: &[crate::dslzone::Zone]) -> (String, bool
     (plain, backed)
 }
 
+/// The formatted text with each body put back where its placeholder now
+/// stands: the call's line takes the source's text from the body's `{` on,
+/// and the body's later lines follow it, moved right or left by as much as
+/// the call's line moved. `None` when a placeholder or the blank lines that
+/// held its body's shape are not found where they must be.
+fn place_bodies(src: &str, dz: &[crate::dslzone::Zone], formatted: &str) -> Option<String> {
+    let sl: Vec<&str> = src.split('\n').collect();
+    let mut ol: Vec<String> = formatted.split('\n').map(|l| l.to_string()).collect();
+    let line_of = |at: usize| src[..at].matches('\n').count();
+    let indent = |l: &str| l.len() - l.trim_start_matches(' ').len();
+    let mut from = 0usize;
+    for (n, z) in dz.iter().enumerate() {
+        let (first, last) = (line_of(z.open), line_of(z.close));
+        let ph = format!("{{/*Z{n}*/}}");
+        let j = (from..ol.len()).find(|&k| ol[k].contains(&ph))?;
+        let span = last - first;
+        // A body that ends the file: the blank lines that held its shape
+        // were trimmed with the file's end.
+        while j + span >= ol.len() && ol[j + 1..].iter().all(|l| l.trim().is_empty()) {
+            ol.push(String::new());
+        }
+        if !(j + 1..=j + span).all(|k| ol[k].trim().is_empty()) {
+            if std::env::var("HRS_FMT_DEBUG").is_ok() {
+                eprintln!("place_bodies: zone {n} (source line {}): its blank lines are not beneath it", first + 1);
+            }
+            return None;
+        }
+        let at = ol[j].find(&ph)?;
+        let col = z.open - src[..z.open].rfind('\n').map_or(0, |k| k + 1);
+        let delta = indent(&ol[j]) as isize - indent(sl[first]) as isize;
+        let rest = &ol[j][at + ph.len()..];
+        if !rest.trim().is_empty() && span > 0 {
+            return None;
+        }
+        let tail_end = if span == 0 { format!("{}{}", &sl[first][col..col + (z.close - z.open + 1)], rest) } else { sl[first][col..].to_string() };
+        ol[j] = format!("{}{}", &ol[j][..at], tail_end);
+        for k in 1..=span {
+            let line = sl[first + k];
+            let ind = indent(line) as isize;
+            ol[j + k] = if line.trim().is_empty() {
+                line.to_string()
+            } else if delta >= 0 || ind + delta >= 0 {
+                format!("{}{}", " ".repeat((ind + delta) as usize), line.trim_start_matches(' '))
+            } else {
+                return None;
+            };
+        }
+        from = j + span + 1;
+    }
+    let mut placed = ol.join("\n");
+    // The file's last newline, where a body ends the file.
+    if src.ends_with('\n') && !placed.ends_with('\n') {
+        placed.push('\n');
+    }
+    Some(placed)
+}
+
 /// Only the holes, in a file left otherwise as written: the bodies' lines
 /// normalised (B7) and laid out (#3), kept when the Rust is unchanged.
 fn format_holes_only(src: &str, dz: &[crate::dslzone::Zone]) -> String {
@@ -119,9 +195,11 @@ fn format_holes_only(src: &str, dz: &[crate::dslzone::Zone]) -> String {
     for z in dz {
         let (first, last) = (line_of(z.open), line_of(z.close));
         let col = z.open - (src[..z.open].rfind('\n').map_or(0, |k| k + 1));
-        holes[first] = format!("{}{}", &sl[first][..col], crate::dslzone::normalize_hole_line(&sl[first][col..]));
+        let text = std::iter::once(&sl[first][col..]).chain(sl[first + 1..=last].iter().map(|l| l.as_str())).collect::<Vec<_>>().join("\n");
+        let body: Vec<String> = crate::dslzone::normalize_holes(&text).split('\n').map(|l| l.to_string()).collect();
+        holes[first] = format!("{}{}", &sl[first][..col], body[0]);
         for k in first + 1..=last {
-            holes[k] = crate::dslzone::normalize_hole_line(&sl[k]);
+            holes[k] = body[k - first].clone();
         }
     }
     let holes = hole_layout(holes.iter().map(|l| tight_hole_braces(l)).collect());
@@ -133,11 +211,16 @@ fn format_holes_only(src: &str, dz: &[crate::dslzone::Zone]) -> String {
 }
 
 /// Rule 0 for a file with DSL bodies, which `rust_tokens` cannot read: both
-/// versions transpiled, compared with their whitespace removed.
+/// versions transpiled, compared token for token (comments aside).
 fn same_rust(a: &str, b: &str) -> bool {
-    let t = |s: &str| crate::driver::transpile_str(s).ok().map(|r| r.chars().filter(|c| !c.is_whitespace()).collect::<String>());
+    // Token for token, so a space inside a string is a difference: compared
+    // with the whitespace stripped, `"{n():>4}"` and `"{n(): >4}"` were the
+    // same, and a changed format spec passed Rule 0 (found 2026-10-12).
+    let t = |s: &str| crate::driver::transpile_str(s).ok().and_then(|r| crate::lex::lex_rust(&r).ok()).map(|v| v.into_iter().filter(|t| !t.is_comment()).map(|t| t.text).collect::<Vec<String>>());
+    // An arm's body moved under its `=>` is the same arm, as `rust_tokens`
+    // counts it (0.8.1: a file with DSL bodies was refused for it).
     match (t(a), t(b)) {
-        (Some(x), Some(y)) => x == y,
+        (Some(x), Some(y)) => x == y || bare_arms(x) == bare_arms(y),
         _ => false,
     }
 }
@@ -232,6 +315,28 @@ fn format_harsh(src: &str) -> String {
 
 /// `format_harsh`, and whether Rule 0 refused the result (S4, 2026-10-05).
 fn format_harsh_checked(src: &str) -> (String, bool) {
+    // To a fixed point: a pass places a line by the columns it knows, and an
+    // indent the next pass learns -- a closure's body set under its `(` --
+    // can make a line it measured short a long one (H16, found formatting
+    // Docreview twice, 2026-10-12: the second run changed what the first had
+    // written). Each pass is checked against the one before (Rule 0), so the
+    // result is the same Rust as the source; a pass that backs out ends the
+    // loop with what was already good.
+    let (mut cur, backed) = format_harsh_once(src);
+    if backed {
+        return (cur, true);
+    }
+    for _ in 0..3 {
+        let (next, b) = format_harsh_once(&cur);
+        if b || next == cur {
+            break;
+        }
+        cur = next;
+    }
+    (cur, false)
+}
+
+fn format_harsh_once(src: &str) -> (String, bool) {
     // Two passes: re-break (adds line breaks, never joins), then indent.
     let broken = rebreak(src);
     if std::env::var("HRS_FMT_DEBUG").is_ok() {
@@ -393,6 +498,48 @@ fn rebreak(src: &str) -> String {
         // line break inside a `~` call's stream. The stream's syntax belongs
         // to the DSL, and for `m~` a line break *is* syntax -- a row.
         let streams = tilde_streams(t);
+        // An inline `if c: a else: b` is the author's line: no chain or
+        // argument list inside it is broken (H16, Docreview 2026-10-12: a
+        // value moved to the next line left `else:` behind it, which is not
+        // Harsh, and a chain broken at its `<-` mixed the condition and the
+        // two values on one column).
+        let inline_if: Option<usize> = (0..t.len())
+            .find(|&k| {
+                t[k].is_kw("else")
+                    && depth_at(t, k) == 0
+                    && t.get(k + 1).map_or(false, |x| x.kind == Tk::Colon)
+                    && (k + 2..t.len()).any(|j| !t[j].is_comment())
+            })
+            .and_then(|e| (0..e).rev().find(|&k| t[k].is_kw("if") && depth_at(t, k) == 0));
+        let in_inline_if = |k: usize| inline_if.map_or(false, |f| k >= f);
+        // An inline literal of three items or more goes vertical below (the
+        // list rule): its items get lines of their own, so a chain or an
+        // argument list inside one is not judged by the width of the line
+        // the literal was written on (H16, Docreview 2026-10-12: `detail =
+        // line <- detail <- clone$` in a long `LogLine\ …` broke at its `<-`,
+        // a continuation the field's line could not hold).
+        let listed_from: Option<usize> = {
+            let bs: Vec<usize> = (0..t.len()).filter(|&k| t[k].kind == Tk::Backslash && depth_at(t, k) == 0).collect();
+            match bs.as_slice() {
+                [b] => {
+                    let commas = (b + 1..t.len()).filter(|&k| t[k].kind == Tk::Comma && depth_at(t, k) == 0).count();
+                    let one_line = (b + 1..t.len()).all(|k| t[k].line_start.is_none());
+                    (commas >= 2 && one_line).then_some(*b)
+                }
+                _ => None,
+            }
+        };
+        let in_list = |k: usize| listed_from.map_or(false, |b| k > b);
+        let listed_heads = argument_heads(t, layout::opens(t).is_some());
+        // A block value -- `let r = match v <- a <- b\` -- moves after its
+        // `=` (the break below): a chain in its first line is measured from
+        // there, as it will stand, not from the binding's start (H16: it was
+        // broken on the first run and joined on the second).
+        let moving_value: Option<usize> = top_level_eq(t)
+            .filter(|&eq| !(0..eq).any(|k| t[k].kind == Tk::Backslash && depth_at(t, k) == 0))
+            .and_then(|eq| (eq + 1..t.len()).find(|&i| !t[i].is_comment()))
+            .filter(|&first| t[first].line_start.is_none())
+            .filter(|_| layout::opens(t).is_some() && (0..t.len()).rev().find(|&i| !t[i].is_comment()).map_or(false, |i| t[i].kind == Tk::Backslash));
         let mut note = |tok: &Token, ind: usize, breaks: &mut std::collections::HashMap<u32, usize>| {
             if breaks.contains_key(&tok.span.lo) || in_stream(&streams, tok) {
                 return;
@@ -401,6 +548,47 @@ fn rebreak(src: &str) -> String {
             let line_ind = (0..t.len()).rev().find(|&k| t[k].span.lo <= tok.span.lo && t[k].line_start.is_some()).and_then(|k| t[k].line_start).unwrap_or(l.indent);
             noted.push((tok.span.lo, ind as isize - line_ind as isize));
         };
+        // A literal argument whose fields, one unit past its name, would
+        // pass `CHAIN_WIDTH`: its `(` goes to the next line, one unit past
+        // the callee, and the literal with it (the user's ruling,
+        // 2026-10-13, for a long method name).
+        if let Some(o) = literal_argument(t).filter(|&o| t[o].line_start.is_none() && !in_inline_if(o)) {
+            let starts = line_starts(src);
+            let ls = (0..o).rev().find(|&k| t[k].line_start.is_some()).unwrap_or(0);
+            let head_col = (orig_col(&t[o + 1], &starts) as isize - orig_col(&t[ls], &starts) as isize + l.indent as isize + sh).max(0) as usize;
+            let after = t.last().map_or(0, |x| x.span.hi as usize);
+            let body: Vec<&str> = src[after..(last_hi as usize).min(src.len())].lines().skip(1).filter(|x| !x.trim().is_empty()).collect();
+            // The `)` on a line of its own is not a field; a comment line
+            // is not measured.
+            let closer_alone = body.last().map_or(false, |x| x.trim_start().starts_with(')'));
+            let fields: Vec<&str> = body[..body.len() - usize::from(closer_alone)]
+                .iter()
+                .copied()
+                .filter(|x| !x.trim_start().starts_with("//"))
+                .collect();
+            let base = fields.iter().map(|x| x.len() - x.trim_start().len()).min().unwrap_or(0);
+            let widest = fields.iter().map(|x| x.trim_end().len().saturating_sub(base)).max().unwrap_or(0);
+            if head_col + UNIT + widest > CHAIN_WIDTH {
+                note(&t[o], cont_s, &mut breaks);
+                // Still past it from beneath a long callee after a long
+                // receiver: the link goes to its own line too, one unit past
+                // the receiver, and the literal one unit past the method.
+                let callee = anchor_index(t, o);
+                let callee_col = (orig_col(&t[callee], &starts) as isize - orig_col(&t[ls], &starts) as isize + l.indent as isize + sh).max(0) as usize;
+                // Only the chain's one link: a longer chain has the chain
+                // rules of its own.
+                let one_link = callee > 0
+                    && t[callee - 1].kind == Tk::LArrow
+                    && t[callee - 1].line_start.is_none()
+                    && !(0..callee - 1).any(|k| t[k].kind == Tk::LArrow && depth_at(t, k) == depth_at(t, callee - 1))
+                    // After a long receiver only (his example): beside a
+                    // short one, a link on its own line gains a column or two.
+                    && receiver_is_long(t, callee - 1);
+                if callee_col + UNIT + 1 + UNIT + widest > CHAIN_WIDTH && one_link {
+                    note(&t[callee - 1], cont_s, &mut breaks);
+                }
+            }
+        }
         // A paren block's prototype: `( |x| :` line-final, `)` on its own line.
         if layout::opens(t).is_some() {
             if let Some(o) = innermost_open(t, t.len()) {
@@ -431,7 +619,7 @@ fn rebreak(src: &str) -> String {
             let end = chain_end(t, *run.last().unwrap());
             // A chain in operator context -- `a <- x > b <- y` -- is an
             // operand, not a statement's chain: its shape is the author's.
-            if !chain_starts_expression(t, first) {
+            if !chain_starts_expression(t, first) || in_inline_if(first) || in_list(first) {
                 continue;
             }
             // A paren block's header: the chain goes on after the `)` in
@@ -478,9 +666,47 @@ fn rebreak(src: &str) -> String {
             if run.len() + tail_links == 1 {
                 continue;
             }
-            let eq_before = recv > 0 && t[recv - 1].kind == Tk::Eq && t[recv].line_start.is_none();
+            // A binding's `=`, never a field's: after a literal's `\` every
+            // `=` is a field's (H16, Docreview 2026-10-12: `LogLine\ action =
+            // action, detail = line <- detail <- clone$, ..` broke after
+            // `detail =`, and the field's value fell out of the literal).
+            // A chain after a call whose arguments are listed beneath it --
+            // `record` / `(a)` / `(b)` / `<- await` / `<- map_err e` -- is
+            // the call's: its links stay beneath it, never joined onto the
+            // last argument's line, where they would read as that
+            // argument's (H16, found formatting Docreview twice, 2026-10-12:
+            // the second run joined what the first had broken).
+            let after_listed = depth_at(t, first) == 0
+                && t[first].line_start.is_some()
+                && listed_heads.contains_key(&receiver_line);
+            if after_listed {
+                continue;
+            }
+            let eq_before = recv > 0
+                && t[recv - 1].kind == Tk::Eq
+                && t[recv].line_start.is_none()
+                && !(0..recv - 1).any(|k| t[k].kind == Tk::Backslash && depth_at(t, k) == 0);
             let whole = joined_width(src, t, receiver_line, end);
-            let own = if eq_before { cont_s + span_width(src, t, recv, end) } else { whole };
+            // The value a binding's `=` holds, when the chain is in its first
+            // line: `let r = Literal\ a, b = x <- f$ <- g$`. Too long where it
+            // stands, it moves after its `=` (as a receiver right after the
+            // `=` does), and the chain is measured where it will stand (H16:
+            // measured from `let`, it was broken on one run and joined on the
+            // next).
+            let value_start = moving_value.or_else(|| {
+                top_level_eq(t)
+                    .filter(|&eq| !(0..eq).any(|k| t[k].kind == Tk::Backslash && depth_at(t, k) == 0))
+                    .and_then(|eq| (eq + 1..t.len()).find(|&i| !t[i].is_comment()))
+                    .filter(|&v| t[v].line_start.is_none())
+            });
+            let value_start = value_start.filter(|&v| !eq_before && v < recv && (v..first).all(|k| t[k].line_start.is_none()));
+            let own = if eq_before {
+                cont_s + span_width(src, t, recv, end)
+            } else if let Some(v) = value_start {
+                cont_s + span_width(src, t, v, end)
+            } else {
+                whole
+            };
             if own > CHAIN_WIDTH {
                 for &a in rest {
                     if t[a].line_start.is_none() {
@@ -492,10 +718,14 @@ fn rebreak(src: &str) -> String {
                 }
                 if eq_before {
                     note(&t[recv], cont_s, &mut breaks);
+                } else if let Some(v) = value_start {
+                    note(&t[v], cont_s, &mut breaks);
                 }
             } else if joinable(t, receiver_line, end) {
                 if eq_before && whole > CHAIN_WIDTH {
                     note(&t[recv], cont_s, &mut breaks);
+                } else if let Some(v) = value_start.filter(|_| whole > CHAIN_WIDTH) {
+                    note(&t[v], cont_s, &mut breaks);
                 }
                 for &a in &run {
                     if t[a].line_start.is_some() && !in_stream(&streams, &t[a]) {
@@ -511,7 +741,7 @@ fn rebreak(src: &str) -> String {
         {
             let mut i = 0;
             while i < t.len() {
-                if t[i].kind == Tk::Open('(') {
+                if t[i].kind == Tk::Open('(') && !in_inline_if(i) {
                     if let Some(c) = matching_close_from(t, i) {
                         let inner = &t[i + 1..c];
                         for run in chain_runs(inner) {
@@ -554,7 +784,7 @@ fn rebreak(src: &str) -> String {
                     continue;
                 }
                 let already = args.iter().all(|&a| t[a].line_start.is_some() || breaks.contains_key(&t[a].span.lo));
-                if already {
+                if already || in_inline_if(h) || in_list(h) {
                     continue;
                 }
                 // The extent: from the head to the end of the last argument's atom.
@@ -566,9 +796,29 @@ fn rebreak(src: &str) -> String {
                 // block's own shape, the prototype rule's; with a second
                 // argument beside it, all go beneath.)
                 let has_block = args.len() >= 2 && args.iter().any(|&a| t[a].kind == Tk::Open('(') && matching_close_from(t, a).is_none());
+                // A method applied in a chain of one link -- `message <-
+                // subject (first_long) (second_long)` -- is measured, moved
+                // and listed from its chain's start, the receiver: the chain
+                // is never broken (rule 1). When its line is too long, it
+                // moves after its `=` and its arguments go beneath the
+                // method, one unit past it, as beneath any callee -- both
+                // at once (the user's ruling, 2026-10-12, H9). A longer
+                // chain's links are the chain rule's.
+                let callee = h;
+                let prev = (0..h).rev().find(|&k| !t[k].is_comment());
+                let one_link = prev.filter(|&p| t[p].kind == Tk::LArrow && depth_at(t, p) == 0).filter(|&p| chain_runs(t).iter().any(|r| r.len() == 1 && r[0] == p) && chain_starts_expression(t, p));
+                let h = match one_link {
+                    Some(p) => receiver_start(t, p),
+                    None => h,
+                };
+                // From the callee's new column: where an earlier break moved
+                // this line's block (`let next =` / `match mode\` moved after
+                // its `=`), the line's own shift counts (H16, Docreview
+                // 2026-10-12: the arguments kept the old column, the
+                // callee's new one, and became statements of their own).
                 let head_col = match moved.iter().rev().find(|&&(a, e, _)| a <= h && h < e) {
                     Some(&(a, _, new)) => new + orig_col_of(src, t, h).saturating_sub(orig_col_of(src, t, a)),
-                    None => orig_col_of(src, t, h),
+                    None => (orig_col_of(src, t, h) as isize + sh).max(0) as usize,
                 };
                 let width = head_col + span_width(src, t, h, last_end);
                 // The user's rule (2026-09-29): a call goes vertical when it is
@@ -598,12 +848,15 @@ fn rebreak(src: &str) -> String {
                         note(&t[h], cont_s, &mut breaks);
                         head_col = cont_s;
                         moved.push((h, last_end, cont_s));
-                        if cont_s + span_width(src, t, h, last_end) <= CHAIN_WIDTH {
+                        // A one-link chain that did not fit on its line moves
+                        // and lists its arguments together, never moved alone
+                        // (the user's ruling, 2026-10-12).
+                        if one_link.is_none() && cont_s + span_width(src, t, h, last_end) <= CHAIN_WIDTH {
                             continue;
                         }
                     }
                 }
-                let arg_col = head_col + UNIT;
+                let arg_col = head_col + orig_col_of(src, t, callee).saturating_sub(orig_col_of(src, t, h)) + UNIT;
                 for &a in &args {
                     if t[a].line_start.is_none() {
                         note(&t[a], arg_col, &mut breaks);
@@ -858,7 +1111,11 @@ pub const LONG_ARG: usize = 20;
 /// An operator, `=`, `,`, `;`, `:`, `=>`, `as` ends the chain.
 fn chain_token(t: &Token) -> bool {
     match t.kind {
-        Tk::Ident => !is_kw_text(&t.text) || t.text == "self" || t.text == "Self",
+        // A path's head is part of the chain: `crate.server.f x <- await`
+        // (H16, Docreview 2026-10-12: with `crate` left out, the receiver
+        // began at its `.`, the `=` before it went unseen, and a chain that
+        // fit after its `=` was broken on one run and joined on the next).
+        Tk::Ident => !is_kw_text(&t.text) || matches!(t.text.as_str(), "self" | "Self" | "crate" | "super"),
         Tk::Int | Tk::Float | Tk::Str | Tk::Char | Tk::Open(_) | Tk::Close(_) | Tk::Dot | Tk::PathSep | Tk::LArrow => true,
         Tk::Punct => matches!(t.text.as_str(), "$" | "?" | "!" | "&" | "*"),
         _ => false,
@@ -1029,8 +1286,16 @@ fn chain_starts_expression(toks: &[Token], first: usize) -> bool {
     let p = &toks[i - 1];
     matches!(p.kind, Tk::Eq | Tk::FatArrow | Tk::Comma | Tk::Colon | Tk::Semi | Tk::Open(_))
         || (p.kind == Tk::Ident && is_kw_text(&p.text))
-        // A closure's body begins after its prototype's closing bar.
-        || (p.kind == Tk::Punct && p.text.ends_with('|'))
+        // A closure's body begins after its prototype's closing bar: `|c|`,
+        // or `||` written where an expression begins -- after `(`, `,`, `=`,
+        // `move` -- never the logical or, whose operands are the author's
+        // (Docreview, 0.8.2: `|c| a <- x || c <- name <- f$ <- g$` had each
+        // operand's chain broken in place, mid-expression).
+        || (p.kind == Tk::Punct && p.text == "|")
+        || (p.kind == Tk::Punct && p.text == "||" && {
+            let before = (0..i - 1).rev().find(|&k| !toks[k].is_comment()).map(|k| &toks[k]);
+            before.map_or(true, |b| matches!(b.kind, Tk::Eq | Tk::FatArrow | Tk::Comma | Tk::Colon | Tk::Semi | Tk::Open(_)) || b.is_kw("move") || b.is_kw("return"))
+        })
 }
 
 /// The first token of the receiver of the chain whose first arrow is `first`.
@@ -1193,7 +1458,7 @@ fn innermost_open_any(toks: &[Token], end: usize) -> Option<usize> {
 /// Index of the anchor token of the bracket at `open`: the start of the
 /// callee path before it (`compute (`, `foo.bar (`, `vec![`), else the
 /// bracket itself.
-fn anchor_index(toks: &[Token], open: usize) -> usize {
+pub(crate) fn anchor_index(toks: &[Token], open: usize) -> usize {
     // `[where ..]` is Harsh's own construct, not an index: the bracket is
     // its anchor, whatever type precedes it.
     if toks.get(open + 1).map_or(false, |t| t.is_kw("where")) {
@@ -1221,10 +1486,21 @@ fn anchor_index(toks: &[Token], open: usize) -> usize {
         }
         break;
     }
+    // A reference to a literal, `&[` or `&mut [`, is one construct: it is
+    // anchored on its `&` (0.8.1: `const XS: &[T] =` / `&[` put the entries
+    // one column past the unit and the `]` under the `[`, one column past
+    // the `&` that starts its line -- found in the site's pages).
+    if i == open && i > 0 {
+        let amp = |k: usize| toks[k].kind == Tk::Punct && toks[k].text == "&";
+        if amp(i - 1) {
+            i -= 1;
+        } else if i > 1 && toks[i - 1].is_kw("mut") && amp(i - 2) {
+            i -= 2;
+        }
+    }
     i
 }
 
-/// Index of the first `<-` at bracket depth zero in the logical line.
 /// For every application in the line, each argument's first token mapped
 /// to the callee's first token (a path's first segment). From the
 /// juxtaposition fixups: `Open` marks the first argument, `Comma` the rest.
@@ -1328,6 +1604,7 @@ fn chain_first_arrow(toks: &[Token], a: usize) -> usize {
     a
 }
 
+/// Index of the first `<-` at bracket depth zero in the logical line.
 fn first_arrow(toks: &[Token]) -> Option<usize> {
     let mut d = 0usize;
     for (i, t) in toks.iter().enumerate() {
@@ -1544,7 +1821,13 @@ fn plan(src: &str, lines: &[Line]) -> Plan {
                             if fa < start && (l.toks[fa].line_start.is_some() || !receiver_is_long(&l.toks, fa)) {
                                 new_col[fa]
                             } else {
-                                let ls = (0..=fa).rev().find(|&k| l.toks[k].line_start.is_some()).unwrap_or(0);
+                                // The receiver's line: the one before the
+                                // first arrow, which may stand on its own
+                                // line by now (H16, Docreview 2026-10-12:
+                                // `Some (PathBuf.from home` / `<- join …`
+                                // found the arrow's own line, not yet placed,
+                                // and put the links at column 0 + 4).
+                                let ls = (0..fa).rev().find(|&k| l.toks[k].line_start.is_some()).unwrap_or(0);
                                 new_col[ls] + UNIT
                             }
                         } else if let Some(o) = innermost_open(&l.toks, start) {
@@ -1582,7 +1865,11 @@ fn plan(src: &str, lines: &[Line]) -> Plan {
             let last_phys = *phys.last().unwrap_or(&0);
             let opener_idx = opener_token(&l.toks).unwrap_or(last_phys);
             let opener_new = new_col[opener_idx];
-            let anchor_new = innermost_open(&l.toks, l.toks.len()).map(|i| new_col[anchor_index(&l.toks, i)]).or(inherited_anchor);
+            let anchor_new = match literal_argument(&l.toks) {
+                // A literal argument's `)` stands under its `(`.
+                Some(o) => Some(new_col[o]),
+                None => innermost_open(&l.toks, l.toks.len()).map(|i| new_col[anchor_index(&l.toks, i)]).or(inherited_anchor),
+            };
             let opener_orig = orig_col(&l.toks[opener_idx], &starts);
             let chain_new = if innermost_open(&l.toks, l.toks.len()).is_some() {
                 Some(tail_link.unwrap_or_else(|| link_col(&l.toks, &new_col, l.toks.len(), first_new)))
@@ -1593,7 +1880,7 @@ fn plan(src: &str, lines: &[Line]) -> Plan {
                 header_orig: l.indent,
                 opener_orig,
                 opener_new: new_col[opener_idx],
-                body_new: first_new_body(&l.toks, opener_new, first_new),
+                body_new: first_new_body(opener_new),
                 anchor_new,
                 chain_new,
             });
@@ -1637,6 +1924,12 @@ fn opener_token(toks: &[Token]) -> Option<usize> {
                 }
             }
         }
+        // A literal passed as an argument, `push (Card\`: its fields go one
+        // unit past the literal's name, and its `)` under its `(` (the
+        // user's ruling, 2026-10-13).
+        if let Some(o) = literal_argument(toks) {
+            return Some(o + 1);
+        }
         return Some(line_start_of(colon));
     }
     // Opened inside a group on this line?
@@ -1678,6 +1971,41 @@ fn opener_token(toks: &[Token]) -> Option<usize> {
     Some(line_start_of(colon))
 }
 
+/// A line ending in a literal passed as an argument, `cards <- push (Card\`
+/// or `(P.<i32>\`: the index of the `(` that isolates it, when the literal's
+/// head is all the group holds so far.
+fn literal_argument(toks: &[Token]) -> Option<usize> {
+    let last = (0..toks.len()).rev().find(|&i| !toks[i].is_comment())?;
+    if toks[last].kind != Tk::Backslash {
+        return None;
+    }
+    let o = innermost_open(toks, last)?;
+    if toks[o].kind != Tk::Open('(') || o + 1 >= last {
+        return None;
+    }
+    // A path, its generic list included: a comma only inside `<…>`, so
+    // `(a, Card\` is a tuple, not a literal argument.
+    let mut angle = 0i32;
+    let head = (o + 1..last).all(|k| {
+        let t = &toks[k];
+        match t.kind {
+            Tk::Lt => {
+                angle += 1;
+                true
+            }
+            Tk::Gt => {
+                angle -= 1;
+                angle >= 0
+            }
+            Tk::Comma => angle > 0,
+            Tk::Dot | Tk::PathSep => true,
+            Tk::Ident => !is_kw_text(&t.text),
+            _ => false,
+        }
+    });
+    (head && angle == 0).then_some(o)
+}
+
 /// Is the receiver of the arrow at `a` -- what stands between the start of
 /// its physical line (or the last `=`) and the arrow -- longer than
 /// `LINK_ALIGN`? Then its links do not align under the arrow but hang one
@@ -1701,7 +2029,7 @@ fn receiver_is_long(toks: &[Token], a: usize) -> bool {
 }
 
 /// Where a block's body goes: one unit past the opener.
-fn first_new_body(_toks: &[Token], opener_new: usize, _line_new: usize) -> usize {
+fn first_new_body(opener_new: usize) -> usize {
     opener_new + UNIT
 }
 

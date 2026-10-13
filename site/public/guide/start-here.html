@@ -264,7 +264,11 @@ pre.code:hover .copy,.copy:focus-visible{opacity:1}
 </tr>
 <tr>
 <td><code>docs/ROADMAP.md</code></td>
-<td>What is left to build, sized and ordered, plus the one decision that is blocking three items.</td>
+<td>What is left to build: the rulings waiting first, then what is the author's to run, then what is open.</td>
+</tr>
+<tr>
+<td><code>docs/RETROSPECTIVE.md</code></td>
+<td>The project's history, session by session: what was decided and undone, the tools and their files, the oracles and what each caught, the principles that held or were amended.</td>
 </tr>
 <tr>
 <td><code>docs/TUTORIAL.md</code></td>
@@ -374,11 +378,11 @@ src/bin/          `hrs-from` and `hrs-remap`</code></pre>
 </table>
 <h2 id="current-state">Current state</h2>
 <p>Working: layout, token substitution, curried parameter declarations, source map, diagnostic remapping, and the Rust-to-Harsh converter. The transpiler round-trips through its own converter to a fixed point — converted to Harsh, transpiled back, rebuilt, and the resulting binaries produce byte-identical output.</p>
-<p>Deferred, because each needs an expression parser rather than a layout pass:</p>
+<p>Once deferred here, and since built or settled:</p>
 <ul>
-<li>Juxtaposed application at call sites (<code>f x y</code>). Parameter declarations are curried; arguments are not.</li>
-<li>Indentation-form struct literals (<code>Point:</code>). Use <code>Point { x: 1 }</code>.</li>
-<li><code>&lt;-</code> for type paths (<code>Router &lt;- new$</code>). Use <code>Router.new$</code>.</li>
+<li>Juxtaposed application at call sites, <code>f x y</code>, as well as curried parameter declarations.</li>
+<li>Struct literals are written <code>Point\ x = 1</code>, inline or with the fields beneath; Rust's <code>Point { x: 1 }</code> is refused.</li>
+<li>A type path takes <code>.</code>, <code>Router.new$</code>; <code>&lt;-</code> is for fields and methods only.</li>
 </ul>
 <h2 id="resolved">Resolved</h2>
 <ul>

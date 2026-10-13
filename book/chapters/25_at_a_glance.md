@@ -107,6 +107,7 @@ Point { x: 1.0, y: 2.0 } Size { w: 3.0, h: 4.0 } 1.5 9.14 5 12 8 big counts: 2 4
 - An enum is a union of variants, each one of the three forms spelled as that struct is: `Empty`, `Circle f64`, `Rect` with fields beneath or `Rect\ w: f64, h: f64`. (§6.1)
 - A literal is the name, `\`, and `field = value` — inline to the end of its line or its group's `)`, or a field per line beneath. `..base` last. A literal that is one element of a tuple has its own parentheses. (§5.1)
 - A literal inside a literal on one line is parenthesised, so the reader sees where it ends: `inner = (Animal\ name = n), good = true`; or the outer literal goes one field per line, where the line ends the inner one. A comma ending a field line is refused. (§5.1)
+- A literal passed as an argument is isolated, a constructor's too: `cards <- push (Card\ id = 1)`, `Ok (View\ title = t)`; written bare it is refused, the isolated form named; over several lines its fields stand one unit past its name and its `)` under its `(`. (§5)
 - `impl Point`, `trait Area`, `mod geometry`, `extern "C"` — headers with no mark, their items beneath. (§5.3, §10.2, §7.2, §20.1)
 - A `where` clause on one line needs nothing; over several lines it is bracketed, `[where T: Debug]`, on its own line under the signature. (§10.2)
 - Attributes apply inside their brackets: `#[derive Debug Clone]`, `#[cfg (feature = "x")]`. (§5.2)
@@ -122,12 +123,12 @@ Point { x: 1.0, y: 2.0 } Size { w: 3.0, h: 4.0 } 1.5 9.14 5 12 8 big counts: 2 4
 
 - `|x| x + 1` inline; `|x|:` with the body beneath; `|x: i32| -> i32:` fully annotated; `move ||:` capturing by value. (§13.1)
 - A closure's type is the trait applied to its parameter types: `Fn i32 -> i32`, `Fn (i32) (i32) -> i32`, `FnOnce$`. (§13.1)
-- A chain of one or two links stays on its line within 72 columns; three or more go vertical, every `<-` under the first, and `=` ends its line before one begins. A block-bodied closure in a chain is a paren block: `(`, the parameters, the body, `)` on its own line. (§13.2)
+- A chain of one or two links stays on its line within 72 columns, a single link at any length (long arguments go beneath its method); three or more go vertical, every `<-` under the first, and `=` ends its line before one begins. A block-bodied closure in a chain is a paren block: `(`, the parameters, the body, `)` on its own line. (§13.2)
 - `x |> f` hands `x` to `f`; `f <| x` the same from the right; both sides are atoms, and a chain or a closure is isolated first. Fewer values than the function takes defer the rest as one flat closure — `|>` fills from the left, `<|` from the right, both leave a hole in the middle — and the result is a value. A project function given too many is an error. (§13.3)
 
 ## Macros and markup — chapter 23
 
-- `macro_rules! twice` holds its arms beneath, no mark; a matcher is a parameter list, `( ($x:expr) )`; a transcriber is a block, `=> do:`. Harsh's own macros are written `macro_rules~`, called with `~`, and expanded by `hrs`: they are gone from the Rust. (§20.5, chapter 23)
+- Harsh's own macros are written `macro_rules~ twice`, their arms beneath with no mark; a matcher is a parameter list, `( ($x:expr) )`; a transcriber is a block, `=> do:`. They are called with `~` and expanded by `hrs`: they are gone from the Rust. A `macro_rules! twice { … }` in a Harsh file is Rust's, copied byte for byte; its calls are Harsh calls, `twice! n`. (§20.5, chapter 23)
 - A macro's own language — `select!`'s arms, `view!` markup, an `rsx!` tree — goes in braces, as Rust, byte for byte; the Harsh inside is a hole, `@: … :@`, always closed. (chapter 23)
 - A fenced block in a `///` comment is Harsh, and the tool that runs it gets the Rust it expects. (§14.2)
 

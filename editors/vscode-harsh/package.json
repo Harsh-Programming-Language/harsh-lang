@@ -2,7 +2,7 @@
   "name": "harsh-lang",
   "displayName": "Harsh",
   "description": "Rust without the braces: highlighting, layout-aware Enter and Tab, format on save, and errors on your .hrs lines, for the Harsh language.",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "publisher": "harsh-lang",
   "author": "Bahiminin Benoit Dah",
   "engines": {
@@ -37,7 +37,7 @@
       "properties": {
         "harsh.serverPath": {
           "type": "string",
-          "default": "hrs-lsp",
+          "default": "",
           "description": "Path to the hrs-lsp binary. Leave empty and the extension looks on your PATH and where `cargo install harsh-lang` puts it (~/.cargo/bin); set it when the binary is elsewhere."
         }
       }

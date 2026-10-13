@@ -324,7 +324,7 @@ fn main$:
 
 ```text
 reaching for element 5
-thread 'main' panicked at out_of_range.hrs:6:20:
+thread 'main' (24720) panicked at out_of_range.hrs:6:20:
 ```
 
 
@@ -386,6 +386,16 @@ the opener starts its own line after the `=`. Taking one apart is the mirror
 image — `let Pair x y = pair` — which is the general rule that **matching is
 constructing**, read backwards.
 
+Handed to a function, a literal is isolated like any argument of several
+tokens, a constructor's included: `people <- push (Person\ name = n, age = 27)`,
+`Some (Person\ …)`; written bare, it is refused. Over several lines, its
+fields stand one unit past its name and its `)` under its `(`:
+
+    people <- push (Person\
+                        name = String.from "Ada"
+                        age = 36
+                   )
+
 ## 3.2 Enums
 
 ```rust harsh
@@ -407,12 +417,13 @@ fn describe (e: Event) -> String:
         Event.Paste\ text, at => format! "pasted {:?} at {}" text at
 
 fn main$:
-    let events = [
-        Event.PageLoad,
-        Event.Click 20 80,
-        Event.KeyPress 'q',
-        Event.Paste\ text = String.from "hi", at = 3,
-    ]
+    let events =
+        [
+            Event.PageLoad,
+            Event.Click 20 80,
+            Event.KeyPress 'q',
+            Event.Paste\ text = String.from "hi", at = 3,
+        ]
     for e in events:
         println! "{}" (describe e)
 ```
@@ -1098,6 +1109,69 @@ Imported from Rust libraries, called by Harsh's rules: `vec! 1 2 3`,
 `#[derive Debug Serialize]`, `#[tokio.main]`; a stream that is a language of
 its own goes in braces, with Harsh in holes, `@: … :@` (23.8).
 
+A hole is an expression that calls on a variable, a function or a name the
+DSL binds, or uses an operator (`.` and `::` too); a single word is exempt,
+`{count}`. Look in the strings' format slots, after a key's `:` in `json!`,
+in a splice `( … )` in Maud, after an attribute's `:` or `=`, in a brace pair
+of its own, after the DSL's `for … in` and `if`. The Book's 23.8 and the
+guide to macros have the full catalogue.
+
+```toml
+[dependencies]
+serde_json = "1"
+```
+
+```rust harsh
+use serde_json.json
+
+fn main$:
+    let name = "Ada"
+    let langs = vec! "Rust" "Harsh"
+    let v = json! {{
+        "name": @: name <- to_uppercase$ :@,
+        "age": 36,
+        "langs": langs,
+        "count": @: langs <- len$ + 1 :@,
+        "tags": [{ "id": 1, "main": @: langs <- first$ :@ }]
+    }}
+    println! "{v}"
+```
+
+```text
+{"age":36,"count":3,"langs":["Rust","Harsh"],"name":"ADA","tags":[{"id":1,"main":"Rust"}]}
+```
+
+```toml
+[dependencies]
+maud = "0.27"
+```
+
+```rust harsh
+use maud.(html, Markup)
+
+fn page (title: &str) (items: &[&str]) -> Markup:
+    html! {
+        h1 { (title) }
+        p.intro { "Items: " (@: items <- len$ :@) }
+        a href=(@: format! "/items/{}" (items <- len$) :@) { "next" }
+        ul {
+            @for item in items {
+                li { (@: item <- to_uppercase$ :@) }
+            }
+        }
+        @if @: items <- is_empty$ :@ {
+            p { "none" }
+        }
+    }
+
+fn main$:
+    println! "{}" (page "Fruit" (&["apple", "pear"]) <- into_string$)
+```
+
+```text
+<h1>Fruit</h1><p class="intro">Items: 2</p><a href="/items/2">next</a><ul><li>APPLE</li><li>PEAR</li></ul>
+```
+
 ## Precedence
 
 Application binds tighter than anything but an atom: `add 1 2 * 10` adds,
@@ -1219,14 +1293,14 @@ fn main$:
 
 ```text
 error[E0382]: borrow of moved value: `a`
-  --> use_after_move.hrs:7:15
+  --> use_after_move.hrs:7:16
    |
  5 |     let a = String.from "hello"
    |         - move occurs because `a` has type `String`, which does not implement the `Copy` trait
  6 |     consume a
    |             - value moved here
  7 |     println! "{a}"
-   |               ^^^ value borrowed here after move
+   |                ^ value borrowed here after move
    = note: consider changing this parameter type in function `consume` to borrow instead if owning the value isn't necessary (hrs 1:16)
    = help: consider cloning the value if the performance cost is acceptable (hrs 6:14)
 ```
@@ -2472,9 +2546,30 @@ fn main$:
 ```
 
 ```text
+warning[unused_parens]: unnecessary parentheses around closure body
+  --> /tmp/harsh-by-example/projects/17_matrices/regression/src/main.hrs:10:38
+   |
+10 |     let x = Matrix.from_rows (list~ (vec! 1.0 h) for h in hours)
+   |                                      ^
+12 |     // Julia's `β = X \ y`: for a tall matrix, the least-squares fit.
+   |         ^
+   = note: in the expansion of `hrs_std.g~` called at /tmp/harsh-by-example/projects/17_matrices/regression/src/main.hrs:12:56
+12 |     // Julia's `β = X \ y`: for a tall matrix, the least-squares fit.
+   = note: `#[warn(unused_parens)]` (part of `#[warn(unused)]`) on by default
+   = help: remove these parentheses (hrs 10:38)
+
+warning[unused_parens]: unnecessary parentheses around closure body
+  --> /tmp/harsh-by-example/projects/17_matrices/regression/src/main.hrs:10:37
+   |
+10 |     let x = Matrix.from_rows (list~ (vec! 1.0 h) for h in hours)
+   |                                     ^
+   |                                                ^
+   = help: remove these parentheses (hrs 10:37)
+
 score = 47.20 + 4.37 × hours
 residual 1.76
 7 hours: 77.8
+hrs: 0 error(s), 2 warning(s)
 ```
 
 With more rows than columns, `solve` returns the least-squares fit, as Julia's

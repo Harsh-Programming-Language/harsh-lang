@@ -211,6 +211,18 @@ pub fn restore(
         shift(map, old_end, delta);
         map.extend(entries);
         generated.replace_range(at..old_end, &text);
+        // The spaces that padded the placeholder to the body's first line
+        // were copied after it as a gap: they go (`view! { … }                , 1`
+        // until 0.7.3, found writing the developer book).
+        let first = src[z.open..=z.close].find('\n').unwrap_or(z.close + 1 - z.open);
+        let pad = first.saturating_sub(ph.len());
+        let after = at + text.len();
+        let run = generated[after..].bytes().take_while(|b| *b == b' ').count();
+        let cut = pad.min(run);
+        if cut > 0 {
+            generated.replace_range(after..after + cut, "");
+            shift(map, after + cut, -(cut as i64));
+        }
         // The lines the body occupied were blanked, and came out as empty
         // lines after the call: as many as the body spans are dropped.
         let spans = src[z.open..=z.close].matches('\n').count();
@@ -362,18 +374,37 @@ fn fill_holes(src: &str, lo: usize, hi: usize, hole: &dyn Fn(&str) -> Result<Str
 /// a hole's marks, `@: x :@` -- after `@:` unless the code starts on the next
 /// line, before `:@` unless the mark starts its own line. `@@:`, a literal
 /// `@:`, is not a mark. Outside the marks the text is the DSL's and is left
-/// as written. One line at a time: a mark's spacing is its own line's.
+/// as written. One line, read on its own: `normalize_holes` for a body.
 pub fn normalize_hole_line(line: &str) -> String {
-    let b = line.as_bytes();
-    let mut out = String::with_capacity(line.len() + 4);
+    normalize_holes(line)
+}
+
+/// `normalize_hole_line` over a whole body, its lines together, so a hole's
+/// code is read as the transpiler reads it (`fill_holes`): Harsh, where a
+/// mark inside a string, a character or a comment is text. Docreview's H11
+/// (0.6.4-0.7.2): `@: format! "from:@{domain}" :@` became `"from :@{domain}"`,
+/// a changed string, because the line was scanned as the DSL's text.
+pub fn normalize_holes(text: &str) -> String {
+    let b = text.as_bytes();
+    let mut out = String::with_capacity(text.len() + 8);
+    let mut d = 0i32;
     let mut i = 0;
     while i < b.len() {
-        if line[i..].starts_with("@@:") {
+        if b[i..].starts_with(b"@@:") {
             out.push_str("@@:");
             i += 3;
             continue;
         }
-        if line[i..].starts_with("@:") {
+        // Inside a hole's own code, a literal or a comment is copied whole.
+        if d == 1 {
+            if let Some(k) = skip_harsh_literal(b, i) {
+                out.push_str(&text[i..k]);
+                i = k;
+                continue;
+            }
+        }
+        if b[i..].starts_with(b"@:") {
+            d += 1;
             out.push_str("@:");
             i += 2;
             let mut j = i;
@@ -381,24 +412,28 @@ pub fn normalize_hole_line(line: &str) -> String {
                 j += 1;
             }
             // Code follows on this line: exactly one space before it.
-            if j < b.len() {
+            if j < b.len() && b[j] != b'\n' {
                 out.push(' ');
             }
             i = j;
             continue;
         }
-        // `:@:` is the DSL's `:` and an opening `@:` (`onclick:@: …`), never a
-        // closing mark (found 2026-10-04).
-        if line[i..].starts_with(":@:") {
+        // Outside a hole, `:@:` is the DSL's `:` and an opening `@:`
+        // (`onclick:@: …`), never a closing mark (found 2026-10-04). Inside
+        // one it closes, as the transpiler reads it: a format slot's hole
+        // and its spec, `{@: v <- len$ :@:>4}` (2026-10-12).
+        if d == 0 && b[i..].starts_with(b":@:") {
             out.push(':');
             i += 1;
             continue;
         }
-        if line[i..].starts_with(":@") {
+        if b[i..].starts_with(b":@") {
+            d -= 1;
             // The mark ends a hole: one space after the code, unless the mark
             // starts its line.
             let trimmed_len = out.trim_end_matches([' ', '\t']).len();
-            let own_line = out[..trimmed_len].trim().is_empty();
+            let line_lo = out[..trimmed_len].rfind('\n').map_or(0, |k| k + 1);
+            let own_line = out[line_lo..trimmed_len].trim().is_empty();
             if !own_line {
                 out.truncate(trimmed_len);
                 out.push(' ');
@@ -407,7 +442,7 @@ pub fn normalize_hole_line(line: &str) -> String {
             i += 2;
             continue;
         }
-        let ch = line[i..].chars().next().unwrap();
+        let ch = text[i..].chars().next().unwrap();
         out.push(ch);
         i += ch.len_utf8();
     }
@@ -548,6 +583,10 @@ mod tests {
         // `@@:` is a literal `@:`, never a mark.
         assert_eq!(n("mail @@:x"), "mail @@:x");
         assert_eq!(n("{@: x :@}"), "{@: x :@}");
+        // H11: in a hole's code a mark inside a string is text.
+        assert_eq!(n("query: @:format! \"from:@{d}\":@,"), "query: @: format! \"from:@{d}\" :@,");
+        // A DSL's own string may hold a hole (a format slot): it is one.
+        assert_eq!(n("p { \"n: {@:n$:@}\" }"), "p { \"n: {@: n$ :@}\" }");
     }
 
     use super::*;

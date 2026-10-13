@@ -253,6 +253,7 @@ fn print_all<T: std.fmt.Debug> (items: &[T]):
 | Build a struct | `let p = Point\ x = 1.0, y = 2.0` |
 | Field shorthand | `let p = Point\ x, y` |
 | Struct update | `let q = Point\ x = 5.0, ..p` |
+| A struct as an argument | `cards <- push (Card\ id = 1)`, `Ok (Card\ id = 1)` — isolated; bare, it is refused. Over several lines: the fields one unit past `Card`, the closing paren under the opening one |
 | Tuple struct value | `let d = Meters 3.5` |
 | Read a tuple field | `let m = d.0` |
 | Enum, inline | `enum Dir\ North, South, East, West` |
@@ -515,6 +516,7 @@ Rust. A macro's own language — an `rsx!` tree, `view!` markup, `select!` arms
 | `hrs check` · `hrs lint` | `cargo check`, `cargo clippy`, mapped to Harsh |
 | `hrs watch` | rebuild on every save |
 | `hrs fmt` · `hrs fmt --check` | lay out the files by Harsh's rules |
+| `hrs test` at a workspace's root | each member in turn: a Harsh member by `hrs`, a Rust one by cargo (also `build`, `check`, `lint`, `fmt`) |
 | `hrs add hrs_std` | add Harsh's crates, to `Hrs.toml` (Rust crates: `cargo add`, to `Cargo.toml`) |
 | `hrs migrate` | move `hrs_std` from a pre-0.3.0 `Cargo.toml` to `Hrs.toml` |
 | `hrs in.hrs -o out.rs` | transpile one file, anywhere; the `.rs` starts with a header naming its source |
@@ -553,6 +555,8 @@ Rust. A macro's own language — an `rsx!` tree, `view!` markup, `select!` arms
 - An `if` with three branches or more goes on several lines.
 - A literal inside a literal on one line is parenthesised:
   `Dog\ inner = (Animal\ name = n), good = true`.
+- An inline `if c: a else: b` is left as written; too long, write a block
+  `if` with each value beneath its branch.
 - A `match` with more than two arms goes one arm per line.
 - A call made long by a long argument goes vertical, one argument per line.
 - No semicolons: a block that discards its last value ends with a line `()`.

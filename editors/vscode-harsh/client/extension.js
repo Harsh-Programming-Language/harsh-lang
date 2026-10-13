@@ -2,10 +2,10 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-// Launches `hrs-lsp` and binds Tab / Shift-Tab to its `harsh/columns`
-// request. Enter needs no code here: the server advertises on-type
-// formatting on `\n` and VSCode calls it, given `editor.formatOnType`,
-// which package.json turns on for Harsh.
+// Launches `hrs-lsp` and binds Enter, Tab and Shift-Tab to its
+// `harsh/columns` request (`enter` below places the new line at the layout's
+// column); the server also answers on-type formatting, formatting on save,
+// hover, go-to-definition and completion.
 
 const vscode = require("vscode");
 const { LanguageClient, TransportKind } = require("vscode-languageclient/node");

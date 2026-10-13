@@ -64,6 +64,44 @@ pub fn convert(src: &str) -> Result<String, String> {
 }
 
 fn convert_inner(src: &str) -> Result<String, String> {
+    // The file's marks are thread-local, and a hole is converted by a nested
+    // call: the outer file's marks come back when it returns (a hole reset
+    // them, so after `json!`'s holes `*x > 0` was written `*x> 0`, 0.7.5).
+    let amps = BINARY_AMPS.with(|b| b.borrow().clone());
+    let ctors = CTORS.with(|c| c.borrow().clone());
+    let file = FILE_BOUND.with(|f| f.borrow().clone());
+    DEPTH.with(|d| *d.borrow_mut() += 1);
+    if DEPTH.with(|d| *d.borrow()) == 1 {
+        WARNINGS.with(|w| w.borrow_mut().clear());
+    }
+    let r = convert_marked(src);
+    DEPTH.with(|d| *d.borrow_mut() -= 1);
+    BINARY_AMPS.with(|b| *b.borrow_mut() = amps);
+    CTORS.with(|c| *c.borrow_mut() = ctors);
+    FILE_BOUND.with(|f| *f.borrow_mut() = file);
+    r
+}
+
+thread_local! {
+    /// The names bound in the file being converted (`bindings::file_names`),
+    /// with, in a hole's nested conversion, those bound at its macro call.
+    static FILE_BOUND: std::cell::RefCell<std::collections::HashSet<String>> = std::cell::RefCell::new(std::collections::HashSet::new());
+    /// The names bound at the macro call whose hole is being converted.
+    static INHERITED: std::cell::RefCell<std::collections::HashSet<String>> = std::cell::RefCell::new(std::collections::HashSet::new());
+    /// Nesting: 1 for the file, more inside a hole's conversion.
+    static DEPTH: std::cell::RefCell<usize> = std::cell::RefCell::new(0);
+    /// What the conversion left as written for want of a binding.
+    static WARNINGS: std::cell::RefCell<Vec<String>> = std::cell::RefCell::new(Vec::new());
+}
+
+/// The warnings of the last conversion: each stretch of Rust-shaped text in
+/// a macro's body left as written because it names nothing the binding
+/// table holds and uses no operator (a glob import's names, say).
+pub fn take_warnings() -> Vec<String> {
+    WARNINGS.with(|w| std::mem::take(&mut *w.borrow_mut()))
+}
+
+fn convert_marked(src: &str) -> Result<String, String> {
     let toks = crate::lex::lex_rust(src).map_err(|e| e.msg)?;
     // Rust's empty generic list -- `f::<>(x)`, `P<>`, `impl<>` -- means
     // nothing, and in Harsh `f<>` is *apply to each*. It is dropped here, from
@@ -88,9 +126,14 @@ fn convert_inner(src: &str) -> Result<String, String> {
     let classes = classify_all(&toks);
     mark_binary_amps(&toks);
     mark_constructors(&toks);
+    {
+        let mut names = crate::bindings::file_names(&toks);
+        names.extend(INHERITED.with(|i| i.borrow().clone()));
+        FILE_BOUND.with(|f| *f.borrow_mut() = names);
+    }
     let pc = param_commas(&toks);
     let ep = empty_params(&toks);
-    let mut w = Writer { out: String::new(), restart_at: None, level: 0, at_line_start: true, param_commas: pc, empty_params: ep, src, brace_depth: 0, in_enum_body: false, errors: Vec::new() };
+    let mut w = Writer { out: String::new(), restart_at: None, level: 0, at_line_start: true, param_commas: pc, empty_params: ep, src, in_enum_body: false, errors: Vec::new() };
     w.emit(&toks, &classes, 0, toks.len(), Kind::Items);
     // A piece of Rust in a DSL body that could not be written as Harsh stops
     // the conversion (the user's ruling, 2026-09-23: no silent failure).
@@ -312,7 +355,6 @@ fn enclosing_open(toks: &[Token], i: usize) -> Option<usize> {
     stack.last().copied()
 }
 
-/// A binary operator a block can follow as an operand: `a && { .. }`.
 /// The line with every string and character literal's content replaced by
 /// `_`, so a scan for brackets or words sees only code. A lifetime's `'` has
 /// no partner within three characters and is left alone.
@@ -353,6 +395,15 @@ fn mask_literals(line: &str) -> String {
 /// One piece of Rust code from a DSL body, as Harsh: converted as the body of
 /// a function, then transpiled back and compared token for token with the
 /// original. Anything else is an error, never a silent Rust fallback.
+/// `hole_of`, the names bound at the macro call handed to the nested
+/// conversion: a DSL inside the hole sees them too.
+fn hole_of_within(frag: &str, bound: &std::collections::HashSet<String>) -> Result<String, String> {
+    let saved = INHERITED.with(|i| std::mem::replace(&mut *i.borrow_mut(), bound.clone()));
+    let r = hole_of(frag);
+    INHERITED.with(|i| *i.borrow_mut() = saved);
+    r
+}
+
 fn hole_of(frag: &str) -> Result<String, String> {
     // A hole is a whole expression: one that ends expecting more is a
     // misread extent, and an error rather than a hole.
@@ -414,6 +465,7 @@ fn same_rust(a: &str, b: &str) -> bool {
     matches!((norm(a), norm(b)), (Some(x), Some(y)) if x == y)
 }
 
+/// A binary operator a block can follow as an operand: `a && { .. }`.
 fn is_binary_operator(t: &Token) -> bool {
     t.kind == Tk::Punct && matches!(t.text.as_str(), "&&" | "||" | "+" | "-" | "*" | "/" | "%" | "==" | "!=" | "<=" | ">=" | "^" | "<<")
 }
@@ -433,7 +485,6 @@ fn innermost_open_char(toks: &[Token], i: usize) -> Option<char> {
     stack.last().copied()
 }
 
-/// Is the innermost bracket left open at `i` a `[`?
 /// Is the innermost group still open at `i` a paren holding a top-level
 /// comma -- a tuple, `(Point { x: 1 }, msg)`? An inline literal there must be
 /// isolated: its field list would otherwise read to the group's `)` and take
@@ -477,6 +528,7 @@ fn innermost_open_is_tuple(toks: &[Token], i: usize) -> bool {
     false
 }
 
+/// Is the innermost bracket left open at `i` a `[`?
 fn innermost_open_is_bracket(toks: &[Token], i: usize) -> bool {
     let mut stack: Vec<char> = Vec::new();
     for t in &toks[..i] {
@@ -786,9 +838,6 @@ struct Writer<'a> {
     empty_params: std::collections::HashSet<usize>,
     /// The source, for the whitespace a macro body keeps.
     src: &'a str,
-    /// How many Rust braces the writer is inside: no layout block can be
-    /// opened there, so a `view!` keeps its brace form.
-    brace_depth: usize,
     /// Inside an enum's body: a variant `V(A, B)` is written `V A B`, a
     /// record variant's name opens its fields with no mark.
     in_enum_body: bool,
@@ -896,7 +945,10 @@ impl<'a> Writer<'a> {
         // nor after a negative's `-` beside a `<` (`d < -1`, it was `- 1`).
         let space_before = space_before
             && !(self.out.ends_with('.') && !self.out.ends_with(".."))
-            && !self.out.ends_with("< -");
+            && !self.out.ends_with("< -")
+            // A range is tight to its end, `0..count$` (a call there was
+            // written `0.. count$`, found 0.7.5).
+            && !(self.out.ends_with("..") && s.chars().next().map_or(false, |c| c.is_alphanumeric() || c == '_' || c == '('));
         // A path's dot touches the name after it, whatever wrote a space
         // there (after a generic list: `Vec.<u32>. new$`).
         if self.out.ends_with(". ") && !self.out.ends_with(".. ") && s.chars().next().map_or(false, |c| c.is_alphabetic() || c == '_') {
@@ -1132,376 +1184,6 @@ impl<'a> Writer<'a> {
         out
     }
 
-    /// Emit one item, recursing into nested blocks.
-    /// Statements inside a brace-delimited block each get their own expression
-    /// region, rather than inheriting the enclosing item's.
-    /// The tokens strictly between a macro's `{` at `open` and its `}` at
-    /// `close`, with the source's own whitespace between them. Newlines keep
-    /// their indentation relative to the `{`'s line, re-based on the current
-    /// level. Substitutions: `::` → `.`, a member `.` → ` <- `, an empty call
-    /// `()` → `$`.
-    /// Tokens `a..b` with the macro-body substitutions and single spaces,
-    /// for an argument inside a macro's braces.
-    fn macro_body_span(&mut self, toks: &[Token], a: usize, b: usize) {
-        let mut prev_hi: Option<u32> = None;
-        let mut k = a;
-        while k < b {
-            let t = &toks[k];
-            if let Some(ph) = prev_hi {
-                if t.span.lo > ph && !matches!(t.kind, Tk::Comma | Tk::Close(_) | Tk::Semi) {
-                    self.out.push(' ');
-                }
-            }
-            let member = matches!(t.kind, Tk::Dot | Tk::LArrow) && k + 1 < b && toks[k + 1].kind == Tk::Ident;
-            let empty_call = t.kind == Tk::Open('(') && k + 1 < b && toks[k + 1].kind == Tk::Close(')') && k > a && toks[k - 1].span.hi == t.span.lo;
-            match t.kind {
-                Tk::PathSep => self.out.push('.'),
-                _ if member => {
-                    while self.out.ends_with(' ') {
-                        self.out.pop();
-                    }
-                    self.out.push_str(" <- ");
-                }
-                _ if empty_call => {
-                    self.out.push('$');
-                    k += 1;
-                }
-                _ => self.out.push_str(&t.text),
-            }
-            prev_hi = Some(toks[k].span.hi);
-            k += 1;
-        }
-        self.at_line_start = false;
-    }
-
-    fn macro_body(&mut self, toks: &[Token], open: usize, close: usize) {
-        let src = self.src;
-        let base_line_start = src[..toks[open].span.lo as usize].rfind('\n').map(|p| p + 1).unwrap_or(0);
-        let base_indent = src[base_line_start..toks[open].span.lo as usize].chars().take_while(|c| *c == ' ').count();
-        let mut k = open + 1;
-        let mut prev_hi = toks[open].span.hi as usize;
-        while k < close {
-            let t = &toks[k];
-            let gap = &src[prev_hi..t.span.lo as usize];
-            if let Some(nl) = gap.rfind('\n') {
-                self.out.push_str(gap[..=nl].trim_end_matches(' '));
-                let ind = gap[nl + 1..].len().saturating_sub(base_indent);
-                for _ in 0..self.level * 4 + ind {
-                    self.out.push(' ');
-                }
-            } else {
-                self.out.push_str(gap);
-            }
-            self.at_line_start = false;
-            let empty_call = t.kind == Tk::Open('(')
-                && k + 1 < close
-                && toks[k + 1].kind == Tk::Close(')')
-                && k > 0
-                && toks[k - 1].span.hi == t.span.lo
-                && matches!(toks[k - 1].kind, Tk::Ident | Tk::Close(')') | Tk::Gt);
-            // `name(args)` inside a macro's braces is an application, as
-            // everywhere: `m.insert($k, $v)` -> `m <- insert ($k) ($v)`.
-            let bang = k + 1 < close && toks[k + 1].kind == Tk::Punct && toks[k + 1].text == "!" && toks[k + 1].span.lo == t.span.hi;
-            let open_at = if bang { k + 2 } else { k + 1 };
-            if t.kind == Tk::Ident
-                && !crate::rules::is_keyword(&t.text)
-                && open_at < close
-                && toks[open_at].kind == Tk::Open('(')
-                && toks[open_at].span.lo == toks[open_at - 1].span.hi
-                && !(open_at + 1 < close && toks[open_at + 1].kind == Tk::Close(')'))
-            {
-                if let Some(ce) = Self::atom_end(toks, open_at, close) {
-                    self.out.push_str(&t.text);
-                    if bang {
-                        self.out.push('!');
-                    }
-                    let args = Self::args_of(toks, open_at, ce - 1);
-                    for (a, b) in &args {
-                        self.out.push(' ');
-                        // One token, a metavariable `$x`, or a repetition
-                        // `$( .. )*` is an atom.
-                        let is_meta = toks[*a].kind == Tk::Punct && toks[*a].text == "$";
-                        let rep_end = if is_meta && *a + 1 < *b && toks[*a + 1].kind == Tk::Open('(') {
-                            Self::atom_end(toks, *a + 1, *b).map(|e| if e < *b && toks[e].kind == Tk::Punct && matches!(toks[e].text.as_str(), "*" | "+" | "?") { e + 1 } else { e })
-                        } else {
-                            None
-                        };
-                        let atomic = (*b - *a == 1 && matches!(toks[*a].kind, Tk::Ident | Tk::Int | Tk::Str | Tk::Char))
-                            || (is_meta && *b - *a == 2 && toks[*a + 1].kind == Tk::Ident)
-                            || rep_end == Some(*b);
-                        if !atomic {
-                            self.out.push('(');
-                        }
-                        self.macro_body_span(toks, *a, *b);
-                        if !atomic {
-                            self.out.push(')');
-                        }
-                    }
-                    prev_hi = toks[ce - 1].span.hi as usize;
-                    k = ce;
-                    continue;
-                }
-            }
-            match t.kind {
-                Tk::PathSep => self.out.push('.'),
-                Tk::Dot | Tk::LArrow => {
-                    let member = k + 1 < close && toks[k + 1].kind == Tk::Ident;
-                    if member {
-                        while self.out.ends_with(' ') {
-                            self.out.pop();
-                        }
-                        self.out.push_str(" <- ");
-                    } else {
-                        self.out.push('.');
-                    }
-                }
-                _ if empty_call => {
-                    self.out.push('$');
-                    k += 1;
-                }
-                _ => self.out.push_str(&t.text),
-            }
-            prev_hi = toks[k].span.hi as usize;
-            k += 1;
-        }
-        let gap = &src[prev_hi..toks[close].span.lo as usize];
-        if let Some(nl) = gap.rfind('\n') {
-            self.out.push_str(gap[..=nl].trim_end_matches(' '));
-            let ind = gap[nl + 1..].len().saturating_sub(base_indent);
-            for _ in 0..self.level * 4 + ind {
-                self.out.push(' ');
-            }
-        } else {
-            self.out.push_str(gap);
-        }
-        self.at_line_start = false;
-    }
-
-    /// The arms of a `macro_rules!` body, one per line: the matcher in rule-4
-    /// groups, the transcriber as written (rule 3, `::` -> `.`, member `.`
-    /// -> `<-`, `()` -> `$`), the `;` between arms dropped.
-    fn macro_rules_arms(&mut self, toks: &[Token], cl: &Classes, from: usize, to: usize) {
-        let mut d = 0i32;
-        let mut start = from;
-        let mut arms: Vec<(usize, usize)> = Vec::new();
-        for i in from..to {
-            match toks[i].kind {
-                Tk::Open(_) => d += 1,
-                Tk::Close(_) => d -= 1,
-                Tk::Semi if d == 0 => {
-                    arms.push((start, i));
-                    start = i + 1;
-                }
-                _ => {}
-            }
-        }
-        if start < to && toks[start..to].iter().any(|t| !t.is_comment()) {
-            arms.push((start, to));
-        }
-        let _ = cl;
-        for (a, b) in arms {
-            let sig: Vec<usize> = (a..b).filter(|&i| !toks[i].is_comment()).collect();
-            let Some(&m0) = sig.first() else { continue };
-            // Comments before the arm keep their own lines.
-            for i in a..m0 {
-                if toks[i].is_comment() {
-                    self.newline();
-                    self.word(&toks[i].text, false);
-                    self.newline();
-                }
-            }
-            let Some(m1) = Self::atom_end(toks, m0, b) else { continue };
-            let arrow = sig.iter().copied().find(|&i| i >= m1 && toks[i].kind == Tk::FatArrow);
-            self.newline();
-            self.indent();
-            self.matcher(toks, m0, m1 - 1);
-            let Some(arrow) = arrow else {
-                self.newline();
-                continue;
-            };
-            self.word("=>", true);
-            let rest: Vec<usize> = sig.iter().copied().filter(|&i| i > arrow).collect();
-            if let Some(&o) = rest.first() {
-                if let Tk::Open(ch) = toks[o].kind {
-                    if let Some(c) = Self::atom_end(toks, o, b).map(|e| e - 1) {
-                        // A transcriber over several lines is a `do:` block
-                        // of Harsh; on one line it keeps its braces.
-                        if ch == '{' && toks[c].line != toks[o].line {
-                            self.word("do:", true);
-                            self.newline();
-                            self.level += 1;
-                            self.emit(toks, cl, o + 1, c, Kind::Stmts);
-                            self.level -= 1;
-                        } else {
-                            self.word(&ch.to_string(), true);
-                            self.macro_body(toks, o, c);
-                            self.out.push_str(&toks[c].text);
-                            self.at_line_start = false;
-                        }
-                    }
-                }
-            }
-            self.newline();
-        }
-    }
-
-    /// Rule 4, converter side. In a parenthesised matcher, the items a
-    /// top-level comma separates each become a group, and a repetition with
-    /// a comma separator, `$( .. ),*`, becomes `$( ( .. ) )*` with its body
-    /// mapped the same way. A matcher with neither is written as it is; a
-    /// bracketed or braced matcher always is (rule 5).
-    fn matcher(&mut self, toks: &[Token], open: usize, close: usize) {
-        if toks[open].kind != Tk::Open('(') {
-            self.out.push_str(&toks[open].text);
-            self.macro_body(toks, open, close);
-            self.out.push_str(&toks[close].text);
-            self.at_line_start = false;
-            return;
-        }
-        self.out.push('(');
-        self.at_line_start = false;
-        self.matcher_items(toks, open + 1, close);
-        self.out.push(')');
-    }
-
-    fn matcher_items(&mut self, toks: &[Token], from: usize, to: usize) {
-        // Items at top level, split at commas; repetitions are one item each.
-        let mut items: Vec<(usize, usize)> = Vec::new();
-        let mut d = 0i32;
-        let mut start = from;
-        let mut i = from;
-        while i < to {
-            match toks[i].kind {
-                Tk::Open(_) => d += 1,
-                Tk::Close(_) => d -= 1,
-                Tk::Comma if d == 0 => {
-                    // The `,` of a repetition's `),*` is its separator, not
-                    // an item boundary.
-                    let rep_sep = i > 0
-                        && toks[i - 1].kind == Tk::Close(')')
-                        && i + 1 < to
-                        && matches!(toks[i + 1].text.as_str(), "*" | "+")
-                        && Self::rep_open_of(toks, from, i - 1).is_some();
-                    if !rep_sep {
-                        items.push((start, i));
-                        start = i + 1;
-                    }
-                }
-                _ => {}
-            }
-            i += 1;
-        }
-        if start < to {
-            items.push((start, to));
-        }
-        items.retain(|(a, b)| toks[*a..*b].iter().any(|t| !t.is_comment()));
-        let rep_with_comma = |a: usize, b: usize| -> Option<(usize, usize, usize)> {
-            // `$( body ),op` -- returns (group open, group close, op index)
-            let sig: Vec<usize> = (a..b).filter(|&i| !toks[i].is_comment()).collect();
-            if sig.len() < 4 || toks[sig[0]].text != "$" || toks[sig[1]].kind != Tk::Open('(') {
-                return None;
-            }
-            let c = Self::atom_end(toks, sig[1], b)? - 1;
-            let after: Vec<usize> = sig.iter().copied().filter(|&i| i > c).collect();
-            match after.as_slice() {
-                [sep, op] if toks[*sep].kind == Tk::Comma && matches!(toks[*op].text.as_str(), "*" | "+") => Some((sig[1], c, *op)),
-                _ => None,
-            }
-        };
-        let grouped = items.len() > 1 || items.iter().any(|&(a, b)| rep_with_comma(a, b).is_some());
-        if !grouped {
-            if let Some(&(a, b)) = items.first() {
-                self.matcher_tokens(toks, a, b);
-            }
-            return;
-        }
-        for (n, &(a, b)) in items.iter().enumerate() {
-            if n > 0 {
-                self.out.push(' ');
-            }
-            if let Some((o, c, op)) = rep_with_comma(a, b) {
-                self.out.push_str("$( (");
-                self.matcher_items(toks, o + 1, c);
-                self.out.push_str(") )");
-                self.out.push_str(&toks[op].text);
-            } else {
-                let sig: Vec<usize> = (a..b).filter(|&i| !toks[i].is_comment()).collect();
-                let bare_rep = sig.len() >= 2 && toks[sig[0]].text == "$" && toks[sig[1]].kind == Tk::Open('(');
-                if bare_rep {
-                    self.matcher_tokens(toks, a, b);
-                } else {
-                    self.out.push('(');
-                    self.matcher_tokens(toks, a, b);
-                    self.out.push(')');
-                }
-            }
-        }
-    }
-
-    /// The `(` matching the `)` at `close`, if a `$` precedes it.
-    fn rep_open_of(toks: &[Token], from: usize, close: usize) -> Option<usize> {
-        let mut d = 0i32;
-        let mut k = close;
-        loop {
-            match toks[k].kind {
-                Tk::Close(_) => d += 1,
-                Tk::Open(_) => {
-                    d -= 1;
-                    if d == 0 {
-                        return (k > from && toks[k - 1].text == "$").then_some(k);
-                    }
-                }
-                _ => {}
-            }
-            if k == from {
-                return None;
-            }
-            k -= 1;
-        }
-    }
-
-    /// Tokens as written with the rule-3 substitutions -- `::` -> `.`, a
-    /// member `.` -> `<-`, an empty call `()` -> `$` -- and single spaces.
-    fn matcher_tokens(&mut self, toks: &[Token], from: usize, to: usize) {
-        let mut prev_hi: Option<u32> = None;
-        let mut i = from;
-        while i < to {
-            let t = &toks[i];
-            if t.is_comment() {
-                i += 1;
-                continue;
-            }
-            if let Some(ph) = prev_hi {
-                if t.span.lo > ph {
-                    self.out.push(' ');
-                }
-            }
-            let empty_call = t.kind == Tk::Open('(')
-                && i + 1 < to
-                && toks[i + 1].kind == Tk::Close(')')
-                && i > 0
-                && toks[i - 1].span.hi == t.span.lo
-                && matches!(toks[i - 1].kind, Tk::Ident | Tk::Close(')') | Tk::Gt);
-            match t.kind {
-                Tk::PathSep => self.out.push('.'),
-                Tk::Dot | Tk::LArrow if i + 1 < to && toks[i + 1].kind == Tk::Ident => {
-                    self.out.push_str(" <- ");
-                    prev_hi = Some(toks[i + 1].span.lo);
-                    i += 1;
-                    continue;
-                }
-                _ if empty_call => {
-                    self.out.push('$');
-                    i += 1;
-                }
-                _ => self.out.push_str(&t.text),
-            }
-            prev_hi = Some(toks[i].span.hi);
-            i += 1;
-        }
-        self.at_line_start = false;
-    }
-
     /// Is `toks[open]` the `(` of a `fn` parameter list that holds a doc
     /// comment or an attribute at depth one? Returns the list's `)`.
     fn documented_list(&self, toks: &[Token], open: usize, to: usize) -> Option<usize> {
@@ -1659,9 +1341,6 @@ impl<'a> Writer<'a> {
         Some(end)
     }
 
-    /// Is the brace at `open` a struct literal's -- a path of names before
-    /// it, in expression position, its body fields -- rather than a pattern
-    /// (`let Name { .. } =`, `Name { .. } =>`, `if let`, `for`) or a block?
     /// A DSL body, `{` to `}`, with every piece of Rust code in it written as
     /// a hole of Harsh. The pieces are found by shape, knowing no DSL: a
     /// `{ … }` group, and a value after `=` that ends where Rust itself stops
@@ -1673,6 +1352,7 @@ impl<'a> Writer<'a> {
     fn dsl_body(&mut self, toks: &[Token], open: usize, close: usize) -> String {
         let src = self.src;
         let mut holes: Vec<(usize, usize)> = Vec::new();
+        let mut slots: Vec<(usize, usize)> = Vec::new();
         let is_lit = |t: &Token| matches!(t.kind, Tk::Str | Tk::Int | Tk::Float | Tk::Char) || (t.kind == Tk::Ident && (t.text == "true" || t.text == "false"));
         let atom_end = |t: &Token| matches!(t.kind, Tk::Ident | Tk::Str | Tk::Int | Tk::Float | Tk::Char | Tk::Close(_)) && !matches!(t.text.as_str(), "move" | "as" | "else" | "in" | "if" | "match" | "return" | "async");
         // (A `{` never ends an attribute's value: in Rust it continues the
@@ -1693,6 +1373,13 @@ impl<'a> Writer<'a> {
         // expression -- `>`, `/>`, `;`, a `,` outside a closure's parameters,
         // the `}` that closes the element, a DSL body's `{` when `body_brace`,
         // or two atoms meeting with nothing between them.
+        // Markup -- `view!`'s, Yew's `html!` -- opens with a tag; there a `>`
+        // with no bracket open ends the tag. In a tree (`rsx!`), a list of
+        // arms or a declaration, a `>` is a comparison (0.7.5: `if count() > 3 {`
+        // in `rsx!` was cut at its `>`).
+        let markup = sig(open + 1).map_or(false, |a| toks[a].kind == Tk::Lt);
+        // A `<` spaced on both sides is a comparison, not a bracket.
+        let spaced = |j: usize| j > 0 && j + 1 < toks.len() && toks[j - 1].span.hi < toks[j].span.lo && toks[j].span.hi < toks[j + 1].span.lo;
         let value_end = |v: usize, body_brace: bool| -> usize {
             let (mut dd, mut bars, mut last, mut j) = (0i32, false, v, v);
             // Angle brackets open: once a `<` is not a comparison -- it
@@ -1706,7 +1393,7 @@ impl<'a> Writer<'a> {
                     j += 1;
                     continue;
                 }
-                if u.kind == Tk::Lt && j > v && matches!(toks[last].kind, Tk::Ident) {
+                if u.kind == Tk::Lt && j > v && matches!(toks[last].kind, Tk::Ident) && !spaced(j) {
                     angles += 1;
                     dd += 1;
                     last = j;
@@ -1722,13 +1409,22 @@ impl<'a> Writer<'a> {
                     continue;
                 }
                 if dd == 0 && j > v {
-                    let stop = u.kind == Tk::Gt
-                        || (u.text == "/" && toks.get(j + 1).map_or(false, |n| n.kind == Tk::Gt))
+                    let stop = (u.kind == Tk::Gt && markup && !body_brace)
+                        || (markup && u.text == "/" && toks.get(j + 1).map_or(false, |n| n.kind == Tk::Gt))
                         || u.kind == Tk::Semi
                         || (u.kind == Tk::Comma && !bars)
                         || matches!(u.kind, Tk::Close(_))
                         || u.kind == Tk::FatArrow
                         || (body_brace && u.kind == Tk::Open('{'))
+                        // An element's or a declaration's own body after the
+                        // value: `a href=(…) { "next" }` (Maud), `struct P: u32
+                        // { const A = …; }` (`bitflags!`) -- a `{` whose first
+                        // token is a string, an attribute or a keyword, after a
+                        // value that is no `if`/`match`/loop.
+                        || (u.kind == Tk::Open('{')
+                            && matches!(toks[last].kind, Tk::Ident | Tk::Close(_) | Tk::Str | Tk::Int)
+                            && !(toks[v].kind == Tk::Ident && matches!(toks[v].text.as_str(), "if" | "match" | "loop" | "unsafe" | "async" | "while" | "for"))
+                            && sig(j + 1).map_or(false, |a| toks[a].kind == Tk::Str || toks[a].kind == Tk::Hash || (toks[a].kind == Tk::Ident && matches!(toks[a].text.as_str(), "const" | "fn" | "pub" | "static" | "let" | "type" | "struct" | "enum" | "impl" | "use" | "mod" | "trait"))))
                         || (atom_start(u) && atom_end(&toks[last]));
                     if stop {
                         break;
@@ -1739,7 +1435,10 @@ impl<'a> Writer<'a> {
                     Tk::Close(_) => dd -= 1,
                     _ => {}
                 }
-                if dd == 0 && u.text == "|" {
+                // A closure's bars: the value's first token, or after
+                // `move`; a `|` anywhere else is bit-or (`A.bits() | B.bits()`
+                // in `bitflags!`, 0.7.5).
+                if dd == 0 && u.text == "|" && (bars || j == v || toks[last].is_kw("move")) {
                     bars = !bars;
                 }
                 last = j;
@@ -1761,6 +1460,9 @@ impl<'a> Writer<'a> {
         // (`div {`, `for … {`) are transparent, scanned as the body is.
         let mut d = 0i32;
         let mut kinds: Vec<bool> = Vec::new();
+        // The `{` after a DSL's `for … in EXPR` or `if EXPR` is its body,
+        // whatever the expression ends with (`if count() > 3 {` in `rsx!`).
+        let mut body_next = false;
         let mut k = open + 1;
         while k < close {
             let t = &toks[k];
@@ -1769,6 +1471,15 @@ impl<'a> Writer<'a> {
                 continue;
             }
             let prev = (open + 1..k).rev().find(|&j| !toks[j].is_comment()).map(|j| &toks[j]);
+            // A string of the DSL: Rust code in its format slots becomes a
+            // hole, `"Hello {@: name <- to_uppercase$ :@}"` (the user's
+            // ruling, 2026-10-12: what looks like Rust is made a hole).
+            if t.kind == Tk::Str {
+                let lo = t.span.lo as usize;
+                for (a, b) in format_slots(&src[lo..t.span.hi as usize]) {
+                    slots.push((lo + a, lo + b));
+                }
+            }
             if d == 0 && object_array(k) {
                 kinds.push(true);
                 k += 1;
@@ -1777,7 +1488,8 @@ impl<'a> Writer<'a> {
             if d == 0 && t.kind == Tk::Open('{') {
                 // After a name or a `)` it opens the DSL's own nested body;
                 // anywhere else it holds Rust code.
-                let dsl = prev.map_or(false, |p| matches!(p.kind, Tk::Ident | Tk::Close(')')) && !matches!(p.text.as_str(), "move" | "else"))
+                let dsl = std::mem::take(&mut body_next)
+                    || prev.map_or(false, |p| matches!(p.kind, Tk::Ident | Tk::Close(')')) && !matches!(p.text.as_str(), "move" | "else"))
                     // `{ "key": value, … }` is the DSL's own object (`json!`),
                     // never a block of Rust.
                     || (sig(k + 1).map_or(false, |a| toks[a].kind == Tk::Str) && sig(k + 1).and_then(|a| sig(a + 1)).map_or(false, |c| toks[c].kind == Tk::Colon));
@@ -1788,6 +1500,13 @@ impl<'a> Writer<'a> {
                 }
                 let c = Self::partner_of(toks, k, close);
                 let inner: Vec<&Token> = toks[k + 1..c].iter().filter(|t| !t.is_comment()).collect();
+                // Yew's `{ for EXPR }`: `for` without `in` is the DSL's, the
+                // iterator after it Rust (0.7.5).
+                if inner.len() > 1 && inner[0].is_kw("for") && !inner.iter().any(|t| t.is_kw("in")) {
+                    holes.push((inner[1].span.lo as usize, inner.last().unwrap().span.hi as usize));
+                    k = c + 1;
+                    continue;
+                }
                 if !inner.is_empty() && !literal_range(k + 1, c - 1) {
                     holes.push((inner[0].span.lo as usize, inner.last().unwrap().span.hi as usize));
                 }
@@ -1812,6 +1531,15 @@ impl<'a> Writer<'a> {
             }
             if d == 0 && t.kind == Tk::FatArrow {
                 if let Some(v) = sig(k + 1) {
+                    // A block after `=>` (`select!`'s handler) is one value,
+                    // an explicit block: `=> @: do: … :@` (0.7.5; its
+                    // statements were left as Rust).
+                    if toks[v].kind == Tk::Open('{') {
+                        let c = Self::partner_of(toks, v, close);
+                        holes.push((toks[v].span.lo as usize, toks[c].span.hi as usize));
+                        k = c + 1;
+                        continue;
+                    }
                     if toks[v].kind != Tk::Open('{') {
                         let last = value_end(v, false);
                         if !literal_range(v, last) {
@@ -1828,12 +1556,37 @@ impl<'a> Writer<'a> {
                 if let Some(v) = sig(k + 1) {
                     if toks[v].kind != Tk::Open('{') && !object_array(v) {
                         let last = value_end(v, flow);
-                        if !literal_range(v, last) {
-                            holes.push((toks[v].span.lo as usize, toks[last].span.hi as usize));
+                        // A value that is one paren group, `href=(format!(…))`
+                        // (Maud), keeps its parens as the DSL's: the hole is
+                        // inside them.
+                        let (hv, hl) = if toks[v].kind == Tk::Open('(') && Self::partner_of(toks, v, close) == last && last > v + 1 { (v + 1, last - 1) } else { (v, last) };
+                        // A type before a declaration's body, `struct Perms:
+                        // u32 { const … }` (`bitflags!`), is no value.
+                        let decl_type = sig(last + 1).map_or(false, |b| toks[b].kind == Tk::Open('{')) && toks[open + 1..k].iter().rev().take(3).any(|t| t.is_kw("struct") || t.is_kw("enum"));
+                        if !literal_range(hv, hl) && !decl_type {
+                            holes.push((toks[hv].span.lo as usize, toks[hl].span.hi as usize));
                         }
+                        body_next = flow;
                         k = last + 1;
                         continue;
                     }
+                }
+            }
+            // A splice, `(expr)` among the DSL's text (Maud: `h1 { (title) }`,
+            // `"Items: " (items.len())`): after a string, a body's `{` or `}`,
+            // and not a pattern before `=`/`=>`. Its contents are the hole.
+            if d == 0 && t.kind == Tk::Open('(') && prev.map_or(true, |p| matches!(p.kind, Tk::Str | Tk::Open('{') | Tk::Close('}') | Tk::Close(')'))) {
+                let c = Self::partner_of(toks, k, close);
+                let after = sig(c + 1).map(|a| toks[a].kind.clone());
+                if c > k + 1 && !matches!(after, Some(Tk::Eq) | Some(Tk::FatArrow)) {
+                    if !literal_range(k + 1, c - 1) {
+                        let inner: Vec<&Token> = toks[k + 1..c].iter().filter(|t| !t.is_comment()).collect();
+                        if let (Some(a), Some(b)) = (inner.first(), inner.last()) {
+                            holes.push((a.span.lo as usize, b.span.hi as usize));
+                        }
+                    }
+                    k = c + 1;
+                    continue;
                 }
             }
             match t.kind {
@@ -1850,11 +1603,49 @@ impl<'a> Writer<'a> {
             }
             k += 1;
         }
+        // A slot inside another hole is that hole's Harsh, not a hole.
+        slots.retain(|&(a, b)| !holes.iter().any(|&(x, y)| x <= a && b <= y));
+        let slot_starts: std::collections::HashSet<usize> = slots.iter().map(|&(a, _)| a).collect();
+        holes.extend(slots);
         holes.sort();
         let (lo, hi) = (toks[open].span.lo as usize, toks[close].span.hi as usize);
         let mut out = String::new();
         let mut at = lo;
+        // The bindings outside the DSL's language at this call (the user's
+        // ruling, 2026-10-12): the file's names, the enclosing function's
+        // in scope here, and the names the DSL binds itself.
+        let bound: std::collections::HashSet<String> = {
+            let file = FILE_BOUND.with(|f| f.borrow().clone());
+            let mut b = file.clone();
+            b.extend(crate::bindings::locals_before(toks, open, &file));
+            b.extend(crate::bindings::dsl_bound(toks, open, close, &file));
+            b
+        };
+        let decide = |frag: &str| crate::bindings::decide(frag, &bound);
+        let warn = |a: usize, frag: &str| {
+            if DEPTH.with(|d| *d.borrow()) == 1 {
+                let line = src[..a].matches('\n').count() + 1;
+                WARNINGS.with(|w| w.borrow_mut().push(format!("line {line}: `{}` names nothing bound in this file and uses no operator; left as written", frag.split_whitespace().collect::<Vec<_>>().join(" "))));
+            }
+        };
         for (a, b) in holes {
+            // A format slot: one line of Harsh, or the slot as written --
+            // a slot of plain text (Leptos's strings are text) is the
+            // DSL's, so copying it is no fallback.
+            if slot_starts.contains(&a) {
+                out.push_str(&src[at..a]);
+                let frag = &src[a..b];
+                let verdict = decide(frag);
+                if verdict == crate::bindings::Verdict::Unbound {
+                    warn(a, frag);
+                }
+                match (verdict, hole_of_within(frag, &bound)) {
+                    (crate::bindings::Verdict::Hole, Ok(h)) if !h.contains('\n') => out.push_str(&format!("@: {} :@", h)),
+                    _ => out.push_str(frag),
+                }
+                at = b;
+                continue;
+            }
             // Step 3 of the rule (the user, 2026-10-06): the hole covers the
             // longest stretch, from its start or after a top-level `=` or `:`
             // in it, that Rust's parser reads as one expression; what precedes
@@ -1866,9 +1657,22 @@ impl<'a> Writer<'a> {
             };
             out.push_str(&src[at..a]);
             let frag = &src[a..b];
+            // A single word reads the same in both languages; a stretch that
+            // calls on nothing bound and uses no operator is the DSL's text.
+            match decide(frag) {
+                crate::bindings::Verdict::Hole => {}
+                v => {
+                    if v == crate::bindings::Verdict::Unbound {
+                        warn(a, frag);
+                    }
+                    out.push_str(frag);
+                    at = b;
+                    continue;
+                }
+            }
             let line_start = src[..a].rfind('\n').map_or(0, |n| n + 1);
             let base = src[line_start..].len() - src[line_start..].trim_start().len();
-            match hole_of(frag) {
+            match hole_of_within(frag, &bound) {
                 Ok(h) => {
                     let lines: Vec<&str> = h.lines().collect();
                     if lines.len() == 1 {
@@ -1957,6 +1761,9 @@ impl<'a> Writer<'a> {
         end
     }
 
+    /// Is the brace at `open` a struct literal's -- a path of names before
+    /// it, in expression position, its body fields -- rather than a pattern
+    /// (`let Name { .. } =`, `Name { .. } =>`, `if let`, `for`) or a block?
     fn is_struct_literal(toks: &[Token], open: usize, close: usize) -> bool {
         // The path before the brace.
         let mut k = open;
@@ -2315,13 +2122,9 @@ impl<'a> Writer<'a> {
         }
     }
 
+    /// Statements inside a brace-delimited block each get their own
+    /// expression region, rather than inheriting the enclosing item's.
     fn run_braced(&mut self, toks: &[Token], cl: &Classes, from: usize, to: usize) {
-        self.brace_depth += 1;
-        self.run_braced_inner(toks, cl, from, to);
-        self.brace_depth -= 1;
-    }
-
-    fn run_braced_inner(&mut self, toks: &[Token], cl: &Classes, from: usize, to: usize) {
         let mut d = 0i32;
         let mut start = from;
         for i in from..to {
@@ -2641,25 +2444,6 @@ impl<'a> Writer<'a> {
                     // `matches!(x, Some(n) if n > 1)` becomes
                     // `matches! x (Some n if n > 1)`; the pattern is one
                     // argument and is isolated like any other multi-token one.
-                    let soup = false;
-                    if soup {
-                        // Emit the macro and its group exactly as written: its
-                        // contents are patterns, not expressions.
-                        if let Some(ce) = Self::atom_end(toks, ae, to) {
-                            self.indent();
-                            if prev.is_some()
-                                && !self.out.ends_with(' ')
-                                && !self.out.ends_with('\n')
-                                && !self.out.ends_with('(')
-                            {
-                                self.out.push(' ');
-                            }
-                            self.run_span(toks, cl, i, ce, false);
-                            i = ce;
-                            prev = Some(&toks[ce - 1]);
-                            continue;
-                        }
-                    }
                     // A macro's bracket call is a call like any other (the
                     // delimiter means nothing to the macro): `vec![1, 2]` ->
                     // `vec! 1 2`, `vec![]` -> `vec!$`. A stream that is not a
@@ -2736,15 +2520,21 @@ impl<'a> Writer<'a> {
                                 && !self.out.ends_with(' ')
                                 && !self.out.ends_with('\n')
                                 && !self.out.ends_with('(')
-                                && !self.out.ends_with("#[")
+                                && !self.out.ends_with('[')
+                                && !(self.out.ends_with("..") && prev.map_or(false, |p| p.kind == Tk::DotDot))
                             {
+                                // (`[` covers `#[` too; a call opening an
+                                // index was written `v[ g i]`, found 0.7.3.)
                                 self.out.push(' ');
                             }
                             // A tuple index on the call's result -- `f(src).0`
                             // -- needs the call isolated: a tuple index is part
                             // of its atom, so `f src.0` is `f(src.0)`. Written
-                            // `(f src).0` (found 2026-10-05).
-                            let indexed = ce < to && toks[ce].kind == Tk::TupleIdx && !Self::args_of(toks, ae, close).is_empty();
+                            // `(f src).0` (found 2026-10-05). An index the
+                            // same: `cols(l)[i]` is `(cols l)[i]`, since
+                            // `cols l[i]` indexes `l` (found by the round trip,
+                            // 0.7.3).
+                            let indexed = ce < to && matches!(toks[ce].kind, Tk::TupleIdx | Tk::Open('[')) && !Self::args_of(toks, ae, close).is_empty();
                             if indexed {
                                 self.out.push('(');
                             }
@@ -3158,36 +2948,25 @@ impl<'a> Writer<'a> {
                         continue;
                     }
                     Brace::UseGroup => {
-                        // The `::` before it was already emitted as `.`
+                        // The `::` before it was already emitted as `.`; the
+                        // first name is tight to the `(` (it was written
+                        // `use a.( b, c)`, found 0.7.6).
                         self.word("(", false);
+                        prev = None;
+                        i += 1;
+                        continue;
                     }
                     Brace::Verbatim => {
                         let close = cl.partner[i];
                         let macro_body = i > 0 && toks[i - 1].kind == Tk::Punct && toks[i - 1].text == "!";
-                        let macro_rules = i >= 3
-                            && toks[i - 1].kind == Tk::Ident
-                            && toks[i - 2].text == "!"
-                            && toks[i - 3].is_kw("macro_rules");
-                        if macro_rules && close != usize::MAX && close < to && close > i + 1 {
-                            // `macro_rules! name { arms }` -> `macro_rules! name:`
-                            // with one arm per line, its matcher in rule-4 groups
-                            // and its transcriber kept in Rust's braces (rule 3).
-                            self.word(":", false);
-                            self.newline();
-                            self.level += 1;
-                            self.macro_rules_arms(toks, cl, i + 1, close);
-                            self.level -= 1;
-                            self.newline();
-                            i = close + 1;
-                            prev = None;
-                            continue;
-                        }
+                        // (`macro_rules! name { .. }` never reaches here:
+                        // `convert` copies it verbatim, a raw zone.)
                         // A Rust macro's brace body: the DSL is copied as
                         // written, and every piece of Rust code in it becomes a
                         // hole of Harsh, `@: … :@` (principle 2 and the user's
                         // algorithm, 2026-09-23: the converter writes the holes
                         // an author would).
-                        if macro_body && !macro_rules && close != usize::MAX && close < to {
+                        if macro_body && close != usize::MAX && close < to {
                             if !self.at_line_start && !self.out.ends_with(' ') && !self.out.ends_with('(') {
                                 self.out.push(' ');
                             }
@@ -3227,21 +3006,6 @@ impl<'a> Writer<'a> {
                                     self.restart_at = Some(i);
                                 }
                             }
-                            continue;
-                        }
-                        // (`hm!{ 1 => "a" }` was written `hm!\\ 1 => "a"` from
-                        // 2026-09-20 to 2026-09-22; `m!\\` is retired, A2, and a
-                        // brace call keeps its braces.)
-                        if macro_body && close != usize::MAX && close < to {
-                            // `view! { … }`, `quote! { … }`: the body has its own
-                            // grammar and its own layout. Keep the author's
-                            // whitespace, line for line; change only the tokens
-                            // Harsh spells differently.
-                            self.word("{", true);
-                            self.macro_body(toks, i, close);
-                            self.out.push('}');
-                            i = close + 1;
-                            prev = Some(&toks[close]);
                             continue;
                         }
                         // A struct literal: `Name { f: v, .. }` is built with
@@ -3609,8 +3373,8 @@ fn is_macro_rules_open(toks: &[Token], o: usize) -> bool {
 }
 
 thread_local! {
-    /// The `&` tokens of the file being converted that are bit-and, by their
-    /// offset: Harsh's layout spaces a binary operator, `a & b`, and writes a
+    /// The `&` and `*` tokens of the file being converted that are binary
+    /// (bit-and, a product), by their offset: Harsh's layout spaces a binary operator, `a & b`, and writes a
     /// reference tight, `&x` (the user's convention, 2026-10-06).
     static BINARY_AMPS: std::cell::RefCell<std::collections::HashSet<u32>> = std::cell::RefCell::new(std::collections::HashSet::new());
 }
@@ -3621,7 +3385,10 @@ thread_local! {
 fn mark_binary_amps(toks: &[Token]) {
     let mut set = std::collections::HashSet::new();
     for (i, t) in toks.iter().enumerate() {
-        if !(t.kind == Tk::Punct && t.text == "&") {
+        // `*` the same: a dereference is tight, `*x`, a product spaced
+        // (it was written `* x` always -- found writing the developer book,
+        // 0.7.3).
+        if !(t.kind == Tk::Punct && matches!(t.text.as_str(), "&" | "*" | "&&")) {
             continue;
         }
         let Some(p) = toks[..i].iter().rev().find(|q| !q.is_comment()) else { continue };
@@ -3635,7 +3402,50 @@ fn mark_binary_amps(toks: &[Token]) {
             set.insert(t.span.lo);
         }
     }
+    // A `!` that is not a macro's bang -- no name right before it -- is a
+    // negation, tight to its operand: `!a`, `if !a` (it was written `! a`,
+    // found writing the developer book, 0.7.3).
+    for (i, t) in toks.iter().enumerate() {
+        if t.kind == Tk::Punct && t.text == "!" {
+            let p = toks[..i].iter().rev().find(|q| !q.is_comment());
+            let bang = p.map_or(false, |p| p.kind == Tk::Ident && !crate::rules::is_keyword(&p.text) && p.span.hi == t.span.lo);
+            if !bang {
+                set.insert(t.span.lo);
+            }
+        }
+    }
+    // A `%` where no operand precedes it is `tracing`'s Display sigil,
+    // `user = %name`, tight like `?name` (it was written `% name`, 0.7.5).
+    for (i, t) in toks.iter().enumerate() {
+        if t.kind == Tk::Punct && t.text == "%" {
+            let p = toks[..i].iter().rev().find(|q| !q.is_comment());
+            if p.map_or(true, |p| matches!(p.kind, Tk::Eq | Tk::Comma | Tk::Open(_))) {
+                set.insert(t.span.lo);
+            }
+        }
+    }
+    // A `<` or `>` spaced on both sides in the source is a comparison, and
+    // keeps its spaces: `x > 0` (it was written `x> 0`, read as a generic
+    // closer -- found writing the DSL catalogue, 0.7.5). Generic brackets
+    // are written tight in Rust, `Vec<T>`, and stay tight.
+    for (i, t) in toks.iter().enumerate() {
+        if matches!(t.kind, Tk::Lt | Tk::Gt) {
+            let p = toks[..i].iter().rev().find(|q| !q.is_comment());
+            let n = toks[i + 1..].iter().find(|q| !q.is_comment());
+            if p.map_or(false, |p| p.span.hi < t.span.lo) && n.map_or(false, |n| t.span.hi < n.span.lo) {
+                set.insert(t.span.lo);
+            }
+        }
+    }
     BINARY_AMPS.with(|b| *b.borrow_mut() = set);
+}
+
+fn is_comparison(t: &Token) -> bool {
+    matches!(t.kind, Tk::Lt | Tk::Gt) && BINARY_AMPS.with(|b| b.borrow().contains(&t.span.lo))
+}
+
+fn is_negation(t: &Token) -> bool {
+    t.kind == Tk::Punct && t.text == "!" && BINARY_AMPS.with(|b| b.borrow().contains(&t.span.lo))
 }
 
 thread_local! {
@@ -3722,7 +3532,7 @@ fn prefixed_atom(toks: &[Token], a: usize, b: usize) -> bool {
 }
 
 fn is_binary_amp(t: &Token) -> bool {
-    t.kind == Tk::Punct && t.text == "&" && BINARY_AMPS.with(|b| b.borrow().contains(&t.span.lo))
+    t.kind == Tk::Punct && matches!(t.text.as_str(), "&" | "*" | "&&") && BINARY_AMPS.with(|b| b.borrow().contains(&t.span.lo))
 }
 
 /// Whether a space is written between `p` and `t`.
@@ -3732,20 +3542,29 @@ fn is_binary_amp(t: &Token) -> bool {
 fn needs_space(prev: Option<&Token>, t: &Token) -> bool {
     let Some(p) = prev else { return false };
 
+    // A comparison is spaced on both sides, `x > 0`.
+    if is_comparison(t) || is_comparison(p) {
+        return true;
+    }
+    if p.kind == Tk::Punct && p.text == "%" && BINARY_AMPS.with(|b| b.borrow().contains(&p.span.lo)) {
+        return false;
+    }
     // Nothing ever follows these directly.
     if matches!(p.kind, Tk::Open('(') | Tk::Open('[') | Tk::PathSep | Tk::Hash | Tk::Lt) {
         return false;
     }
     // `!` is a macro bang or a negation, both tight -- except after
     // `macro_rules!`, where a name follows.
-    if p.text == "!" && t.kind == Tk::Ident {
+    if p.text == "!" && t.kind == Tk::Ident && !is_negation(p) {
         return true;
     }
-    // Bit-and is spaced like every binary operator; a reference is tight.
+    // Bit-and and a product are spaced like every binary operator; a
+    // reference and a dereference are tight.
     if is_binary_amp(p) || is_binary_amp(t) {
         return true;
     }
-    if p.text == "&" || p.text == "!" || p.text == "?" {
+    if matches!(p.text.as_str(), "&" | "*" | "&&") && p.kind == Tk::Punct || p.text == "!" || p.text == "?" {
+        // (`&&x`, a reference to a reference, is one token in Rust.)
         return false;
     }
     // Nothing ever precedes these directly.
@@ -3764,6 +3583,11 @@ fn needs_space(prev: Option<&Token>, t: &Token) -> bool {
         let after_kw = p.kind == Tk::Ident && crate::rules::is_keyword(&p.text);
         let after_op = p.kind == Tk::Punct && matches!(p.text.as_str(), "&&" | "||" | "==" | "!=");
         return after_kw || after_op || p.kind == Tk::Eq || p.kind == Tk::FatArrow;
+    }
+    // A range or rest pattern after a comma is spaced like any item,
+    // `(0..2, ..)`, `(a, ..)` (it was `(0..2,..)`, found 2026-10-13).
+    if t.kind == Tk::DotDot && p.kind == Tk::Comma {
+        return true;
     }
     // Generic brackets and ranges bind tight.
     if matches!(t.kind, Tk::Lt | Tk::Gt | Tk::DotDot) || p.kind == Tk::DotDot {
@@ -3836,12 +3660,90 @@ fn simple_if_else(toks: &[Token], from: usize, to: usize) -> Option<(usize, usiz
     Some((o1, c1, o2, c2))
 }
 
+/// The Rust code in a string's format slots, as byte ranges within `lit`
+/// (the literal with its quotes): `"Hello {name.to_uppercase()}"` gives
+/// the range of `name.to_uppercase()`. A slot that is a plain name or a
+/// position (`{count}`, `{0}`, `{}`) reads the same in both languages and
+/// is left; `{{` and `}}` are escapes; a format spec stays outside,
+/// `{v.len():>4}` gives `v.len()`. Only a slot that Rust's parser reads as
+/// an expression counts, and none holding a quote or a backslash. Raw and
+/// byte strings have no slots.
+fn format_slots(lit: &str) -> Vec<(usize, usize)> {
+    let mut out = Vec::new();
+    if !lit.starts_with('"') || lit.len() < 2 {
+        return out;
+    }
+    let b = lit.as_bytes();
+    let end = lit.len() - 1;
+    let is_expr = |t: &str| syn::parse_str::<syn::Expr>(t).is_ok();
+    let plain = |t: &str| t.is_empty() || t.chars().all(|c| c.is_ascii_digit()) || (t.chars().next().map_or(false, |c| c.is_alphabetic() || c == '_') && t.chars().all(|c| c.is_alphanumeric() || c == '_'));
+    let mut i = 1;
+    while i < end {
+        match b[i] {
+            b'\\' => i += 2,
+            b'{' if b.get(i + 1) == Some(&b'{') => i += 2,
+            b'}' if b.get(i + 1) == Some(&b'}') => i += 2,
+            b'{' => {
+                let mut d = 1;
+                let mut j = i + 1;
+                while j < end && d > 0 {
+                    match b[j] {
+                        b'{' => d += 1,
+                        b'}' => d -= 1,
+                        _ => {}
+                    }
+                    if d > 0 {
+                        j += 1;
+                    }
+                }
+                if d != 0 {
+                    break;
+                }
+                let inner = &lit[i + 1..j];
+                if !inner.contains('"') && !inner.contains('\\') {
+                    // The expression, and where it begins and ends.
+                    let mut code = inner;
+                    if !is_expr(code.trim()) {
+                        // A spec after the last single `:`, outside brackets.
+                        let ib = inner.as_bytes();
+                        let mut dd = 0i32;
+                        let mut cut = None;
+                        for k in 0..ib.len() {
+                            match ib[k] {
+                                b'(' | b'[' | b'{' => dd += 1,
+                                b')' | b']' | b'}' => dd -= 1,
+                                b':' if dd == 0 && ib.get(k + 1) != Some(&b':') && (k == 0 || ib[k - 1] != b':') => cut = Some(k),
+                                _ => {}
+                            }
+                        }
+                        code = match cut {
+                            Some(k) if inner[k + 1..].chars().all(|c| c.is_alphanumeric() || "#?.<>^+-$_".contains(c)) && is_expr(inner[..k].trim()) => &inner[..k],
+                            _ => "",
+                        };
+                    }
+                    let t = code.trim();
+                    if !t.is_empty() && !plain(t) {
+                        let lo = i + 1 + (code.len() - code.trim_start().len());
+                        out.push((lo, lo + t.len()));
+                    }
+                }
+                i = j + 1;
+            }
+            _ => i += 1,
+        }
+    }
+    out
+}
+
 /// Where in `frag` the longest stretch that Rust parses as one expression
 /// begins: at its start, or after one of its top-level `=` or `:` (outside
 /// brackets, strings and comments), tried in order. `None` when no such
 /// stretch is an expression. The parser is Rust's own (`syn`).
 fn expression_start(frag: &str) -> Option<usize> {
-    let is_expr = |t: &str| !t.trim().is_empty() && syn::parse_str::<syn::Expr>(t).is_ok();
+    // An assignment is no value a macro takes: in `static ref N: usize =
+    // T.len() * 2;` (`lazy_static!`), `usize = …` parses as one, and the
+    // hole belongs after the `=` (0.7.5).
+    let is_expr = |t: &str| !t.trim().is_empty() && matches!(syn::parse_str::<syn::Expr>(t), Ok(e) if !matches!(e, syn::Expr::Assign(_)));
     if is_expr(frag) {
         return Some(frag.len() - frag.trim_start().len());
     }

@@ -98,6 +98,7 @@ It opens the first exercise that is not done, shows why it fails on the line of 
 ```sh
 hrs new myproject            # a project laid out for Harsh
 hrs check | hrs build | hrs run | hrs test | hrs lint
+                             # at a workspace's root: each member in turn (not run)
 hrs watch [check]            # rebuild on every save
 hrs fmt --check              # what the formatter would change (CI-friendly, exit 1)
 hrs fmt                      # reformat src/**.hrs in place
@@ -105,7 +106,31 @@ hrs fmt file.hrs             # one file
 hrs-from file.rs -o file.hrs # Rust in
 hrs export                   # the project as a plain Rust crate, cargo fmt'd
 hrs cargo leptos build       # transpile, then any cargo subcommand (Leptos, doc, ...)
+hrs -- dx serve              # transpile, then any program, in target/src/
+hrs which dx                 # every program named dx on PATH, in order
 ```
+
+**Other tools: `hrs -- <program>`.** After transpiling, `hrs --` runs any
+program in the generated project, `target/src/`: `hrs -- dx serve` for
+Dioxus, `hrs -- trunk serve`, anything else. It finds the program exactly as
+your shell does -- the first of that name on your PATH, or the path you
+write -- so it runs what `dx` runs in your terminal. (`hrs dx` was retired in
+0.8.0 for that reason.)
+
+**Two programs, one name.** Deno and Dioxus both install a `dx`. Harsh does
+not choose between them: `hrs which dx` lists every `dx` on your PATH, in
+order, with its version, and `hrs --` says so when there is more than one.
+You decide, the usual ways -- put the one you want first on your PATH, or
+name it:
+
+```sh
+hrs which dx                         # /opt/homebrew/bin/dx  deno 2.x  <- runs
+                                     # ~/.cargo/bin/dx       dioxus-cli 0.7.x
+hrs -- ~/.cargo/bin/dx serve         # this one, by its path
+export PATH="$HOME/.cargo/bin:$PATH" # or Dioxus's first, in your shell profile
+```
+
+A shell alias does not reach a program `hrs` starts; a path or PATH order does.
 
 `hrs <file.hrs> -o out.rs` transpiles one file; `--map out.map.json` writes
 the source map that `hrs-remap` and `hrs check` use to put rustc's errors on

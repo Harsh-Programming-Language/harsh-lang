@@ -145,11 +145,7 @@ error[E0277]: cannot add `Option<i8>` to `i8`
  4 |     let sum = x + y
    |                 ^ no implementation for `i8 + Option<i8>`
    = help: the trait `Add<Option<i8>>` is not implemented for `i8`
-   = help: the following other types implement trait `Add<Rhs>`:
-  <i8 as Add>
-  <i8 as Add<&i8>>
-  <&'a i8 as Add<i8>>
-  <&i8 as Add<&i8>>
+   = help: the following other types implement trait `Add<Rhs>`
 ```
 
 In a language with null, `x + y` compiles and fails at runtime when `y` happens to be null. Here it does not compile, because a value that might be absent cannot be added until you have said what happens when it is. To use the `i8` inside, you have to take the `Option` apart, and handling the `None` case is part of taking it apart. That is the whole idea, and `match` is how it is done.

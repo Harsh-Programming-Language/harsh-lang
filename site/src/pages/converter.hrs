@@ -17,11 +17,15 @@ pub fn Converter$ -> Element:
     let code: String = src <- read$ <- clone$
     let forward = to_rust$
     let converted = if forward: transpile_str (&code) else: convert_str (&code)
-    let (out, ok) = match converted\
-        Ok text => (text, true)
-        Err e => (e, false)
+    let (out, ok) =
+        match converted\
+            Ok text => (text, true)
+            Err e => (e, false)
     let rust_side = if forward: out <- clone$ else: code <- clone$
-    let run = format! "https://play.rust-lang.org/?version=stable&edition=2021&code={}" (encode (&rust_side))
+    let run =
+        format!
+            "https://play.rust-lang.org/?version=stable&edition=2021&code={}"
+            (encode (&rust_side))
     // What the other direction starts from: the output, as its input.
     let for_rust = out <- clone$
     let for_harsh = out <- clone$
@@ -96,12 +100,13 @@ pub fn Converter$ -> Element:
     }
 
 /// The samples the chips load: each in Harsh and in Rust.
-const EXAMPLES: &[(&str, &str, &str)] = &[
-    ("Word count", HERO_HARSH, HERO_RUST),
-    ("Pipes", PIPES_HARSH, PIPES_RUST),
-    ("Comprehensions", COMPREHENSIONS_HARSH, COMPREHENSIONS_RUST),
-    ("Linear algebra", LINALG_HARSH, LINALG_RUST),
-]
+const EXAMPLES: &[(&str, &str, &str)] =
+    &[
+        ("Word count", HERO_HARSH, HERO_RUST),
+        ("Pipes", PIPES_HARSH, PIPES_RUST),
+        ("Comprehensions", COMPREHENSIONS_HARSH, COMPREHENSIONS_RUST),
+        ("Linear algebra", LINALG_HARSH, LINALG_RUST),
+    ]
 
 /// A sample, in the language the input is in.
 fn sample (forward: bool) (harsh: &str) (rust: &str) -> String:

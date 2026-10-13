@@ -24,7 +24,6 @@ typedef struct {
   uint16_t len;
   uint16_t cap;
   uint16_t *cols;
-  uint16_t depth;   /* bracket nesting */
   int16_t pending;  /* column seen after a newline, -1 when none */
 } Scanner;
 
@@ -44,27 +43,37 @@ void tree_sitter_harsh_external_scanner_destroy(void *p) {
   free(s);
 }
 
+/* The state an incremental re-parse resumes from: the column still owed
+ * indent tokens (`pending`), then the indent stack above its base 0.
+ * `pending` was not saved and the stack was read back only up to its first
+ * capacity, with the base 0 written twice (found writing the developer book,
+ * 0.7.3). A bracket depth was saved too, and never read: brackets are the
+ * grammar's, not the scanner's (removed 2026-10-13). */
 unsigned tree_sitter_harsh_external_scanner_serialize(void *p, char *buf) {
   Scanner *s = p;
   unsigned n = 0;
-  buf[n++] = (char)(s->depth & 0xff);
-  for (uint16_t i = 0; i < s->len && n + 2 <= TREE_SITTER_SERIALIZATION_BUFFER_SIZE; i++) {
+  buf[n++] = (char)(s->pending & 0xff);
+  buf[n++] = (char)((s->pending >> 8) & 0xff);
+  for (uint16_t i = 1; i < s->len && n + 2 <= TREE_SITTER_SERIALIZATION_BUFFER_SIZE; i++) {
     buf[n++] = (char)(s->cols[i] & 0xff);
     buf[n++] = (char)(s->cols[i] >> 8);
   }
   return n;
 }
 
+static void push(Scanner *s, uint16_t col);
+
 void tree_sitter_harsh_external_scanner_deserialize(void *p, const char *buf, unsigned n) {
   Scanner *s = p;
   s->len = 1;
   s->cols[0] = 0;
-  s->depth = 0;
-  if (n == 0) return;
+  s->pending = -1;
+  if (n < 2) return;
   unsigned i = 0;
-  s->depth = (uint8_t)buf[i++];
-  while (i + 1 < n && s->len < s->cap) {
-    s->cols[s->len++] = (uint8_t)buf[i] | ((uint8_t)buf[i + 1] << 8);
+  s->pending = (int16_t)((uint8_t)buf[i] | ((uint8_t)buf[i + 1] << 8));
+  i += 2;
+  while (i + 1 < n) {
+    push(s, (uint16_t)((uint8_t)buf[i] | ((uint8_t)buf[i + 1] << 8)));
     i += 2;
   }
 }

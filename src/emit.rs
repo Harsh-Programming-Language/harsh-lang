@@ -120,9 +120,6 @@ impl<'a> Emitter<'a> {
         }
     }
 
-    /// The source whitespace between two tokens, as `tok` would copy it: a
-    /// line break becomes a break plus this level's indent plus the source
-    /// line's own indentation.
     /// The source text between two positions, or nothing when they are not
     /// a range of this file. An expansion's tokens carry the spans of their
     /// definition; the prelude's index the prelude's own text, which may run
@@ -814,7 +811,7 @@ impl<'a> Emitter<'a> {
         if drop_last_colon {
             Self::scrutinee_fixups(toks, &mut fixes);
         }
-        Self::backslash_fixups(toks, end, &mut fixes, &mut comma_at);
+        Self::backslash_fixups(toks, end, &mut fixes);
         let mut prev: Option<Token> = None;
         for (i, t) in toks.iter().enumerate() {
             if drop_last_colon && (i == end || i == skip_do) {
@@ -884,10 +881,7 @@ impl<'a> Emitter<'a> {
                         }
                     }
                     self.out.push('(');
-                    let tf = false;
-                    let mut t2 = t.clone();
-                    t2.span.lo = t.span.lo;
-                    self.tok(&t2, None, tf, braces.contains(&i));
+                    self.tok(t, None, false, braces.contains(&i));
                     if matches!(fix, Fix::Wrap) {
                         self.out.push(')');
                     }
@@ -895,22 +889,19 @@ impl<'a> Emitter<'a> {
                     continue;
                 }
                 Some(Fix::CloseAfter) => {
-                    let tf = false;
-                    self.tok(t, prev.as_ref(), tf, braces.contains(&i));
+                    self.tok(t, prev.as_ref(), false, braces.contains(&i));
                     self.out.push(')');
                     prev = Some(t.clone());
                     continue;
                 }
                 Some(Fix::TextAfter(s)) => {
-                    let tf = false;
-                    self.tok(t, prev.as_ref(), tf, braces.contains(&i));
+                    self.tok(t, prev.as_ref(), false, braces.contains(&i));
                     self.out.push_str(s);
                     prev = Some(t.clone());
                     continue;
                 }
                 None => {}
             }
-            let tf = false;
             if fixes_drop.contains(&i) {
                 if comma_at.contains(&i) {
                     while self.out.ends_with(' ') {
@@ -949,8 +940,7 @@ impl<'a> Emitter<'a> {
                 prev = Some(t.clone());
                 continue;
             }
-            if let Some(n) = comma_at.get(&i).map(|_| 1) {
-                let _ = n;
+            if comma_at.contains(&i) {
                 while self.out.ends_with(' ') {
                     self.out.pop();
                 }
@@ -963,9 +953,9 @@ impl<'a> Emitter<'a> {
                 for _ in 0..*n {
                     self.out.push('(');
                 }
-                self.tok(t, None, tf, braces.contains(&i));
+                self.tok(t, None, false, braces.contains(&i));
             } else {
-                self.tok(t, prev.as_ref(), tf, braces.contains(&i));
+                self.tok(t, prev.as_ref(), false, braces.contains(&i));
             }
             if let Some(n) = close_at.get(&i) {
                 for _ in 0..*n {
@@ -1138,7 +1128,7 @@ impl<'a> Emitter<'a> {
                         let eff_kind = if b.kind == BlockKind::Lit && kind == BlockKind::Stmts { BlockKind::Stmts } else { eff_kind };
                         // A tail that ends in a written `;` already ends the
                         // statement. A block whose tail is a line -- a paren
-                        // block, `f (Point:` .. `)` -- is an expression
+                        // block, `f (Point\` .. `)` -- is an expression
                         // statement and takes `;` like a line, unless last.
                         // Through nested tails (`(P\ ..) + (P\ ..)` on one
                         // line): the statement ends where the innermost
@@ -1149,7 +1139,6 @@ impl<'a> Emitter<'a> {
                         }
                         let tail_semi = matches!(last_tail.tail.last(), Some(Node::Line(l)) if ends_with_semi(&l.toks));
                         let tail_is_line = matches!(last_tail.tail.last(), Some(Node::Line(_)));
-                        let eff_kind = if tail_is_line && !ends_in_closure_ret(&b.header.toks) { eff_kind } else { eff_kind };
                         self.separator(
                             eff_kind,
                             eff.as_deref(),
@@ -1177,7 +1166,7 @@ impl<'a> Emitter<'a> {
     /// item run ends with ` }` at its bound -- `=`, `=>`, `in`, `if`, `|`,
     /// the `)` closing its group, or the line's end -- and in a literal each
     /// field's `=` becomes `:`.
-    fn backslash_fixups(toks: &[Token], end: usize, fixes: &mut std::collections::HashMap<usize, Fix>, _comma_at: &mut std::collections::HashSet<usize>) {
+    fn backslash_fixups(toks: &[Token], end: usize, fixes: &mut std::collections::HashMap<usize, Fix>) {
         let mut i = 0;
         while i < end {
             if toks[i].kind != Tk::Backslash {
@@ -1413,8 +1402,6 @@ impl<'a> Emitter<'a> {
         // application, `Some (if c:`) and not a macro's bang. A `(do:` is
         // always optional: the block's braces isolate it already.
         let whole_group = last_open.map_or(false, |p| {
-            let after: Vec<&Token> = head[p + 1..].iter().filter(|t| !t.is_comment()).collect();
-            let is_do = after.first().map_or(false, |t| t.is_kw("do"));
             let before = (0..p).rev().find(|&k| !head[k].is_comment()).map(|k| &head[k]);
             let not_call = match before {
                 None => true,
@@ -1445,7 +1432,7 @@ impl<'a> Emitter<'a> {
             };
             // (A `(do:` that is an argument -- `routes (do:` -- keeps its
             // parens: they are the call's.)
-            tail_starts_close && not_call && !tuple && (is_do || true)
+            tail_starts_close && not_call && !tuple
         });
         // The dropped `(` is skipped when the head is written (its index
         // must stay, since the fixups are computed on the head as it is).
@@ -1759,10 +1746,6 @@ fn has_top_level_arrow(toks: &[Token]) -> bool {
             _ => {}
         }
     }
-    false
-}
-
-fn ends_in_closure_ret(_toks: &[Token]) -> bool {
     false
 }
 

@@ -183,6 +183,38 @@ hello, harsh 5 52 42 () 3 abc HELLO, HARSH 6 hello, ABC
 
 When an application meets operators, chains and pipes, it binds before any of them: `add 1 2 * 10` adds, then multiplies. The appendix *Precedence* sets out every level. An index written tight, `arr[1]`, is part of its atom, so `f arr[1]` passes the element — the same way `t.0` is part of `t`; brackets never apply, and an array passed as an argument is isolated, `f ([1, 2, 3])`. Two arrows share the work of reaching into things: `<-` reaches into a *value* — a field, a method, `v <- len$` — and `.` walks a *path* — a module, a type, an item, `String.from`. A macro applies like a function, with its `!` glued to its name: `vec! [1, 2, 3]`, `println! "{s}"`. And when an application and an arrow meet, **the application binds tighter**: in `greet "harsh" <- to_uppercase$` the function is applied first and the arrow takes its result, and the next arrow, or an operator, ends the arguments. The parentheses you will be tempted to write, `(greet "harsh") <- to_uppercase$`, are not wrong; they are not needed. Parentheses are needed the other way round — when the arrow belongs *inside* an argument, `greet (&(text <- to_uppercase$))`.
 
-## 2.7 What you have met
+## 2.7 One argument, one atom
+
+Every pair of parentheses in this chapter that was not a tuple has had the same job, and it is worth seeing the rule whole, because it explains each case at once instead of one at a time.
+
+Harsh separates arguments with spaces: `add 2 3` has two. So an argument that is itself made of several tokens — `n * 2`, `-1`, `&line`, `s <- len$` — would be read as several arguments, and must be **isolated**, wrapped in parentheses that say *this is one argument*. An argument of one token needs nothing: that token is an **atom**. Atoms are names and literals, and a few shapes that stay one piece because they are written tight: a path `Route.Home`, a tuple's item `pair.0`, an index `v[0]`, a call with no arguments `now$`, a turbofish `parse.<i32>$`, a range of atoms `0..n`, and anything already isolated `(n * 2)`.
+
+```rust harsh
+fn add (a: i32) (b: i32) -> i32: a + b
+
+fn main$:
+    let n = 4
+    let pair = (1, 2)
+    let v = vec! 10 20 30
+    println! "{}" (add (n * 2) (-1))
+    println! "{}" (add pair.0 v[1])
+    println! "{}" (add (v <- len$ as i32) n)
+    let total: i32 = (0..n) <- sum$
+    println! "{total}"
+```
+
+Each isolated argument there has several tokens: an operator, a negative number, a method step. Each bare one is an atom. The reason is always the same, so a reader never has to remember a list.
+
+**Where nothing needs separating, nothing is isolated.** The parentheses exist only to tell an argument from its neighbours, so where there are no neighbours they are not needed. A function with one parameter writes it bare, however many tokens it has: `fn greet name: &str`, `fn bump &mut n: &mut i32`. After a constructor — a `struct` or enum variant the program declares (a record variant's fields are not constructors), or the prelude's `Some`, `Ok`, `Err` — a single argument is bare too: `Some &x`, `Some mut line`, `Ok ref v`. A constructor can only take its argument; it is never an operand of `&`. After any other name, `f & x` is bit-and, so a reference passed to a function is isolated: `f (&x)`.
+
+**Two operators keep their parentheses everywhere.** A leading `-` and a range whose ends are not atoms: `f (-1)`, `Celsius (-40..=0)`, `f (a + 1..n)` — because `f -1` is subtraction and `f a + 1..n` would split at the `+`.
+
+**Commas separate too.** Inside a tuple, items are separated by commas, and a literal brings commas of its own: `(1, (Point\ x = 1, y = 2))` — isolated, or its fields would read as the tuple's items.
+
+**A tuple index applies to one atom.** `pair.0` indexes `pair`. To index what a call returns, isolate the call: `let first = (f src).0` — in `f src.0`, the `.0` is `src`'s. That indexed group is itself several pieces, so passed as an argument it is isolated in turn: `show ((f src).0)`. Written `show (f src).0`, the index would apply to `show`'s result; Harsh refuses it and names the isolated form. An index in brackets follows the same rule: `(f src)[i]` indexes what `f src` returns.
+
+Rust needs none of this, because it separates arguments with commas. Harsh separates them with spaces, so where spaces separate, an argument of several tokens is isolated, and nowhere else.
+
+## 2.8 What you have met
 
 Immutability by default and `mut` to opt out; `&` and `&mut` on arguments; `Result` for operations that can fail and `match` to take it apart; `loop`, `break`, `continue`; enums; type annotations that tell `parse` what to produce. Each has a chapter. The next one starts with the smallest pieces: variables, types, functions, and control flow.

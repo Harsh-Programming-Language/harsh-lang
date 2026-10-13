@@ -158,7 +158,8 @@ pre.code:hover .copy,.copy:focus-visible{opacity:1}
 <li class="d1"><a href="#2-4-loop-read-trim-parse">2.4 Loop, read, trim, parse</a></li>
 <li class="d1"><a href="#2-5-compare-and-decide">2.5 Compare and decide</a></li>
 <li class="d1"><a href="#2-6-how-a-page-of-harsh-is-laid-out">2.6 How a page of Harsh is laid out</a></li>
-<li class="d1"><a href="#2-7-what-you-have-met">2.7 What you have met</a></li>
+<li class="d1"><a href="#2-7-one-argument-one-atom">2.7 One argument, one atom</a></li>
+<li class="d1"><a href="#2-8-what-you-have-met">2.8 What you have met</a></li>
 <li class="d0"><a href="#3-common-concepts">3. Common concepts</a></li>
 <li class="d1"><a href="#3-1-variables-and-mutability">3.1 Variables and mutability</a></li>
 <li class="d2"><a href="#shadowing">Shadowing</a></li>
@@ -389,6 +390,7 @@ pre.code:hover .copy,.copy:focus-visible{opacity:1}
 <li class="d3"><a href="#function-like-macros-1">Function-Like Macros</a></li>
 <li class="d1"><a href="#23-7-harsh-dsls">23.7 Harsh DSLs (~)</a></li>
 <li class="d1"><a href="#23-8-rust-dsls">23.8 Rust DSLs (!)</a></li>
+<li class="d2"><a href="#where-the-holes-go">Where the holes go</a></li>
 <li class="d1"><a href="#23-9-parentheses-once-and-for-all">23.9 Parentheses, once and for all</a></li>
 <li class="d1"><a href="#23-10-what-you-have">23.10 What you have</a></li>
 <li class="d0"><a href="#24-final-project-a-multithreaded-web-server">24. Final project: a multithreaded web server</a></li>
@@ -489,10 +491,10 @@ hrs new hello &amp;&amp; cd hello &amp;&amp; hrs run                            
 <h3 id="1-2-what-hrs-run-did">1.2 What <code>hrs run</code> did</h3>
 <p><code>hrs run</code> is two steps that you will do a thousand times, so it is worth seeing them once.</p>
 <ol>
-<li><strong>Transpile.</strong> <code>hrs</code> reads <code>src/main.hrs</code> and writes <code>target/hrs/main.rs</code>, the same program in Rust's own spelling. It also writes a <em>source map</em>: which byte of the Rust came from which byte of the Harsh.</li>
+<li><strong>Transpile.</strong> <code>hrs</code> reads <code>src/main.hrs</code> and writes <code>target/src/main.rs</code>, the same program in Rust's own spelling. It also writes a <em>source map</em>: which byte of the Rust came from which byte of the Harsh.</li>
 <li><strong>Compile and run.</strong> <code>cargo</code>, Rust's build tool, compiles the Rust and runs the binary. If the compiler complains, <code>hrs</code> uses the source map to turn every line number in the complaint into a line of your <code>.hrs</code> file.</li>
 </ol>
-<p>You never read <code>target/hrs/main.rs</code> unless you want to; in daily use it is an intermediate file.</p>
+<p>You never read <code>target/src/main.rs</code> unless you want to; in daily use it is an intermediate file.</p>
 <h3 id="1-3-arguments">1.3 Arguments</h3>
 <p>Programs take input. The simplest input is what follows the program's name on the command line, which Rust hands you through the standard library:</p>
 <pre class="code harsh"><code><span class="k">use</span> std<span class="p">.</span>env
@@ -651,7 +653,27 @@ you have it: 37</code></pre>
 <p><strong>Harsh —</strong> A function is applied by writing its arguments after it, separated by spaces: <code>add 2 3</code>. Parentheses around an argument mean <em>this is one argument</em> — <code>add (n * 2) (nothing$)</code> — and never <em>these are the arguments</em>; an argument that is a single token needs none. Applying a function to nothing is <code>nothing$</code>, because <code>()</code> is a value, the unit, and only ever that. The same rule declares a function: <code>fn add (a: i32) (b: i32)</code> is one group per parameter, and a lone parameter may drop its parentheses, <code>fn greet name: &amp;str</code>. A block's opener says how its entries end, and there are only three kinds. A header that ends itself — <code>struct Point</code>, <code>impl Point</code>, <code>mod geometry</code>, <code>extern "C"</code> — needs no mark at all, since nothing but a name can follow it and what comes deeper can only be the body. A <code>\</code> opens a comma-separated list — a literal's fields, or a <code>match</code>'s arms. A <code>:</code> or <code>do:</code> opens statements. A grouping whose grammar belongs to someone else — a macro's own language — is not a block at all: it goes in the macro's braces, as Rust, and the Harsh inside is marked <code>@: … :@</code> (chapter 23).</p>
 </blockquote>
 <p>When an application meets operators, chains and pipes, it binds before any of them: <code>add 1 2 * 10</code> adds, then multiplies. The appendix <em>Precedence</em> sets out every level. An index written tight, <code>arr[1]</code>, is part of its atom, so <code>f arr[1]</code> passes the element — the same way <code>t.0</code> is part of <code>t</code>; brackets never apply, and an array passed as an argument is isolated, <code>f ([1, 2, 3])</code>. Two arrows share the work of reaching into things: <code>&lt;-</code> reaches into a <em>value</em> — a field, a method, <code>v &lt;- len$</code> — and <code>.</code> walks a <em>path</em> — a module, a type, an item, <code>String.from</code>. A macro applies like a function, with its <code>!</code> glued to its name: <code>vec! [1, 2, 3]</code>, <code>println! "{s}"</code>. And when an application and an arrow meet, <strong>the application binds tighter</strong>: in <code>greet "harsh" &lt;- to_uppercase$</code> the function is applied first and the arrow takes its result, and the next arrow, or an operator, ends the arguments. The parentheses you will be tempted to write, <code>(greet "harsh") &lt;- to_uppercase$</code>, are not wrong; they are not needed. Parentheses are needed the other way round — when the arrow belongs <em>inside</em> an argument, <code>greet (&amp;(text &lt;- to_uppercase$))</code>.</p>
-<h3 id="2-7-what-you-have-met">2.7 What you have met</h3>
+<h3 id="2-7-one-argument-one-atom">2.7 One argument, one atom</h3>
+<p>Every pair of parentheses in this chapter that was not a tuple has had the same job, and it is worth seeing the rule whole, because it explains each case at once instead of one at a time.</p>
+<p>Harsh separates arguments with spaces: <code>add 2 3</code> has two. So an argument that is itself made of several tokens — <code>n * 2</code>, <code>-1</code>, <code>&amp;line</code>, <code>s &lt;- len$</code> — would be read as several arguments, and must be <strong>isolated</strong>, wrapped in parentheses that say <em>this is one argument</em>. An argument of one token needs nothing: that token is an <strong>atom</strong>. Atoms are names and literals, and a few shapes that stay one piece because they are written tight: a path <code>Route.Home</code>, a tuple's item <code>pair.0</code>, an index <code>v[0]</code>, a call with no arguments <code>now$</code>, a turbofish <code>parse.&lt;i32&gt;$</code>, a range of atoms <code>0..n</code>, and anything already isolated <code>(n * 2)</code>.</p>
+<pre class="code harsh"><code><span class="k">fn</span> add <span class="p">(</span>a<span class="p">:</span> i32<span class="p">)</span> <span class="p">(</span>b<span class="p">:</span> i32<span class="p">)</span> <span class="op">-&gt;</span> i32<span class="p">:</span> a <span class="p">+</span> b
+
+<span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="k">let</span> n <span class="p">=</span> <span class="num">4</span>
+    <span class="k">let</span> pair <span class="p">=</span> <span class="p">(</span><span class="num">1</span><span class="p">,</span> <span class="num">2</span><span class="p">)</span>
+    <span class="k">let</span> v <span class="p">=</span> <span class="mac">vec!</span> <span class="num">10</span> <span class="num">20</span> <span class="num">30</span>
+    <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span>add <span class="p">(</span>n <span class="p">*</span> <span class="num">2</span><span class="p">)</span> <span class="p">(</span><span class="p">-</span><span class="num">1</span><span class="p">)</span><span class="p">)</span>
+    <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span>add pair<span class="p">.</span><span class="num">0</span> v<span class="p">[</span><span class="num">1</span><span class="p">]</span><span class="p">)</span>
+    <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span>add <span class="p">(</span>v <span class="op">&lt;-</span> len<span class="defer">$</span> <span class="k">as</span> i32<span class="p">)</span> n<span class="p">)</span>
+    <span class="k">let</span> total<span class="p">:</span> i32 <span class="p">=</span> <span class="p">(</span><span class="num">0..n</span><span class="p">)</span> <span class="op">&lt;-</span> sum<span class="defer">$</span>
+    <span class="mac">println!</span> <span class="str">"{total}"</span></code></pre>
+<p>Each isolated argument there has several tokens: an operator, a negative number, a method step. Each bare one is an atom. The reason is always the same, so a reader never has to remember a list.</p>
+<p><strong>Where nothing needs separating, nothing is isolated.</strong> The parentheses exist only to tell an argument from its neighbours, so where there are no neighbours they are not needed. A function with one parameter writes it bare, however many tokens it has: <code>fn greet name: &amp;str</code>, <code>fn bump &amp;mut n: &amp;mut i32</code>. After a constructor — a <code>struct</code> or enum variant the program declares (a record variant's fields are not constructors), or the prelude's <code>Some</code>, <code>Ok</code>, <code>Err</code> — a single argument is bare too: <code>Some &amp;x</code>, <code>Some mut line</code>, <code>Ok ref v</code>. A constructor can only take its argument; it is never an operand of <code>&amp;</code>. After any other name, <code>f &amp; x</code> is bit-and, so a reference passed to a function is isolated: <code>f (&amp;x)</code>.</p>
+<p><strong>Two operators keep their parentheses everywhere.</strong> A leading <code>-</code> and a range whose ends are not atoms: <code>f (-1)</code>, <code>Celsius (-40..=0)</code>, <code>f (a + 1..n)</code> — because <code>f -1</code> is subtraction and <code>f a + 1..n</code> would split at the <code>+</code>.</p>
+<p><strong>Commas separate too.</strong> Inside a tuple, items are separated by commas, and a literal brings commas of its own: <code>(1, (Point\ x = 1, y = 2))</code> — isolated, or its fields would read as the tuple's items.</p>
+<p><strong>A tuple index applies to one atom.</strong> <code>pair.0</code> indexes <code>pair</code>. To index what a call returns, isolate the call: <code>let first = (f src).0</code> — in <code>f src.0</code>, the <code>.0</code> is <code>src</code>'s. That indexed group is itself several pieces, so passed as an argument it is isolated in turn: <code>show ((f src).0)</code>. Written <code>show (f src).0</code>, the index would apply to <code>show</code>'s result; Harsh refuses it and names the isolated form. An index in brackets follows the same rule: <code>(f src)[i]</code> indexes what <code>f src</code> returns.</p>
+<p>Rust needs none of this, because it separates arguments with commas. Harsh separates them with spaces, so where spaces separate, an argument of several tokens is isolated, and nowhere else.</p>
+<h3 id="2-8-what-you-have-met">2.8 What you have met</h3>
 <p>Immutability by default and <code>mut</code> to opt out; <code>&amp;</code> and <code>&amp;mut</code> on arguments; <code>Result</code> for operations that can fail and <code>match</code> to take it apart; <code>loop</code>, <code>break</code>, <code>continue</code>; enums; type annotations that tell <code>parse</code> what to produce. Each has a chapter. The next one starts with the smallest pieces: variables, types, functions, and control flow.</p>
 <h2 id="3-common-concepts">3. Common concepts</h2>
 <p>Variables, types, functions, control flow: every language has them, and Rust's versions each have one thing that is not like the others. This chapter is those things.</p>
@@ -1063,8 +1085,8 @@ hello</code></pre>
   --&gt; borrow_mut_err.hrs:2:5
    |
  2 |     some_string &lt;- push_str ", world"
-   |     ^^^^^^^^^^^ `some_string` is a `&amp;` reference, so the data it refers to cannot be borrowed as mutable
-   = help: consider changing this to be a mutable reference (hrs 1:25)</code></pre>
+   |     ^^^^^^^^^^^ `some_string` is a `&amp;` reference, so it cannot be borrowed as mutable
+   = help: consider changing this to be a mutable reference (hrs 1:24)</code></pre>
 <p>A plain <code>&amp;</code> reference is a promise to only read. To change something through a reference you need a <strong>mutable reference</strong>, <code>&amp;mut</code>, and the value you borrow from has to be <code>mut</code> in the first place:</p>
 <pre class="code harsh"><code><span class="k">fn</span> change some_string<span class="p">:</span> <span class="p">&amp;</span><span class="k">mut</span> <span class="t">String</span><span class="p">:</span>
     some_string <span class="op">&lt;-</span> push_str <span class="str">", world"</span>
@@ -1150,7 +1172,8 @@ hello!</code></pre>
  1 | fn dangle$ -&gt; &amp;String:
    |               ^ expected named lifetime parameter
    = help: this function's return type contains a borrowed value, but there is no value for it to be borrowed from
-   = help: consider using the `'static` lifetime (hrs 1:16)</code></pre>
+   = help: consider using the `'static` lifetime, but this is uncommon unless you're returning a borrowed value from a `const` or a `static` (hrs 1:16)
+   = help: instead, you are more likely to want to return an owned value (hrs 1:15)</code></pre>
 <p><code>s</code> is created inside <code>dangle</code>, so it is dropped when <code>dangle</code> returns; a reference to it would point at freed memory. The compiler's message is about <em>lifetimes</em>, a word chapter 10 explains in full — for now, read the first <code>help</code>: the return type is a borrowed value and there is nothing in this function it could be borrowed <em>from</em>. The fix is to return the <code>String</code> itself, moving it out to the caller:</p>
 <pre class="code harsh"><code><span class="k">fn</span> no_dangle<span class="defer">$</span> <span class="op">-&gt;</span> <span class="t">String</span><span class="p">:</span>
     <span class="k">let</span> s <span class="p">=</span> <span class="t">String</span><span class="p">.</span>from <span class="str">"hello"</span>
@@ -1310,6 +1333,29 @@ world</code></pre>
 <pre class="code"><code>someusername123 (anotheremail@example.com), active: true, sign-ins: 1</code></pre>
 <p>The definition is <code>struct User</code> and four indented fields, each <code>name: Type</code>. Nothing marks the body: only a name can follow <code>struct</code>, so a deeper line can only be a field. An <em>instance</em> is the struct's name, a <code>\</code>, and every field given a value with <code>=</code> — a line each here, or all on one line after the mark, <code>User\ active = true, …</code>. Order does not matter, but every field must be present, and the <code>\</code> is what says the name is not finished: a bare <code>User</code> is already a complete expression. Inline, the field list reaches the end of its line, or the <code>)</code> of the group it is written in — so <code>Point\ x = 1, msg</code> is one literal with the shorthand field <code>msg</code>, with or without parens around it, and the compiler is the one to say whether <code>msg</code> is a field <code>Point</code> has. When a literal is one element of a tuple, give it its own parens: <code>((Point\ x = 1), msg)</code>. A field is read with <code>&lt;-</code>: <code>user1 &lt;- email</code>. The whole instance is mutable or it is not — <code>let mut user1</code> — and then a field is assigned with <code>&lt;-</code> on the left of <code>=</code>. There is no way to mark a single field mutable, and this is deliberate: mutability is a property of the binding, and a reader who sees <code>let user1</code> knows the entire value is fixed.</p>
 <p>Notice the parentheses around <code>(user1 &lt;- username)</code> when it is handed to <code>println!</code>. A field access has an operator in it, so, like every other operator expression, it is isolated when it is an argument; <code>println! "{}" user1 &lt;- username</code> would read as <code>println!</code> applied to <code>user1</code>, followed by an arrow the macro does not want. The rule is chapter 3's and chapter 4's, applied again.</p>
+<p>A literal handed to a function is an argument like any other, and an argument of several tokens is isolated: <code>cards &lt;- push (Card\ id = 1, …)</code>, or with the fields beneath, one unit past the literal's name, and the <code>)</code> under its <code>(</code> — far to the right, but clear. When that would run past the line, the <code>(</code> goes on the next line, one unit past the callee, and <code>hrs fmt</code> does it for you. A constructor takes it the same way, <code>Some (Card\ …)</code>, <code>Ok (Card\ …)</code>. Written bare, <code>cards &lt;- push Card\</code>, it is refused, and the message names the isolated form.</p>
+<pre class="code harsh"><code><span class="k">struct</span> <span class="t">Card</span>
+    id<span class="p">:</span> u32
+    title<span class="p">:</span> <span class="t">String</span>
+
+<span class="k">fn</span> first <span class="p">(</span>cards<span class="p">:</span> <span class="p">&amp;</span><span class="p">[</span><span class="t">Card</span><span class="p">]</span><span class="p">)</span> <span class="op">-&gt;</span> <span class="t">Result</span><span class="p">&lt;</span><span class="p">&amp;</span><span class="t">Card</span><span class="p">,</span> <span class="t">String</span><span class="p">&gt;</span><span class="p">:</span>
+    cards <span class="op">&lt;-</span> first<span class="defer">$</span> <span class="op">&lt;-</span> ok_or <span class="p">(</span><span class="t">String</span><span class="p">.</span>from <span class="str">"no cards"</span><span class="p">)</span>
+
+<span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="k">let</span> <span class="k">mut</span> cards <span class="p">=</span> <span class="t">Vec</span><span class="p">.</span>new<span class="defer">$</span>
+    cards <span class="op">&lt;-</span> push <span class="p">(</span><span class="t">Card</span>\ id <span class="p">=</span> <span class="num">1</span><span class="p">,</span> title <span class="p">=</span> <span class="t">String</span><span class="p">.</span>from <span class="str">"Draft"</span><span class="p">)</span>
+    cards <span class="op">&lt;-</span> push <span class="p">(</span><span class="t">Card</span>\ id <span class="p">=</span> <span class="num">2</span><span class="p">,</span> title <span class="p">=</span> <span class="t">String</span><span class="p">.</span>from <span class="str">"Review"</span><span class="p">)</span>
+    cards <span class="op">&lt;-</span> push <span class="p">(</span><span class="t">Card</span>\
+                       id <span class="p">=</span> <span class="num">3</span>
+                       title <span class="p">=</span> <span class="t">String</span><span class="p">.</span>from <span class="str">"Publish"</span>
+                  <span class="p">)</span>
+    <span class="k">let</span> spare <span class="p">=</span> <span class="t">Some</span> <span class="p">(</span><span class="t">Card</span>\ id <span class="p">=</span> <span class="num">4</span><span class="p">,</span> title <span class="p">=</span> <span class="t">String</span><span class="p">.</span>from <span class="str">"Spare"</span><span class="p">)</span>
+    <span class="k">match</span> first <span class="p">(</span><span class="p">&amp;</span>cards<span class="p">)</span>\
+        <span class="t">Ok</span> card <span class="op">=&gt;</span> <span class="mac">println!</span> <span class="str">"first: {} {}"</span> <span class="p">(</span>card <span class="op">&lt;-</span> id<span class="p">)</span> <span class="p">(</span>card <span class="op">&lt;-</span> title<span class="p">)</span>
+        <span class="t">Err</span> why <span class="op">=&gt;</span> <span class="mac">println!</span> <span class="str">"{why}"</span>
+    <span class="mac">println!</span> <span class="str">"{} cards, spare: {}"</span> <span class="p">(</span>cards <span class="op">&lt;-</span> len<span class="defer">$</span><span class="p">)</span> <span class="p">(</span>spare <span class="op">&lt;-</span> is_some<span class="defer">$</span><span class="p">)</span></code></pre>
+<pre class="code"><code>first: 1 Draft
+3 cards, spare: true</code></pre>
 <h4 id="building-a-struct-in-a-function">Building a struct in a function</h4>
 <p>A function that returns a struct is the ordinary way to construct one with defaults:</p>
 <pre class="code harsh"><code><span class="k">struct</span> <span class="t">User</span>
@@ -1490,7 +1536,8 @@ error[E0106]: missing lifetime specifier
   --&gt; no_debug.hrs:7:30
    |
  7 |     println! "rect1 is {:?}" rect1
-   |                              ^^^^^ `Rectangle` cannot be formatted using `{:?}`
+   |                        ---- required by this formatting parameter
+   |                              ^^^^^ `Rectangle` cannot be formatted using `{:?}` because it doesn't implement `Debug`
    = help: the trait `Debug` is not implemented for `Rectangle`
    = note: add `#[derive(Debug)]` to `Rectangle` or manually `impl Debug for Rectangle`
    = help: consider annotating `Rectangle` with `#[derive(Debug)]` (hrs 1:1)</code></pre>
@@ -1686,11 +1733,7 @@ calling ChangeColor(0, 160, 255)</code></pre>
  4 |     let sum = x + y
    |                 ^ no implementation for `i8 + Option&lt;i8&gt;`
    = help: the trait `Add&lt;Option&lt;i8&gt;&gt;` is not implemented for `i8`
-   = help: the following other types implement trait `Add&lt;Rhs&gt;`:
-  &lt;i8 as Add&gt;
-  &lt;i8 as Add&lt;&amp;i8&gt;&gt;
-  &lt;&amp;'a i8 as Add&lt;i8&gt;&gt;
-  &lt;&amp;i8 as Add&lt;&amp;i8&gt;&gt;</code></pre>
+   = help: the following other types implement trait `Add&lt;Rhs&gt;`</code></pre>
 <p>In a language with null, <code>x + y</code> compiles and fails at runtime when <code>y</code> happens to be null. Here it does not compile, because a value that might be absent cannot be added until you have said what happens when it is. To use the <code>i8</code> inside, you have to take the <code>Option</code> apart, and handling the <code>None</code> case is part of taking it apart. That is the whole idea, and <code>match</code> is how it is done.</p>
 <h3 id="6-2-match">6.2 <code>match</code></h3>
 <p><code>match</code> takes a value and a list of <em>arms</em>, each a pattern and the code to run when the pattern fits. The first arm whose pattern matches wins:</p>
@@ -2066,11 +2109,12 @@ delivered</code></pre>
 
 <span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
     customer<span class="p">.</span>eat_at_restaurant<span class="defer">$</span></code></pre>
-<pre class="code"><code>error[E0433]: failed to resolve: use of undeclared crate or module `hosting`
+<pre class="code"><code>error[E0433]: cannot find module or crate `hosting` in this scope
   --&gt; use_scope.hrs:10:9
    |
 10 |         hosting.add_to_waitlist$          // `use` above is in the parent, not here
-   |         ^^^^^^^ use of undeclared crate or module `hosting`
+   |         ^^^^^^^ use of unresolved module or unlinked crate `hosting`
+   = help: you might be missing a crate named `hosting`
    = help: consider importing this module through its public re-export (hrs 9:5)</code></pre>
 <p>The <code>use</code> is in the crate root; <code>customer</code> is a child; the name is not in scope there. Either move the <code>use</code> into <code>customer</code> or write <code>super.hosting</code> from inside it.</p>
 <h4 id="as"><code>as</code></h4>
@@ -2141,7 +2185,7 @@ I'm growing Asparagus!</code></pre>
 <p>Three files. <code>src/main.hrs</code> declares <code>pub mod garden</code> with no body — just the declaration on a line — and the compiler looks for the body in <code>src/garden.hrs</code>. That file declares <code>pub mod vegetables</code> the same way, and the body of <em>that</em> is found in <code>src/garden/vegetables.hrs</code>: a module's children go in a directory named after it. The <code>use</code> at the top of <code>main.hrs</code> is then the ordinary thing, a path through the tree to the item wanted.</p>
 <p>Only the crate root ever needs to know the tree's shape; a file that declares a child module does not say where the child's file is, because there is only one place it can be. And nothing in the calling code changes when a module moves from inline to its own file — the path <code>crate.garden.vegetables.Asparagus</code> is the same either way. Moving code into files is a filing decision, and the module system keeps it from being anything more.</p>
 <blockquote>
-<p><strong>Harsh —</strong> The file layout is not Harsh's invention and Harsh does not touch it: <code>hrs build</code> transpiles every file under <code>src/</code> into <code>target/hrs/</code>, tree for tree and name for name, so the compiler finds each module exactly where the declaration says it is.</p>
+<p><strong>Harsh —</strong> The file layout is not Harsh's invention and Harsh does not touch it: <code>hrs build</code> transpiles every file under <code>src/</code> into <code>target/src/</code>, tree for tree and name for name, so the compiler finds each module exactly where the declaration says it is.</p>
 </blockquote>
 <h3 id="7-6-what-you-have">7.6 What you have</h3>
 <p>A package is what <code>hrs new</code> makes and a crate is what the compiler builds from its root. <code>mod</code> opens a module; everything in it is private until <code>pub</code> says otherwise, and <code>pub</code> on a struct still leaves each field private. Paths are <code>crate.</code> from the root, or relative, or <code>super.</code> from the parent, with <code>.</code> between segments. <code>use</code> shortens a path for one module — import the parent for a function, the type for a type — <code>as</code> renames, <code>pub use</code> re-exports, <code>(…)</code> groups, <code>*</code> takes all. A bodiless <code>mod name</code> puts the body in <code>name.hrs</code>, and its children in <code>name/</code>.</p>
@@ -2186,7 +2230,7 @@ None Some(1)</code></pre>
     <span class="k">let</span> does_not_exist <span class="p">=</span> <span class="p">&amp;</span>v<span class="p">[</span><span class="num">100</span><span class="p">]</span>        <span class="com">// this line panics at runtime</span>
     <span class="mac">println!</span> <span class="str">"{}"</span> does_not_exist</code></pre>
 <pre class="code"><code>None
-thread 'main' panicked at vec_index_panic.hrs:7:
+thread 'main' (18072) panicked at vec_index_panic.hrs:7:
 index out of bounds: the len is 5 but the index is 100</code></pre>
 <p>The program printed <code>None</code> for <code>get 100</code>, then reached <code>&amp;v[100]</code> and stopped, with the line. That is what a panic is: an unrecoverable error that ends the program with a message rather than reading memory it should not. Chapter 9 is about when to panic and when to return an <code>Option</code> or <code>Result</code> instead.</p>
 <h4 id="borrowing-a-vector">Borrowing a vector</h4>
@@ -2204,7 +2248,7 @@ index out of bounds: the len is 5 but the index is 100</code></pre>
  4 |     v &lt;- push 6
    |     ^^^^^^^^^^^^ mutable borrow occurs here
  5 |     println! "The first element is: {first}"
-   |                                     ------- immutable borrow later used here</code></pre>
+   |                                      ----- immutable borrow later used here</code></pre>
 <p>Holding a reference to the first element and then pushing looks harmless — the first element is not moving. But it might: a <code>Vec</code> that runs out of room allocates a bigger buffer, copies everything across and frees the old one, and <code>first</code> would then point into freed memory. The compiler does not know whether this push will reallocate, and does not need to; it knows that <code>push</code> needs <code>&amp;mut v</code> while <code>first</code> holds <code>&amp;v</code>, and that is enough. The fix is the usual one: use <code>first</code> before the push, or copy the value out (<code>let first = v[0]</code> — an <code>i32</code> is <code>Copy</code>).</p>
 <h4 id="iterating">Iterating</h4>
 <p>To visit every element, borrow the vector and loop:</p>
@@ -2288,19 +2332,16 @@ tic-tac-toe tic tac toe</code></pre>
     <span class="k">let</span> s1 <span class="p">=</span> <span class="t">String</span><span class="p">.</span>from <span class="str">"hello"</span>
     <span class="k">let</span> h <span class="p">=</span> s1<span class="p">[</span><span class="num">0</span><span class="p">]</span>
     <span class="mac">println!</span> <span class="str">"{}"</span> h</code></pre>
-<pre class="code"><code>error[E0277]: the type `String` cannot be indexed by `{integer}`
-  --&gt; string_index.hrs:3:13
+<pre class="code"><code>error[E0277]: the type `str` cannot be indexed by `{integer}`
+  --&gt; string_index.hrs:3:16
    |
  3 |     let h = s1[0]
-   |             ^^^^^ `String` cannot be indexed by `{integer}`
-   = help: the trait `Index&lt;{integer}&gt;` is not implemented for `String`
-   = help: the following other types implement trait `Index&lt;Idx&gt;`:
-  &lt;String as Index&lt;RangeFull&gt;&gt;
-  &lt;String as Index&lt;std::ops::Range&lt;usize&gt;&gt;&gt;
-  &lt;String as Index&lt;RangeFrom&lt;usize&gt;&gt;&gt;
-  &lt;String as Index&lt;RangeTo&lt;usize&gt;&gt;&gt;
-  &lt;String as Index&lt;RangeInclusive&lt;usize&gt;&gt;&gt;
-  &lt;String as Index&lt;RangeToInclusive&lt;usize&gt;&gt;&gt;</code></pre>
+   |                ^ string indices are ranges of `usize`
+   = help: the trait `SliceIndex&lt;str&gt;` is not implemented for `{integer}`
+   = note: you can use `.chars().nth()` or `.bytes().nth()`
+for more information, see chapter 8 in The Book: &lt;https://doc.rust-lang.org/book/ch08-02-strings.html#indexing-into-strings&gt;
+   = help: `usize` implements trait `SliceIndex&lt;T&gt;`
+   = note: required for `String` to implement `Index&lt;{integer}&gt;`</code></pre>
 <p><code>s1[0]</code> does not compile, and the reason is the byte count above. A <code>String</code> is bytes; a character may be one to four of them; so "the first character" is not "byte zero", and Rust refuses to pretend it is. Indexing that returned a byte would be wrong for most of the world's text, and indexing that returned a character would have to scan from the start, which is not what <code>[i]</code> promises. So there is no <code>[i]</code>.</p>
 <h4 id="slicing-and-iterating">Slicing and iterating</h4>
 <p>What there is: a <em>byte range</em> slice, and iterators over characters or bytes:</p>
@@ -2360,14 +2401,14 @@ Yellow: 50</code></pre>
     <span class="mac">println!</span> <span class="str">"{:?}"</span> map
     <span class="mac">println!</span> <span class="str">"{field_name}"</span>                   <span class="com">// no longer valid</span></code></pre>
 <pre class="code"><code>error[E0382]: borrow of moved value: `field_name`
-  --&gt; map_own.hrs:10:15
+  --&gt; map_own.hrs:10:16
    |
  4 |     let field_name = String.from "Favorite color"
    |         ---------- move occurs because `field_name` has type `String`, which does not implement the `Copy` trait
  8 |     map &lt;- insert field_name field_value      // both moved into the map
    |                   ---------- value moved here
 10 |     println! "{field_name}"                   // no longer valid
-   |               ^^^^^^^^^^^^ value borrowed here after move
+   |                ^^^^^^^^^^ value borrowed here after move
    = help: consider cloning the value if the performance cost is acceptable (hrs 8:29)</code></pre>
 <p><code>field_name</code> and <code>field_value</code> are <code>String</code>s, so <code>insert</code> takes ownership of both and the map owns them from then on. For a <code>Copy</code> type — an <code>i32</code> key — a copy goes in and the variable is untouched. For a reference — <code>&amp;str</code> keys — the map holds the reference, and the borrow checker ensures the text outlives the map.</p>
 <h4 id="updating">Updating</h4>
@@ -2411,7 +2452,7 @@ Some(25) Some(50)</code></pre>
     <span class="mac">println!</span> <span class="str">"about to fail"</span>
     <span class="mac">panic!</span> <span class="str">"crash and burn"</span></code></pre>
 <pre class="code"><code>about to fail
-thread 'main' panicked at panic.hrs:4:
+thread 'main' (18260) panicked at panic.hrs:4:
 crash and burn</code></pre>
 <p>The program printed its first line, reached <code>panic!</code>, printed the message with the file and line, and exited. That is the whole mechanism. By default the panic <em>unwinds</em>: it walks back up the stack dropping every value on the way, so files close and memory is freed, and then the process ends. (A backtrace — the chain of calls that led here — is available with <code>RUST_BACKTRACE=1</code> in the environment; the book leaves it off.)</p>
 <p>Most panics are not written; they are hit:</p>
@@ -2419,7 +2460,7 @@ crash and burn</code></pre>
     <span class="k">let</span> v <span class="p">=</span> <span class="mac">vec!</span> <span class="num">1</span> <span class="num">2</span> <span class="num">3</span>
     v<span class="p">[</span><span class="num">99</span><span class="p">]</span>                           <span class="com">// the value is discarded; the index still runs</span>
     <span class="p">(</span><span class="p">)</span></code></pre>
-<pre class="code"><code>thread 'main' panicked at panic_index.hrs:4:
+<pre class="code"><code>thread 'main' (18276) panicked at panic_index.hrs:4:
 index out of bounds: the len is 3 but the index is 99</code></pre>
 <p>Chapter 8's index rule, seen from the other side. In C this reads whatever happens to be at that address — a <em>buffer over-read</em>, the root of a large fraction of security holes. Rust checks, and panics, and the panic is not the bug: the index was. The panic is the report.</p>
 <h3 id="9-2-recoverable-errors-with-result">9.2 Recoverable errors with <code>Result</code></h3>
@@ -2439,7 +2480,7 @@ index out of bounds: the len is 3 but the index is 99</code></pre>
             <span class="t">Err</span> error <span class="op">=&gt;</span> <span class="mac">panic!</span> <span class="str">"Problem opening the file: {error:?}"</span>
 
     <span class="k">let</span> _ <span class="p">=</span> greeting_file</code></pre>
-<pre class="code"><code>thread 'main' panicked at result_match.hrs:10:
+<pre class="code"><code>thread 'main' (18292) panicked at result_match.hrs:10:
 Problem opening the file: Os { code: 2, kind: NotFound, message: "No such file or directory" }</code></pre>
 <p>There is no <code>hello.txt</code>, so the <code>Err</code> arm ran and the program panicked with the error inside it. This is a recoverable error handled by choosing not to recover — which is fine for a program that cannot do anything without the file — and the point is that the choice was made in the code, visibly, rather than by the runtime.</p>
 <h4 id="matching-on-the-kind-of-error">Matching on the kind of error</h4>
@@ -2470,7 +2511,7 @@ Problem opening the file: Os { code: 2, kind: NotFound, message: "No such file o
 <span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
     <span class="k">let</span> f <span class="p">=</span> <span class="t">File</span><span class="p">.</span>open <span class="str">"hello.txt"</span> <span class="op">&lt;-</span> unwrap<span class="defer">$</span>
     <span class="k">let</span> _ <span class="p">=</span> f</code></pre>
-<pre class="code"><code>thread 'main' panicked at unwrap_expect.hrs:5:
+<pre class="code"><code>thread 'main' (18324) panicked at unwrap_expect.hrs:5:
 called `Result::unwrap()` on an `Err` value: Os { code: 2, kind: NotFound, message: "No such file or directory" }</code></pre>
 <p><code>unwrap$</code> is the <code>match</code> above with a generic message. <code>expect</code> is the same with <em>your</em> message:</p>
 <pre class="code harsh"><code><span class="k">use</span> std<span class="p">.</span>fs<span class="p">.</span><span class="t">File</span>
@@ -2481,7 +2522,7 @@ called `Result::unwrap()` on an `Err` value: Os { code: 2, kind: NotFound, messa
             <span class="op">&lt;-</span> expect <span class="str">"hello.txt should be included in this project"</span>
 
     <span class="k">let</span> _ <span class="p">=</span> f</code></pre>
-<pre class="code"><code>thread 'main' panicked at expect.hrs:7:
+<pre class="code"><code>thread 'main' (18340) panicked at expect.hrs:7:
 hello.txt should be included in this project: Os { code: 2, kind: NotFound, message: "No such file or directory" }</code></pre>
 <p>Prefer <code>expect</code>: when it fires, the message says what you were assuming, and that is what you need to know first. Both are right when the <code>Err</code> case really cannot happen — a literal that you know parses — or in a quick program where stopping is the correct response. In library code they are a smell, since the library does not know what the caller wants done.</p>
 <h4 id="propagating-errors">Propagating errors</h4>
@@ -2555,7 +2596,7 @@ None</code></pre>
    | -------- this function should return `Result` or `Option` to accept `?`
  4 |     let greeting_file = File.open "hello.txt"?
    |                                              ^ cannot use the `?` operator in a function that returns `()`
-   = help: the trait `FromResidual&lt;Result&lt;Infallible, std::io::Error&gt;&gt;` is not implemented for `()`</code></pre>
+   = help: consider adding return type (hrs 3:9)</code></pre>
 <p>The compiler says exactly what is missing: <code>main</code> returns <code>()</code>, and <code>?</code> needs somewhere to send the error. <code>main</code> may return a <code>Result</code>:</p>
 <pre class="code harsh"><code><span class="k">use</span> std<span class="p">.</span>error<span class="p">.</span><span class="t">Error</span>
 <span class="k">use</span> std<span class="p">.</span>fs<span class="p">.</span><span class="t">File</span>
@@ -2599,7 +2640,7 @@ None</code></pre>
     <span class="k">let</span> bad <span class="p">=</span> <span class="t">Guess</span><span class="p">.</span>new <span class="num">200</span>
     <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span>bad <span class="op">&lt;-</span> value<span class="defer">$</span><span class="p">)</span></code></pre>
 <pre class="code"><code>50
-thread 'main' panicked at guess_validate.hrs:9:
+thread 'main' (18434) panicked at guess_validate.hrs:9:
 Guess value must be between 1 and 100, got 200.</code></pre>
 <p><code>Guess.new</code> checks the range once; <code>value</code> is private, so a <code>Guess</code> cannot be made any other way; every function that takes a <code>Guess</code> can therefore trust it without checking. Making an invalid state impossible to construct is the strongest form of error handling, because the error has nowhere to occur.</p>
 <h3 id="9-4-what-you-have">9.4 What you have</h3>
@@ -2652,7 +2693,7 @@ y</code></pre>
    |            ---- &amp;T
    |                 ^
    |                   ------- &amp;T
-   = help: consider restricting type parameter `T` (hrs 1:13)</code></pre>
+   = help: consider restricting type parameter `T` with trait `PartialOrd` (hrs 1:13)</code></pre>
 <p><code>fn largest&lt;T&gt; list: &amp;[T] -&gt; &amp;T</code> — the <code>&lt;T&gt;</code> after the name declares a type parameter, and then <code>T</code> is used where the type would be. It does not compile, and the error is the chapter's first lesson: <code>&gt;</code> is not defined for <em>every</em> type, so the compiler will not let a function that takes <em>any</em> <code>T</code> compare two of them. It has to be told which <code>T</code>s are allowed, and the help says how: restrict the type parameter.</p>
 <pre class="code harsh"><code><span class="k">fn</span> largest<span class="p">&lt;</span><span class="t">T</span><span class="p">:</span> <span class="t">PartialOrd</span><span class="p">&gt;</span> list<span class="p">:</span> <span class="p">&amp;</span><span class="p">[</span><span class="t">T</span><span class="p">]</span> <span class="op">-&gt;</span> <span class="p">&amp;</span><span class="t">T</span><span class="p">:</span>
     <span class="k">let</span> <span class="k">mut</span> largest <span class="p">=</span> <span class="p">&amp;</span>list<span class="p">[</span><span class="num">0</span><span class="p">]</span>
@@ -2931,7 +2972,7 @@ tweet by horse_ebooks — @horse_ebooks</code></pre>
    |                                                ^^^^^^^ borrowed value does not live long enough
 12 |     println! "The longest string is {result}"
    |     - `string2` dropped here while still borrowed
-   |                                     -------- borrow later used here</code></pre>
+   |                                      ------ borrow later used here</code></pre>
 <p><code>string2</code> lives only inside the <code>do:</code> block; <code>result</code> is used after it; and <code>longest</code>'s signature says <code>result</code> cannot outlive the shorter of its inputs. So the compiler rejects the program, and — this is the part to appreciate — it does so <em>at the call</em>, from the signature alone, without looking inside <code>longest</code>. That is what the annotation bought: a function's borrowing behaviour is part of its interface, checked at each use.</p>
 <h4 id="lifetimes-in-structs">Lifetimes in structs</h4>
 <p>Chapter 5's <code>&amp;str</code> field had this error. A struct that holds a reference declares a lifetime, and the struct cannot outlive what it borrows:</p>
@@ -3040,7 +3081,7 @@ test tests::another ... FAILED
 test tests::exploration ... ok
 failures:
 ---- tests::another stdout ----
-thread 'tests::another' panicked at failing.hrs:11:
+thread 'tests::another' (18716) panicked at failing.hrs:11:
 Make this test fail
 failures:
     tests::another
@@ -3095,7 +3136,7 @@ running 1 test
 test tests::it_adds_two ... FAILED
 failures:
 ---- tests::it_adds_two stdout ----
-thread 'tests::it_adds_two' panicked at assert_eq_fail.hrs:13:
+thread 'tests::it_adds_two' (18752) panicked at assert_eq_fail.hrs:13:
 assertion `left == right` failed
   left: 5
  right: 4
@@ -3123,7 +3164,7 @@ running 1 test
 test tests::greeting_contains_name ... FAILED
 failures:
 ---- tests::greeting_contains_name stdout ----
-thread 'tests::greeting_contains_name' panicked at custom_message.hrs:13:
+thread 'tests::greeting_contains_name' (18769) panicked at custom_message.hrs:13:
 Greeting did not contain name, value was `Hello!`
 failures:
     tests::greeting_contains_name
@@ -3323,7 +3364,8 @@ To an admiring bog!</code></pre>
 
     <span class="mac">println!</span> <span class="str">"With text:\n{contents}"</span></code></pre>
 <pre class="code"><code>$ cargo run
-thread 'main' panicked at src/main.hrs:13:
+
+thread 'main' (18886) panicked at src/main.hrs:13:
 not enough arguments</code></pre>
 <p><code>Config</code> names the two values, and <code>Config.new</code> builds one from the argument list — cloning the strings, which costs a little and keeps the ownership story simple: the <code>Config</code> owns its fields, and <code>args</code> is untouched. The check for too few arguments is in the one place the arguments are looked at. Run with none and the check fires — as a panic, which is the right <em>check</em> with the wrong <em>response</em>: a panic is for bugs, and a user forgetting an argument is not a bug.</p>
 <p><code>src/main.hrs</code></p>
@@ -4111,10 +4153,13 @@ moved out
    |
 14 |     let value = String.from "closure called"
    |         ----- captured outer variable
+   |                 ----------------------------- move occurs because `value` has type `String`, which does not implement the `Copy` trait
 16 |     list &lt;- sort_by_key |r|:
    |                         --- captured by this `FnMut` closure
 17 |         sort_operations &lt;- push value       // moves `value` out: can only happen once
-   |                                 ^^^^^ move occurs because `value` has type `String`, which does not implement the `Copy` trait</code></pre>
+   |                                 ^^^^^ `value` is moved here
+   = help: `Fn` and `FnMut` closures require captured values to be able to be consumed multiple times, but `FnOnce` closures may consume them only once
+   = help: consider cloning the value if the performance cost is acceptable (hrs 17:38)</code></pre>
 <p>The closure pushes <code>value</code> — a <code>String</code>, moved out of the capture — onto a vector. That can happen once, so the closure is <code>FnOnce</code> only, and <code>sort_by_key</code> needs to call it many times; the error names both facts. Mutating a capture <em>without</em> moving it is fine:</p>
 <pre class="code harsh"><code><span class="attr">#[derive Debug]</span>
 <span class="k">struct</span> <span class="t">Rectangle</span>
@@ -4160,9 +4205,9 @@ moved out
 <pre class="code harsh"><code><span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
     <span class="k">let</span> v1 <span class="p">=</span> <span class="mac">vec!</span> <span class="num">1</span> <span class="num">2</span> <span class="num">3</span>
     <span class="k">let</span> <span class="k">mut</span> v1_iter <span class="p">=</span> v1 <span class="op">&lt;-</span> iter<span class="defer">$</span>            <span class="com">// nothing happens yet</span>
-    <span class="mac">assert_eq!</span> <span class="p">(</span>v1_iter <span class="op">&lt;-</span> next<span class="defer">$</span><span class="p">)</span> <span class="p">(</span><span class="t">Some</span> <span class="p">(</span><span class="p">&amp;</span><span class="num">1</span><span class="p">)</span><span class="p">)</span>
-    <span class="mac">assert_eq!</span> <span class="p">(</span>v1_iter <span class="op">&lt;-</span> next<span class="defer">$</span><span class="p">)</span> <span class="p">(</span><span class="t">Some</span> <span class="p">(</span><span class="p">&amp;</span><span class="num">2</span><span class="p">)</span><span class="p">)</span>
-    <span class="mac">assert_eq!</span> <span class="p">(</span>v1_iter <span class="op">&lt;-</span> next<span class="defer">$</span><span class="p">)</span> <span class="p">(</span><span class="t">Some</span> <span class="p">(</span><span class="p">&amp;</span><span class="num">3</span><span class="p">)</span><span class="p">)</span>
+    <span class="mac">assert_eq!</span> <span class="p">(</span>v1_iter <span class="op">&lt;-</span> next<span class="defer">$</span><span class="p">)</span> <span class="p">(</span><span class="t">Some</span> <span class="p">&amp;</span><span class="num">1</span><span class="p">)</span>
+    <span class="mac">assert_eq!</span> <span class="p">(</span>v1_iter <span class="op">&lt;-</span> next<span class="defer">$</span><span class="p">)</span> <span class="p">(</span><span class="t">Some</span> <span class="p">&amp;</span><span class="num">2</span><span class="p">)</span>
+    <span class="mac">assert_eq!</span> <span class="p">(</span>v1_iter <span class="op">&lt;-</span> next<span class="defer">$</span><span class="p">)</span> <span class="p">(</span><span class="t">Some</span> <span class="p">&amp;</span><span class="num">3</span><span class="p">)</span>
     <span class="mac">assert_eq!</span> <span class="p">(</span>v1_iter <span class="op">&lt;-</span> next<span class="defer">$</span><span class="p">)</span> <span class="t">None</span>
 
     <span class="k">for</span> val <span class="k">in</span> v1 <span class="op">&lt;-</span> iter<span class="defer">$</span><span class="p">:</span>                 <span class="com">// `for` calls next until None</span>
@@ -4170,7 +4215,7 @@ moved out
 <pre class="code"><code>Got: 1
 Got: 2
 Got: 3</code></pre>
-<p><code>v1 &lt;- iter$</code> makes an iterator over references to the vector's elements — <code>Some (&amp;1)</code>, a reference, because <code>iter</code> borrows — and each <code>next$</code> advances it, which is why <code>v1_iter</code> is <code>mut</code>. A <code>for</code> loop is exactly this: it calls <code>next</code> until <code>None</code>, and does not need the <code>mut</code> because it takes the iterator by value and does its own advancing. Three ways to make an iterator from a collection: <code>iter$</code> yields <code>&amp;T</code>, <code>iter_mut$</code> yields <code>&amp;mut T</code>, and <code>into_iter$</code> consumes the collection and yields <code>T</code>.</p>
+<p><code>v1 &lt;- iter$</code> makes an iterator over references to the vector's elements — <code>Some &amp;1</code>, a reference, because <code>iter</code> borrows — and each <code>next$</code> advances it, which is why <code>v1_iter</code> is <code>mut</code>. A <code>for</code> loop is exactly this: it calls <code>next</code> until <code>None</code>, and does not need the <code>mut</code> because it takes the iterator by value and does its own advancing. Three ways to make an iterator from a collection: <code>iter$</code> yields <code>&amp;T</code>, <code>iter_mut$</code> yields <code>&amp;mut T</code>, and <code>into_iter$</code> consumes the collection and yields <code>T</code>.</p>
 <h4 id="consumers-and-adaptors">Consumers and adaptors</h4>
 <p>Methods on iterators come in two kinds. A <em>consumer</em> calls <code>next</code> until the end and produces something:</p>
 <pre class="code harsh"><code><span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
@@ -4290,7 +4335,7 @@ true
     <span class="mac">println!</span> <span class="str">"{n} {first:?} {caps:?} {lengths:?}"</span></code></pre>
 <pre class="code"><code>4 Some("apple") ["APPLE", "BANANA", "CHERRY", "DATE"] [10, 12, 12, 8]</code></pre>
 <blockquote>
-<p><strong>Harsh —</strong> One or two links stay on their line when the line fits in 72 columns; three or more go vertical, one <code>&lt;-</code> per line, every arrow under the first. A <code>=</code> always ends its line before a vertical chain begins, never starts one. A closure whose body is a block is written as a <em>paren block</em>: the <code>(</code> ends the arrow's line, the parameters sit on their own line, the body beneath them, and the <code>)</code> closes on a line of its own at the closure's column — the parentheses are transparent to the layout, and the block inside ends where they end. <code>hrs fmt</code> puts all of this where it belongs; write it however it comes out of your fingers, save, and read the result.</p>
+<p><strong>Harsh —</strong> One or two links stay on their line when the line fits in 72 columns; a single link stays whatever its length, and when long arguments make it long they go beneath the method, one unit past it, the chain moved after its <code>=</code>; three or more go vertical, one <code>&lt;-</code> per line, every arrow under the first. A <code>=</code> always ends its line before a vertical chain begins, never starts one. A closure whose body is a block is written as a <em>paren block</em>: the <code>(</code> ends the arrow's line, the parameters sit on their own line, the body beneath them, and the <code>)</code> closes on a line of its own at the closure's column — the parentheses are transparent to the layout, and the block inside ends where they end. <code>hrs fmt</code> puts all of this where it belongs; write it however it comes out of your fingers, save, and read the result.</p>
 </blockquote>
 <h3 id="13-3-where-the-pipes-come-in">13.3 Where the pipes come in</h3>
 <p>Chains reach into a value with <code>&lt;-</code>. Harsh has a second way to pass a value along — the <em>pipes</em>, <code>|&gt;</code> and <code>&lt;|</code>, which hand a value to a function rather than call a method on it — and with them, partial application. They are one of the things Harsh adds to Rust, and chapter 14 is theirs.</p>
@@ -4982,9 +5027,30 @@ hrs_std = "0.1"</code></pre>
     <span class="mac">println!</span> <span class="str">"residual {:.2}"</span> <span class="p">(</span><span class="p">(</span><span class="p">&amp;</span>score <span class="p">-</span> <span class="p">&amp;</span>fitted<span class="p">)</span> <span class="op">&lt;-</span> norm<span class="defer">$</span><span class="p">)</span>
     <span class="mac">println!</span> <span class="str">"7 hours: {:.1}"</span> <span class="p">(</span>beta<span class="p">[</span><span class="num">0</span><span class="p">]</span> <span class="p">+</span> beta<span class="p">[</span><span class="num">1</span><span class="p">]</span> <span class="p">*</span> <span class="num">7.0</span><span class="p">)</span></code></pre>
 <pre class="code"><code>$ hrs run
+warning[unused_parens]: unnecessary parentheses around closure body
+  --&gt; /tmp/harsh-book/16_matrices_regression/src/main.hrs:10:38
+   |
+10 |     let x = Matrix.from_rows (list~ (vec! 1.0 h) for h in hours)
+   |                                      ^
+12 |     // Julia's `β = X \ y`: for a tall matrix, the least-squares fit.
+   |         ^
+   = note: in the expansion of `hrs_std.g~` called at /tmp/harsh-book/16_matrices_regression/src/main.hrs:12:56
+12 |     // Julia's `β = X \ y`: for a tall matrix, the least-squares fit.
+   = note: `#[warn(unused_parens)]` (part of `#[warn(unused)]`) on by default
+   = help: remove these parentheses (hrs 10:38)
+
+warning[unused_parens]: unnecessary parentheses around closure body
+  --&gt; /tmp/harsh-book/16_matrices_regression/src/main.hrs:10:37
+   |
+10 |     let x = Matrix.from_rows (list~ (vec! 1.0 h) for h in hours)
+   |                                     ^
+   |                                                ^
+   = help: remove these parentheses (hrs 10:37)
+
 score = 47.20 + 4.37 × hours
 residual 1.76
-7 hours: 77.8</code></pre>
+7 hours: 77.8
+hrs: 0 error(s), 2 warning(s)</code></pre>
 <p>This is linear regression: a straight line through data that does not lie on one. Given students' hours and scores, find the intercept and slope that fit best.</p>
 <p>Each student is a row of the <em>design matrix</em>: a 1, which will be multiplied by the intercept, and their hours, which will be multiplied by the slope. A comprehension builds those rows from the data. The matrix has six rows and two columns — more equations than unknowns — so no line fits every point exactly, and <code>solve</code> returns the <em>least-squares</em> line: the one that makes the total squared error smallest. That is what Julia's <code>X \ y</code> does for a tall matrix, and it is the first step of most statistics and machine learning. The residual measures what the line leaves unexplained, and the line predicts a score for seven hours.</p>
 <h3 id="16-7-taking-a-part">16.7 Taking a part</h3>
@@ -5092,7 +5158,7 @@ hrs_std = "0.1"</code></pre>
     <span class="com">// A 2×3 matrix times a 2×3 matrix: the inner sizes, 3 and 2, differ.</span>
     <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span><span class="p">&amp;</span>a <span class="p">*</span> <span class="p">&amp;</span>a<span class="p">)</span></code></pre>
 <pre class="code"><code>$ hrs run
-thread 'main' panicked at main.rs:4:20:
+thread 'main' (20892) panicked at main.rs:4:20:
 DimensionMismatch: matrix A has dimensions (2, 3), matrix B has dimensions (2, 3)</code></pre>
 <p>A product needs the columns of the left matrix to match the rows of the right. Sizes are known when the program runs, not when it compiles, so a mismatch is caught then and reported in Julia's words: <code>DimensionMismatch</code>, with the two sizes.</p>
 <h3 id="16-10-what-you-have">16.10 What you have</h3>
@@ -5133,9 +5199,9 @@ opt-level = 3</code></pre>
    Doc-tests my_crate
 
 running 1 test
-test target/hrs/lib.rs - add_one (line 10) ... ok
+test target/src/lib.rs - add_one (line 10) ... ok
 
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.17s</code></pre>
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.07s</code></pre>
 <p><code>cargo doc --open</code> renders every <code>///</code> and <code>//!</code> in the crate as HTML, with the Markdown inside them — headings, code blocks, links — laid out. The conventional sections are <code># Examples</code>, <code># Panics</code> (when the function can), <code># Errors</code> (what <code>Err</code>s it returns) and <code># Safety</code> (for <code>unsafe</code> functions). The example in the <code>///</code> is Harsh, like everything else in the file, and <code>cargo test</code> <em>runs it</em> — every code block in a doc comment is a test, so documentation cannot drift from the code without failing the build.</p>
 <blockquote>
 <p><strong>Harsh —</strong> A fenced block in a doc comment is the one kind of comment the transpiler reads. The documentation tool lifts such a block out, compiles it and runs it — it is code, not prose — so it is written in Harsh and the transpiler writes out the Rust that tool expects, the same translation it does everywhere else. A fence tagged with another language — <code>text</code>, <code>toml</code> — is prose and is left exactly as you wrote it. A line beginning <code>#</code> inside the fence is the documentation tool's own mark for <em>compile this but do not show it</em>, and it survives the translation.</p>
@@ -5186,7 +5252,7 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fini
 <p><code>crates.io</code> is the registry <code>cargo</code> fetches dependencies from, and publishing to it is <code>cargo publish</code> after <code>cargo login</code> once with a token from the site. <code>Cargo.toml</code> needs <code>name</code> (unique on the registry), <code>version</code>, <code>description</code> and <code>license</code> before the registry will accept it; a publish is permanent, since other crates may depend on it — versions can be <em>yanked</em> (<code>cargo yank --vers 1.0.1</code>) to stop new projects picking them up, but never deleted. For a Harsh crate, <code>hrs export</code> writes the transpiled Rust as a plain crate under <code>target/export</code>, which is what you publish: the registry, and the people who depend on you, see Rust.</p>
 <p>That is the way to share Harsh code <em>with Rust users</em>: they get readable Rust, formatted by <code>cargo fmt</code>, with no Harsh anywhere — the parts of <code>hrs_std</code> you use become the crate's own <code>matrix</code> module — and they never need <code>hrs</code>. It is not the way to share it with Harsh users, because of what a Rust crate cannot carry: Harsh's own macros. A <code>~</code> macro unfolds in Harsh, before anything is transpiled, and leaves nothing in the Rust; so the exported crate has no <code>macro_rules~</code> in it, and a Harsh program that depends on it cannot call them. (Rust's <code>!</code> macros, which are Rust, survive the export.)</p>
 <p>To share a library <em>as Harsh</em>, macros and all, share its Harsh: another project depends on it by path, as the next section shows, and <code>hrs</code> transpiles it first — its <code>~</code> macros, and those it re-exports with <code>pub use</code>, reach the program that uses it. A registry of Harsh's own is planned, so that a Harsh library can be published and added by name as a Rust crate is; until it exists, a path is how Harsh travels as Harsh.</p>
-<p><strong>Adding dependencies.</strong> A Harsh project has two manifests side by side. <code>Cargo.toml</code> is Cargo's, and lists Rust's crates: <code>cargo add serde</code> writes there, as in Rust. <code>Hrs.toml</code> is Harsh's, and lists Harsh's dependencies — <code>hrs_std</code>, and Harsh crates — which <code>hrs</code> handles before Cargo runs: it reads each one's Harsh macros and signatures, transpiles it, and builds the project from a <code>Cargo.toml</code> it generates in <code>target/hrs/</code>, yours plus them. <code>hrs add hrs_std</code> writes to <code>Hrs.toml</code>. A Harsh crate of your own, in a folder beside the project, is one line:</p>
+<p><strong>Adding dependencies.</strong> A Harsh project has two manifests side by side. <code>Cargo.toml</code> is Cargo's, and lists Rust's crates: <code>cargo add serde</code> writes there, as in Rust. <code>Hrs.toml</code> is Harsh's, and lists Harsh's dependencies — <code>hrs_std</code>, and Harsh crates — which <code>hrs</code> handles before Cargo runs: it reads each one's Harsh macros and signatures, transpiles it, and builds the project from a <code>Cargo.toml</code> it generates in <code>target/src/</code>, yours plus them. <code>hrs add hrs_std</code> writes to <code>Hrs.toml</code>. A Harsh crate of your own, in a folder beside the project, is one line:</p>
 <pre class="code"><code># Hrs.toml
 [package]
 cargo = "Cargo.toml"        # optional: the Cargo.toml beside this file is the default
@@ -5244,6 +5310,13 @@ cargo publish</code></pre>
 <pre class="code"><code>[workspace]
 members = ["adder", "add_one"]</code></pre>
 <p>and each member is an ordinary package in its own directory, depending on its siblings by path (<code>add_one = { path = "../add_one" }</code>). Run <code>hrs build</code> or <code>hrs run</code> in the member you want: <code>hrs</code> first transpiles the Harsh libraries it depends on by path, each only when its sources changed, and cargo then builds them all. A library written in Rust is cargo's, and needs nothing from <code>hrs</code>.</p>
+<p>At the workspace's root, <code>hrs build</code>, <code>hrs check</code>, <code>hrs test</code>, <code>hrs lint</code>, <code>hrs fmt</code> and <code>hrs cargo …</code> go through the members in the order <code>members</code> lists them (a trailing <code>*</code> takes every package in that folder; <code>exclude</code> leaves one out). Each Harsh member is built by <code>hrs</code> in its own folder, each Rust member by cargo, and <code>hrs fmt</code> skips the Rust ones. The first failure stops the run:</p>
+<pre class="code harsh"><code><span class="defer">$</span> hrs test
+hrs<span class="p">:</span> workspace member adder
+<span class="op">..</span><span class="p">.</span>
+hrs<span class="p">:</span> workspace member add_one
+<span class="op">..</span><span class="p">.</span></code></pre>
+<p><code>hrs run</code> acts on one program, so at the root it is refused, and the message names the members: run it in the one you want.</p>
 <h3 id="17-5-installing-binaries">17.5 Installing binaries</h3>
 <p><code>cargo install crate_name</code> fetches a crate from the registry, builds its binary and puts it in <code>~/.cargo/bin</code>, which is on your <code>PATH</code> once Rust is installed — it is how command-line tools written in Rust get distributed, and how <code>hrs</code> itself is installed from its repository (<code>cargo install --path .</code>). Any binary named <code>cargo-something</code> on the <code>PATH</code> also becomes a subcommand, <code>cargo something</code>, which is how cargo's own set of commands is extended.</p>
 <h3 id="17-6-what-you-have">17.6 What you have</h3>
@@ -5425,8 +5498,8 @@ c after = Cons(RefCell { value: 4 }, Cons(RefCell { value: 15 }, Nil))</code></p
     <span class="k">let</span> one <span class="p">=</span> cell <span class="op">&lt;-</span> borrow_mut<span class="defer">$</span>
     <span class="k">let</span> two <span class="p">=</span> cell <span class="op">&lt;-</span> borrow_mut<span class="defer">$</span>       <span class="com">// two mutable borrows: the rule, checked at runtime</span>
     <span class="mac">println!</span> <span class="str">"{one} {two}"</span></code></pre>
-<pre class="code"><code>thread 'main' panicked at refcell_panic.hrs:7:
-already borrowed: BorrowMutError</code></pre>
+<pre class="code"><code>thread 'main' (21229) panicked at refcell_panic.hrs:7:
+RefCell already borrowed</code></pre>
 <p>Two <code>borrow_mut$</code> guards alive at once is exactly what the compiler forbids for <code>&amp;mut</code>, and <code>RefCell</code> panics with <code>already borrowed</code>. The rules did not change; only when they are checked did. Use <code>RefCell</code> when you know the code respects the rules and the compiler cannot see it — a value mutated through shared handles, a mock object recording calls in a test — and accept that the check has moved from build time to the first run that violates it.</p>
 <h3 id="18-6-reference-cycles">18.6 Reference cycles</h3>
 <p><code>Rc</code> frees when the count reaches zero; two <code>Rc</code>s that point at each other never reach zero, and the memory leaks. Rust does not prevent this — a leak is safe, just wasteful — so structures with pointers in both directions use a <code>Weak&lt;T&gt;</code> for one direction. A weak pointer does not count toward ownership, and to use it you <code>upgrade$</code> it into an <code>Option&lt;Rc&lt;T&gt;&gt;</code> that is <code>None</code> if the value is gone:</p>
@@ -5442,10 +5515,10 @@ already borrowed: BorrowMutError</code></pre>
 <span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
     <span class="k">let</span> leaf <span class="p">=</span>
         <span class="t">Rc</span><span class="p">.</span>new <span class="p">(</span><span class="t">Node</span>\
-            value <span class="p">=</span> <span class="num">3</span>
-            parent <span class="p">=</span> <span class="t">RefCell</span><span class="p">.</span>new <span class="p">(</span><span class="t">Weak</span><span class="p">.</span>new<span class="defer">$</span><span class="p">)</span>
-            children <span class="p">=</span> <span class="t">RefCell</span><span class="p">.</span>new <span class="p">(</span><span class="mac">vec!</span><span class="defer">$</span><span class="p">)</span>
-        <span class="p">)</span>
+                    value <span class="p">=</span> <span class="num">3</span>
+                    parent <span class="p">=</span> <span class="t">RefCell</span><span class="p">.</span>new <span class="p">(</span><span class="t">Weak</span><span class="p">.</span>new<span class="defer">$</span><span class="p">)</span>
+                    children <span class="p">=</span> <span class="t">RefCell</span><span class="p">.</span>new <span class="p">(</span><span class="mac">vec!</span><span class="defer">$</span><span class="p">)</span>
+               <span class="p">)</span>
     <span class="mac">println!</span>
         <span class="str">"leaf strong = {}, weak = {}"</span>
         <span class="p">(</span><span class="t">Rc</span><span class="p">.</span>strong_count <span class="p">(</span><span class="p">&amp;</span>leaf<span class="p">)</span><span class="p">)</span>
@@ -5454,10 +5527,10 @@ already borrowed: BorrowMutError</code></pre>
     <span class="k">do</span><span class="p">:</span>
         <span class="k">let</span> branch <span class="p">=</span>
             <span class="t">Rc</span><span class="p">.</span>new <span class="p">(</span><span class="t">Node</span>\
-                value <span class="p">=</span> <span class="num">5</span>
-                parent <span class="p">=</span> <span class="t">RefCell</span><span class="p">.</span>new <span class="p">(</span><span class="t">Weak</span><span class="p">.</span>new<span class="defer">$</span><span class="p">)</span>
-                children <span class="p">=</span> <span class="t">RefCell</span><span class="p">.</span>new <span class="p">(</span><span class="mac">vec!</span> <span class="p">(</span><span class="t">Rc</span><span class="p">.</span>clone <span class="p">(</span><span class="p">&amp;</span>leaf<span class="p">)</span><span class="p">)</span><span class="p">)</span>
-            <span class="p">)</span>
+                        value <span class="p">=</span> <span class="num">5</span>
+                        parent <span class="p">=</span> <span class="t">RefCell</span><span class="p">.</span>new <span class="p">(</span><span class="t">Weak</span><span class="p">.</span>new<span class="defer">$</span><span class="p">)</span>
+                        children <span class="p">=</span> <span class="t">RefCell</span><span class="p">.</span>new <span class="p">(</span><span class="mac">vec!</span> <span class="p">(</span><span class="t">Rc</span><span class="p">.</span>clone <span class="p">(</span><span class="p">&amp;</span>leaf<span class="p">)</span><span class="p">)</span><span class="p">)</span>
+                   <span class="p">)</span>
         <span class="p">*</span>leaf <span class="op">&lt;-</span> parent <span class="op">&lt;-</span> borrow_mut<span class="defer">$</span> <span class="p">=</span> <span class="t">Rc</span><span class="p">.</span>downgrade <span class="p">(</span><span class="p">&amp;</span>branch<span class="p">)</span>
         <span class="mac">println!</span>
             <span class="str">"branch strong = {}, weak = {}"</span>
@@ -5571,15 +5644,14 @@ main is done</code></pre>
     <span class="k">let</span> received <span class="p">=</span> rx <span class="op">&lt;-</span> recv<span class="defer">$</span> <span class="op">&lt;-</span> unwrap<span class="defer">$</span>
     <span class="mac">println!</span> <span class="str">"Got: {received}"</span></code></pre>
 <pre class="code"><code>error[E0382]: borrow of moved value: `val`
-  --&gt; channel_moved.hrs:10:26
+  --&gt; channel_moved.hrs:10:27
    |
  8 |         let val = String.from "hi"
    |             --- move occurs because `val` has type `String`, which does not implement the `Copy` trait
  9 |         tx &lt;- send val &lt;- unwrap$
    |                    --- value moved here
 10 |         println! "val is {val}"        // val was moved into the channel
-   |                          ^^^^^ value borrowed here after move
-   = help: consider cloning the value if the performance cost is acceptable (hrs 9:23)</code></pre>
+   |                           ^^^ value borrowed here after move</code></pre>
 <p><code>send</code> took <code>val</code>; using it afterwards is chapter 4's error, and it is the right error, because the receiving thread may have modified or dropped the value by now. In a language where sending is a copy of a pointer, this compiles and the two threads quietly share a string.</p>
 <p>Several producers, one consumer:</p>
 <pre class="code harsh"><code><span class="k">use</span> std<span class="p">.</span>sync<span class="p">.</span>mpsc
@@ -5642,14 +5714,14 @@ main is done</code></pre>
         handle <span class="op">&lt;-</span> join<span class="defer">$</span> <span class="op">&lt;-</span> unwrap<span class="defer">$</span>
 
     <span class="mac">println!</span> <span class="str">"Result: {}"</span> <span class="p">(</span><span class="p">*</span>counter <span class="op">&lt;-</span> lock<span class="defer">$</span> <span class="op">&lt;-</span> unwrap<span class="defer">$</span><span class="p">)</span></code></pre>
-<pre class="code"><code>error[E0277]: `Rc&lt;Mutex&lt;i32&gt;&gt;` cannot be sent between threads safely
+<pre class="code"><code>error[E0277]: `Rc&lt;std::sync::Mutex&lt;i32&gt;&gt;` cannot be sent between threads safely
   --&gt; mutex_rc_err.hrs:12:35
    |
 12 |         let handle = thread.spawn move ||:
    |                      ------------ required by a bound introduced by this call
-   |                                   ^^^^^^^^ `Rc&lt;Mutex&lt;i32&gt;&gt;` cannot be sent between threads safely
+   |                                   ^^^^^^^^ `Rc&lt;std::sync::Mutex&lt;i32&gt;&gt;` cannot be sent between threads safely
    |                                   ------- within this `{closure@mutex_rc_err.hrs:13:36: 13:43}`
-   = help: within `{closure@mutex_rc_err.hrs:13:36: 13:43}`, the trait `Send` is not implemented for `Rc&lt;Mutex&lt;i32&gt;&gt;`
+   = help: within `{closure@mutex_rc_err.hrs:13:36: 13:43}`, the trait `Send` is not implemented for `Rc&lt;std::sync::Mutex&lt;i32&gt;&gt;`
    = note: required because it's used within this closure (hrs 12:35)
    = note: required by a bound in `spawn`</code></pre>
 <p>Refused. <code>Rc</code> counts references without any synchronisation — two threads incrementing the count at once would corrupt it — and so <code>Rc&lt;T&gt;</code> is not <code>Send</code>, and <code>spawn</code> requires <code>Send</code>. The type system knows which types are safe to move across threads, and this one is not. The thread-safe reference count is <code>Arc</code>, <em>atomic</em> <code>Rc</code>, with the same API:</p>
@@ -6203,9 +6275,9 @@ Current location: (3, 5)</code></pre>
  3 |     let Some x = some_option_value
    |         ^^^^^^^ pattern `None` not covered
    = note: `let` bindings require an "irrefutable pattern", like a `struct` or an `enum` with only one variant
-   = note: for more information, visit https://doc.rust-lang.org/book/ch18-02-refutability.html
+   = note: for more information, visit https://doc.rust-lang.org/book/ch19-02-refutability.html
    = note: the matched value is of type `Option&lt;i32&gt;`
-   = help: you might want to use `let else` to handle the variant that isn't matched (hrs 3:35)</code></pre>
+   = help: you might want to use `let...else` to handle the variant that isn't matched (hrs 3:35)</code></pre>
 <p><code>let Some x = value</code> has nowhere to go when <code>value</code> is <code>None</code>, and the help offers the fix from chapter 6, <code>let … else</code>. The other direction is a warning rather than an error: <code>if let x = 5</code> is legal and pointless, and the compiler says so.</p>
 <h3 id="22-3-the-forms">22.3 The forms</h3>
 <h4 id="literals-names-ranges-alternatives">Literals, names, ranges, alternatives</h4>
@@ -7076,7 +7148,144 @@ Hello, Macro! My name is Waffles!</code></pre>
     <span class="mac">println!</span> <span class="str">"rendered {count}"</span></code></pre>
 <pre class="code"><code>rendered 3</code></pre>
 <p><code>for item in items { … }</code> there is <code>rsx!</code>'s own, not Harsh's: inside the braces the macro's grammar rules, and a hole is only for what you want written in Harsh. A hole may hold a macro call with braces of its own, and holes inside those.</p>
-<p>Holes follow a few conventions. A hole always closes, with <code>:@</code>, even at the end of a line. A literal <code>@:</code> in the macro's own language is written <code>@@:</code>. <code>hrs-from</code> writes the holes when it converts a Rust file, turning each piece of Rust inside a body into Harsh. And a Harsh macro whose expansion contains such a call writes the holes too, since what it produces is Harsh.</p>
+<p>Holes follow a few conventions. A hole always closes, with <code>:@</code>, even at the end of a line. A hole's code is Harsh, so a mark inside one of its strings is text: <code>@: format! "from:@{domain}" :@</code> closes at its last <code>:@</code>. A literal <code>@:</code> in the macro's own language is written <code>@@:</code>. <code>hrs-from</code> writes the holes when it converts a Rust file, turning each piece of Rust inside a body into Harsh — in its strings' format slots too, <code>"Hello {@: name &lt;- to_uppercase$ :@}"</code>. And a Harsh macro whose expansion contains such a call writes the holes too, since what it produces is Harsh.</p>
+<h4 id="where-the-holes-go">Where the holes go</h4>
+<p><strong>A hole is an expression that calls on something bound outside the DSL's own language — a variable, a function, a name the DSL itself binds — or that uses an operator, <code>.</code> and <code>::</code> included; a single word is exempt.</strong> <code>{count}</code> stays as it is; <code>{@: items &lt;- len$ :@}</code>, <code>{@: 3 + 5 :@}</code> and <code>{@: item &lt;- name :@}</code> are holes. Everything else is the library's language, copied as written. You find them in a handful of places, and once you have seen them you will find them in any library — the strings' slots first:</p>
+<ul>
+<li><strong>A value after a name and <code>:</code> or <code>=</code></strong> — an attribute in <code>rsx!</code> or <code>view!</code>, a key in <code>json!</code>, a static's value in <code>thread_local!</code> or <code>lazy_static!</code>, a constant in <code>bitflags!</code>: <code>onclick: @: move |_| count += 1 :@</code>.</li>
+<li><strong>A brace pair of its own</strong> — a child in <code>view!</code> or Yew's <code>html!</code>: <code>{@: move || count &lt;- get$ + 1 :@}</code>.</li>
+<li><strong>A format slot in the DSL's strings</strong> — Dioxus: <code>"Twice: {@: count$ * 2 :@}"</code>.</li>
+<li><strong>A splice in parentheses</strong> — Maud: <code>(@: items &lt;- len$ :@)</code>; the parentheses are Maud's, the hole inside them.</li>
+<li><strong>The DSL's own control flow</strong> — after <code>for … in</code> and <code>if</code>, up to the body's brace: <code>if @: count$ &gt; 3 :@ {</code>; Yew's <code>{ for @: … :@ }</code>, Maud's <code>@for</code> and <code>@if</code>.</li>
+<li><strong>An arm</strong> — <code>select!</code>'s pattern, future and handler, as in 20.4.</li>
+</ul>
+<p>What is never a hole: a single word — <code>{count}</code> and <code>(title)</code> read the same in both languages — a type before a <code>=</code>, and the library's own words (<code>const</code>, <code>@for</code>, an attribute inside the body), however much they look like code. A macro whose stream is a list of values is no DSL at all: it is juxtaposed, like <code>vec!</code> and <code>format!</code>, and so is <code>tracing</code>'s <code>info!</code>, whose fields are each one argument.</p>
+<p>A JSON value built with serde_json: a hole after each key whose value is code; <code>"age": 36</code> and the array of strings stay as written.</p>
+<p><code>Cargo.toml</code></p>
+<pre class="code"><code>[dependencies]
+serde_json = "1"</code></pre>
+<p><code>src/main.hrs</code></p>
+<pre class="code harsh"><code><span class="k">use</span> serde_json<span class="p">.</span>json
+
+<span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="k">let</span> name <span class="p">=</span> <span class="str">"Ada"</span>
+    <span class="k">let</span> langs <span class="p">=</span> <span class="mac">vec!</span> <span class="str">"Rust"</span> <span class="str">"Harsh"</span>
+    <span class="k">let</span> v <span class="p">=</span> <span class="mac">json!</span> <span class="p">{</span><span class="p">{</span>
+        <span class="str">"name"</span><span class="p">:</span> <span class="p">@</span><span class="p">:</span> name <span class="op">&lt;-</span> to_uppercase<span class="defer">$</span> <span class="p">:</span><span class="p">@</span><span class="p">,</span>
+        <span class="str">"age"</span><span class="p">:</span> <span class="num">36</span><span class="p">,</span>
+        <span class="str">"langs"</span><span class="p">:</span> langs<span class="p">,</span>
+        <span class="str">"count"</span><span class="p">:</span> <span class="p">@</span><span class="p">:</span> langs <span class="op">&lt;-</span> len<span class="defer">$</span> <span class="p">+</span> <span class="num">1</span> <span class="p">:</span><span class="p">@</span><span class="p">,</span>
+        <span class="str">"tags"</span><span class="p">:</span> <span class="p">[</span><span class="p">{</span> <span class="str">"id"</span><span class="p">:</span> <span class="num">1</span><span class="p">,</span> <span class="str">"main"</span><span class="p">:</span> <span class="p">@</span><span class="p">:</span> langs <span class="op">&lt;-</span> first<span class="defer">$</span> <span class="p">:</span><span class="p">@</span> <span class="p">}</span><span class="p">]</span>
+    <span class="p">}</span><span class="p">}</span>
+    <span class="mac">println!</span> <span class="str">"{v}"</span></code></pre>
+<pre class="code"><code>$ hrs run
+{"age":36,"count":3,"langs":["Rust","Harsh"],"name":"ADA","tags":[{"id":1,"main":"Rust"}]}</code></pre>
+<p>Statics, with <code>thread_local!</code> and <code>lazy_static!</code>: the type before <code>=</code> is the macro's, the value after it is a hole — a block when it takes several statements.</p>
+<pre class="code harsh"><code><span class="k">use</span> std<span class="p">.</span>cell<span class="p">.</span><span class="t">RefCell</span>
+
+<span class="mac">thread_local!</span> <span class="p">{</span>
+    <span class="k">static</span> <span class="t">LOG</span><span class="p">:</span> <span class="t">RefCell</span><span class="p">&lt;</span><span class="t">Vec</span><span class="p">&lt;</span><span class="t">String</span><span class="p">&gt;</span><span class="p">&gt;</span> <span class="p">=</span> <span class="p">@</span><span class="p">:</span> <span class="t">RefCell</span><span class="p">.</span>new <span class="p">(</span><span class="t">Vec</span><span class="p">.</span>with_capacity <span class="num">8</span><span class="p">)</span> <span class="p">:</span><span class="p">@</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="t">LOG</span> <span class="op">&lt;-</span> with <span class="p">(</span><span class="p">|</span>l<span class="p">|</span> l <span class="op">&lt;-</span> borrow_mut<span class="defer">$</span> <span class="op">&lt;-</span> push <span class="p">(</span><span class="str">"start"</span> <span class="op">&lt;-</span> to_string<span class="defer">$</span><span class="p">)</span><span class="p">)</span>
+    <span class="t">LOG</span> <span class="op">&lt;-</span> with <span class="p">(</span><span class="p">|</span>l<span class="p">|</span> <span class="mac">println!</span> <span class="str">"{:?}"</span> <span class="p">(</span>l <span class="op">&lt;-</span> borrow<span class="defer">$</span><span class="p">)</span><span class="p">)</span>
+    <span class="p">(</span><span class="p">)</span></code></pre>
+<pre class="code"><code>["start"]</code></pre>
+<p><code>Cargo.toml</code></p>
+<pre class="code"><code>[dependencies]
+lazy_static = "1"</code></pre>
+<p><code>src/main.hrs</code></p>
+<pre class="code harsh"><code><span class="k">use</span> lazy_static<span class="p">.</span>lazy_static
+<span class="k">use</span> std<span class="p">.</span>collections<span class="p">.</span><span class="t">HashMap</span>
+
+<span class="mac">lazy_static!</span> <span class="p">{</span>
+    <span class="k">static</span> <span class="k">ref</span> <span class="t">NAMES</span><span class="p">:</span> <span class="t">HashMap</span><span class="p">&lt;</span>u32<span class="p">,</span> <span class="p">&amp;</span>'static str<span class="p">&gt;</span> <span class="p">=</span> <span class="p">@</span><span class="p">:</span> <span class="k">do</span><span class="p">:</span>
+        <span class="k">let</span> <span class="k">mut</span> m <span class="p">=</span> <span class="t">HashMap</span><span class="p">.</span>new<span class="defer">$</span>
+        m <span class="op">&lt;-</span> insert <span class="num">0</span> <span class="str">"zero"</span>
+        m <span class="op">&lt;-</span> insert <span class="num">1</span> <span class="str">"one"</span>
+        m <span class="p">:</span><span class="p">@</span><span class="p">;</span>
+    <span class="k">static</span> <span class="k">ref</span> <span class="t">COUNT</span><span class="p">:</span> usize <span class="p">=</span> <span class="p">@</span><span class="p">:</span> <span class="t">NAMES</span> <span class="op">&lt;-</span> len<span class="defer">$</span> <span class="p">*</span> <span class="num">2</span> <span class="p">:</span><span class="p">@</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="mac">println!</span> <span class="str">"{} {}"</span> <span class="p">(</span><span class="t">NAMES</span><span class="p">[</span><span class="p">&amp;</span><span class="num">1</span><span class="p">]</span><span class="p">)</span> <span class="p">(</span><span class="p">*</span><span class="t">COUNT</span><span class="p">)</span></code></pre>
+<pre class="code"><code>$ hrs run
+one 4</code></pre>
+<p><code>bitflags!</code> declares in its own grammar: <code>struct Perms: u32</code>, the <code>const</code> lines and the derive above them are the macro's, and only a value that is code is a hole.</p>
+<p><code>Cargo.toml</code></p>
+<pre class="code"><code>[dependencies]
+bitflags = "2"</code></pre>
+<p><code>src/main.hrs</code></p>
+<pre class="code harsh"><code><span class="k">use</span> bitflags<span class="p">.</span>bitflags
+
+<span class="mac">bitflags!</span> <span class="p">{</span>
+    <span class="attr">#[derive(Debug, Clone, Copy, PartialEq, Eq)]</span>
+    <span class="k">pub</span> <span class="k">struct</span> <span class="t">Perms</span><span class="p">:</span> u32 <span class="p">{</span>
+        <span class="k">const</span> <span class="t">READ</span> <span class="p">=</span> <span class="num">0b001</span><span class="p">;</span>
+        <span class="k">const</span> <span class="t">WRITE</span> <span class="p">=</span> <span class="num">0b010</span><span class="p">;</span>
+        <span class="k">const</span> <span class="t">ALL</span> <span class="p">=</span> <span class="p">@</span><span class="p">:</span> <span class="k">Self</span><span class="p">.</span><span class="t">READ</span> <span class="op">&lt;-</span> bits<span class="defer">$</span> <span class="p">|</span> <span class="k">Self</span><span class="p">.</span><span class="t">WRITE</span> <span class="op">&lt;-</span> bits<span class="defer">$</span> <span class="p">:</span><span class="p">@</span><span class="p">;</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+
+<span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="k">let</span> p <span class="p">=</span> <span class="t">Perms</span><span class="p">.</span><span class="t">READ</span> <span class="p">|</span> <span class="t">Perms</span><span class="p">.</span><span class="t">WRITE</span>
+    <span class="mac">println!</span> <span class="str">"{:?} {}"</span> p <span class="p">(</span>p <span class="op">==</span> <span class="t">Perms</span><span class="p">.</span><span class="t">ALL</span><span class="p">)</span></code></pre>
+<pre class="code"><code>$ hrs run
+Perms(READ | WRITE) true</code></pre>
+<p>Maud's markup splices its values in parentheses; <code>@for</code> and <code>@if</code> are its control flow.</p>
+<p><code>Cargo.toml</code></p>
+<pre class="code"><code>[dependencies]
+maud = "0.27"</code></pre>
+<p><code>src/main.hrs</code></p>
+<pre class="code harsh"><code><span class="k">use</span> maud<span class="p">.</span><span class="p">(</span>html<span class="p">,</span> <span class="t">Markup</span><span class="p">)</span>
+
+<span class="k">fn</span> page <span class="p">(</span>title<span class="p">:</span> <span class="p">&amp;</span>str<span class="p">)</span> <span class="p">(</span>items<span class="p">:</span> <span class="p">&amp;</span><span class="p">[</span><span class="p">&amp;</span>str<span class="p">]</span><span class="p">)</span> <span class="op">-&gt;</span> <span class="t">Markup</span><span class="p">:</span>
+    <span class="mac">html!</span> <span class="p">{</span>
+        h1 <span class="p">{</span> <span class="p">(</span>title<span class="p">)</span> <span class="p">}</span>
+        p<span class="p">.</span>intro <span class="p">{</span> <span class="str">"Items: "</span> <span class="p">(</span><span class="p">@</span><span class="p">:</span> items <span class="op">&lt;-</span> len<span class="defer">$</span> <span class="p">:</span><span class="p">@</span><span class="p">)</span> <span class="p">}</span>
+        a href<span class="p">=</span><span class="p">(</span><span class="p">@</span><span class="p">:</span> <span class="mac">format!</span> <span class="str">"/items/{}"</span> <span class="p">(</span>items <span class="op">&lt;-</span> len<span class="defer">$</span><span class="p">)</span> <span class="p">:</span><span class="p">@</span><span class="p">)</span> <span class="p">{</span> <span class="str">"next"</span> <span class="p">}</span>
+        ul <span class="p">{</span>
+            <span class="p">@</span><span class="k">for</span> item <span class="k">in</span> items <span class="p">{</span>
+                li <span class="p">{</span> <span class="p">(</span><span class="p">@</span><span class="p">:</span> item <span class="op">&lt;-</span> to_uppercase<span class="defer">$</span> <span class="p">:</span><span class="p">@</span><span class="p">)</span> <span class="p">}</span>
+            <span class="p">}</span>
+        <span class="p">}</span>
+        <span class="p">@</span><span class="k">if</span> <span class="p">@</span><span class="p">:</span> items <span class="op">&lt;-</span> is_empty<span class="defer">$</span> <span class="p">:</span><span class="p">@</span> <span class="p">{</span>
+            p <span class="p">{</span> <span class="str">"none"</span> <span class="p">}</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+
+<span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span>page <span class="str">"Fruit"</span> <span class="p">(</span><span class="p">&amp;</span><span class="p">[</span><span class="str">"apple"</span><span class="p">,</span> <span class="str">"pear"</span><span class="p">]</span><span class="p">)</span> <span class="op">&lt;-</span> into_string<span class="defer">$</span><span class="p">)</span></code></pre>
+<pre class="code"><code>$ hrs run
+&lt;h1&gt;Fruit&lt;/h1&gt;&lt;p class="intro"&gt;Items: 2&lt;/p&gt;&lt;a href="/items/2"&gt;next&lt;/a&gt;&lt;ul&gt;&lt;li&gt;APPLE&lt;/li&gt;&lt;li&gt;PEAR&lt;/li&gt;&lt;/ul&gt;</code></pre>
+<p>And the contrast: <code>tracing</code>'s macros take a list, so they are called as functions are, each field isolated.</p>
+<p><code>Cargo.toml</code></p>
+<pre class="code"><code>[dependencies]
+tracing = "0.1"
+tracing-subscriber = "0.3"</code></pre>
+<p><code>src/main.hrs</code></p>
+<pre class="code harsh"><code><span class="k">use</span> tracing<span class="p">.</span><span class="p">(</span>debug<span class="p">,</span> info<span class="p">)</span>
+
+<span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    tracing_subscriber<span class="p">.</span>fmt<span class="defer">$</span>
+        <span class="op">&lt;-</span> without_time<span class="defer">$</span>
+        <span class="op">&lt;-</span> with_ansi <span class="k">false</span>
+        <span class="op">&lt;-</span> with_max_level tracing<span class="p">.</span><span class="t">Level</span><span class="p">.</span><span class="t">DEBUG</span>
+        <span class="op">&lt;-</span> init<span class="defer">$</span>
+    <span class="k">let</span> user <span class="p">=</span> <span class="str">"ada"</span>
+    <span class="k">let</span> items <span class="p">=</span> <span class="mac">vec!</span> <span class="num">1</span> <span class="num">2</span> <span class="num">3</span>
+    <span class="mac">info!</span>
+        <span class="p">(</span>user <span class="p">=</span> <span class="p">%</span>user<span class="p">)</span>
+        <span class="p">(</span>count <span class="p">=</span> items <span class="op">&lt;-</span> len<span class="defer">$</span><span class="p">)</span>
+        <span class="str">"processed {} items"</span>
+        <span class="p">(</span>items <span class="op">&lt;-</span> len<span class="defer">$</span><span class="p">)</span>
+    <span class="mac">debug!</span> <span class="p">(</span>target<span class="p">:</span> <span class="str">"app"</span><span class="p">)</span> <span class="p">(</span><span class="p">?</span>items<span class="p">)</span> <span class="str">"starting"</span>
+    <span class="p">(</span><span class="p">)</span></code></pre>
+<pre class="code"><code>$ hrs run
+ INFO dsl_tracing: processed 3 items user=ada count=3
+DEBUG app: starting items=[1, 2, 3]</code></pre>
+<p>The guide to macros has the same catalogue beside each library's own Rust, with Leptos, Dioxus and Yew's markup — the shapes above, in the frameworks this chapter's <code>view!</code> and <code>rsx!</code> stand in for.</p>
 <h3 id="23-9-parentheses-once-and-for-all">23.9 Parentheses, once and for all</h3>
 <p>Every use of parentheses in this book has been one of a short list, and the list is worth stating now that all of it has been seen:</p>
 <pre class="code harsh"><code><span class="k">fn</span> double x<span class="p">:</span> i32 <span class="op">-&gt;</span> i32<span class="p">:</span>
@@ -7438,6 +7647,7 @@ worker 3 shut down
 <li>An enum is a union of variants, each one of the three forms spelled as that struct is: <code>Empty</code>, <code>Circle f64</code>, <code>Rect</code> with fields beneath or <code>Rect\ w: f64, h: f64</code>. (§6.1)</li>
 <li>A literal is the name, <code>\</code>, and <code>field = value</code> — inline to the end of its line or its group's <code>)</code>, or a field per line beneath. <code>..base</code> last. A literal that is one element of a tuple has its own parentheses. (§5.1)</li>
 <li>A literal inside a literal on one line is parenthesised, so the reader sees where it ends: <code>inner = (Animal\ name = n), good = true</code>; or the outer literal goes one field per line, where the line ends the inner one. A comma ending a field line is refused. (§5.1)</li>
+<li>A literal passed as an argument is isolated, a constructor's too: <code>cards &lt;- push (Card\ id = 1)</code>, <code>Ok (View\ title = t)</code>; written bare it is refused, the isolated form named; over several lines its fields stand one unit past its name and its <code>)</code> under its <code>(</code>. (§5)</li>
 <li><code>impl Point</code>, <code>trait Area</code>, <code>mod geometry</code>, <code>extern "C"</code> — headers with no mark, their items beneath. (§5.3, §10.2, §7.2, §20.1)</li>
 <li>A <code>where</code> clause on one line needs nothing; over several lines it is bracketed, <code>[where T: Debug]</code>, on its own line under the signature. (§10.2)</li>
 <li>Attributes apply inside their brackets: <code>#[derive Debug Clone]</code>, <code>#[cfg (feature = "x")]</code>. (§5.2)</li>
@@ -7453,12 +7663,12 @@ worker 3 shut down
 <ul>
 <li><code>|x| x + 1</code> inline; <code>|x|:</code> with the body beneath; <code>|x: i32| -&gt; i32:</code> fully annotated; <code>move ||:</code> capturing by value. (§13.1)</li>
 <li>A closure's type is the trait applied to its parameter types: <code>Fn i32 -&gt; i32</code>, <code>Fn (i32) (i32) -&gt; i32</code>, <code>FnOnce$</code>. (§13.1)</li>
-<li>A chain of one or two links stays on its line within 72 columns; three or more go vertical, every <code>&lt;-</code> under the first, and <code>=</code> ends its line before one begins. A block-bodied closure in a chain is a paren block: <code>(</code>, the parameters, the body, <code>)</code> on its own line. (§13.2)</li>
+<li>A chain of one or two links stays on its line within 72 columns, a single link at any length (long arguments go beneath its method); three or more go vertical, every <code>&lt;-</code> under the first, and <code>=</code> ends its line before one begins. A block-bodied closure in a chain is a paren block: <code>(</code>, the parameters, the body, <code>)</code> on its own line. (§13.2)</li>
 <li><code>x |&gt; f</code> hands <code>x</code> to <code>f</code>; <code>f &lt;| x</code> the same from the right; both sides are atoms, and a chain or a closure is isolated first. Fewer values than the function takes defer the rest as one flat closure — <code>|&gt;</code> fills from the left, <code>&lt;|</code> from the right, both leave a hole in the middle — and the result is a value. A project function given too many is an error. (§13.3)</li>
 </ul>
 <h3 id="macros-and-markup-chapter-23">Macros and markup — chapter 23</h3>
 <ul>
-<li><code>macro_rules! twice</code> holds its arms beneath, no mark; a matcher is a parameter list, <code>( ($x:expr) )</code>; a transcriber is a block, <code>=&gt; do:</code>. Harsh's own macros are written <code>macro_rules~</code>, called with <code>~</code>, and expanded by <code>hrs</code>: they are gone from the Rust. (§20.5, chapter 23)</li>
+<li>Harsh's own macros are written <code>macro_rules~ twice</code>, their arms beneath with no mark; a matcher is a parameter list, <code>( ($x:expr) )</code>; a transcriber is a block, <code>=&gt; do:</code>. They are called with <code>~</code> and expanded by <code>hrs</code>: they are gone from the Rust. A <code>macro_rules! twice { … }</code> in a Harsh file is Rust's, copied byte for byte; its calls are Harsh calls, <code>twice! n</code>. (§20.5, chapter 23)</li>
 <li>A macro's own language — <code>select!</code>'s arms, <code>view!</code> markup, an <code>rsx!</code> tree — goes in braces, as Rust, byte for byte; the Harsh inside is a hole, <code>@: … :@</code>, always closed. (chapter 23)</li>
 <li>A fenced block in a <code>///</code> comment is Harsh, and the tool that runs it gets the Rust it expects. (§14.2)</li>
 </ul>
@@ -7559,7 +7769,7 @@ rest. The program at the end shows each rule at work, with its output.</p>
 </tr>
 <tr>
 <td>12</td>
-<td><code>\|</code></td>
+<td><code>|</code></td>
 <td></td>
 <td></td>
 </tr>
@@ -7571,7 +7781,7 @@ rest. The program at the end shows each rule at work, with its output.</p>
 </tr>
 <tr>
 <td>14</td>
-<td><code>&amp;&amp;</code>, then <code>\|\|</code></td>
+<td><code>&amp;&amp;</code>, then <code>||</code></td>
 <td></td>
 <td></td>
 </tr>
@@ -7584,8 +7794,8 @@ rest. The program at the end shows each rule at work, with its output.</p>
 <tr>
 <td>16</td>
 <td><strong>Pipes</strong></td>
-<td><code>\|&gt;</code> and <code>&lt;\|</code>, a form of their own (below)</td>
-<td><code>3 \|&gt; double \|&gt; double</code></td>
+<td><code>|&gt;</code> and <code>&lt;|</code>, a form of their own (below)</td>
+<td><code>3 |&gt; double |&gt; double</code></td>
 </tr>
 <tr>
 <td>17</td>
@@ -7596,7 +7806,7 @@ rest. The program at the end shows each rule at work, with its output.</p>
 <tr>
 <td>18</td>
 <td><strong>To the end of the line</strong></td>
-<td>a closure <code>\|x\| …</code>, an inline <code>if c: a else: b</code>, <code>do:</code>, a struct literal <code>P\\ a = 1, b = 2</code></td>
+<td>a closure <code>|x| …</code>, an inline <code>if c: a else: b</code>, <code>do:</code>, a struct literal <code>P\\ a = 1, b = 2</code></td>
 <td></td>
 </tr>
 </tbody>

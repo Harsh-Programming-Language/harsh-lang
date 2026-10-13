@@ -275,7 +275,7 @@ echo 'fn main<span class="p">(</span><span class="p">)</span><span class="p">{</
 <p>The project-layout question stayed open for most of the project. It was settled by trying the preferred option rather than reasoning about it:</p>
 <pre class="code"><code>[[bin]]
 name = "myapp"
-path = "target/hrs/main.rs"</code></pre>
+path = "target/src/main.rs"</code></pre>
 <p>Cargo accepts arbitrary target paths, <code>/target</code> is already gitignored, dependencies stay in one manifest, and <code>mod</code> works across generated files. Five minutes of testing replaced weeks of intermittent deliberation.</p>
 <hr />
 <h2 id="part-three-the-lessons">Part three — the lessons</h2>

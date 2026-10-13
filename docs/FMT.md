@@ -8,7 +8,7 @@ Written before the code, as `docs/LSP.md` was. The formatter is the last tool; i
 
 ## What it must not touch
 
-- **Authoring.** Blank lines are the author's. `fmt` never inserts or removes one, except to collapse three or more into two. Where a block begins and ends is visible from indentation; where a paragraph begins is the author's decision, and the Book shows what an author does with it.
+- **Authoring.** Blank lines are the author's. `fmt` never inserts or removes one. Where a block begins and ends is visible from indentation; where a paragraph begins is the author's decision, and the Book shows what an author does with it.
 - **Comments.** Every comment stays on the line it was on, at the end of the line it ended. A comment on its own line keeps its position among the statements and takes the indentation of the next statement.
 - **Line breaks inside a continuation.** An author who broke a chain, a literal, or a signature across lines meant to. `fmt` keeps every physical break and fixes only the columns. (It may *add* breaks — a chain wider than the line goes vertical — but never joins lines the author broke.)
 - **Rust's braces.** What is inside `{ … }` is Rust's and is left alone, byte for byte: macro bodies, `extern` blocks, struct literals, inline `{ a; b }` blocks.
@@ -26,10 +26,10 @@ Every rule below is already stated in the guide; `fmt` is their implementation. 
 5. **Bracket groups.** Anchor = the callee path before the bracket (over the complete groups of earlier arguments: `compute (1 + 1) (` anchors on `compute`; `m! [` on `m`; `$(` on `$`), else the bracket itself; `[where` always anchors on its `[`. Contents one unit past the anchor; a closer first on its line under the anchor. The compact form (construct on the `(` line, one-line body, closer ending the line) is kept.
 6. **Closers** as in 5.
 7. **Continuations** otherwise sit one unit past the statement's first line, and keep their relative nesting: a line the author indented past the previous continuation goes one unit past it (`where` / its bounds; multi-argument calls).
-8. **Braces are Rust's**, and a macro's brace body is the macro's: it is set aside before formatting and put back byte for byte; the formatter may move the call, never what is inside it.
+8. **Braces are Rust's**, and a macro's brace body is the macro's: it is set aside before formatting and put back where its call now stands, its text unchanged; the formatter may move the call, and the body's lines move with the call's line by as many columns, never what is inside them. (Until 0.8.1 a file whose layout added or removed a line kept its layout as written, its holes only formatted: a file of `rsx!` views never took the layout.)
 9. **Trailing whitespace** removed; one newline at end of file.
 
-Nothing here changes a token, so rule 0 — same Rust out — is checkable after every rule, and is (`tests/fmt.rs`). **It is also enforced at run time:** `fmt::format` transpiles its input and its output and compares the tokens; if they differ, or the output no longer transpiles, the file is returned unchanged. A formatter that reads structure from indentation can misread a shape it has not met (a paren block inside a paren block with markup inside was the first), and when it does, leaving the file alone is the only right answer. `hrs fmt --check` counts such a file as formatted.
+Nothing here changes a token, so rule 0 — same Rust out — is checkable after every rule, and is (`tests/fmt.rs`). **It is also enforced at run time:** `fmt::format` transpiles its input and its output and compares the tokens; if they differ, or the output no longer transpiles, the file is returned unchanged. A formatter that reads structure from indentation can misread a shape it has not met (a paren block inside a paren block with markup inside was the first), and when it does, leaving the file alone is the only right answer. `hrs fmt --check` fails on such a file (since 0.7.0), naming it, so CI does not pass a file the formatter could not read.
 
 ## Architecture
 
@@ -95,10 +95,59 @@ what asks for judgment, it does cautiously or leaves to the author.
   block holding a single expression equals the arm written bare (`p => { e }`
   and `p => e,`), since an arm body moved beneath its `=>` is written as a
   block.
+- **An inline `if c: a else: b` is the author's line** (0.8.1): nothing in it
+  is broken. A value moved after its `:` would leave `else:` behind it, which
+  is not Harsh, and a chain broken at its `<-` would put the condition and the
+  two values on one column. Too long, it is the author's to write as a block
+  `if`, each value beneath its branch.
+- **Measured where it will stand** (0.8.1): a chain in a binding's value is
+  measured after its `=` when the value moves there, a chain or a call in the
+  item of a literal going vertical is left for the item's own line, and a
+  call's arguments listed inside a block that moved take the block's new
+  column.
+- **A literal passed as an argument** (the user's ruling, 2026-10-13, 0.8.4):
+  with its fields beneath, they stand one unit past the literal's name and
+  its `)` under its `(` -- far to the right, but clear:
+
+  ```rust harsh
+  cards <- push (Card\
+                     id = 2
+                     title = String.from "Review"
+                )
+  ```
+
+  When the fields would pass `CHAIN_WIDTH` there, the `(` goes beneath the
+  callee, one unit past it, the literal with it; when even that is too far
+  and the callee follows a long receiver, the link goes to its own line
+  first, one unit past the receiver:
+
+  ```rust harsh
+  cards <- very_long_method_called_push
+               (Card\
+                    id = 2
+                    title = String.from "Review"
+               )
+
+  very_extremely_long_struct_called_cards
+      <- very_extremely_long_method_called_push
+             (Card\
+                  id = 2
+                  title = String.from "Review"
+             )
+  ```
+
+  Two rules met there before: a literal's body one unit past its statement,
+  a group's `)` under its callee, which left the `)` stranded. Pinned in
+  `tests/shopbill.rs`.
+- **One run is enough** (0.8.1): `hrs fmt` repeats its passes until the text
+  stops changing (four at most), each pass checked by Rule 0 against the one
+  before, so a second run changes nothing. A layout one pass sets -- a
+  closure's body under its `(` -- can make a line the pass measured short a
+  long one; the next pass sees it.
 
 ## Arguments beneath the callee -- built (2026-09-10)
 
-**The rule (the author's, parallel to the chain rule):** (1) a call's arguments stay on the callee's line when the whole line fits within `CHAIN_WIDTH` and no argument is a block; (2) otherwise every argument takes its own line, one unit past the callee's start -- all or none, never a staircase; (3) recursive -- a call or a chain inside an argument is judged by the same rules from where it now stands (an inner application is measured from its new column, not its old); (4) a block argument is `(do:` with the body one unit past the `(` and the `)` under it, and the converter writes that form for a multi-statement block argument. One argument stays with its callee (nothing to list); a lone `(|x|:` keeps the paren block's own shape; a `=` ends its line when its value goes vertical. Built in `fmt::rebreak` (`argument_heads` from the juxtaposition fixups, `extent_end`, `moved`) and `plan` (an argument first on its line: one unit past its callee). 37 corpus files moved, mostly long `println!` lines. Pinned in `arguments_beneath_the_callee`. Also: **a chain of one link is never broken nor moved, whatever its length** (rule 1 of the chain algorithm, now literal), and the re-break's shifts no longer compound when several breaks land on one line.
+**The rule (the author's, parallel to the chain rule):** (1) a call's arguments stay on the callee's line when the whole line fits within `CHAIN_WIDTH` and no argument is a block; (2) otherwise every argument takes its own line, one unit past the callee's start -- all or none, never a staircase; (3) recursive -- a call or a chain inside an argument is judged by the same rules from where it now stands (an inner application is measured from its new column, not its old); (4) a block argument is `(do:` with the body one unit past the `(` and the `)` under it, and the converter writes that form for a multi-statement block argument. One argument stays with its callee (nothing to list); a lone `(|x|:` keeps the paren block's own shape; a `=` ends its line when its value goes vertical. Built in `fmt::rebreak` (`argument_heads` from the juxtaposition fixups, `extent_end`, `moved`) and `plan` (an argument first on its line: one unit past its callee). 37 corpus files moved, mostly long `println!` lines. Pinned in `arguments_beneath_the_callee`. Also: **a chain of one link is never broken nor moved, whatever its length** (rule 1 of the chain algorithm, now literal), and the re-break's shifts no longer compound when several breaks land on one line. **Its arguments follow this rule** (the user's ruling, 2026-10-12, Docreview's H9): when long arguments take the line past `CHAIN_WIDTH`, the chain moves after its `=` and its arguments go beneath the method, one unit past it -- moved and listed together, never moved alone; with no argument, nothing moves. Pinned in `tests/rulings_0_7_4.rs`.
 
 ## Earlier notes (2026-09-07), superseded by the section above
 

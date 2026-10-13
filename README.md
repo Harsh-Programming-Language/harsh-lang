@@ -139,6 +139,7 @@ One manifest, dependencies untouched, and nothing extra to gitignore since Cargo
 | `hrs check` | …then `cargo check` |
 | `hrs lint` | …then `cargo clippy` |
 | `hrs watch [sub]` | rebuild on save; defaults to `check` |
+| at a workspace's root | `build`, `check`, `test`, `lint`, `fmt` go through each member |
 | `hrs new <name>` | scaffold a project |
 | `hrs export [dir]` | write the project as a plain Rust crate, formatted with `cargo fmt` — the hand-off artifact; `target/src/` is for the compiler, not for reading |
 

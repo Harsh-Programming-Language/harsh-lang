@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.6
+
+- **The search for `hrs-lsp` runs by default.** `harsh.serverPath` defaulted to `"hrs-lsp"`, which counts as set, so the `PATH` search, the `cargo install` folders and the login shell of 0.1.2-0.1.3 never ran. It is empty by default now; set it only to name a server of your own.
+- Columns are exchanged with the server in UTF-16 units, as the protocol counts them (fixed in `hrs-lsp` 0.7.3): after an emoji, Enter and formatting land on the right column.
+
 ## 0.1.5
 
 - **DSL bodies and holes are highlighted as what they are.** A Rust macro's brace body, `view! { … }`, is the DSL's own text, no longer coloured as Harsh; a hole, `@: … :@`, is Harsh inside it, its marks shown as embedded punctuation -- a DSL body inside a hole nests, holes and all; `@@:`, the literal `@:`, is an escape. Checked with VS Code's own tokenizer.

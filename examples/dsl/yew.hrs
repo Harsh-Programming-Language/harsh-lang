@@ -1,0 +1,21 @@
+use yew.prelude.*
+
+#[function_component App]
+fn app$ -> Html:
+    let counter = use_state (|| 0)
+    let onclick = do:
+        let counter = counter <- clone$
+        move |_| counter <- set (*counter + 1)
+    html! {
+        <div class={@: classes! "app" ((*counter > 5) <- then (|| "big")) :@}>
+            <button {onclick}>{ "+1" }</button>
+            <p>{@: *counter :@}</p>
+            <p>{@: format! "Twice: {}" (*counter * 2) :@}</p>
+            { for @: (0..*counter) <- map (|i| html! { <span key={i}>{ i }</span> }) :@ }
+            if @: *counter > 3 :@ { <p>{ "big" }</p> }
+        </div>
+    }
+
+fn main$:
+    yew.Renderer.<App>.new$ <- render$
+    ()

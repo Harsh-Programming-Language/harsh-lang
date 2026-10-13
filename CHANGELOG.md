@@ -1,5 +1,107 @@
 # Changelog
 
+## 0.8.4 — 2026-10-13  (`hrs_std` 0.1.5, `hrs_proc_macro` 0.2.1, the Jupyter kernel 0.1.3, Harshlings 0.1.9 and the VS Code extension 0.1.6, unchanged)
+
+The user's ruling on a multi-line literal argument's layout, `hrs` at a workspace's root, and Harsh's colours for GitLab.
+
+- **A literal argument with its fields beneath** (the user's ruling, 2026-10-13): `hrs fmt` puts the fields one unit past the literal's name and the `)` under its `(` -- "far to the right but clear". Two rules met there before (a literal's body one unit past its statement, a group's `)` under its callee), and the `)` stood stranded. When the fields would pass 72 columns, the `(` goes beneath the callee, one unit past it; when even that is too far after a long receiver, the link goes to its own line first:
+
+  ```text
+  cards <- push (Card\                    cards <- very_long_method_called_push
+                     id = 2                             (Card\
+                     title = t                               id = 2
+                )                                            title = t
+                                                        )
+  ```
+
+  `hrs fmt` changes such literals in existing code once: the Book's `weak.hrs` moved. The guide's *Building a struct*, the Book's chapter 5 (an example, run), *By Example*'s 3.1, `FMT.md`, `DECISIONS.md` and the quick references show the layout.
+- **`hrs` at a workspace's root.** In a folder whose `Cargo.toml` is a `[workspace]` with no `[package]`, `hrs build`, `check`, `test`, `lint`, `fmt` and `hrs cargo …` go through the members in the order `members` lists them (a trailing `*` expanded, `exclude` honoured): a Harsh member by `hrs` in its folder, a Rust member by cargo, which `fmt` skips; the first failure stops the run. `hrs run`, `watch`, `export`, `publish`, `add` and `hrs --` act on one program, and are refused there with the members named. It was "no target under target/src/". The Book's 17.4 teaches it.
+- **Harsh's own colours for GitLab:** a Rouge lexer, `editors/rouge-harsh/`, with its spec, demo and visual sample, passing Rouge's suite; the pull request to Rouge is the next step (its README has it). GitHub's Linguist takes a language at 2,000 files a year: the entry waits, drafted in `editors/linguist/`.
+- `hrs-from` spaces a range after a comma, `&a[(0..2, ..)]` (it wrote `(0..2,..)`).
+- The tree-sitter scanner's `depth` field is gone: saved for incremental parsing and never read. Every corpus file parses to the same tree, edits included.
+- `docs/RETROSPECTIVE.md`: the project's history, its tools and oracles, the bugs the books found, and the principles that held or were amended.
+- The roadmap is rewritten: the open rulings first, then what is yours to run, then what is open; everything before is kept below as the record. SR-Auto is no longer part of the project.
+
+## 0.8.3 — 2026-10-13  (`hrs_std` 0.1.5, `hrs_proc_macro` 0.2.1, the Jupyter kernel 0.1.3, Harshlings 0.1.9 and the VS Code extension 0.1.6, unchanged)
+
+Documentation only: the language, the tools and their output are 0.8.2's.
+
+- **The quick references teach 0.8.1 and 0.8.2.** The cheatsheet has a row *A struct as an argument* (`cards <- push (Card\ id = 1)`, `Ok (Card\ id = 1)`; bare, it is refused) and says an inline `if c: a else: b` is left as written, a block `if` when too long. *At a glance* (the Book's chapter 25) and `SPEC.md` state the literal-argument rule.
+- `RELEASE.md`'s install check expects 390 tests (it said 379).
+
+## 0.8.2 — 2026-10-12  (`hrs_std` 0.1.5, `hrs_proc_macro` 0.2.1, the Jupyter kernel 0.1.3, Harshlings 0.1.9 and the VS Code extension 0.1.6, unchanged)
+
+Fixes: what ShopBill found still open in 0.8.1 (its `HARSH-ISSUES.md`, S2 and S7), with the user's rulings of 2026-10-12.
+
+- **S7 -- `asset!` accepts the project's files.** The project's top-level folders and files are mirrored into `target/src/` -- real folders, each file a hard link to the project's (a copy where a link cannot be made) -- instead of symbolic links. Dioxus's `asset!` resolves a link and requires the file to sit inside the crate, `CARGO_MANIFEST_DIR`, and a link led back out to the project: `asset! "/assets/main.css"` failed with "Asset path … is invalid" in any project with an `Hrs.toml`. The mirror follows the project at every pass 1 -- a file added, changed, replaced by an editor or removed -- and a link left by an earlier `hrs` is replaced. A project without an `Hrs.toml`, built from its own `Cargo.toml`, never met it.
+- **S2 -- a literal as an argument is isolated, and the bare form is refused.** `cards <- push Card\` with its fields beneath became `cards.push(Card) { … }`, and rustc's error pointed at the generated brace. It is now refused at the literal, the isolated form named: `push (Card\ …)`. A constructor takes a literal the same way, `Ok (View\ …)`, `Some (P\ x = 1)`: its single argument goes bare only when it is one atom with a prefix, `Some &x` (the user's ruling). The guide's *Building a struct*, the Book's chapter 5 (a new example, run) and *By Example*'s 3.1 teach it; `DECISIONS.md` records both rulings.
+- **A chain in an operand of `||` is the author's** (Docreview, round 76), as any operand chain is: the logical or was taken for an empty closure's bars, so `|c| a <- is_empty$ || c <- name <- to_lowercase$ <- contains (&w)` had each operand's chain broken in place, mid-expression, its links under its own receiver.
+- **The constructor table is one per thread.** It was one for the whole process, so two transpilations at once -- tests run in parallel, a language server -- reset and filled each other's, and a declared constructor could be forgotten mid-file: `Wrap &x` read as a bit-and. Found as a test failing once in 300 runs; none in 600 since.
+- `tests/shopbill.rs` has a test for each, failing on 0.8.1; `tests/docreview.rs`'s H12 test expects the mirror.
+
+## 0.8.1 — 2026-10-12  (`hrs_std` 0.1.5, `hrs_proc_macro` 0.2.1, the Jupyter kernel 0.1.3, Harshlings 0.1.9 and the VS Code extension 0.1.6, unchanged)
+
+Fixes: what Docreview's round 75 found in 0.8.0 (its `HARSH-ISSUES.md`, H14-H16), each checked on the app's own code. The language is unchanged.
+
+- **H14 -- a call right after a range's `..` is applied.** `&v[..(split n)]`, `&v[0..(split n)]`, `..=(split n)`, `for i in 0..(split n):` and `take 0..(split n)` left the call as written, `(split n)`, Rust that does not parse, and `hrs` said nothing; only a group that starts an atom was applied. An argument that starts with a group is that group, as before: `f (x)..` is `f(x)..`, the form `hrs-from` writes.
+- **H15 -- `hrs fmt` keeps `b &= x`.** It wrote `b & = x`, Rust that does not parse, and its own check passed it: `&=` and `|=` were read as two tokens, so the `&` was spaced as a bit-and and both versions looked alike. They are one token each, as in Rust.
+- **H16 -- `hrs fmt` formats every file of Docreview's, in one run.** It left 18 of its 94 files as written, refusing its own layout -- rightly: each would have changed or broken the program. The faults: arguments listed inside a block that had moved (`let next =` / `match mode\`) kept the callee's old column and became statements of their own; an inline `if c: a else: b` had its value moved after the `:`, leaving `else:` behind it, or its chains broken at their `<-`; a chain inside parentheses after a long receiver, `Some (PathBuf.from home <- join …`, had its links placed at column 4; a field's value in a literal going vertical, `detail = line <- detail <- clone$`, was broken after the field's `=`. An inline `if` is now the author's line, never broken.
+- **One run is enough.** A second `hrs fmt` changed what the first had written, in 13 of Docreview's files: a chain was measured from `let` where its value was about to move after the `=`, or from the start of a path written `crate.…`, which the chain rule did not count; a chain after a call whose arguments are listed was joined onto the last argument, where it reads as that argument's; a closure's body set deep under its `(` made a short line long. `hrs fmt` now runs its passes until the text stops changing, each pass checked against the one before.
+- **A file with macro bodies takes the layout.** A file holding `rsx!`, `view!` or any brace body kept its lines whenever the layout would add or remove one -- only its holes were formatted -- so a file of views never took the layout: seven of Docreview's. Each body now goes back where its call stands, moved with it, its text unchanged; the whole file is checked against the source's Rust, and a body that cannot be placed leaves the file as before.
+- `docs/FMT.md` and the guide's *Breaking long lines* say so; the guide shows the inline `if` written as a block when it is too long. `tests/docreview.rs` has a test for each, cut from Docreview's files, each failing on 0.8.0.
+
+## 0.8.0 — 2026-10-12  (`hrs_proc_macro` 0.2.1, now on `harsh-lang` 0.8; `hrs_std` 0.1.5, the Jupyter kernel 0.1.3, Harshlings 0.1.9 and the VS Code extension 0.1.6, unchanged)
+
+Breaking: `hrs dx` is retired. Write `hrs -- dx …`.
+
+- **`hrs -- <program> [args]`** transpiles, then runs any program in the generated project, `target/src/`: `hrs -- dx serve`, `hrs -- trunk serve`. The program is found as your shell finds it -- the first of its name on PATH, or the path you write -- so it is the one your terminal runs. Its arguments are its own, `--version` included.
+- **Harsh arbitrates no conflict between two programs of one name** (the user's ruling): Deno and Dioxus both install a `dx`. **`hrs which <program>`** lists every program of that name on PATH, in order, with its `--version`, and marks the one that runs; `hrs --` notes when there is more than one. The programmer decides, by PATH order or a path. `INSTALL.md` has a section, *Two programs, one name*.
+- **`hrs dx` is refused**, naming `hrs -- dx …`: one library's name built into Harsh, and with Deno's `dx` first on PATH it ran Deno's.
+
+## 0.7.6 — 2026-10-12  (`hrs_std` 0.1.5, the Jupyter kernel 0.1.3, Harshlings 0.1.9 and the VS Code extension 0.1.6, unchanged)
+
+What a hole is (the user's rule): **a Rust expression in a macro's body that calls on something bound outside the DSL's own language -- a variable, a function, a name the DSL binds -- or uses an operator, `.` and `::` included; a single word is exempt.**
+
+- **`hrs-from` decides by a binding table**, never by a name's case: the prelude, the file's items, its imports, the bindings in scope at the macro call, the names the DSL binds (`let:item`, `for item in …`, `Some(v)` in an arm) and an expression's own closure parameters. A single word is no hole anywhere -- `{count}`, `(title)`, `=> n` -- where it wrote `{@: count :@}`. The converter's holes are now the author's, one for one: `tests/dsl_libraries.rs` checks it for every library in the catalogue.
+- **A glob import's names** cannot be listed: a stretch built only from them, with no operator -- Leptos's `fallback=|| view! { … }`, Yew's `classes!("btn", "big")` -- is left as written, and `hrs-from` names its line in a warning. Text the DSL owns stays (`quick_error!`'s `display("…", err)`); an operator alone makes a hole (SQL's `price * 2`).
+- The guide, `DECISIONS.md`, `GOVERNANCE.md` (the converter's table is its own; the transpiler keeps none), the Book's 23.8 and *By Example*'s 7.3 teach the rule, with the places to look -- string slots first.
+- `hrs-from` writes a use group tight, `use a.(b, c)` (it wrote `use a.( b, c)`).
+
+## 0.7.5 — 2026-10-12  (`hrs_std` 0.1.5, the Jupyter kernel 0.1.3, Harshlings 0.1.9 and the VS Code extension 0.1.6, unchanged)
+
+Where the holes go in the DSLs of popular libraries -- taught, and the converter brought to them.
+
+- **The catalogue.** The guide to macros shows, for Leptos `view!`, Dioxus `rsx!`, Yew `html!`, Maud `html!`, serde_json `json!`, Tokio `select!`, `thread_local!`, `lazy_static!`, `bitflags!`, `tracing` and the list macros, the library's own Rust and the Harsh an author writes for it, with the rule that finds every hole: wherever the library's documentation writes a Rust expression. The Book's 23.8 teaches the same shapes with runnable examples built against the real crates; *By Example*'s 7.3 runs two. Every example is in `examples/dsl/`, its Rust compiled against the crate, and `tests/dsl_libraries.rs` checks all three ways (the author's Harsh gives the Rust, `hrs-from` gives Harsh that comes back the same, the holes land where the library takes Rust) and that the guide and the books show them as tested.
+- **`hrs-from` finds the holes the catalogue showed it missing:** a Maud splice, `(items.len())`, and a value in parens, `href=(…)`; Yew's `{ for ITER }`; a `select!` handler that is a block, now `=> @: do: … :@` (its statements were left as Rust); a comparison in a tree's `if count() > 3 {` or an attribute's value (`rsx!` was cut at the `>`, which only ends a tag in markup); the body after a DSL's `if`/`for`; a `bitflags!` constant built with `|` (taken for a closure's bars); `lazy_static!`'s `COUNT: usize = …` (the hole started at `usize`, Rust's parser reading an assignment).
+- **`hrs-from` writes a comparison spaced,** `x > 0` -- it wrote `x> 0` everywhere, taking `>` for a generic closer -- a range tight to a call, `0..count$`, and `tracing`'s `%` sigil tight, `%user`. A hole no longer resets the file's operator and constructor marks: after `json!`'s holes, `*x > 0` was written `*x> 0`.
+- **The rendered guide, cheat sheet and Book show `|` in tables** as `|`: a cell's `\|` kept its backslash, so the quick reference read `inc <\| double`.
+
+## 0.7.4 — 2026-10-12  (`hrs_std` 0.1.5, the Jupyter kernel 0.1.3, Harshlings 0.1.9 and the VS Code extension 0.1.6, unchanged)
+
+The user's rulings on what 0.7.3 left open.
+
+- **A long chain of one link (H9, closed).** With no arguments it stays on its line, however long: `let label = message <- subject_line_for_privilege_log_with_redactions_applied$`. When long arguments make it long, `hrs fmt` moves it after its `=` and lists the arguments beneath the method, one unit past it -- both at once, never moved alone; without a `=`, the arguments go beneath. It left such a line at any length before.
+- **`hrs-from` writes holes in a DSL string's format slots:** `"Hello {name.to_uppercase()}"` is `"Hello {@: name <- to_uppercase$ :@}"`, and a spec stays outside, `{@: v <- len$ :@:>4}`. A plain name `{count}`, a position `{0}` and `{{` stay as written. What looks like Rust is made a hole; the round trip is exact, strings included.
+- **`hrs fmt` keeps a format spec after a hole:** inside a hole, `:@:` closes it, as the transpiler reads it -- it wrote `:@: >4`, changing the string. And its safety check compares the Rust token for token: it compared it with all whitespace removed, so a space added inside a string passed.
+- **Enter after a call still waiting for arguments** lands one unit past the callee, `let s = add 1` with `add` taking two; a pipe makes the call a partial, and Enter stays at the statement's column. `GOVERNANCE.md` names this as the arity table's one reader besides the pipes, for the cursor only (it read the table already; the rule said it did not).
+
+## 0.7.3 — 2026-10-12  (`hrs_std` 0.1.5, the Jupyter kernel 0.1.3 and Harshlings 0.1.9, unchanged; the VS Code extension 0.1.6)
+
+Fixes: three from building Docreview (its `HARSH-ISSUES.md`, H11–H13), and what writing the developer book found by reading every line of 0.7.2. The language is unchanged.
+
+- **H11 — `hrs fmt` changed a string inside a hole.** It spaced every `:@` it met, so `@: format! "from:@{domain}" :@` became `"from :@{domain}"`. A hole's code is Harsh, and a mark inside one of its strings, characters or comments is text; the formatter now reads a body whole, across lines, and spaces only the marks that open and close a hole.
+- **H12 — top-level files are linked into `target/src/`,** not folders alone, so `hrs dx` finds `Dioxus.toml`. Every top-level entry is linked except hidden ones, `src`, `target`, and the `Cargo.toml`, `Cargo.lock` and `Hrs.toml` that `hrs` writes there itself.
+- **H13 — a record variant's fields are not constructors.** With a variant `Email` holding `first: u8`, a local `first` made `first & 0x7f` read as `first(&0x7f)`. The constructors are a program's structs and its variants one level under the `enum` — and, newly, those declared inline after its `\`.
+- **An index on a call's result is isolated, `(f src)[i]`,** as a tuple index is since 0.7.0: the Rust is `f(src)[i]`. `hrs-from` writes it so; `(g v)[f x]` applied its index twice.
+- **`hrs-from` writes a dereference and a negation tight,** `*m += 1`, `!a`, and a product spaced, `2 * *m` (it wrote `* m += 1`).
+- **Fixed, from the developer book:** a plain byte string `b"…"` had no escapes, so `b"\""` ended at its second quote; after a bare parameter (`fn show s: String:`) the arity scan ran on into the next function; `>>` closing two generic lists left a signature's parameter groups unjoined; a function with its body on its line escaped the parameter checks, so `fn f (a: i32, b: i32) -> i32: a` was accepted; a `macro_rules!` with a one- or two-letter name moved to the top of the output; the tree shaker dropped an inner attribute such as `#![forbid(unsafe_code)]` and the `use` after it; a DSL body's placeholder left spaces in the Rust, `}                , 1`; a file re-read after a `~` expansion mapped the token after a one-digit placeholder to the wrong place; Enter and `hrs fmt` placed a group's contents by two rules, now one; `hrs` names `hrs expand` and the multi-file mode in its usage.
+- **The language server counts columns in UTF-16 units,** as LSP does: after a character outside the Basic Multilingual Plane, positions were one off.
+- **The VS Code extension 0.1.6:** `harsh.serverPath` is empty by default, so the `PATH` search and the login-shell fallback run (it defaulted to `"hrs-lsp"`).
+- **The tree-sitter grammar** saves its whole scanner state, `pending` included, and grows its stack on restore; Zed's highlighting has the hole captures; its `Cargo.toml` names Harsh, 0.1.0, MPL-2.0.
+- **The Book is rebuilt.** Its builder still read the generated Rust from `target/hrs/`, so since 0.7.0 it stopped short and the website kept 0.6.4's Book; it reads `target/src/` now.
+- **Gates:** `check.sh`'s self-host gate fails on a difference (it printed `DIFFERS` and went on); `make-public.sh` catches a failed test by its count.
+- **Documents:** `DECISIONS.md` said a hole that would not come back identical is copied verbatim — the converter stops, naming the line, as ruled in 0.1.25; `FMT.md`: `--check` fails on a file it could not format, and blank lines are never collapsed. The guide's quick-reference tables lost their retired forms (`Point { x: 1 }`, `Vec.<i32>.new()`, `Rec:`, `macro_rules~ m:`, an explicit `;`); `START-HERE.md`'s deferred list is built. Stale comments, dead code and tests that checked nothing were cleaned up; `rv0.hrs`, a stray probe, is gone.
+
 ## 0.7.2 — 2026-10-06  (`hrs_std` 0.1.5, the Jupyter kernel 0.1.3 and Harshlings 0.1.9, unchanged)
 
 - **`hrs fmt` writes a constructor's single argument bare** (the user's convention): `Some (&1)` is `Some &1`, `Ok (mut v)` is `Ok mut v`, as `hrs-from` writes it since 0.7.1. Only when that argument is the only one; `Some (&x) (&y)` keeps its parentheses. The Book's iterator example reads `assert_eq! (v1_iter <- next$) (Some &1)`.

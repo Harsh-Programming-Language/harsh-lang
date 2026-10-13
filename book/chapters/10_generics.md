@@ -61,7 +61,7 @@ error[E0369]: binary operation `>` cannot be applied to type `&T`
    |            ---- &T
    |                 ^
    |                   ------- &T
-   = help: consider restricting type parameter `T` (hrs 1:13)
+   = help: consider restricting type parameter `T` with trait `PartialOrd` (hrs 1:13)
 ```
 
 `fn largest<T> list: &[T] -> &T` — the `<T>` after the name declares a type parameter, and then `T` is used where the type would be. It does not compile, and the error is the chapter's first lesson: `>` is not defined for *every* type, so the compiler will not let a function that takes *any* `T` compare two of them. It has to be told which `T`s are allowed, and the help says how: restrict the type parameter.
@@ -434,7 +434,7 @@ error[E0597]: `string2` does not live long enough
    |                                                ^^^^^^^ borrowed value does not live long enough
 12 |     println! "The longest string is {result}"
    |     - `string2` dropped here while still borrowed
-   |                                     -------- borrow later used here
+   |                                      ------ borrow later used here
 ```
 
 `string2` lives only inside the `do:` block; `result` is used after it; and `longest`'s signature says `result` cannot outlive the shorter of its inputs. So the compiler rejects the program, and — this is the part to appreciate — it does so *at the call*, from the signature alone, without looking inside `longest`. That is what the annotation bought: a function's borrowing behaviour is part of its interface, checked at each use.

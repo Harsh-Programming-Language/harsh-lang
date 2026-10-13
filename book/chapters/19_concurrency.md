@@ -122,15 +122,14 @@ fn main$:
 
 ```text
 error[E0382]: borrow of moved value: `val`
-  --> channel_moved.hrs:10:26
+  --> channel_moved.hrs:10:27
    |
  8 |         let val = String.from "hi"
    |             --- move occurs because `val` has type `String`, which does not implement the `Copy` trait
  9 |         tx <- send val <- unwrap$
    |                    --- value moved here
 10 |         println! "val is {val}"        // val was moved into the channel
-   |                          ^^^^^ value borrowed here after move
-   = help: consider cloning the value if the performance cost is acceptable (hrs 9:23)
+   |                           ^^^ value borrowed here after move
 ```
 
 `send` took `val`; using it afterwards is chapter 4's error, and it is the right error, because the receiving thread may have modified or dropped the value by now. In a language where sending is a copy of a pointer, this compiles and the two threads quietly share a string.
@@ -218,14 +217,14 @@ fn main$:
 ```
 
 ```text
-error[E0277]: `Rc<Mutex<i32>>` cannot be sent between threads safely
+error[E0277]: `Rc<std::sync::Mutex<i32>>` cannot be sent between threads safely
   --> mutex_rc_err.hrs:12:35
    |
 12 |         let handle = thread.spawn move ||:
    |                      ------------ required by a bound introduced by this call
-   |                                   ^^^^^^^^ `Rc<Mutex<i32>>` cannot be sent between threads safely
+   |                                   ^^^^^^^^ `Rc<std::sync::Mutex<i32>>` cannot be sent between threads safely
    |                                   ------- within this `{closure@mutex_rc_err.hrs:13:36: 13:43}`
-   = help: within `{closure@mutex_rc_err.hrs:13:36: 13:43}`, the trait `Send` is not implemented for `Rc<Mutex<i32>>`
+   = help: within `{closure@mutex_rc_err.hrs:13:36: 13:43}`, the trait `Send` is not implemented for `Rc<std::sync::Mutex<i32>>`
    = note: required because it's used within this closure (hrs 12:35)
    = note: required by a bound in `spawn`
 ```

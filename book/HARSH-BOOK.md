@@ -361,7 +361,39 @@ hello, harsh 5 52 42 () 3 abc HELLO, HARSH 6 hello, ABC
 
 When an application meets operators, chains and pipes, it binds before any of them: `add 1 2 * 10` adds, then multiplies. The appendix *Precedence* sets out every level. An index written tight, `arr[1]`, is part of its atom, so `f arr[1]` passes the element — the same way `t.0` is part of `t`; brackets never apply, and an array passed as an argument is isolated, `f ([1, 2, 3])`. Two arrows share the work of reaching into things: `<-` reaches into a *value* — a field, a method, `v <- len$` — and `.` walks a *path* — a module, a type, an item, `String.from`. A macro applies like a function, with its `!` glued to its name: `vec! [1, 2, 3]`, `println! "{s}"`. And when an application and an arrow meet, **the application binds tighter**: in `greet "harsh" <- to_uppercase$` the function is applied first and the arrow takes its result, and the next arrow, or an operator, ends the arguments. The parentheses you will be tempted to write, `(greet "harsh") <- to_uppercase$`, are not wrong; they are not needed. Parentheses are needed the other way round — when the arrow belongs *inside* an argument, `greet (&(text <- to_uppercase$))`.
 
-## 2.7 What you have met
+## 2.7 One argument, one atom
+
+Every pair of parentheses in this chapter that was not a tuple has had the same job, and it is worth seeing the rule whole, because it explains each case at once instead of one at a time.
+
+Harsh separates arguments with spaces: `add 2 3` has two. So an argument that is itself made of several tokens — `n * 2`, `-1`, `&line`, `s <- len$` — would be read as several arguments, and must be **isolated**, wrapped in parentheses that say *this is one argument*. An argument of one token needs nothing: that token is an **atom**. Atoms are names and literals, and a few shapes that stay one piece because they are written tight: a path `Route.Home`, a tuple's item `pair.0`, an index `v[0]`, a call with no arguments `now$`, a turbofish `parse.<i32>$`, a range of atoms `0..n`, and anything already isolated `(n * 2)`.
+
+```rust harsh
+fn add (a: i32) (b: i32) -> i32: a + b
+
+fn main$:
+    let n = 4
+    let pair = (1, 2)
+    let v = vec! 10 20 30
+    println! "{}" (add (n * 2) (-1))
+    println! "{}" (add pair.0 v[1])
+    println! "{}" (add (v <- len$ as i32) n)
+    let total: i32 = (0..n) <- sum$
+    println! "{total}"
+```
+
+Each isolated argument there has several tokens: an operator, a negative number, a method step. Each bare one is an atom. The reason is always the same, so a reader never has to remember a list.
+
+**Where nothing needs separating, nothing is isolated.** The parentheses exist only to tell an argument from its neighbours, so where there are no neighbours they are not needed. A function with one parameter writes it bare, however many tokens it has: `fn greet name: &str`, `fn bump &mut n: &mut i32`. After a constructor — a `struct` or enum variant the program declares (a record variant's fields are not constructors), or the prelude's `Some`, `Ok`, `Err` — a single argument is bare too: `Some &x`, `Some mut line`, `Ok ref v`. A constructor can only take its argument; it is never an operand of `&`. After any other name, `f & x` is bit-and, so a reference passed to a function is isolated: `f (&x)`.
+
+**Two operators keep their parentheses everywhere.** A leading `-` and a range whose ends are not atoms: `f (-1)`, `Celsius (-40..=0)`, `f (a + 1..n)` — because `f -1` is subtraction and `f a + 1..n` would split at the `+`.
+
+**Commas separate too.** Inside a tuple, items are separated by commas, and a literal brings commas of its own: `(1, (Point\ x = 1, y = 2))` — isolated, or its fields would read as the tuple's items.
+
+**A tuple index applies to one atom.** `pair.0` indexes `pair`. To index what a call returns, isolate the call: `let first = (f src).0` — in `f src.0`, the `.0` is `src`'s. That indexed group is itself several pieces, so passed as an argument it is isolated in turn: `show ((f src).0)`. Written `show (f src).0`, the index would apply to `show`'s result; Harsh refuses it and names the isolated form. An index in brackets follows the same rule: `(f src)[i]` indexes what `f src` returns.
+
+Rust needs none of this, because it separates arguments with commas. Harsh separates them with spaces, so where spaces separate, an argument of several tokens is isolated, and nowhere else.
+
+## 2.8 What you have met
 
 Immutability by default and `mut` to opt out; `&` and `&mut` on arguments; `Result` for operations that can fail and `match` to take it apart; `loop`, `break`, `continue`; enums; type annotations that tell `parse` what to produce. Each has a chapter. The next one starts with the smallest pieces: variables, types, functions, and control flow.
 
@@ -974,8 +1006,8 @@ error[E0596]: cannot borrow `*some_string` as mutable, as it is behind a `&` ref
   --> borrow_mut_err.hrs:2:5
    |
  2 |     some_string <- push_str ", world"
-   |     ^^^^^^^^^^^ `some_string` is a `&` reference, so the data it refers to cannot be borrowed as mutable
-   = help: consider changing this to be a mutable reference (hrs 1:25)
+   |     ^^^^^^^^^^^ `some_string` is a `&` reference, so it cannot be borrowed as mutable
+   = help: consider changing this to be a mutable reference (hrs 1:24)
 ```
 
 A plain `&` reference is a promise to only read. To change something through a reference you need a **mutable reference**, `&mut`, and the value you borrow from has to be `mut` in the first place:
@@ -1108,7 +1140,8 @@ error[E0106]: missing lifetime specifier
  1 | fn dangle$ -> &String:
    |               ^ expected named lifetime parameter
    = help: this function's return type contains a borrowed value, but there is no value for it to be borrowed from
-   = help: consider using the `'static` lifetime (hrs 1:16)
+   = help: consider using the `'static` lifetime, but this is uncommon unless you're returning a borrowed value from a `const` or a `static` (hrs 1:16)
+   = help: instead, you are more likely to want to return an owned value (hrs 1:15)
 ```
 
 `s` is created inside `dangle`, so it is dropped when `dangle` returns; a reference to it would point at freed memory. The compiler's message is about *lifetimes*, a word chapter 10 explains in full — for now, read the first `help`: the return type is a borrowed value and there is nothing in this function it could be borrowed *from*. The fix is to return the `String` itself, moving it out to the caller:
@@ -1344,6 +1377,36 @@ someusername123 (anotheremail@example.com), active: true, sign-ins: 1
 The definition is `struct User` and four indented fields, each `name: Type`. Nothing marks the body: only a name can follow `struct`, so a deeper line can only be a field. An *instance* is the struct's name, a `\`, and every field given a value with `=` — a line each here, or all on one line after the mark, `User\ active = true, …`. Order does not matter, but every field must be present, and the `\` is what says the name is not finished: a bare `User` is already a complete expression. Inline, the field list reaches the end of its line, or the `)` of the group it is written in — so `Point\ x = 1, msg` is one literal with the shorthand field `msg`, with or without parens around it, and the compiler is the one to say whether `msg` is a field `Point` has. When a literal is one element of a tuple, give it its own parens: `((Point\ x = 1), msg)`. A field is read with `<-`: `user1 <- email`. The whole instance is mutable or it is not — `let mut user1` — and then a field is assigned with `<-` on the left of `=`. There is no way to mark a single field mutable, and this is deliberate: mutability is a property of the binding, and a reader who sees `let user1` knows the entire value is fixed.
 
 Notice the parentheses around `(user1 <- username)` when it is handed to `println!`. A field access has an operator in it, so, like every other operator expression, it is isolated when it is an argument; `println! "{}" user1 <- username` would read as `println!` applied to `user1`, followed by an arrow the macro does not want. The rule is chapter 3's and chapter 4's, applied again.
+
+A literal handed to a function is an argument like any other, and an argument of several tokens is isolated: `cards <- push (Card\ id = 1, …)`, or with the fields beneath, one unit past the literal's name, and the `)` under its `(` — far to the right, but clear. When that would run past the line, the `(` goes on the next line, one unit past the callee, and `hrs fmt` does it for you. A constructor takes it the same way, `Some (Card\ …)`, `Ok (Card\ …)`. Written bare, `cards <- push Card\`, it is refused, and the message names the isolated form.
+
+```rust harsh
+struct Card
+    id: u32
+    title: String
+
+fn first (cards: &[Card]) -> Result<&Card, String>:
+    cards <- first$ <- ok_or (String.from "no cards")
+
+fn main$:
+    let mut cards = Vec.new$
+    cards <- push (Card\ id = 1, title = String.from "Draft")
+    cards <- push (Card\ id = 2, title = String.from "Review")
+    cards <- push (Card\
+                       id = 3
+                       title = String.from "Publish"
+                  )
+    let spare = Some (Card\ id = 4, title = String.from "Spare")
+    match first (&cards)\
+        Ok card => println! "first: {} {}" (card <- id) (card <- title)
+        Err why => println! "{why}"
+    println! "{} cards, spare: {}" (cards <- len$) (spare <- is_some$)
+```
+
+```text
+first: 1 Draft
+3 cards, spare: true
+```
 
 ### Building a struct in a function
 
@@ -1606,7 +1669,8 @@ error[E0277]: `Rectangle` doesn't implement `Debug`
   --> no_debug.hrs:7:30
    |
  7 |     println! "rect1 is {:?}" rect1
-   |                              ^^^^^ `Rectangle` cannot be formatted using `{:?}`
+   |                        ---- required by this formatting parameter
+   |                              ^^^^^ `Rectangle` cannot be formatted using `{:?}` because it doesn't implement `Debug`
    = help: the trait `Debug` is not implemented for `Rectangle`
    = note: add `#[derive(Debug)]` to `Rectangle` or manually `impl Debug for Rectangle`
    = help: consider annotating `Rectangle` with `#[derive(Debug)]` (hrs 1:1)
@@ -1891,11 +1955,7 @@ error[E0277]: cannot add `Option<i8>` to `i8`
  4 |     let sum = x + y
    |                 ^ no implementation for `i8 + Option<i8>`
    = help: the trait `Add<Option<i8>>` is not implemented for `i8`
-   = help: the following other types implement trait `Add<Rhs>`:
-  <i8 as Add>
-  <i8 as Add<&i8>>
-  <&'a i8 as Add<i8>>
-  <&i8 as Add<&i8>>
+   = help: the following other types implement trait `Add<Rhs>`
 ```
 
 In a language with null, `x + y` compiles and fails at runtime when `y` happens to be null. Here it does not compile, because a value that might be absent cannot be added until you have said what happens when it is. To use the `i8` inside, you have to take the `Option` apart, and handling the `None` case is part of taking it apart. That is the whole idea, and `match` is how it is done.
@@ -2424,11 +2484,12 @@ fn main$:
 ```
 
 ```text
-error[E0433]: failed to resolve: use of undeclared crate or module `hosting`
+error[E0433]: cannot find module or crate `hosting` in this scope
   --> use_scope.hrs:10:9
    |
 10 |         hosting.add_to_waitlist$          // `use` above is in the parent, not here
-   |         ^^^^^^^ use of undeclared crate or module `hosting`
+   |         ^^^^^^^ use of unresolved module or unlinked crate `hosting`
+   = help: you might be missing a crate named `hosting`
    = help: consider importing this module through its public re-export (hrs 9:5)
 ```
 
@@ -2619,7 +2680,7 @@ fn main$:
 
 ```text
 None
-thread 'main' panicked at vec_index_panic.hrs:7:
+thread 'main' (18072) panicked at vec_index_panic.hrs:7:
 index out of bounds: the len is 5 but the index is 100
 ```
 
@@ -2646,7 +2707,7 @@ error[E0502]: cannot borrow `v` as mutable because it is also borrowed as immuta
  4 |     v <- push 6
    |     ^^^^^^^^^^^^ mutable borrow occurs here
  5 |     println! "The first element is: {first}"
-   |                                     ------- immutable borrow later used here
+   |                                      ----- immutable borrow later used here
 ```
 
 Holding a reference to the first element and then pushing looks harmless — the first element is not moving. But it might: a `Vec` that runs out of room allocates a bigger buffer, copies everything across and frees the old one, and `first` would then point into freed memory. The compiler does not know whether this push will reallocate, and does not need to; it knows that `push` needs `&mut v` while `first` holds `&v`, and that is enough. The fix is the usual one: use `first` before the push, or copy the value out (`let first = v[0]` — an `i32` is `Copy`).
@@ -2774,19 +2835,16 @@ fn main$:
 ```
 
 ```text
-error[E0277]: the type `String` cannot be indexed by `{integer}`
-  --> string_index.hrs:3:13
+error[E0277]: the type `str` cannot be indexed by `{integer}`
+  --> string_index.hrs:3:16
    |
  3 |     let h = s1[0]
-   |             ^^^^^ `String` cannot be indexed by `{integer}`
-   = help: the trait `Index<{integer}>` is not implemented for `String`
-   = help: the following other types implement trait `Index<Idx>`:
-  <String as Index<RangeFull>>
-  <String as Index<std::ops::Range<usize>>>
-  <String as Index<RangeFrom<usize>>>
-  <String as Index<RangeTo<usize>>>
-  <String as Index<RangeInclusive<usize>>>
-  <String as Index<RangeToInclusive<usize>>>
+   |                ^ string indices are ranges of `usize`
+   = help: the trait `SliceIndex<str>` is not implemented for `{integer}`
+   = note: you can use `.chars().nth()` or `.bytes().nth()`
+for more information, see chapter 8 in The Book: <https://doc.rust-lang.org/book/ch08-02-strings.html#indexing-into-strings>
+   = help: `usize` implements trait `SliceIndex<T>`
+   = note: required for `String` to implement `Index<{integer}>`
 ```
 
 `s1[0]` does not compile, and the reason is the byte count above. A `String` is bytes; a character may be one to four of them; so "the first character" is not "byte zero", and Rust refuses to pretend it is. Indexing that returned a byte would be wrong for most of the world's text, and indexing that returned a character would have to scan from the start, which is not what `[i]` promises. So there is no `[i]`.
@@ -2873,14 +2931,14 @@ fn main$:
 
 ```text
 error[E0382]: borrow of moved value: `field_name`
-  --> map_own.hrs:10:15
+  --> map_own.hrs:10:16
    |
  4 |     let field_name = String.from "Favorite color"
    |         ---------- move occurs because `field_name` has type `String`, which does not implement the `Copy` trait
  8 |     map <- insert field_name field_value      // both moved into the map
    |                   ---------- value moved here
 10 |     println! "{field_name}"                   // no longer valid
-   |               ^^^^^^^^^^^^ value borrowed here after move
+   |                ^^^^^^^^^^ value borrowed here after move
    = help: consider cloning the value if the performance cost is acceptable (hrs 8:29)
 ```
 
@@ -2954,7 +3012,7 @@ fn main$:
 
 ```text
 about to fail
-thread 'main' panicked at panic.hrs:4:
+thread 'main' (18260) panicked at panic.hrs:4:
 crash and burn
 ```
 
@@ -2970,7 +3028,7 @@ fn main$:
 ```
 
 ```text
-thread 'main' panicked at panic_index.hrs:4:
+thread 'main' (18276) panicked at panic_index.hrs:4:
 index out of bounds: the len is 3 but the index is 99
 ```
 
@@ -3003,7 +3061,7 @@ fn main$:
 ```
 
 ```text
-thread 'main' panicked at result_match.hrs:10:
+thread 'main' (18292) panicked at result_match.hrs:10:
 Problem opening the file: Os { code: 2, kind: NotFound, message: "No such file or directory" }
 ```
 
@@ -3052,7 +3110,7 @@ fn main$:
 ```
 
 ```text
-thread 'main' panicked at unwrap_expect.hrs:5:
+thread 'main' (18324) panicked at unwrap_expect.hrs:5:
 called `Result::unwrap()` on an `Err` value: Os { code: 2, kind: NotFound, message: "No such file or directory" }
 ```
 
@@ -3070,7 +3128,7 @@ fn main$:
 ```
 
 ```text
-thread 'main' panicked at expect.hrs:7:
+thread 'main' (18340) panicked at expect.hrs:7:
 hello.txt should be included in this project: Os { code: 2, kind: NotFound, message: "No such file or directory" }
 ```
 
@@ -3178,7 +3236,7 @@ error[E0277]: the `?` operator can only be used in a function that returns `Resu
    | -------- this function should return `Result` or `Option` to accept `?`
  4 |     let greeting_file = File.open "hello.txt"?
    |                                              ^ cannot use the `?` operator in a function that returns `()`
-   = help: the trait `FromResidual<Result<Infallible, std::io::Error>>` is not implemented for `()`
+   = help: consider adding return type (hrs 3:9)
 ```
 
 The compiler says exactly what is missing: `main` returns `()`, and `?` needs somewhere to send the error. `main` may return a `Result`:
@@ -3238,7 +3296,7 @@ fn main$:
 
 ```text
 50
-thread 'main' panicked at guess_validate.hrs:9:
+thread 'main' (18434) panicked at guess_validate.hrs:9:
 Guess value must be between 1 and 100, got 200.
 ```
 
@@ -3313,7 +3371,7 @@ error[E0369]: binary operation `>` cannot be applied to type `&T`
    |            ---- &T
    |                 ^
    |                   ------- &T
-   = help: consider restricting type parameter `T` (hrs 1:13)
+   = help: consider restricting type parameter `T` with trait `PartialOrd` (hrs 1:13)
 ```
 
 `fn largest<T> list: &[T] -> &T` — the `<T>` after the name declares a type parameter, and then `T` is used where the type would be. It does not compile, and the error is the chapter's first lesson: `>` is not defined for *every* type, so the compiler will not let a function that takes *any* `T` compare two of them. It has to be told which `T`s are allowed, and the help says how: restrict the type parameter.
@@ -3686,7 +3744,7 @@ error[E0597]: `string2` does not live long enough
    |                                                ^^^^^^^ borrowed value does not live long enough
 12 |     println! "The longest string is {result}"
    |     - `string2` dropped here while still borrowed
-   |                                     -------- borrow later used here
+   |                                      ------ borrow later used here
 ```
 
 `string2` lives only inside the `do:` block; `result` is used after it; and `longest`'s signature says `result` cannot outlive the shorter of its inputs. So the compiler rejects the program, and — this is the part to appreciate — it does so *at the call*, from the signature alone, without looking inside `longest`. That is what the annotation bought: a function's borrowing behaviour is part of its interface, checked at each use.
@@ -3842,7 +3900,7 @@ test tests::another ... FAILED
 test tests::exploration ... ok
 failures:
 ---- tests::another stdout ----
-thread 'tests::another' panicked at failing.hrs:11:
+thread 'tests::another' (18716) panicked at failing.hrs:11:
 Make this test fail
 failures:
     tests::another
@@ -3914,7 +3972,7 @@ running 1 test
 test tests::it_adds_two ... FAILED
 failures:
 ---- tests::it_adds_two stdout ----
-thread 'tests::it_adds_two' panicked at assert_eq_fail.hrs:13:
+thread 'tests::it_adds_two' (18752) panicked at assert_eq_fail.hrs:13:
 assertion `left == right` failed
   left: 5
  right: 4
@@ -3951,7 +4009,7 @@ running 1 test
 test tests::greeting_contains_name ... FAILED
 failures:
 ---- tests::greeting_contains_name stdout ----
-thread 'tests::greeting_contains_name' panicked at custom_message.hrs:13:
+thread 'tests::greeting_contains_name' (18769) panicked at custom_message.hrs:13:
 Greeting did not contain name, value was `Hello!`
 failures:
     tests::greeting_contains_name
@@ -4227,7 +4285,8 @@ fn main$:
 
 ```text
 $ cargo run
-thread 'main' panicked at src/main.hrs:13:
+
+thread 'main' (18886) panicked at src/main.hrs:13:
 not enough arguments
 ```
 
@@ -5160,10 +5219,13 @@ error[E0507]: cannot move out of `value`, a captured variable in an `FnMut` clos
    |
 14 |     let value = String.from "closure called"
    |         ----- captured outer variable
+   |                 ----------------------------- move occurs because `value` has type `String`, which does not implement the `Copy` trait
 16 |     list <- sort_by_key |r|:
    |                         --- captured by this `FnMut` closure
 17 |         sort_operations <- push value       // moves `value` out: can only happen once
-   |                                 ^^^^^ move occurs because `value` has type `String`, which does not implement the `Copy` trait
+   |                                 ^^^^^ `value` is moved here
+   = help: `Fn` and `FnMut` closures require captured values to be able to be consumed multiple times, but `FnOnce` closures may consume them only once
+   = help: consider cloning the value if the performance cost is acceptable (hrs 17:38)
 ```
 
 The closure pushes `value` — a `String`, moved out of the capture — onto a vector. That can happen once, so the closure is `FnOnce` only, and `sort_by_key` needs to call it many times; the error names both facts. Mutating a capture *without* moving it is fine:
@@ -5226,9 +5288,9 @@ pub trait Iterator
 fn main$:
     let v1 = vec! 1 2 3
     let mut v1_iter = v1 <- iter$            // nothing happens yet
-    assert_eq! (v1_iter <- next$) (Some (&1))
-    assert_eq! (v1_iter <- next$) (Some (&2))
-    assert_eq! (v1_iter <- next$) (Some (&3))
+    assert_eq! (v1_iter <- next$) (Some &1)
+    assert_eq! (v1_iter <- next$) (Some &2)
+    assert_eq! (v1_iter <- next$) (Some &3)
     assert_eq! (v1_iter <- next$) None
 
     for val in v1 <- iter$:                 // `for` calls next until None
@@ -5241,7 +5303,7 @@ Got: 2
 Got: 3
 ```
 
-`v1 <- iter$` makes an iterator over references to the vector's elements — `Some (&1)`, a reference, because `iter` borrows — and each `next$` advances it, which is why `v1_iter` is `mut`. A `for` loop is exactly this: it calls `next` until `None`, and does not need the `mut` because it takes the iterator by value and does its own advancing. Three ways to make an iterator from a collection: `iter$` yields `&T`, `iter_mut$` yields `&mut T`, and `into_iter$` consumes the collection and yields `T`.
+`v1 <- iter$` makes an iterator over references to the vector's elements — `Some &1`, a reference, because `iter` borrows — and each `next$` advances it, which is why `v1_iter` is `mut`. A `for` loop is exactly this: it calls `next` until `None`, and does not need the `mut` because it takes the iterator by value and does its own advancing. Three ways to make an iterator from a collection: `iter$` yields `&T`, `iter_mut$` yields `&mut T`, and `into_iter$` consumes the collection and yields `T`.
 
 ### Consumers and adaptors
 
@@ -5407,7 +5469,7 @@ fn main$:
 4 Some("apple") ["APPLE", "BANANA", "CHERRY", "DATE"] [10, 12, 12, 8]
 ```
 
-> **Harsh —** One or two links stay on their line when the line fits in 72 columns; three or more go vertical, one `<-` per line, every arrow under the first. A `=` always ends its line before a vertical chain begins, never starts one. A closure whose body is a block is written as a *paren block*: the `(` ends the arrow's line, the parameters sit on their own line, the body beneath them, and the `)` closes on a line of its own at the closure's column — the parentheses are transparent to the layout, and the block inside ends where they end. `hrs fmt` puts all of this where it belongs; write it however it comes out of your fingers, save, and read the result.
+> **Harsh —** One or two links stay on their line when the line fits in 72 columns; a single link stays whatever its length, and when long arguments make it long they go beneath the method, one unit past it, the chain moved after its `=`; three or more go vertical, one `<-` per line, every arrow under the first. A `=` always ends its line before a vertical chain begins, never starts one. A closure whose body is a block is written as a *paren block*: the `(` ends the arrow's line, the parameters sit on their own line, the body beneath them, and the `)` closes on a line of its own at the closure's column — the parentheses are transparent to the layout, and the block inside ends where they end. `hrs fmt` puts all of this where it belongs; write it however it comes out of your fingers, save, and read the result.
 
 ## 13.3 Where the pipes come in
 
@@ -6382,9 +6444,30 @@ fn main$:
 
 ```text
 $ hrs run
+warning[unused_parens]: unnecessary parentheses around closure body
+  --> /tmp/harsh-book/16_matrices_regression/src/main.hrs:10:38
+   |
+10 |     let x = Matrix.from_rows (list~ (vec! 1.0 h) for h in hours)
+   |                                      ^
+12 |     // Julia's `β = X \ y`: for a tall matrix, the least-squares fit.
+   |         ^
+   = note: in the expansion of `hrs_std.g~` called at /tmp/harsh-book/16_matrices_regression/src/main.hrs:12:56
+12 |     // Julia's `β = X \ y`: for a tall matrix, the least-squares fit.
+   = note: `#[warn(unused_parens)]` (part of `#[warn(unused)]`) on by default
+   = help: remove these parentheses (hrs 10:38)
+
+warning[unused_parens]: unnecessary parentheses around closure body
+  --> /tmp/harsh-book/16_matrices_regression/src/main.hrs:10:37
+   |
+10 |     let x = Matrix.from_rows (list~ (vec! 1.0 h) for h in hours)
+   |                                     ^
+   |                                                ^
+   = help: remove these parentheses (hrs 10:37)
+
 score = 47.20 + 4.37 × hours
 residual 1.76
 7 hours: 77.8
+hrs: 0 error(s), 2 warning(s)
 ```
 
 This is linear regression: a straight line through data that does not lie on one. Given students' hours and scores, find the intercept and slope that fit best.
@@ -6539,7 +6622,7 @@ fn main$:
 
 ```text
 $ hrs run
-thread 'main' panicked at main.rs:4:20:
+thread 'main' (20892) panicked at main.rs:4:20:
 DimensionMismatch: matrix A has dimensions (2, 3), matrix B has dimensions (2, 3)
 ```
 
@@ -6604,7 +6687,7 @@ $ hrs test
 running 1 test
 test target/src/lib.rs - add_one (line 10) ... ok
 
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.17s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.07s
 ```
 
 `cargo doc --open` renders every `///` and `//!` in the crate as HTML, with the Markdown inside them — headings, code blocks, links — laid out. The conventional sections are `# Examples`, `# Panics` (when the function can), `# Errors` (what `Err`s it returns) and `# Safety` (for `unsafe` functions). The example in the `///` is Harsh, like everything else in the file, and `cargo test` *runs it* — every code block in a doc comment is a test, so documentation cannot drift from the code without failing the build.
@@ -6743,6 +6826,18 @@ members = ["adder", "add_one"]
 ```
 
 and each member is an ordinary package in its own directory, depending on its siblings by path (`add_one = { path = "../add_one" }`). Run `hrs build` or `hrs run` in the member you want: `hrs` first transpiles the Harsh libraries it depends on by path, each only when its sources changed, and cargo then builds them all. A library written in Rust is cargo's, and needs nothing from `hrs`.
+
+At the workspace's root, `hrs build`, `hrs check`, `hrs test`, `hrs lint`, `hrs fmt` and `hrs cargo …` go through the members in the order `members` lists them (a trailing `*` takes every package in that folder; `exclude` leaves one out). Each Harsh member is built by `hrs` in its own folder, each Rust member by cargo, and `hrs fmt` skips the Rust ones. The first failure stops the run:
+
+```console
+$ hrs test
+hrs: workspace member adder
+...
+hrs: workspace member add_one
+...
+```
+
+`hrs run` acts on one program, so at the root it is refused, and the message names the members: run it in the one you want.
 
 ## 17.5 Installing binaries
 
@@ -7005,8 +7100,8 @@ fn main$:
 ```
 
 ```text
-thread 'main' panicked at refcell_panic.hrs:7:
-already borrowed: BorrowMutError
+thread 'main' (21229) panicked at refcell_panic.hrs:7:
+RefCell already borrowed
 ```
 
 Two `borrow_mut$` guards alive at once is exactly what the compiler forbids for `&mut`, and `RefCell` panics with `already borrowed`. The rules did not change; only when they are checked did. Use `RefCell` when you know the code respects the rules and the compiler cannot see it — a value mutated through shared handles, a mock object recording calls in a test — and accept that the check has moved from build time to the first run that violates it.
@@ -7028,10 +7123,10 @@ struct Node
 fn main$:
     let leaf =
         Rc.new (Node\
-            value = 3
-            parent = RefCell.new (Weak.new$)
-            children = RefCell.new (vec!$)
-        )
+                    value = 3
+                    parent = RefCell.new (Weak.new$)
+                    children = RefCell.new (vec!$)
+               )
     println!
         "leaf strong = {}, weak = {}"
         (Rc.strong_count (&leaf))
@@ -7040,10 +7135,10 @@ fn main$:
     do:
         let branch =
             Rc.new (Node\
-                value = 5
-                parent = RefCell.new (Weak.new$)
-                children = RefCell.new (vec! (Rc.clone (&leaf)))
-            )
+                        value = 5
+                        parent = RefCell.new (Weak.new$)
+                        children = RefCell.new (vec! (Rc.clone (&leaf)))
+                   )
         *leaf <- parent <- borrow_mut$ = Rc.downgrade (&branch)
         println!
             "branch strong = {}, weak = {}"
@@ -7206,15 +7301,14 @@ fn main$:
 
 ```text
 error[E0382]: borrow of moved value: `val`
-  --> channel_moved.hrs:10:26
+  --> channel_moved.hrs:10:27
    |
  8 |         let val = String.from "hi"
    |             --- move occurs because `val` has type `String`, which does not implement the `Copy` trait
  9 |         tx <- send val <- unwrap$
    |                    --- value moved here
 10 |         println! "val is {val}"        // val was moved into the channel
-   |                          ^^^^^ value borrowed here after move
-   = help: consider cloning the value if the performance cost is acceptable (hrs 9:23)
+   |                           ^^^ value borrowed here after move
 ```
 
 `send` took `val`; using it afterwards is chapter 4's error, and it is the right error, because the receiving thread may have modified or dropped the value by now. In a language where sending is a copy of a pointer, this compiles and the two threads quietly share a string.
@@ -7302,14 +7396,14 @@ fn main$:
 ```
 
 ```text
-error[E0277]: `Rc<Mutex<i32>>` cannot be sent between threads safely
+error[E0277]: `Rc<std::sync::Mutex<i32>>` cannot be sent between threads safely
   --> mutex_rc_err.hrs:12:35
    |
 12 |         let handle = thread.spawn move ||:
    |                      ------------ required by a bound introduced by this call
-   |                                   ^^^^^^^^ `Rc<Mutex<i32>>` cannot be sent between threads safely
+   |                                   ^^^^^^^^ `Rc<std::sync::Mutex<i32>>` cannot be sent between threads safely
    |                                   ------- within this `{closure@mutex_rc_err.hrs:13:36: 13:43}`
-   = help: within `{closure@mutex_rc_err.hrs:13:36: 13:43}`, the trait `Send` is not implemented for `Rc<Mutex<i32>>`
+   = help: within `{closure@mutex_rc_err.hrs:13:36: 13:43}`, the trait `Send` is not implemented for `Rc<std::sync::Mutex<i32>>`
    = note: required because it's used within this closure (hrs 12:35)
    = note: required by a bound in `spawn`
 ```
@@ -8042,9 +8136,9 @@ error[E0005]: refutable pattern in local binding
  3 |     let Some x = some_option_value
    |         ^^^^^^^ pattern `None` not covered
    = note: `let` bindings require an "irrefutable pattern", like a `struct` or an `enum` with only one variant
-   = note: for more information, visit https://doc.rust-lang.org/book/ch18-02-refutability.html
+   = note: for more information, visit https://doc.rust-lang.org/book/ch19-02-refutability.html
    = note: the matched value is of type `Option<i32>`
-   = help: you might want to use `let else` to handle the variant that isn't matched (hrs 3:35)
+   = help: you might want to use `let...else` to handle the variant that isn't matched (hrs 3:35)
 ```
 
 `let Some x = value` has nowhere to go when `value` is `None`, and the help offers the fix from chapter 6, `let … else`. The other direction is a warning rather than an error: `if let x = 5` is legal and pointless, and the compiler says so.
@@ -9203,7 +9297,213 @@ rendered 3
 
 `for item in items { … }` there is `rsx!`'s own, not Harsh's: inside the braces the macro's grammar rules, and a hole is only for what you want written in Harsh. A hole may hold a macro call with braces of its own, and holes inside those.
 
-Holes follow a few conventions. A hole always closes, with `:@`, even at the end of a line. A literal `@:` in the macro's own language is written `@@:`. `hrs-from` writes the holes when it converts a Rust file, turning each piece of Rust inside a body into Harsh. And a Harsh macro whose expansion contains such a call writes the holes too, since what it produces is Harsh.
+Holes follow a few conventions. A hole always closes, with `:@`, even at the end of a line. A hole's code is Harsh, so a mark inside one of its strings is text: `@: format! "from:@{domain}" :@` closes at its last `:@`. A literal `@:` in the macro's own language is written `@@:`. `hrs-from` writes the holes when it converts a Rust file, turning each piece of Rust inside a body into Harsh — in its strings' format slots too, `"Hello {@: name <- to_uppercase$ :@}"`. And a Harsh macro whose expansion contains such a call writes the holes too, since what it produces is Harsh.
+
+### Where the holes go
+
+**A hole is an expression that calls on something bound outside the DSL's own language — a variable, a function, a name the DSL itself binds — or that uses an operator, `.` and `::` included; a single word is exempt.** `{count}` stays as it is; `{@: items <- len$ :@}`, `{@: 3 + 5 :@}` and `{@: item <- name :@}` are holes. Everything else is the library's language, copied as written. You find them in a handful of places, and once you have seen them you will find them in any library — the strings' slots first:
+
+- **A value after a name and `:` or `=`** — an attribute in `rsx!` or `view!`, a key in `json!`, a static's value in `thread_local!` or `lazy_static!`, a constant in `bitflags!`: `onclick: @: move |_| count += 1 :@`.
+- **A brace pair of its own** — a child in `view!` or Yew's `html!`: `{@: move || count <- get$ + 1 :@}`.
+- **A format slot in the DSL's strings** — Dioxus: `"Twice: {@: count$ * 2 :@}"`.
+- **A splice in parentheses** — Maud: `(@: items <- len$ :@)`; the parentheses are Maud's, the hole inside them.
+- **The DSL's own control flow** — after `for … in` and `if`, up to the body's brace: `if @: count$ > 3 :@ {`; Yew's `{ for @: … :@ }`, Maud's `@for` and `@if`.
+- **An arm** — `select!`'s pattern, future and handler, as in 20.4.
+
+What is never a hole: a single word — `{count}` and `(title)` read the same in both languages — a type before a `=`, and the library's own words (`const`, `@for`, an attribute inside the body), however much they look like code. A macro whose stream is a list of values is no DSL at all: it is juxtaposed, like `vec!` and `format!`, and so is `tracing`'s `info!`, whose fields are each one argument.
+
+A JSON value built with serde_json: a hole after each key whose value is code; `"age": 36` and the array of strings stay as written.
+
+`Cargo.toml`
+
+```text
+[dependencies]
+serde_json = "1"
+```
+
+`src/main.hrs`
+
+```rust harsh
+use serde_json.json
+
+fn main$:
+    let name = "Ada"
+    let langs = vec! "Rust" "Harsh"
+    let v = json! {{
+        "name": @: name <- to_uppercase$ :@,
+        "age": 36,
+        "langs": langs,
+        "count": @: langs <- len$ + 1 :@,
+        "tags": [{ "id": 1, "main": @: langs <- first$ :@ }]
+    }}
+    println! "{v}"
+```
+
+```text
+$ hrs run
+{"age":36,"count":3,"langs":["Rust","Harsh"],"name":"ADA","tags":[{"id":1,"main":"Rust"}]}
+```
+
+Statics, with `thread_local!` and `lazy_static!`: the type before `=` is the macro's, the value after it is a hole — a block when it takes several statements.
+
+```rust harsh
+use std.cell.RefCell
+
+thread_local! {
+    static LOG: RefCell<Vec<String>> = @: RefCell.new (Vec.with_capacity 8) :@;
+}
+
+fn main$:
+    LOG <- with (|l| l <- borrow_mut$ <- push ("start" <- to_string$))
+    LOG <- with (|l| println! "{:?}" (l <- borrow$))
+    ()
+```
+
+```text
+["start"]
+```
+
+`Cargo.toml`
+
+```text
+[dependencies]
+lazy_static = "1"
+```
+
+`src/main.hrs`
+
+```rust harsh
+use lazy_static.lazy_static
+use std.collections.HashMap
+
+lazy_static! {
+    static ref NAMES: HashMap<u32, &'static str> = @: do:
+        let mut m = HashMap.new$
+        m <- insert 0 "zero"
+        m <- insert 1 "one"
+        m :@;
+    static ref COUNT: usize = @: NAMES <- len$ * 2 :@;
+}
+
+fn main$:
+    println! "{} {}" (NAMES[&1]) (*COUNT)
+```
+
+```text
+$ hrs run
+one 4
+```
+
+`bitflags!` declares in its own grammar: `struct Perms: u32`, the `const` lines and the derive above them are the macro's, and only a value that is code is a hole.
+
+`Cargo.toml`
+
+```text
+[dependencies]
+bitflags = "2"
+```
+
+`src/main.hrs`
+
+```rust harsh
+use bitflags.bitflags
+
+bitflags! {
+    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+    pub struct Perms: u32 {
+        const READ = 0b001;
+        const WRITE = 0b010;
+        const ALL = @: Self.READ <- bits$ | Self.WRITE <- bits$ :@;
+    }
+}
+
+fn main$:
+    let p = Perms.READ | Perms.WRITE
+    println! "{:?} {}" p (p == Perms.ALL)
+```
+
+```text
+$ hrs run
+Perms(READ | WRITE) true
+```
+
+Maud's markup splices its values in parentheses; `@for` and `@if` are its control flow.
+
+`Cargo.toml`
+
+```text
+[dependencies]
+maud = "0.27"
+```
+
+`src/main.hrs`
+
+```rust harsh
+use maud.(html, Markup)
+
+fn page (title: &str) (items: &[&str]) -> Markup:
+    html! {
+        h1 { (title) }
+        p.intro { "Items: " (@: items <- len$ :@) }
+        a href=(@: format! "/items/{}" (items <- len$) :@) { "next" }
+        ul {
+            @for item in items {
+                li { (@: item <- to_uppercase$ :@) }
+            }
+        }
+        @if @: items <- is_empty$ :@ {
+            p { "none" }
+        }
+    }
+
+fn main$:
+    println! "{}" (page "Fruit" (&["apple", "pear"]) <- into_string$)
+```
+
+```text
+$ hrs run
+<h1>Fruit</h1><p class="intro">Items: 2</p><a href="/items/2">next</a><ul><li>APPLE</li><li>PEAR</li></ul>
+```
+
+And the contrast: `tracing`'s macros take a list, so they are called as functions are, each field isolated.
+
+`Cargo.toml`
+
+```text
+[dependencies]
+tracing = "0.1"
+tracing-subscriber = "0.3"
+```
+
+`src/main.hrs`
+
+```rust harsh
+use tracing.(debug, info)
+
+fn main$:
+    tracing_subscriber.fmt$
+        <- without_time$
+        <- with_ansi false
+        <- with_max_level tracing.Level.DEBUG
+        <- init$
+    let user = "ada"
+    let items = vec! 1 2 3
+    info!
+        (user = %user)
+        (count = items <- len$)
+        "processed {} items"
+        (items <- len$)
+    debug! (target: "app") (?items) "starting"
+    ()
+```
+
+```text
+$ hrs run
+ INFO dsl_tracing: processed 3 items user=ada count=3
+DEBUG app: starting items=[1, 2, 3]
+```
+
+The guide to macros has the same catalogue beside each library's own Rust, with Leptos, Dioxus and Yew's markup — the shapes above, in the frameworks this chapter's `view!` and `rsx!` stand in for.
 
 ## 23.9 Parentheses, once and for all
 
@@ -9622,6 +9922,7 @@ Point { x: 1.0, y: 2.0 } Size { w: 3.0, h: 4.0 } 1.5 9.14 5 12 8 big counts: 2 4
 - An enum is a union of variants, each one of the three forms spelled as that struct is: `Empty`, `Circle f64`, `Rect` with fields beneath or `Rect\ w: f64, h: f64`. (§6.1)
 - A literal is the name, `\`, and `field = value` — inline to the end of its line or its group's `)`, or a field per line beneath. `..base` last. A literal that is one element of a tuple has its own parentheses. (§5.1)
 - A literal inside a literal on one line is parenthesised, so the reader sees where it ends: `inner = (Animal\ name = n), good = true`; or the outer literal goes one field per line, where the line ends the inner one. A comma ending a field line is refused. (§5.1)
+- A literal passed as an argument is isolated, a constructor's too: `cards <- push (Card\ id = 1)`, `Ok (View\ title = t)`; written bare it is refused, the isolated form named; over several lines its fields stand one unit past its name and its `)` under its `(`. (§5)
 - `impl Point`, `trait Area`, `mod geometry`, `extern "C"` — headers with no mark, their items beneath. (§5.3, §10.2, §7.2, §20.1)
 - A `where` clause on one line needs nothing; over several lines it is bracketed, `[where T: Debug]`, on its own line under the signature. (§10.2)
 - Attributes apply inside their brackets: `#[derive Debug Clone]`, `#[cfg (feature = "x")]`. (§5.2)
@@ -9637,12 +9938,12 @@ Point { x: 1.0, y: 2.0 } Size { w: 3.0, h: 4.0 } 1.5 9.14 5 12 8 big counts: 2 4
 
 - `|x| x + 1` inline; `|x|:` with the body beneath; `|x: i32| -> i32:` fully annotated; `move ||:` capturing by value. (§13.1)
 - A closure's type is the trait applied to its parameter types: `Fn i32 -> i32`, `Fn (i32) (i32) -> i32`, `FnOnce$`. (§13.1)
-- A chain of one or two links stays on its line within 72 columns; three or more go vertical, every `<-` under the first, and `=` ends its line before one begins. A block-bodied closure in a chain is a paren block: `(`, the parameters, the body, `)` on its own line. (§13.2)
+- A chain of one or two links stays on its line within 72 columns, a single link at any length (long arguments go beneath its method); three or more go vertical, every `<-` under the first, and `=` ends its line before one begins. A block-bodied closure in a chain is a paren block: `(`, the parameters, the body, `)` on its own line. (§13.2)
 - `x |> f` hands `x` to `f`; `f <| x` the same from the right; both sides are atoms, and a chain or a closure is isolated first. Fewer values than the function takes defer the rest as one flat closure — `|>` fills from the left, `<|` from the right, both leave a hole in the middle — and the result is a value. A project function given too many is an error. (§13.3)
 
 ## Macros and markup — chapter 23
 
-- `macro_rules! twice` holds its arms beneath, no mark; a matcher is a parameter list, `( ($x:expr) )`; a transcriber is a block, `=> do:`. Harsh's own macros are written `macro_rules~`, called with `~`, and expanded by `hrs`: they are gone from the Rust. (§20.5, chapter 23)
+- Harsh's own macros are written `macro_rules~ twice`, their arms beneath with no mark; a matcher is a parameter list, `( ($x:expr) )`; a transcriber is a block, `=> do:`. They are called with `~` and expanded by `hrs`: they are gone from the Rust. A `macro_rules! twice { … }` in a Harsh file is Rust's, copied byte for byte; its calls are Harsh calls, `twice! n`. (§20.5, chapter 23)
 - A macro's own language — `select!`'s arms, `view!` markup, an `rsx!` tree — goes in braces, as Rust, byte for byte; the Harsh inside is a hole, `@: … :@`, always closed. (chapter 23)
 - A fenced block in a `///` comment is Harsh, and the tool that runs it gets the Rust it expects. (§14.2)
 

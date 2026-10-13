@@ -2,6 +2,125 @@
 
 Sizing is relative: XS, S, M, L. "Blocked by" matters more than the estimate.
 
+## First: waiting on the user's ruling
+
+- **`take (1)..(split n) 2`.** It becomes `take(1)..(split(n), 2)`, Rust that
+  does not compile (also in 0.8.0). Application binds tighter than `..`
+  (`hrs-from` writes `f(x)..g(y)` as `f x..g y`, `min(a - b)..` as
+  `min (a - b)..`), so by that rule it would be `take(1)..(split(n))(2)`,
+  as `x..(split n) 2` is `x..(split(n))(2)`: the pseudo-tuple follows no
+  rule. Written `take (1..(split n)) 2` or `take 1..(split n) 2`, it is
+  right. Recommended (2026-10-13): keep the precedence and make this case
+  follow it; reading `(x)..(y)` as one range would give `f (x)..(y)` a
+  meaning `f x..y` does not have.
+- **`a[i, j]` beside `a[(i, j)]`** (audit item D): built without his ruling;
+  both give `a[(i, j)]`. `a[i, j]` is Julia's, which `hrs_std` follows; Rust
+  has only `a[(i, j)]`, and `hrs-from` writes that. Recommended: keep both,
+  `a[i, j]` the form the books teach.
+- **`&a[range, range]` as a matrix view** (his, 2026-09-27: reviewed last).
+  An error since 0.1.37; `a <- view (0..2) (..)` borrows a part,
+  `a <- slice …` copies one. To decide once he has used matrices: whether the
+  index form comes back, only if a sound way is found, and a clearer message
+  than rustc's meanwhile. One sound way, sketched 2026-10-13: the transpiler
+  rewrites the syntax, no `Index` involved -- `&a[r, c]` to `a.view(r, c)`,
+  `&mut a[r, c]` to `a.view_mut(r, c)`, `a[r, c]` with a range to
+  `a.slice(r, c)`, a copy: Julia's own split between `a[1:2, :]` and
+  `@view`, told from the syntax alone (a range in a comma index).
+
+## Where things stand (2026-10-13)
+
+0.8.4 is the release in hand: the user's ruling on a multi-line literal argument's layout, `hrs` at a workspace's root, a Rouge lexer. 0.8.3 was documentation only. The website is
+live at https://harsh-lang.com/. `RELEASE.md` lists every product with its
+version, and publishing each is the user's. The changelog has every
+release.
+
+## Open
+
+### His to run
+
+- **Publishing**: crates.io, GitLab and GitHub, the VS Code Marketplace, the
+  website, in `RELEASE.md`'s order. The kernel's PyPI page says `python3 -m`;
+  the tree's README says `python -m`, for the next kernel version.
+- **On his Mac**: Miri over `hrs_std` before publishing it; hover,
+  go-to-definition and completion through the real rust-analyzer (whether it
+  takes the distribution through `cargo.extraArgs`).
+- **Zed**: the two Enter causes in `ZED-FINDINGS.md`; pushing
+  `tree-sitter-harsh` and setting `zed-harsh/extension.toml`'s `rev`; the
+  registry PR.
+
+- **Harsh's own colours on GitLab**: the Rouge lexer in `editors/rouge-harsh/`
+  is ready, with its spec and samples, checked against Rouge's suite; the pull
+  request to `rouge-ruby/rouge` is his (its README has the steps). GitLab
+  follows once Rouge releases it.
+- **Harsh on GitHub (Linguist)** waits on usage: Linguist takes an extension
+  once GitHub Search indexes 2,000 files of it in a year, forks excluded and
+  spread across many repositories (its rule as of 2026-10-13; it was about
+  200 repositories when first noted). The entry is drafted in
+  `editors/linguist/README.md`. Meanwhile a repository can show its `.hrs`
+  as Rust with `*.hrs linguist-language=Rust` in `.gitattributes`.
+
+### Next to last: a Harsh crate registry
+
+**Chosen (the user, 2026-09-27): Harsh's own registry, served as static
+files** -- cargo's sparse alternative-registry index on GitHub Pages
+(`harsh-lang.com/registry/`), packages (`.hrs` sources and `Cargo.toml`) as
+GitHub release downloads with checksums in the index, `hrs publish` with a
+GitHub token, `hrs` transpiling a registry dependency's Harsh before cargo
+builds it, so its `~` macros reach the user's code. Why not crates.io: `hrs
+export` unfolds `~` macros away, so a Harsh library shared as Rust loses them.
+`hrs export` to crates.io stays the way to make *Rust* crates from Harsh.
+Design document first (`REGISTRY-DESIGN.md`), then the build.
+
+
+An online repository of Harsh crates, the user's request of 2026-09-17,
+placed at the end deliberately. It is not a prerequisite for anything above:
+a Harsh crate published to crates.io through `hrs export` is a Rust crate
+that can also ship its `.hrs` sources in the package; cargo vendors them,
+and `hrs` finds a crate's `macro_rules~` definitions (and any `harsh/dsl.hrs`)
+there. So Harsh crates live on crates.io as Rust crates with their Harsh
+alongside, and a registry of Harsh's own is a convenience for the day the
+ecosystem is large enough to want one.
+
+### Last: analytics for the website (the user, 2026-10-12)
+
+Add analytics to https://harsh-lang.com/ so the project can see how it is
+used: the number of visits and visitors, which pages are read (the Book, the
+guide, the Install page, the playground), where readers come from (search,
+links, the repositories), and roughly from which countries and devices.
+Placed last on the roadmap at his request: nothing above waits on it.
+
+**What constrains it.** The site is static, built by CI from `site/`
+(Dioxus, written in Harsh) and served by GitHub Pages, so there is no server
+of ours and no access log to read. Counting therefore means a small script on
+every page, sending each visit to a counting service. Pages Harsh does not
+build itself, like the Book, the guide and the other rendered documents, need
+the same script in their page chrome (`docs/page-head.html`).
+
+**To decide when it comes up.** These are his calls, made with the choices
+in front of him and their current terms checked then:
+- **Which service.**
+  - A privacy-friendly counter, cookie-free with no personal data. GoatCounter
+    is free for open-source projects, and Plausible, Umami and Cloudflare Web
+    Analytics are the same kind. None of them needs a consent banner in most
+    places.
+  - Or Google Analytics, which tells more, but sets cookies and so needs a
+    consent banner for visitors in the EU and UK.
+- **What is counted beyond page views**, for example clicks on the Install
+  page's commands, the `.vsix` and Harshlings downloads, and the
+  playground's Run button.
+- **Who sees the numbers:** only him, or a public dashboard.
+
+**What the build adds, whichever service.**
+- The script in the site's `index.html` and in the rendered documents' page
+  head, loaded only on the live domain, so local runs and CI checks are not
+  counted.
+- A short privacy note on the site saying what is counted.
+- A `check.sh` gate that every built page carries the script exactly once.
+- `site/DEPLOY.md` and `RELEASE.md` saying where the numbers are read.
+
+Since `harsh-lang.com` is a custom domain, the service's own setup may also
+ask for a DNS record or a site code, which is his to add.
+
 ## Done
 
 - Language frozen and self-hosting: transpiler, converter, remapper, driver, watch mode
@@ -15,15 +134,28 @@ Sizing is relative: XS, S, M, L. "Blocked by" matters more than the estimate.
 - Harsh derives (0.1.29), mirroring Rust's: `#[proc_macro_derive~ Name]` with optional helper attributes, called `#[derive~ Name]`
 - Language guide doubled — tutorial plus every construct in every form — with every snippet transpiled, compiled and run
 - Driver verified on a Mac with rustc 1.97 and current cargo: `new`, `build`, `run`, remapping. Manifest guard (refuses to build without a target under `target/src/`), always-on transpile report, equal-mtime staleness, progress bar suppressed; remapper locates zero-width insertion spans; application-vs-`<-` precedence stated in the guide and pinned by a test
+- `docs/RETROSPECTIVE.md` (2026-10-13): the history, the tools, the oracles, the principles.
+- Everything since: `CHANGELOG.md`, release by release.
 
-## Open, in order (2026-09-25)
+## Settled
 
-**Where things stand.** 0.1.54 is delivered (2026-09-29); 0.1.32 is on
-GitLab, and the website is live at https://harsh-lang.com/. `RELEASE.md` has
-publishing and installing every product, in order; publishing is the
-user's. 0.1.30 and 0.1.31 were handed over and are spent. The design questions
-are gathered in the development notes and wait on his use of what exists -- he decides
-after a few days with it. What needs no decision is done, or listed last below.
+- **`<-` stays member access.** Considered and declined: `~`, `\`, `#`, `->`, `-<`, taking `.` back from paths. A future stream-binding feature, when it has a problem statement, takes a symbol that is not a Rust token — `<<-` or `=<` are the candidates (`<<-` cannot be mistyped into `<=`).
+- **Brackets index; parentheses isolate.** `v[0]` and `v [0]` are the same index; an array passed as an argument is `f ([1, 2])`. A spaced `[` never applies. Decided 2026-09-11 when Harshlings' runner met `<- args [..]`. The same day: a *tight* `[..]` is part of its atom, so `f arr[1]` is `f(arr[1])` (it used to be `f(arr)[1]`, silently), and a spaced `[` inside an application is refused with both spellings named.
+- **The arity table is for the pipes alone.** Decided, and recorded as a rule in `docs/GOVERNANCE.md`. Proposals to read it from any other feature are declined.
+- **An inline `\` field list reads to its group's `)`; the transpiler never reads a type to parse a line.** `Point\ x = 1, msg` — grouped or not — is one literal with the shorthand field `msg`; whether `msg` is a field `Point` has is rustc's question, and rustc answers it by name. A rule that ended the literal "once the fields are satisfied" would need the definition of `Point`, which may be in another crate, and is not decidable even then (`..base`). Considered and declined 2026-09-10. A literal that is one element of a tuple takes its own parens, `((Point\ x = 1), msg)`, and `hrs-from` writes that form. The editor's Enter after a trailing macro `!` follows the same discipline: name-blind, from the line alone.
+
+## Principles that decide new items
+
+- Harsh is a superset of Rust: it states rules only for what it changes, and Rust's rules hold everywhere else.
+- Rules are simple bricks applied recursively, not big rules with exceptions.
+- Strict over permissive. There is a converter for translating; the language does not need to be forgiving.
+- Verify against a real compiler. Keep the round trip byte-exact. One change at a time; archive after each green.
+
+## For the record
+
+What was planned, built and fixed before 2026-10-13, kept as it was written.
+Struck items are done; an item not struck below is done too unless the open
+list above names it (checked 2026-10-13).
 
 ### `Hrs.toml` -- Harsh's own manifest: built 2026-10-03 (0.3.0)
 
@@ -120,7 +252,8 @@ cheat sheet (`mem.size_of<u32>$`, `parse<i32>$`, `sum<i32>$` rows);
 tests written the old way (the error finds them); the converter, which must
 write `.<T>` for Rust's `::<T>`; a test of the refusal and of each form.
 
-### Waiting on the user, after his testing
+### The open list of 2026-09-25, as it stood
+
 
 - **For his review: `a[i, j]` beside `a[(i, j)]`** (audit item D). Built
   without his ruling: `a[i, j]` reads one matrix element and is written to
@@ -159,7 +292,7 @@ write `.<T>` for Rust's `::<T>`; a test of the refusal and of each form.
   a file does not transpile, first-release scope.
 - **Zed** -- the two Enter causes in `ZED-FINDINGS.md`, then the registry PR:
   his editor.
-- **sr-auto** -- the hand-written rewrite: his to run.
+- ~~**sr-auto**~~ -- dropped 2026-10-13: SR-Auto is no longer part of the project (the user: enough working test projects).
 - **Publishing**, always his. The Jupyter kernel is on PyPI (`harsh-kernel` 0.1.3, 2026-09-27); its page still says `python3 -m` -- the tree's README says `python -m`, for the next kernel version.
 - ~~`try_solve`/`try_inv` in `hrs_std`~~ -- built 2026-09-29 (hrs_std 0.1.4, harsh-lang 0.1.54), the Julia-style `solve`/`inv` kept beside them.
   `inv` stay Julia's (a panic on a singular matrix, as Julia throws), and the
@@ -186,7 +319,8 @@ check); the matcher ruling's leftovers (the kernel's test).
   `site/DEPLOY.md`. Next: his changes; the first CI deploy; static generation
   (`dx build --ssg`) for SEO; a custom domain; the logo as an SVG.
 
-### Open, needing no decision
+### Open, needing no decision, as it stood in September
+
 
 
 
@@ -220,10 +354,11 @@ check); the matcher ruling's leftovers (the kernel's test).
   `tree-sitter-harsh` is pushed and `zed-harsh/extension.toml`'s `rev` set to
   that commit (the user's). Left: the guide's DSL chapter and its precedence
   table.
-- **A real Leptos build** -- not possible in the sandbox (rustc 1.75; Leptos
+- ~~**A real Leptos build**~~ -- dropped with SR-Auto, 2026-10-13 (Leptos's DSL is compiled against the real crate in `tests/dsl_libraries.rs` since 0.7.5). Was: not possible in the sandbox (rustc 1.75; Leptos
   needs newer): to try on the user's Mac or in CI.
 
-### Last
+### Last, as it stood in September
+
 
 - **Review: `&a[range, range]` as a view** (the user, 2026-09-27: an error
   for now, reviewed last). Since 0.1.37 it does not compile -- a part of a
@@ -238,7 +373,15 @@ check); the matcher ruling's leftovers (the kernel's test).
 *(The detailed list this replaces -- the DSL build plan of 2026-09-22 and the
 items done since -- is kept in the handover and the changelog.)*
 
-## Known bugs, open — fix before the next release that touches the converter
+### Known bugs of September -- all fixed (checked 2026-10-13)
+
+Checked again on 2026-10-13 with hrs 0.8.3: the converter keeps `Home {}`,
+writes `#[route "/"]` (parentheses only around an argument of several tokens,
+`#[cfg (feature = "x")]`), spaces comparisons (`i < cs <- len$ && n > 2`),
+writes `&text (x)` tight, and reads `v[0].1` back; the tests once ignored
+(`converter_writes_an_if_with_a_continued_string_as_a_field_value`,
+`converter_writes_an_if_as_a_macro_argument`) run, none ignored. The
+width-reflowed layout was explained and fixed 2026-09-25 (`format_if_sound`).
 
 - ~~**Matrix views undefined behaviour under Stacked Borrows**~~ -- **fixed
   2026-09-27 (0.1.37, `hrs_std` 0.1.3)**: views are values (`View`,
@@ -294,7 +437,7 @@ items done since -- is kept in the handover and the changelog.)*
   `Project::transpile` transpiles such libraries first, recursively, each
   only when stale (`a_harsh_app_uses_a_harsh_library_by_path`); chapter 17
   corrected to say what `hrs` does. `hrs` at a workspace's root, without a
-  `[package]`, is still not a command -- run it in a member.
+  `[package]`, was still not a command -- built 2026-10-13 (0.8.4).
 
 - **`hrs-from`: an `if` as a struct literal's field value, with a string
   continued over lines in a branch** (found 2026-09-24 by the self-host in
@@ -365,9 +508,9 @@ items done since -- is kept in the handover and the changelog.)*
   `converter_keeps_an_item_after_an_attribute_between_doc_comments`, a regular
   test). The width-reflowed layout noted with it is the formatter's
   `CHAIN_WIDTH`, the likely mechanism, still not isolated.
-- **The retrospective — `docs/RETROSPECTIVE.md`.** Opens with the README's two paragraphs on how the work was run (the credit, and the disagreements that held). When the formatter has landed and the tooling is published, a technical document written to draw lessons from: every step from the first session to the last, in order, with what was decided and why and what was undone; every feature of the language and every tool built to implement and support it — transpiler, converter, remapper, driver, language server, editor grammars, book harness, docs pipeline — each with the source files it lives in (`src/lex.rs`, `src/layout.rs`, `src/juxt.rs`, `src/emit.rs`, `src/unbrace.rs`, `src/columns.rs`, `src/driver.rs`, `src/bin/*`, `editors/*`, `book/build.py`, `docs/build.py`, `check.sh`); the oracles and what each one caught; the bugs the Book found; the principles that held and the ones that were amended, with the amendments dated. Sources: every `HANDOVER.md` delivered (each one records a session), `CHANGELOG.md`, `TUTORIAL.md`, `GOVERNANCE.md`, and the test names, which are the change log the compiler enforces. Opening: the README's paragraph on disagreement — the decisions the author made against Claude's first opinion, and the rule that let a disagreement end with an example rather than with whoever spoke last. Written once, at the end, from those records — so keep them complete until then.
+- ~~**The retrospective**~~ -- moved to the open list, 2026-10-13.
 
-## Blocks, real and pseudo: `#…:`, and no mark on an item body — decided 2026-09-12, not yet built
+### Blocks, real and pseudo: decided 2026-09-12; built -- no mark on an item body; `#…:` pseudo blocks designed, then retired 2026-09-23
 
 **The framing, the user's, and it is the reason the rest follows.** `:` and
 `do:` are *openers*, not header terminators: a construct's own shape says
@@ -637,7 +780,7 @@ site. `hrs fmt` can do most of it and `hrs-from` must stop writing the
 colon; the round trip is the oracle. Land it **with** `#…:` so the corpus
 moves once, not twice.
 
-## A Jupyter kernel for Harsh — built 2026-09-19
+### A Jupyter kernel for Harsh — built 2026-09-19
 
 `kernel/` in the tree: a Python wrapper kernel (`harsh_kernel`) that transpiles
 each cell with `hrs` and proxies it to the evcxr Rust kernel over the Jupyter
@@ -658,7 +801,7 @@ each line of the Rust it sends to the cell's line, and rewrites the gutter
 colours kept; tested on evcxr's real report. **Left:** completion via
 `hrs-lsp`, when the language server has types.
 
-## Next week (as of mid-September -- kept for the record; see the open list above)
+### Next week (as of mid-September -- kept for the record; see the open list above)
 
 - ~~**A turbofish head does not apply to a juxtaposed argument.**~~ -- found
   **fixed** on 2026-09-25 (`from_str.<Person> "x"` → `from_str::<Person>("x")`). `from_str.<Person> "…"` and its multi-line form emit `from_str::<Person> "…"` — no call, and rustc's message is about the string, not about the missing application; only `from_str.<Person> ("…")` works. Cause (found 2026-09-12): `juxt::atom_end` accepts a generic list only when the matching `>` is followed by `(` or `.`, which was written for `Vec<i32>` versus the comparison `a < b && c > d`; a juxtaposed argument after `>` fails that test, so the head is never an atom and nothing applies. The rule Harsh states is that a name with its generics is a callee like any other, so this is the rule failing in one of its forms (GOVERNANCE: "a rule holds in every form it applies to"). Fix: accept the list when the `>` belongs to a path segment written `.<…>` — that spelling is unambiguous, since a comparison never follows a dot — and leave the bare `name<…>` case as it is. Pin both directions plus `a < b && c > d`. **And the error**: when a name with generics is followed by something that is not an application, say so — "`from_str.<Person>` is a name with its generics; write `from_str.<Person> arg` to apply it" beats rustc's complaint about the string that follows.
@@ -667,12 +810,12 @@ colours kept; tested on evcxr's real report. **Left:** completion via
 - **Harshlings: an exercise for every edge case decided this week**, so the language's own rules are the ones a learner practises first: the tight index as an atom (`add a[0] a[1]`, `add a[0] (a[1] * 2)`, a tuple of elements), the refused `f arr [1]` and its two spellings, `f ([1, 2])` for an array argument, the written `;` in an inline `do:`, the `\` literal in a tuple, application binding tighter than `<-`, a pipe's sides as atoms, `$` versus `()`, a bare parameter before `->`. Each with the error it produces today as the exercise and the decided spelling as the solution.
 - **The same edge cases into the Book**, where each construct is taught — chapter 2's applying section for the index atom and the refused spaced form, chapter 5 for the literal in a tuple, chapter 13 for the pipes — as verified snippets, so a reader meets the rule where the construct is introduced and not only in the reference. (The user's request, 2026-09-11.)
 
-## Before publishing
+### Before publishing
 
 - **Formatter: a block literal's shape — done 2026-09-10** (the rule below landed in `fmt.rs` and `columns.rs`; the corpus moved with one `hrs fmt`).
 - Was: `let user1 = User\` with the fields one unit past the *statement* is legal and is what the Book's snippets write today, but it hides what belongs to what. The author's rule (2026-09-10): the fields sit one unit past the literal's own column, so either `=` ends its line and `User\` starts the next one with the fields beneath it — the guide's stated style, and what `hrs-from` already writes — or the fields align one unit past `User` on the `=` line. Today `hrs fmt` leaves the first form alone (`fmt --check` on `book/src/05_structs/define.hrs` is a no-op), so this is a re-breaking rule for `fmt.rs`, the same brick as "break after `=` before a multi-line group": once it lands, the Book's snippets move with one `hrs fmt`, and Enter after a line ending in `\` should land one unit past the literal's name (`columns.rs`), not the statement. Verified the same day the Book's literals are not in the formatter's style.
 
-## Procedural macros — paused 2026-09-18; built since (0.1.28-0.1.30) -- kept for the record
+### Procedural macros — paused 2026-09-18; built since (0.1.28-0.1.30) -- kept for the record
 
 Declarative macros are finished. Procedural macros are **paused while the user
 reads into `TokenStream`**; the careful approach is his, and the state is:
@@ -694,6 +837,7 @@ grouped forms carry operators through intact (`(a | b | c)`, `[a | b | c]`,
 fix, or let a macro call take everything to the end of its line as arguments
 -- which costs `let x = m! 1 + 2`, where `+ 2` is the caller's arithmetic
 today.
+*As built (checked 2026-10-13):* a macro is applied like a function, so `my_macro! a | b | c` is still `my_macro!(a) | b | c`, and an argument of several tokens is isolated, `my_macro! (a | b | c)` -- the isolation rule of 2026-10-05.
 
 **Still untested in group 2**: a proc-macro crate actually written in Harsh,
 built and called; the derive and attribute forms applied to Harsh items; a
@@ -705,53 +849,17 @@ crate): works only where the shapes Harsh emits match what that parser wants.
 The general answer is the crate shipping a spelling map (`dsl.hrs`), designed
 in the development tree and not built. Untouched.
 
-## Further out
+### Further out
 
 - ~~Two converter bugs (a brace group after a name)~~ — fixed and pinned, 0.1.12.
 
-- **Publish on crates.io — first of the two below.** `cargo install <crate>` gives anyone the three binaries with one line and no repository; it is packaging what exists, not new code, and it is gated only by the name. The package name stays **`hrust`** (decided: the `h` and the `rust` tell a reader what the package is to Rust; `harsh` is taken on crates.io; the Rust Foundation's policy permits "Rust" in a crate name that refers to compatibility, and the *language* is named Harsh everywhere, which is what the policy is about). **Reversed the evening of 2026-09-10, after `hrust 0.1.0` had been published**: the repository, the mirror, the Marketplace publisher and the extension had all become `harsh-lang`, and one project with one name in four places and another in the fifth was worse than either name; a name without "rust" in it also needs no tolerance from the policy. The crate is **`harsh-lang`** (library crate `harsh_lang`; the binaries stay `hrs`, `hrs-from`, `hrs-remap`, `hrs-lsp`), `hrust 0.1.0` deleted from crates.io the same night, with zero downloads. Then, manifest metadata (`description`, `license = "MPL-2.0"`, `repository`, `readme`, `keywords`, `categories`, `rust-version`), an `exclude` list so editor grammars, notebooks and examples stay in the repository rather than the package, and `cargo publish --dry-run` as the test.
-- **Build-script integration.** The transpiler is already a library. A small `build.rs` that walks `src/**.hrs`, writes the Rust into `OUT_DIR` and lets `main.rs` `include!` it would make a Harsh project a dependency-only affair: `cargo build` alone, no `hrs` binary, for every collaborator and every CI. `include!` is known not to break span mapping. Short of the language server, the largest adoption lever there is. Caveat: a build script transpiles but cannot sit between cargo and the terminal, so on a plain `cargo build` rustc names the generated file; the driver stays the way to get errors on `.hrs` lines, and `hrs` should learn the build-script layout alongside the `[[bin]]` one.
-- **Language server, the rest of it** -- **ruled 2026-09-24: (a), rust-analyzer
+- ~~**Publish on crates.io — first of the two below.**~~ -- done: `harsh-lang` is on crates.io (the name changed from `hrust`). Was: `cargo install <crate>` gives anyone the three binaries with one line and no repository; it is packaging what exists, not new code, and it is gated only by the name. The package name stays **`hrust`** (decided: the `h` and the `rust` tell a reader what the package is to Rust; `harsh` is taken on crates.io; the Rust Foundation's policy permits "Rust" in a crate name that refers to compatibility, and the *language* is named Harsh everywhere, which is what the policy is about). **Reversed the evening of 2026-09-10, after `hrust 0.1.0` had been published**: the repository, the mirror, the Marketplace publisher and the extension had all become `harsh-lang`, and one project with one name in four places and another in the fifth was worse than either name; a name without "rust" in it also needs no tolerance from the policy. The crate is **`harsh-lang`** (library crate `harsh_lang`; the binaries stay `hrs`, `hrs-from`, `hrs-remap`, `hrs-lsp`), `hrust 0.1.0` deleted from crates.io the same night, with zero downloads. Then, manifest metadata (`description`, `license = "MPL-2.0"`, `repository`, `readme`, `keywords`, `categories`, `rust-version`), an `exclude` list so editor grammars, notebooks and examples stay in the repository rather than the package, and `cargo publish --dry-run` as the test.
+- ~~**Build-script integration.**~~ -- declined 2026-10-03 with `Hrs.toml`: no `build.rs` mode, the three intents never need one (see *`Hrs.toml`* above). Was: The transpiler is already a library. A small `build.rs` that walks `src/**.hrs`, writes the Rust into `OUT_DIR` and lets `main.rs` `include!` it would make a Harsh project a dependency-only affair: `cargo build` alone, no `hrs` binary, for every collaborator and every CI. `include!` is known not to break span mapping. Short of the language server, the largest adoption lever there is. Caveat: a build script transpiles but cannot sit between cargo and the terminal, so on a plain `cargo build` rustc names the generated file; the driver stays the way to get errors on `.hrs` lines, and `hrs` should learn the build-script layout alongside the `[[bin]]` one.
+- ~~**Language server, the rest of it**~~ -- built: hover and go-to-definition 0.1.38, completion 0.1.39. Was: **ruled 2026-09-24: (a), rust-analyzer
   behind `hrs-lsp`**, the server staying name-blind: transpile, map a `.hrs`
   position to the generated Rust through the source maps, ask rust-analyzer,
   map the answer back (the last good transpile kept for a file that does not
   transpile). Its design document comes first. `hrs-lsp` exists and formats on type. What rust-analyzer gives that `.hrs` files still don't: types on hover, go-to-definition, inline errors. Decides adoption beyond one person. Needs error recovery in the layout pass (first error currently stops the run) and the source map in both directions. Largest item by far; deserves its own design conversation. Smaller first steps in `hrs-lsp`: `)` as a second on-type trigger so the closing paren of an isolated closure snaps into place; `else` likewise.
-- **Remove the dead `depth` field** from `scanner.c`.
+- **Remove the dead `depth` field** from `scanner.c` -- in the open list above.
 - ~~**The transpiler panicked on a non-ASCII character inside a hole**~~ — **fixed 2026-09-26**: `dslzone::restore`'s scan for a hole's `:@` stepped one byte at a time and sliced `text[j..]`, panicking inside a multi-byte character (`view! { <p>{@: "…" :@}</p> }`); it compares bytes now, which find the same (ASCII) marks. Pinned by `a_hole_carries_characters_of_several_bytes`. Found writing the website, whose Converter and Playground run this code in the browser, where a panic stops the page.
 - ~~**Converter: a `while … matches! …` condition inside a block-bodied arm of a nested `match`**~~ — **fixed by 2026-09-25**'s brace look-back stopping at an arm's `=>`: it converts and reads back exactly (`a_while_matches_inside_a_nested_match_converts_and_reads_back`). It was never updated and does nothing; noted so it isn't mistaken for load-bearing.
-
-## Last: a Harsh crate registry
-
-**Chosen (the user, 2026-09-27): Harsh's own registry, served as static
-files** -- cargo's sparse alternative-registry index on GitHub Pages
-(`harsh-lang.com/registry/`), packages (`.hrs` sources and `Cargo.toml`) as
-GitHub release downloads with checksums in the index, `hrs publish` with a
-GitHub token, `hrs` transpiling a registry dependency's Harsh before cargo
-builds it, so its `~` macros reach the user's code. Why not crates.io: `hrs
-export` unfolds `~` macros away, so a Harsh library shared as Rust loses them.
-`hrs export` to crates.io stays the way to make *Rust* crates from Harsh.
-Design document first (`REGISTRY-DESIGN.md`), then the build.
-
-
-An online repository of Harsh crates, the user's request of 2026-09-17,
-placed last deliberately. It is not a prerequisite for anything above:
-a Harsh crate published to crates.io through `hrs export` is a Rust crate
-that can also ship its `.hrs` sources in the package; cargo vendors them,
-and `hrs` finds a crate's `macro_rules~` definitions (and any `harsh/dsl.hrs`)
-there. So Harsh crates live on crates.io as Rust crates with their Harsh
-alongside, and a registry of Harsh's own is a convenience for the day the
-ecosystem is large enough to want one.
-
-## Settled
-
-- **`<-` stays member access.** Considered and declined: `~`, `\`, `#`, `->`, `-<`, taking `.` back from paths. A future stream-binding feature, when it has a problem statement, takes a symbol that is not a Rust token — `<<-` or `=<` are the candidates (`<<-` cannot be mistyped into `<=`).
-- **Brackets index; parentheses isolate.** `v[0]` and `v [0]` are the same index; an array passed as an argument is `f ([1, 2])`. A spaced `[` never applies. Decided 2026-09-11 when Harshlings' runner met `<- args [..]`. The same day: a *tight* `[..]` is part of its atom, so `f arr[1]` is `f(arr[1])` (it used to be `f(arr)[1]`, silently), and a spaced `[` inside an application is refused with both spellings named.
-- **The arity table is for the pipes alone.** Decided, and recorded as a rule in `docs/GOVERNANCE.md`. Proposals to read it from any other feature are declined.
-- **An inline `\` field list reads to its group's `)`; the transpiler never reads a type to parse a line.** `Point\ x = 1, msg` — grouped or not — is one literal with the shorthand field `msg`; whether `msg` is a field `Point` has is rustc's question, and rustc answers it by name. A rule that ended the literal "once the fields are satisfied" would need the definition of `Point`, which may be in another crate, and is not decidable even then (`..base`). Considered and declined 2026-09-10. A literal that is one element of a tuple takes its own parens, `((Point\ x = 1), msg)`, and `hrs-from` writes that form. The editor's Enter after a trailing macro `!` follows the same discipline: name-blind, from the line alone.
-
-## Principles that decide new items
-
-- Harsh is a superset of Rust: it states rules only for what it changes, and Rust's rules hold everywhere else.
-- Rules are simple bricks applied recursively, not big rules with exceptions.
-- Strict over permissive. There is a converter for translating; the language does not need to be forgiving.
-- Verify against a real compiler. Keep the round trip byte-exact. One change at a time; archive after each green.

@@ -1,3 +1,7 @@
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 //! The project commands decided 2026-10-04: `hrs new [--lib]`, `hrs new
 //! --help`, `hrs publish` (checks, then stops until the registry opens).
 
@@ -55,4 +59,46 @@ fn publish_checks_the_package_then_stops() {
     assert!(err.contains("no `description`") && err.contains("no `license`"), "{err}");
     assert!(err.contains("`mine` is a path"), "{err}");
     assert!(err.contains("registry is not open yet"), "{err}");
+}
+
+/// `hrs` at a workspace's root, without a `[package]` (2026-10-13; it was
+/// refused as a project with no target under `target/src/`): `check`,
+/// `test` and `fmt` run in each member in `members`' order -- a `*` expanded,
+/// `exclude` left out -- a Harsh member by `hrs`, a Rust member by cargo,
+/// which `fmt` skips; `run` acts on one program and is refused, naming them.
+#[test]
+fn a_workspace_root_runs_each_member() {
+    let d = scratch("workspace");
+    assert!(hrs().args(["new", "app"]).current_dir(&d).status().unwrap().success());
+    std::fs::create_dir_all(d.join("crates")).unwrap();
+    assert!(hrs().args(["new", "--lib", "util"]).current_dir(d.join("crates")).status().unwrap().success());
+    assert!(hrs().args(["new", "--lib", "old"]).current_dir(d.join("crates")).status().unwrap().success());
+    let rusty = d.join("rusty");
+    std::fs::create_dir_all(rusty.join("src")).unwrap();
+    std::fs::write(rusty.join("Cargo.toml"), "[package]\nname = \"rusty\"\nversion = \"0.1.0\"\nedition = \"2021\"\n").unwrap();
+    std::fs::write(rusty.join("src/lib.rs"), "pub fn one() -> i32 { 1 }\n").unwrap();
+    std::fs::write(
+        d.join("Cargo.toml"),
+        "[workspace]\nmembers = [\n    \"app\",\n    \"crates/*\",\n    \"rusty\",\n]\nexclude = [\"./crates/old/\"]  # a comment, \"#\" in a string: [workspace]\nresolver = \"2\"\n",
+    )
+    .unwrap();
+    let members = harsh_lang::driver::workspace_members(&d).unwrap();
+    let names: Vec<_> = members.iter().map(|m| m.strip_prefix(&d).unwrap().display().to_string()).collect();
+    assert_eq!(names, ["app", "crates/util", "rusty"]);
+    assert!(harsh_lang::driver::workspace_members(&d.join("app")).is_none());
+
+    let out = hrs().arg("test").current_dir(&d).output().unwrap();
+    let err = String::from_utf8_lossy(&out.stderr);
+    assert!(out.status.success(), "{err}");
+    let order: Vec<_> = err.lines().filter(|l| l.starts_with("hrs: workspace member")).collect();
+    assert_eq!(order, ["hrs: workspace member app", "hrs: workspace member crates/util", "hrs: workspace member rusty (Rust, by cargo)"], "{err}");
+    assert!(!d.join("crates/old/target").exists(), "an excluded member was built");
+
+    let out = hrs().args(["fmt", "--check"]).current_dir(&d).output().unwrap();
+    let err = String::from_utf8_lossy(&out.stderr);
+    assert!(out.status.success() && !err.contains("rusty"), "{err}");
+
+    let out = hrs().arg("run").current_dir(&d).output().unwrap();
+    let err = String::from_utf8_lossy(&out.stderr);
+    assert!(!out.status.success() && err.contains("run it in a member's folder (app, crates/util, rusty)"), "{err}");
 }

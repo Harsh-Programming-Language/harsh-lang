@@ -273,9 +273,30 @@ fn main$:
 ```
 
 ```text
+warning[unused_parens]: unnecessary parentheses around closure body
+  --> /tmp/harsh-by-example/projects/17_matrices/regression/src/main.hrs:10:38
+   |
+10 |     let x = Matrix.from_rows (list~ (vec! 1.0 h) for h in hours)
+   |                                      ^
+12 |     // Julia's `β = X \ y`: for a tall matrix, the least-squares fit.
+   |         ^
+   = note: in the expansion of `hrs_std.g~` called at /tmp/harsh-by-example/projects/17_matrices/regression/src/main.hrs:12:56
+12 |     // Julia's `β = X \ y`: for a tall matrix, the least-squares fit.
+   = note: `#[warn(unused_parens)]` (part of `#[warn(unused)]`) on by default
+   = help: remove these parentheses (hrs 10:38)
+
+warning[unused_parens]: unnecessary parentheses around closure body
+  --> /tmp/harsh-by-example/projects/17_matrices/regression/src/main.hrs:10:37
+   |
+10 |     let x = Matrix.from_rows (list~ (vec! 1.0 h) for h in hours)
+   |                                     ^
+   |                                                ^
+   = help: remove these parentheses (hrs 10:37)
+
 score = 47.20 + 4.37 × hours
 residual 1.76
 7 hours: 77.8
+hrs: 0 error(s), 2 warning(s)
 ```
 
 With more rows than columns, `solve` returns the least-squares fit, as Julia's

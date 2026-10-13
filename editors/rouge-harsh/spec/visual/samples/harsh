@@ -1,0 +1,43 @@
+struct Point
+    x: f64
+    y: f64
+
+fn norm (p: &Point) -> f64:
+    (p <- x * p <- x + p <- y * p <- y) <- sqrt$
+
+fn main$:
+    let points = v~ (Point\ x = 3.0, y = 4.0) (Point\ x = 1.0, y = 1.0)
+    for p in &points:
+        println! "{:.2}" (norm p)
+
+// Rust's macros take no delimiters; a brace body is the DSL's, with holes.
+fn view_of (count: i32) -> Element:
+    rsx! {
+        p { "Count: {count}" }
+        button { onclick: move |_| @: count += 1 :@, "Add" }
+        p { "write @@: for a literal one" }
+    }
+
+/// A Harsh macro, its metavariables and a repetition.
+macro_rules~ square
+    ($x:expr) => ($x * $x)
+
+#[derive Debug Clone]
+enum Shape
+    Circle f64
+    Rect\ w: f64, h: f64
+
+fn area (s: &Shape) -> f64:
+    match s\
+        Shape.Circle r => 3.14 * r * r
+        Shape.Rect\ w, h => w * h
+
+fn main$:
+    let total = shapes <- iter$ <- map area <- sum.<f64>$
+    let doubled = 4 |> square~
+    let n = "42" <- parse.<i32>$ <- unwrap_or 0
+    let block = do:
+        let a = 1
+        a + 1
+    let r = 'r'
+    let life: &'static str = "ok"

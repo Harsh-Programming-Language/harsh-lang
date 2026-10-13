@@ -1,0 +1,21 @@
+use leptos.prelude.*
+
+#[component]
+fn Counter initial: i32 -> impl IntoView:
+    let (count, set_count) = signal initial
+    let double = move || count <- get$ * 2
+    view! {
+        <button
+            on:click=@: move |_| set_count <- update (|n| *n += 1) :@
+            class:big={@: move || count <- get$ > 10 :@}
+        >
+            "Clicked " {count} " times"
+        </button>
+        <p>"Double: " {double} " / next: " {@: move || count <- get$ + 1 :@}</p>
+        <Show when=@: move || count <- get$ % 2 == 0 :@ fallback=|| view! { <p>"odd"</p> }>
+            <p>"even"</p>
+        </Show>
+    }
+
+fn main$:
+    mount_to_body (|| view! { <Counter initial=3/> })

@@ -1,3 +1,7 @@
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 //! How the converter finds Rust in a macro's body (the user's rule,
 //! 2026-10-06): a hole may start after a top-level `:` or `=`, inside a lone
 //! brace pair, or in a format slot; it ends at the segment's end; it covers

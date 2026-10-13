@@ -148,14 +148,17 @@ let q = f ({ let u = 3; u * u })          // a block passed as an argument
   the indexed group is isolated in turn, `show ((f src).0)`; `show (f src).0`
   is refused, since its index would apply to `show`'s result (2026-10-06). The Rust drops
   the isolation around a call, `f(src).0`, and keeps it where Rust needs it,
-  `(a + b).0` (decided 2026-10-05).
+  `(a + b).0` (decided 2026-10-05). A tight index is the same: a call's
+  result is indexed isolated, `(f src)[i]`, and the Rust is `f(src)[i]`;
+  `hrs-from` writes it so (0.7.3).
 - **A lone parameter may drop its parentheses**, since nothing needs
   separating: `fn double n: i32 -> i32: n * 2`. Two or more are each isolated:
   `fn add (a: i32) (b: i32) -> i32: a + b`.
 - **After a constructor, a single argument needs no parentheses**:
   `Some &x`, `Some &mut x`, `Some mut line`, `Some ref x`, in patterns and
   expressions alike. A constructor is a `struct` or enum variant the files
-  declare, or the prelude's `Some`, `Ok`, `Err` -- known from the
+  declare -- a variant one level under its `enum` or inline after its `\`,
+  never a record variant's fields (0.7.3, Docreview's H13) -- or the prelude's `Some`, `Ok`, `Err` -- known from the
   declarations, never from a name's case (Rust does not care how a name is
   spelt). After any other name `&` is bit-and, so a reference argument is
   isolated: `f (&x)`, `read_line (&mut buf)`. Several arguments are each
@@ -207,6 +210,33 @@ on 2026-10-04 and left dropped: a second spelling, a near-twin of Rust's
 `P { x: 1 }`, and a third meaning for braces. `P { x: 1 }` is refused with the
 `P\` forms in the message.
 
+A literal as an argument is isolated like any argument of several tokens,
+`push (Card\ id = 1)`, inline or with its fields beneath and the `)` after
+them -- after a constructor too, `Ok (View\ title = t)`: a constructor's single
+argument goes bare only when it is one atom with a prefix, `Some &x`, and a
+literal is not (decided 2026-10-12, ShopBill's S2). The bare form is refused
+with the isolated one named (since 0.8.2); before, it became
+`push(Card) { … }`, and rustc's error pointed at the generated brace.
+
+Its layout with the fields beneath (decided 2026-10-13, built in 0.8.4): the
+fields one unit past the literal's name, the `)` under its `(` -- "far to the
+right but clear". A literal that would pass the width there moves beneath its
+callee, one unit past it, and a long link before a long receiver goes to its
+own line first:
+
+```rust harsh
+cards <- push (Card\
+                   id = 2
+                   title = String.from "Review"
+              )
+
+cards <- very_long_method_called_push
+             (Card\
+                  id = 2
+                  title = String.from "Review"
+             )
+```
+
 ## Macros: three rules
 
 1. **A Harsh macro's stream is Harsh.** A `~` macro is written in Harsh and
@@ -249,7 +279,9 @@ braces, no `;`. Whatever the macro's syntax needs around it — a `;` between
 `thread_local!`'s items, a `,` between attributes, braces — is the macro's
 text, written outside the hole as its documentation shows. Several statements
 in a hole's place are an explicit block, as anywhere a value is expected:
-`@: { let v = Cell.new false; v } :@`.
+`@: { let v = Cell.new false; v } :@`. A hole's code is Harsh, so a mark
+inside one of its strings, characters or comments is text; the hole ends at
+the first `:@` outside them (0.7.3, Docreview's H11).
 
 **How the converter finds Rust in a macro's body** (decided 2026-10-06). What
 looks like Rust in a macro is the macro's own language, written in Rust's
@@ -257,7 +289,20 @@ syntax; the converter cannot know its meaning, only its shape. Its rule, one a
 reader can apply by eye:
 
 1. A hole may start after a top-level `:` or `=`, inside a brace pair by
-   itself, or in a format string's slot — where macros put values.
+   itself, or in a format string's slot — where macros put values — and,
+   by the same reasoning (2026-10-12), in a paren splice among the DSL's
+   text (Maud's `(items.len())`), after the DSL's own `for … in` or `if`
+   (Yew's `{ for ITER }` too), and in an arm's pattern, future or handler (a
+   block handler is one value, `=> @: do: … :@`). In markup a bare `>` ends
+   the tag; in a tree or a list of arms it is a comparison. The intuition,
+   for authors and converter alike: a hole goes wherever the library's
+   documentation writes a Rust expression (`MACROS.md` has the catalogue). What
+   looks like Rust is made a hole, as far as it can be (the user's ruling,
+   2026-10-12): in a DSL's string, a slot that Rust's parser reads as an
+   expression, other than a plain name or a position, becomes one --
+   `"Hello {@: name <- to_uppercase$ :@}"`, its spec outside,
+   `{@: v <- len$ :@:>4}`. The converter cannot tell a format string from
+   text, so a Leptos string's slot becomes one too; it comes back the same.
 2. It ends at the segment's end: the next top-level `,` or `;`, the end of the
    line, or the closing bracket.
 3. It covers the longest stretch from such a start to that end that Rust's own
@@ -272,8 +317,9 @@ reader can apply by eye:
 
 In the first row, `Cell<bool> = Cell::new(false)` after the `:` is not an
 expression, so the hole starts after the `=`. A hole whose Rust would not come
-back identical is never written: the converter copies that piece verbatim, so
-a macro's body always survives the round trip.
+back identical is never written: the conversion stops, naming the line (no
+silent fallback, ruled 0.1.25), so a macro's body always survives the round
+trip or is not converted at all.
 
 Braces delimit a macro's token stream; parentheses isolate Harsh. Inside a
 stream, the braces belong to the macro: in `strong { {@: n$ :@} }` the inner
@@ -339,11 +385,26 @@ sees `Hrs.toml`, which is pass 1's alone.
 
 - `Hrs.toml` lists Harsh's dependencies only; everything Cargo installs stays
   in `Cargo.toml`. A crate named in both is refused with a message.
-- The project's top-level folders (`assets/`, `migrations/`, …; not `src`,
-  `target` or hidden ones) are linked into `target/src/`, so paths rooted at
-  `CARGO_MANIFEST_DIR` -- `asset!`, `include_str!(concat!(env!(…)))` -- find
-  the real files.
-- `hrs dx …` runs pass 1, then Dioxus's `dx` inside `target/src/`.
+- The project's top-level entries, folders and files (`assets/`,
+  `migrations/`, `Dioxus.toml`, …; not `src`, `target`, hidden ones, nor the
+  `Cargo.toml`, `Cargo.lock` and `Hrs.toml` that `hrs` writes there itself)
+  are mirrored into `target/src/`, so paths rooted at `CARGO_MANIFEST_DIR` --
+  `asset!`, `include_str!(concat!(env!(…)))` -- and tools reading their own
+  configuration, like `dx` with `Dioxus.toml`, find the real files (files
+  since 0.7.3, Docreview's H12). A mirror, not symbolic links (decided
+  2026-10-12, 0.8.2, ShopBill's S7): real folders, each file a hard link to
+  the project's (a copy where a link cannot be made), followed at every pass
+  1. Dioxus's `asset!` resolves a link and requires the file inside the
+  crate, and a symbolic link led back out to the project.
+- `hrs -- <program> [args]` runs pass 1, then any program inside
+  `target/src/`, found as the shell finds it -- the first of its name on
+  PATH, or the path written (decided 2026-10-12, 0.8.0). Harsh arbitrates no
+  conflict between programs of one name (Dioxus's `dx` and Deno's): `hrs
+  which <program>` lists them in order with their versions, `hrs --` notes
+  when PATH holds several, and the programmer decides -- PATH order or a
+  path. `hrs dx`, one library's name built into Harsh, is retired and
+  refused, naming `hrs -- dx …`. No `[tools]` table: a second resolver would
+  let `hrs -- dx` and the terminal's `dx` differ.
 - Before 0.7.0 the folder was `target/hrs/`; `hrs build` refuses a
   `Cargo.toml` still pointing there, and `hrs migrate` updates it once.
 
@@ -360,6 +421,61 @@ let events =
         Event.Click 20 80,
     ]
 ```
+
+## What a hole is, for the converter (decided 2026-10-12)
+
+**A hole is a Rust expression in a macro's body that calls on something
+bound outside the DSL's own language, or uses an operator.** The bindings: a
+variable, a function, a name the DSL binds itself (Leptos's `let:item`,
+`for item in …`, `select!`'s `Some(v)`), an expression's own closure
+parameters. The operators are functions too -- `+` is `Add::add` -- and the
+access operators `.` and `::` count. `=` does not: assignment has no trait.
+**A single word is exempt**: `{count}`, `(title)`, `=> n`, `4`.
+
+```rust harsh
+p { "{count} of {@: items <- len$ :@:>4} {{literal}} {x:?}" }
+let rows = sql! { SELECT name FROM orders WHERE total = @: price * 2 :@ }
+```
+
+- Who is bound is a table, never a guess from case or layout: the standard
+  prelude, the file's items, the names its `use`s import, the bindings in
+  scope at the macro call (the function's parameters, its `let`s, `for`s and
+  patterns), and the DSL's own.
+- A glob import (`use leptos::prelude::*`) brings names nobody can list
+  without the crate. A stretch built only from them and with no operator --
+  Leptos's `fallback=|| view! { … }`, Yew's `classes!("btn", "big")` -- is
+  left as written, and `hrs-from` names the line in a warning; an author may
+  write the hole.
+- Text the DSL owns stays, however Rust-like: `quick_error!`'s
+  `display("…", err)` calls on nothing bound and uses no operator. An
+  operator decides alone: SQL's `price * 2` is a hole.
+- Where to look is unchanged -- the places above, format slots first -- the
+  table decides. The transpiler keeps no such table (`GOVERNANCE.md`).
+
+## Layout of a long chain of one link (decided 2026-10-12, Docreview's H9)
+
+A chain of one link stays on its line, however long:
+`let label = message <- subject_line_for_privilege_log_with_redactions_applied$`.
+When long arguments make it long, the rule for long calls applies to the
+method: the chain moves after its `=`, and its arguments go beneath the
+method, one unit past it -- moved and listed together, never moved alone.
+Short enough, it stays on one line.
+
+```rust harsh
+let mid = msg <- subject first_custodian_name_argument b
+let label =
+    message <- subject_line_for_privilege_log
+                   (first_custodian_name_argument)
+                   (second_matter_reference)
+```
+
+## Enter after a call still waiting (decided 2026-10-12)
+
+After a call to a declared function given fewer arguments than it takes,
+`let s = add 1` with `add` taking two, Enter lands one unit past `add`, where
+the next argument goes. A pipe makes the call a partial, complete: after
+`let p = 3 |> add`, Enter stays at the statement's column. The editor reads
+the arity table for this alone (`GOVERNANCE.md`).
 
 ## Layout of `&` (decided 2026-10-06)
 

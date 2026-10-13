@@ -909,7 +909,213 @@ rendered 3
 
 `for item in items { … }` there is `rsx!`'s own, not Harsh's: inside the braces the macro's grammar rules, and a hole is only for what you want written in Harsh. A hole may hold a macro call with braces of its own, and holes inside those.
 
-Holes follow a few conventions. A hole always closes, with `:@`, even at the end of a line. A literal `@:` in the macro's own language is written `@@:`. `hrs-from` writes the holes when it converts a Rust file, turning each piece of Rust inside a body into Harsh. And a Harsh macro whose expansion contains such a call writes the holes too, since what it produces is Harsh.
+Holes follow a few conventions. A hole always closes, with `:@`, even at the end of a line. A hole's code is Harsh, so a mark inside one of its strings is text: `@: format! "from:@{domain}" :@` closes at its last `:@`. A literal `@:` in the macro's own language is written `@@:`. `hrs-from` writes the holes when it converts a Rust file, turning each piece of Rust inside a body into Harsh — in its strings' format slots too, `"Hello {@: name <- to_uppercase$ :@}"`. And a Harsh macro whose expansion contains such a call writes the holes too, since what it produces is Harsh.
+
+### Where the holes go
+
+**A hole is an expression that calls on something bound outside the DSL's own language — a variable, a function, a name the DSL itself binds — or that uses an operator, `.` and `::` included; a single word is exempt.** `{count}` stays as it is; `{@: items <- len$ :@}`, `{@: 3 + 5 :@}` and `{@: item <- name :@}` are holes. Everything else is the library's language, copied as written. You find them in a handful of places, and once you have seen them you will find them in any library — the strings' slots first:
+
+- **A value after a name and `:` or `=`** — an attribute in `rsx!` or `view!`, a key in `json!`, a static's value in `thread_local!` or `lazy_static!`, a constant in `bitflags!`: `onclick: @: move |_| count += 1 :@`.
+- **A brace pair of its own** — a child in `view!` or Yew's `html!`: `{@: move || count <- get$ + 1 :@}`.
+- **A format slot in the DSL's strings** — Dioxus: `"Twice: {@: count$ * 2 :@}"`.
+- **A splice in parentheses** — Maud: `(@: items <- len$ :@)`; the parentheses are Maud's, the hole inside them.
+- **The DSL's own control flow** — after `for … in` and `if`, up to the body's brace: `if @: count$ > 3 :@ {`; Yew's `{ for @: … :@ }`, Maud's `@for` and `@if`.
+- **An arm** — `select!`'s pattern, future and handler, as in 20.4.
+
+What is never a hole: a single word — `{count}` and `(title)` read the same in both languages — a type before a `=`, and the library's own words (`const`, `@for`, an attribute inside the body), however much they look like code. A macro whose stream is a list of values is no DSL at all: it is juxtaposed, like `vec!` and `format!`, and so is `tracing`'s `info!`, whose fields are each one argument.
+
+A JSON value built with serde_json: a hole after each key whose value is code; `"age": 36` and the array of strings stay as written.
+
+`Cargo.toml`
+
+```text
+[dependencies]
+serde_json = "1"
+```
+
+`src/main.hrs`
+
+```rust harsh
+use serde_json.json
+
+fn main$:
+    let name = "Ada"
+    let langs = vec! "Rust" "Harsh"
+    let v = json! {{
+        "name": @: name <- to_uppercase$ :@,
+        "age": 36,
+        "langs": langs,
+        "count": @: langs <- len$ + 1 :@,
+        "tags": [{ "id": 1, "main": @: langs <- first$ :@ }]
+    }}
+    println! "{v}"
+```
+
+```text
+$ hrs run
+{"age":36,"count":3,"langs":["Rust","Harsh"],"name":"ADA","tags":[{"id":1,"main":"Rust"}]}
+```
+
+Statics, with `thread_local!` and `lazy_static!`: the type before `=` is the macro's, the value after it is a hole — a block when it takes several statements.
+
+```rust harsh
+use std.cell.RefCell
+
+thread_local! {
+    static LOG: RefCell<Vec<String>> = @: RefCell.new (Vec.with_capacity 8) :@;
+}
+
+fn main$:
+    LOG <- with (|l| l <- borrow_mut$ <- push ("start" <- to_string$))
+    LOG <- with (|l| println! "{:?}" (l <- borrow$))
+    ()
+```
+
+```text
+["start"]
+```
+
+`Cargo.toml`
+
+```text
+[dependencies]
+lazy_static = "1"
+```
+
+`src/main.hrs`
+
+```rust harsh
+use lazy_static.lazy_static
+use std.collections.HashMap
+
+lazy_static! {
+    static ref NAMES: HashMap<u32, &'static str> = @: do:
+        let mut m = HashMap.new$
+        m <- insert 0 "zero"
+        m <- insert 1 "one"
+        m :@;
+    static ref COUNT: usize = @: NAMES <- len$ * 2 :@;
+}
+
+fn main$:
+    println! "{} {}" (NAMES[&1]) (*COUNT)
+```
+
+```text
+$ hrs run
+one 4
+```
+
+`bitflags!` declares in its own grammar: `struct Perms: u32`, the `const` lines and the derive above them are the macro's, and only a value that is code is a hole.
+
+`Cargo.toml`
+
+```text
+[dependencies]
+bitflags = "2"
+```
+
+`src/main.hrs`
+
+```rust harsh
+use bitflags.bitflags
+
+bitflags! {
+    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+    pub struct Perms: u32 {
+        const READ = 0b001;
+        const WRITE = 0b010;
+        const ALL = @: Self.READ <- bits$ | Self.WRITE <- bits$ :@;
+    }
+}
+
+fn main$:
+    let p = Perms.READ | Perms.WRITE
+    println! "{:?} {}" p (p == Perms.ALL)
+```
+
+```text
+$ hrs run
+Perms(READ | WRITE) true
+```
+
+Maud's markup splices its values in parentheses; `@for` and `@if` are its control flow.
+
+`Cargo.toml`
+
+```text
+[dependencies]
+maud = "0.27"
+```
+
+`src/main.hrs`
+
+```rust harsh
+use maud.(html, Markup)
+
+fn page (title: &str) (items: &[&str]) -> Markup:
+    html! {
+        h1 { (title) }
+        p.intro { "Items: " (@: items <- len$ :@) }
+        a href=(@: format! "/items/{}" (items <- len$) :@) { "next" }
+        ul {
+            @for item in items {
+                li { (@: item <- to_uppercase$ :@) }
+            }
+        }
+        @if @: items <- is_empty$ :@ {
+            p { "none" }
+        }
+    }
+
+fn main$:
+    println! "{}" (page "Fruit" (&["apple", "pear"]) <- into_string$)
+```
+
+```text
+$ hrs run
+<h1>Fruit</h1><p class="intro">Items: 2</p><a href="/items/2">next</a><ul><li>APPLE</li><li>PEAR</li></ul>
+```
+
+And the contrast: `tracing`'s macros take a list, so they are called as functions are, each field isolated.
+
+`Cargo.toml`
+
+```text
+[dependencies]
+tracing = "0.1"
+tracing-subscriber = "0.3"
+```
+
+`src/main.hrs`
+
+```rust harsh
+use tracing.(debug, info)
+
+fn main$:
+    tracing_subscriber.fmt$
+        <- without_time$
+        <- with_ansi false
+        <- with_max_level tracing.Level.DEBUG
+        <- init$
+    let user = "ada"
+    let items = vec! 1 2 3
+    info!
+        (user = %user)
+        (count = items <- len$)
+        "processed {} items"
+        (items <- len$)
+    debug! (target: "app") (?items) "starting"
+    ()
+```
+
+```text
+$ hrs run
+ INFO dsl_tracing: processed 3 items user=ada count=3
+DEBUG app: starting items=[1, 2, 3]
+```
+
+The guide to macros has the same catalogue beside each library's own Rust, with Leptos, Dioxus and Yew's markup — the shapes above, in the frameworks this chapter's `view!` and `rsx!` stand in for.
 
 ## 23.9 Parentheses, once and for all
 

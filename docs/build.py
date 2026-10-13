@@ -135,6 +135,10 @@ def render(SRC, IPYNB, HTML, TITLE, TAG):
   # drop the document H1; the HTML header carries the title
   body_md = re.sub(r"^# [^\n]*\n", "", body_md, count=1)
   body = markdown.markdown(body_md, extensions=["tables"])
+  # A `|` in a table cell is written `\|` in the Markdown, as GitHub reads
+  # it; Python-Markdown keeps the backslash inside a code span, so the guide
+  # showed `inc <\| double` (found 0.7.5). In a cell it is always the pipe.
+  body = re.sub(r"<td>.*?</td>|<th>.*?</th>", lambda m: m.group(0).replace("\\|", "|"), body, flags=re.S)
   body = re.sub(r"<p>FENCEBLOCK(\d+)</p>", lambda m: blocks[int(m.group(1))], body)
   # One H1 for the whole document -- the page's title -- and every other
   # heading shifted down from it (the user's styling rule). A document with
@@ -217,6 +221,7 @@ if __name__ == "__main__":
     "TUTORIAL.md": ("Harsh — lessons", "What building Harsh taught."),
     "ROADMAP.md": ("Harsh — roadmap", "What is done, what is next, what is settled."),
     "GOVERNANCE.md": ("Harsh — governance", "Who decides, and what will not change."),
+    "RETROSPECTIVE.md": ("Harsh — retrospective", "How it was built, what it found, what held."),
     "TRADEMARK.md": ("Harsh — trademark", "The name, the logo, the binaries."),
     "BRAND.md": ("Harsh — brand", "The mark and how to use it."),
     "dev/HANDOVER.md": ("Harsh — handover", "Development bundle only."),

@@ -29,6 +29,8 @@ struct Item {
     invokes: Option<String>,
     is_use: bool,
     is_mod: bool,
+    /// `#![…]`, an inner attribute: the file's own, always kept.
+    is_inner: bool,
     idents: HashSet<String>,
 }
 
@@ -40,6 +42,43 @@ fn items(text: &str) -> Vec<Item> {
     let mut k = 0;
     while k < t.len() {
         let start = k;
+        // `#![forbid(unsafe_code)]` belongs to the file, not to the item after
+        // it: an item of its own, always kept. (It was read as the start of
+        // the next item, and with the `use` after it made one item that
+        // defined nothing, which the shaker dropped -- found writing the
+        // developer book, 0.7.3.)
+        if k + 2 < t.len() && t[k].text == "#" && t[k + 1].text == "!" && t[k + 2].text == "[" {
+            let mut d = 0i32;
+            let mut j = k + 2;
+            while j < t.len() {
+                match t[j].kind {
+                    Tk::Open(_) => d += 1,
+                    Tk::Close(_) => {
+                        d -= 1;
+                        if d == 0 {
+                            break;
+                        }
+                    }
+                    _ => {}
+                }
+                j += 1;
+            }
+            let end = j.min(t.len() - 1);
+            out.push(Item {
+                lo: t[k].span.lo as usize,
+                hi: t[end].span.hi as usize,
+                defines: Vec::new(),
+                impl_type: None,
+                impl_trait: None,
+                invokes: None,
+                is_use: false,
+                is_mod: false,
+                is_inner: true,
+                idents: HashSet::new(),
+            });
+            k = end + 1;
+            continue;
+        }
         // attributes and doc comments belong to the item after them
         let mut i = k;
         loop {
@@ -175,6 +214,7 @@ fn items(text: &str) -> Vec<Item> {
             invokes,
             is_use,
             is_mod,
+            is_inner: false,
             idents,
         });
         k = end + 1;
@@ -188,7 +228,7 @@ pub fn shake(files: &[(String, String)], roots: &HashSet<String>) -> Vec<(String
     let all: Vec<(usize, Item)> = files.iter().enumerate().flat_map(|(f, (_, t))| items(t).into_iter().map(move |i| (f, i))).collect();
     let defined: HashSet<String> = all.iter().flat_map(|(_, i)| i.defines.clone()).collect();
     let macro_defs: std::collections::HashMap<String, &HashSet<String>> =
-        all.iter().filter(|(_, i)| !i.defines.is_empty() && files[0].1.len() > 0).flat_map(|(_, i)| i.defines.iter().map(move |d| (d.clone(), &i.idents))).collect();
+        all.iter().filter(|(_, i)| !i.defines.is_empty()).flat_map(|(_, i)| i.defines.iter().map(move |d| (d.clone(), &i.idents))).collect();
     let mut reached: HashSet<String> = roots.clone();
     let mut kept = vec![false; all.len()];
     loop {
@@ -199,6 +239,7 @@ pub fn shake(files: &[(String, String)], roots: &HashSet<String>) -> Vec<(String
             }
             let keep = it.is_use
                 || it.is_mod
+                || it.is_inner
                 || it.defines.iter().any(|d| reached.contains(d))
                 || it.impl_type.as_ref().map_or(false, |ty| reached.contains(ty))
                 // a blanket impl (`Operand for &'a X`), or one for a type not

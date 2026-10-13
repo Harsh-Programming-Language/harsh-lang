@@ -1,0 +1,18 @@
+use tokio::sync::mpsc;
+use tokio::time::{sleep, Duration};
+
+#[tokio::main]
+async fn main() {
+    let (tx, mut rx) = mpsc::channel::<u32>(4);
+    tokio::spawn(async move {
+        tx.send(7).await.unwrap();
+    });
+    let got = tokio::select! {
+        Some(v) = rx.recv() => v * 2,
+        _ = sleep(Duration::from_secs(1)) => {
+            println!("timeout");
+            0
+        }
+    };
+    println!("got {got}");
+}

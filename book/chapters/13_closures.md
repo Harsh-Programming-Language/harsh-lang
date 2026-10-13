@@ -287,10 +287,13 @@ error[E0507]: cannot move out of `value`, a captured variable in an `FnMut` clos
    |
 14 |     let value = String.from "closure called"
    |         ----- captured outer variable
+   |                 ----------------------------- move occurs because `value` has type `String`, which does not implement the `Copy` trait
 16 |     list <- sort_by_key |r|:
    |                         --- captured by this `FnMut` closure
 17 |         sort_operations <- push value       // moves `value` out: can only happen once
-   |                                 ^^^^^ move occurs because `value` has type `String`, which does not implement the `Copy` trait
+   |                                 ^^^^^ `value` is moved here
+   = help: `Fn` and `FnMut` closures require captured values to be able to be consumed multiple times, but `FnOnce` closures may consume them only once
+   = help: consider cloning the value if the performance cost is acceptable (hrs 17:38)
 ```
 
 The closure pushes `value` — a `String`, moved out of the capture — onto a vector. That can happen once, so the closure is `FnOnce` only, and `sort_by_key` needs to call it many times; the error names both facts. Mutating a capture *without* moving it is fine:
@@ -353,9 +356,9 @@ pub trait Iterator
 fn main$:
     let v1 = vec! 1 2 3
     let mut v1_iter = v1 <- iter$            // nothing happens yet
-    assert_eq! (v1_iter <- next$) (Some (&1))
-    assert_eq! (v1_iter <- next$) (Some (&2))
-    assert_eq! (v1_iter <- next$) (Some (&3))
+    assert_eq! (v1_iter <- next$) (Some &1)
+    assert_eq! (v1_iter <- next$) (Some &2)
+    assert_eq! (v1_iter <- next$) (Some &3)
     assert_eq! (v1_iter <- next$) None
 
     for val in v1 <- iter$:                 // `for` calls next until None
@@ -368,7 +371,7 @@ Got: 2
 Got: 3
 ```
 
-`v1 <- iter$` makes an iterator over references to the vector's elements — `Some (&1)`, a reference, because `iter` borrows — and each `next$` advances it, which is why `v1_iter` is `mut`. A `for` loop is exactly this: it calls `next` until `None`, and does not need the `mut` because it takes the iterator by value and does its own advancing. Three ways to make an iterator from a collection: `iter$` yields `&T`, `iter_mut$` yields `&mut T`, and `into_iter$` consumes the collection and yields `T`.
+`v1 <- iter$` makes an iterator over references to the vector's elements — `Some &1`, a reference, because `iter` borrows — and each `next$` advances it, which is why `v1_iter` is `mut`. A `for` loop is exactly this: it calls `next` until `None`, and does not need the `mut` because it takes the iterator by value and does its own advancing. Three ways to make an iterator from a collection: `iter$` yields `&T`, `iter_mut$` yields `&mut T`, and `into_iter$` consumes the collection and yields `T`.
 
 ### Consumers and adaptors
 
@@ -534,7 +537,7 @@ fn main$:
 4 Some("apple") ["APPLE", "BANANA", "CHERRY", "DATE"] [10, 12, 12, 8]
 ```
 
-> **Harsh —** One or two links stay on their line when the line fits in 72 columns; three or more go vertical, one `<-` per line, every arrow under the first. A `=` always ends its line before a vertical chain begins, never starts one. A closure whose body is a block is written as a *paren block*: the `(` ends the arrow's line, the parameters sit on their own line, the body beneath them, and the `)` closes on a line of its own at the closure's column — the parentheses are transparent to the layout, and the block inside ends where they end. `hrs fmt` puts all of this where it belongs; write it however it comes out of your fingers, save, and read the result.
+> **Harsh —** One or two links stay on their line when the line fits in 72 columns; a single link stays whatever its length, and when long arguments make it long they go beneath the method, one unit past it, the chain moved after its `=`; three or more go vertical, one `<-` per line, every arrow under the first. A `=` always ends its line before a vertical chain begins, never starts one. A closure whose body is a block is written as a *paren block*: the `(` ends the arrow's line, the parameters sit on their own line, the body beneath them, and the `)` closes on a line of its own at the closure's column — the parentheses are transparent to the layout, and the block inside ends where they end. `hrs fmt` puts all of this where it belongs; write it however it comes out of your fingers, save, and read the result.
 
 ## 13.3 Where the pipes come in
 

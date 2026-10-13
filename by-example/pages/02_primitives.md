@@ -136,5 +136,5 @@ fn main$:
 
 ```text
 reaching for element 5
-thread 'main' panicked at out_of_range.hrs:6:20:
+thread 'main' (24720) panicked at out_of_range.hrs:6:20:
 ```

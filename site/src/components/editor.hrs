@@ -244,7 +244,8 @@ async fn keys id: &'static str:
                     c <- closer
                       <- map (|n| n as i64)
                       <- unwrap_or (-1)
-                if eval <- send (c <- default, c <- legal, c <- unit, closer) <- is_err$:
+                if eval <- send (c <- default, c <- legal, c <- unit, closer)
+                        <- is_err$:
                     break
             Err _ => break
 

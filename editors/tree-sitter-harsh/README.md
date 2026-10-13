@@ -15,7 +15,7 @@ Expressions, types and patterns are deliberately loose. This grammar exists for 
 
 ## Verified
 
-All 46 `.hrs` files in `examples/` and `examples/guide/` — `brackets.hrs` with the bracket-group shapes included — parse with **zero** `ERROR` or `MISSING` nodes, checked with the committed `src/parser.c` (a loop that also verifies each file actually produced a tree, since a missing CLI greps as zero errors). `tree-sitter.json` is the grammar's configuration for tree-sitter CLI 0.24+, which no longer reads the `tree-sitter` field in `package.json`.
+Of the 43 `.hrs` files in `examples/` and `examples/guide/`, 41 — `brackets.hrs` with the bracket-group shapes included — parse with **zero** `ERROR` or `MISSING` nodes; `guide/16_macros.hrs` and `guide/17_macro_bodies.hrs`, whose macro bodies the grammar does not model, have a few (checked 2026-10-13 with tree-sitter CLI 0.22.6 and the committed `src/parser.c`, in a loop that also verifies each file actually produced a tree, since a missing CLI greps as zero errors). `tree-sitter.json` is the grammar's configuration for tree-sitter CLI 0.24+, which no longer reads the `tree-sitter` field in `package.json`.
 
 ```sh
 tree-sitter generate

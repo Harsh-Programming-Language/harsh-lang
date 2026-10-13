@@ -4,10 +4,14 @@
 
 //! `hrs-lsp`: the Harsh language server.
 //!
-//! One feature, layout-aware on-type formatting, and one custom request,
-//! `harsh/columns`, behind it. The server keeps the text of each open file
-//! and answers every question through `harsh_lang::columns`; it has no model of
-//! names, types or projects. Design in `docs/LSP.md`.
+//! Two halves. Its own: layout-aware on-type formatting (Enter, Tab, a typed
+//! closer), the custom request `harsh/columns` behind it, and formatting on
+//! save -- answered from the text of each open file through
+//! `harsh_lang::columns` and `harsh_lang::fmt`, with no model of names or
+//! types. Through rust-analyzer: hover, go-to-definition and completion,
+//! asked about the Rust a file became (`target/src/`) and mapped both ways
+//! through the source maps; rust-analyzer's Rust is shown as Harsh. Design in
+//! `docs/LSP.md` and the development notes.
 
 use std::collections::HashMap;
 use std::error::Error;
@@ -355,7 +359,8 @@ fn read_frame(r: &mut impl BufRead) -> Option<Value> {
 
 impl Ra {
     /// rust-analyzer on a project: `HRS_RA` names it (the tests' fake), else
-    /// `rust-analyzer` on the PATH. The distribution's patches (the crates
+    /// `rust-analyzer` on the PATH, else the newest copy inside an editor's
+    /// rust-analyzer extension (`candidates`). The distribution's patches (the crates
     /// shipped inside `hrs`) are handed to its cargo as `--config` arguments,
     /// so a project naming `hrs_std = "0.1"` resolves for it as for `hrs`.
     fn start(root: &Path) -> Result<Ra, String> {
@@ -642,11 +647,39 @@ fn harsh_line(line: &str) -> Option<String> {
     first(format!("{};\n", t.trim_end_matches(';')))
 }
 
+/// LSP counts a column in UTF-16 units; the source maps count characters.
+/// The two differ after a character outside the Basic Multilingual Plane (an
+/// emoji): a column was off by one there (found writing the developer book,
+/// 0.7.3). Line `line` (0-based) of `text`.
+fn utf16_to_chars(text: &str, line: usize, col: u64) -> usize {
+    let l = text.split('\n').nth(line).unwrap_or("");
+    let mut units = 0u64;
+    let mut chars = 0usize;
+    for ch in l.chars() {
+        if units >= col {
+            break;
+        }
+        units += ch.len_utf16() as u64;
+        chars += 1;
+    }
+    chars + (col.saturating_sub(units)) as usize
+}
+
+fn chars_to_utf16(text: &str, line: usize, chars: usize) -> u64 {
+    let l = text.split('\n').nth(line).unwrap_or("");
+    let n = l.chars().count();
+    l.chars().take(chars).map(|c| c.len_utf16() as u64).sum::<u64>() + chars.saturating_sub(n) as u64
+}
+
 /// A range in a generated `.rs`, back to its `.hrs` (0-based, as LSP counts).
 fn range_back(m: &harsh_lang::remap::SourceMap, r: &Value) -> Option<Value> {
+    let rs = std::fs::read_to_string(m.generated()).unwrap_or_default();
+    let hrs = std::fs::read_to_string(m.source()).unwrap_or_default();
     let at = |p: &Value| -> Option<Value> {
-        let (l, c) = m.locate(p["line"].as_u64()? as usize + 1, p["character"].as_u64()? as usize + 1)?;
-        Some(json!({"line": l - 1, "character": c - 1}))
+        let line = p["line"].as_u64()? as usize;
+        let col = utf16_to_chars(&rs, line, p["character"].as_u64()?);
+        let (l, c) = m.locate(line + 1, col + 1)?;
+        Some(json!({"line": l - 1, "character": chars_to_utf16(&hrs, l - 1, c - 1)}))
     };
     Some(json!({"start": at(&r["start"])?, "end": at(&r["end"])?}))
 }
@@ -698,15 +731,17 @@ impl Bridge {
             return None;
         }
         let m = harsh_lang::remap::SourceMap::load(map.to_str()?).ok()?;
-        let Some((rl, rc)) = m.find(line + 1, p.position.character as usize + 1) else {
-            log(&format!("{method} at {}:{}: no Rust came from there", line + 1, p.position.character + 1));
+        let col = utf16_to_chars(&now, line, p.position.character as u64);
+        let Some((rl, rc)) = m.find(line + 1, col + 1) else {
+            log(&format!("{method} at {}:{}: no Rust came from there", line + 1, col + 1));
             return None;
         };
-        log(&format!("-> {method} at .hrs {}:{} = .rs {rl}:{rc}", line + 1, p.position.character + 1));
+        log(&format!("-> {method} at .hrs {}:{} = .rs {rl}:{rc}", line + 1, col + 1));
         self.ensure(&root, conn)?;
+        let rs_text = std::fs::read_to_string(&rs).unwrap_or_default();
         let params = json!({
             "textDocument": {"uri": Url::from_file_path(&rs).ok()?},
-            "position": {"line": rl - 1, "character": rc - 1},
+            "position": {"line": rl - 1, "character": chars_to_utf16(&rs_text, rl - 1, rc - 1)},
         });
         let ra = self.ras.get_mut(&root)?;
         ra.wait_ready();
@@ -819,7 +854,8 @@ impl Bridge {
         let root = root_of(&file)?;
         let (rs, _) = generated(&root, &file)?;
         let now = docs.get(uri).cloned().or_else(|| std::fs::read_to_string(&file).ok())?;
-        let (line, col) = (p.position.line as usize, p.position.character as usize);
+        let line = p.position.line as usize;
+        let col = utf16_to_chars(&now, line, p.position.character as u64);
         let start = now.split_inclusive('\n').take(line).map(str::len).sum::<usize>();
         let at = start + now[start..].chars().take(col).map(char::len_utf8).sum::<usize>();
         let marked = format!("{}{MARK}{}", &now[..at], &now[at..]);
@@ -842,7 +878,7 @@ impl Bridge {
         let ra = self.ras.get_mut(&root)?;
         ra.wait_ready();
         ra.set_text(&rs_uri, &rust).ok()?;
-        let answer = ra.request("textDocument/completion", json!({"textDocument": {"uri": rs_uri}, "position": {"line": rl - 1, "character": rc - 1}}), 30);
+        let answer = ra.request("textDocument/completion", json!({"textDocument": {"uri": rs_uri}, "position": {"line": rl - 1, "character": chars_to_utf16(&rust, rl - 1, rc - 1)}}), 30);
         let _ = ra.set_text(&rs_uri, &on_disk);
         let answer = match answer {
             Ok(v) => v,
@@ -880,3 +916,20 @@ impl Bridge {
     }
 }
 
+
+#[cfg(test)]
+mod tests {
+    use super::{chars_to_utf16, utf16_to_chars};
+
+    /// LSP's UTF-16 columns and the maps' character columns agree up to a
+    /// character outside the BMP, and differ by one after each.
+    #[test]
+    fn columns_convert_between_utf16_and_characters() {
+        let text = "a\nlet s = \"\u{1F600}\" + x\n";
+        // `x` is character 15 on line 1, and UTF-16 unit 16.
+        assert_eq!(utf16_to_chars(text, 1, 16), 15);
+        assert_eq!(chars_to_utf16(text, 1, 15), 16);
+        assert_eq!(utf16_to_chars(text, 1, 4), 4);
+        assert_eq!(chars_to_utf16(text, 0, 1), 1);
+    }
+}

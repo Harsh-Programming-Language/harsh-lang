@@ -378,6 +378,12 @@ impl<'a> Lexer<'a> {
     }
 
     fn lex_raw_or_byte_string(&mut self, lo: usize) -> Result<(), LexError> {
+        // A byte string without `r`, `b"..."`, has escapes like any string:
+        // `b"\""` ends at its second quote, not its first (found writing the
+        // developer book, 0.7.3).
+        if self.peek() == Some('b') && self.peek_at(1) == Some('"') {
+            return self.lex_string(lo);
+        }
         // consume prefix letters
         while matches!(self.peek(), Some('r') | Some('b')) {
             self.i += 1;
@@ -386,10 +392,6 @@ impl<'a> Lexer<'a> {
         while self.peek() == Some('#') {
             hashes += 1;
             self.i += 1;
-        }
-        if self.peek() != Some('"') {
-            // `b"..."` with no hashes falls through to a normal escaped string
-            return self.lex_string(lo);
         }
         self.bump(); // opening quote
         if hashes == 0 {
@@ -602,8 +604,12 @@ impl<'a> Lexer<'a> {
 
         // Multi-char operators kept verbatim as Punct.
         const THREE: [&str; 2] = ["<<=", ">>="];
-        const TWO: [&str; 15] = [
-            "==", "!=", "<=", ">=", "&&", "||", "<<", ">>", "+=", "-=", "*=", "/=", "%=", "^=", "->",
+        // `&=` and `|=` are one token each, as in Rust (H15, Docreview
+        // 2026-10-12): read as `&` then `=`, `hrs fmt` spaced the `&` as a
+        // bit-and, `b & = 3`, and its token check, reading both alike,
+        // passed it.
+        const TWO: [&str; 17] = [
+            "==", "!=", "<=", ">=", "&&", "||", "<<", ">>", "+=", "-=", "*=", "/=", "%=", "^=", "&=", "|=", "->",
         ];
         let rest: String = [Some(c), c1, c2].iter().flatten().collect();
         for op in THREE {

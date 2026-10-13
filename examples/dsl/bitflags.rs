@@ -1,0 +1,15 @@
+use bitflags::bitflags;
+
+bitflags! {
+    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+    pub struct Perms: u32 {
+        const READ = 0b001;
+        const WRITE = 0b010;
+        const ALL = Self::READ.bits() | Self::WRITE.bits();
+    }
+}
+
+fn main() {
+    let p = Perms::READ | Perms::WRITE;
+    println!("{:?} {}", p, p == Perms::ALL);
+}

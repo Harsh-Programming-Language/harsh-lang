@@ -50,12 +50,21 @@ fn main() -> ExitCode {
     // doc examples); `--raw` skips only the formatter.
     let converted = if raw {
         harsh_lang::unbrace::convert(&src).map(|mut o| {
+            let w = harsh_lang::unbrace::take_warnings();
             harsh_lang::docex::to_harsh_in(&mut o);
-            o
+            (o, w)
         })
     } else {
-        harsh_lang::driver::convert_str(&src)
+        harsh_lang::driver::convert_str_warned(&src)
     };
+    // What a macro's body kept as written for want of a binding is named,
+    // never silent (the user's choice, 2026-10-12).
+    let converted = converted.map(|(o, warnings)| {
+        for w in warnings {
+            eprintln!("hrs-from: {input}: {w}");
+        }
+        o
+    });
     match converted {
         Ok(out) => match output {
             Some(p) => {

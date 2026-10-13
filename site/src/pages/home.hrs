@@ -21,12 +21,13 @@ const NO_BRACES: &str = r#"I would like to go
 
 /// The jumbotron's four boxes: they take turns in one place, forever --
 /// typed, held, erased (`TYPING`). Each line is a title or an item.
-const BOXES: &[&[(&str, &str)]] = &[
-    &[("title", "Rust without the braces")],
-    &[("title", "Functional Programming"), ("item", "Comprehensions, Pipes,"), ("item", "and Partial Functions")],
-    &[("title", "Linear Algebra"), ("item", "Vectors, Matrices,"), ("item", "and Matrix Arithmetic")],
-    &[("title", "Artificial Intelligence"), ("title", "& Data Science")],
-]
+const BOXES: &[&[(&str, &str)]] =
+    &[
+        &[("title", "Rust without the braces")],
+        &[("title", "Functional Programming"), ("item", "Comprehensions, Pipes,"), ("item", "and Partial Functions")],
+        &[("title", "Linear Algebra"), ("item", "Vectors, Matrices,"), ("item", "and Matrix Arithmetic")],
+        &[("title", "Artificial Intelligence"), ("title", "& Data Science")],
+    ]
 
 #[component]
 pub fn Home$ -> Element:

@@ -1,0 +1,11 @@
+struct Point
+    x: f64
+    y: f64
+
+fn norm (p: &Point) -> f64:
+    (p <- x * p <- x + p <- y * p <- y) <- sqrt$
+
+fn main$:
+    let points = v~ (Point\ x = 3.0, y = 4.0) (Point\ x = 1.0, y = 1.0)
+    for p in &points:
+        println! "{:.2}" (norm p)

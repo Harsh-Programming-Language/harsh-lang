@@ -79,7 +79,8 @@ Harsh is Rust with indentation instead of braces. This bundle contains the compl
 | `tutorial.ipynb` | The tutorial as a notebook, one cell per heading. Same content as `docs/TUTORIAL.md`. |
 | `docs/LANGUAGE.md` | **The language guide.** Every construct, with the Rust it produces. Start here to learn Harsh. |
 | `docs/INSTALL.md` | The commands: install the binaries, verify the tree, install the editor extensions, the day-to-day `hrs` commands. |
-| `docs/ROADMAP.md` | What is left to build, sized and ordered, plus the one decision that is blocking three items. |
+| `docs/ROADMAP.md` | What is left to build: the rulings waiting first, then what is the author's to run, then what is open. |
+| `docs/RETROSPECTIVE.md` | The project's history, session by session: what was decided and undone, the tools and their files, the oracles and what each caught, the principles that held or were amended. |
 | `docs/TUTORIAL.md` | The techniques used to build this, and the lessons that generalise. Worth reading before extending it. |
 | `docs/GOVERNANCE.md` | Who decides language direction, and what the project will not do. |
 | `CONTRIBUTING.md` | How to propose changes; the contributor agreement. |
@@ -142,11 +143,11 @@ Each `.hrs` file has its generated Rust beside it.
 
 Working: layout, token substitution, curried parameter declarations, source map, diagnostic remapping, and the Rust-to-Harsh converter. The transpiler round-trips through its own converter to a fixed point — converted to Harsh, transpiled back, rebuilt, and the resulting binaries produce byte-identical output.
 
-Deferred, because each needs an expression parser rather than a layout pass:
+Once deferred here, and since built or settled:
 
-- Juxtaposed application at call sites (`f x y`). Parameter declarations are curried; arguments are not.
-- Indentation-form struct literals (`Point:`). Use `Point { x: 1 }`.
-- `<-` for type paths (`Router <- new$`). Use `Router.new$`.
+- Juxtaposed application at call sites, `f x y`, as well as curried parameter declarations.
+- Struct literals are written `Point\ x = 1`, inline or with the fields beneath; Rust's `Point { x: 1 }` is refused.
+- A type path takes `.`, `Router.new$`; `<-` is for fields and methods only.
 
 ## Resolved
 

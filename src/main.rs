@@ -17,8 +17,10 @@ usage:
   hrs lint  [cargo args]     transpile, then cargo clippy
   hrs cargo <sub> [args]     transpile, then any cargo subcommand (cargo leptos build, ..)
   hrs watch [subcommand]     rebuild on every save (default: check)
-  hrs dx    [dx args]        transpile, then Dioxus's dx in target/src/
-                             (dx serve, dx bundle)
+  hrs -- <program> [args]    transpile, then run any program in target/src/,
+                             found as your shell finds it (hrs -- dx serve)
+  hrs which <program>        every program of that name on PATH, in order,
+                             with its --version: the first one is what runs
   hrs new   [--lib] <name>   create a project laid out for Harsh -- a program,
                              or with --lib a library
   hrs add   <crate>..        add Harsh crates to Hrs.toml -- hrs_std and the
@@ -36,15 +38,27 @@ usage:
   hrs dist  <dir>             write Harsh's standard distribution (hrs_std,
                              hrs_proc_macro, hrs_quote, hrs_syn) into <dir>,
                              for building outside a Harsh project
+  hrs expand <file.hrs>      print the file with its Harsh macros unfolded,
+                             as Harsh
 
   hrs <input.hrs> [-o out.rs] [--map out.map.json]
                              transpile a single file
+  hrs [--check] <a.hrs> <b.hrs>..
+                             transpile several files together, each beside
+                             its .hrs (Harsh files in a Rust crate); --check
+                             writes nothing and fails when a .rs is stale
 
 Sources live in src/**.hrs; generated Rust goes to target/src/, and
-Cargo.toml points its targets at that tree.";
+Cargo.toml points its targets at that tree.
+
+At a workspace's root (a [workspace] with no [package]), build, check,
+test, lint, fmt and cargo go through the members in order: a Harsh member
+by hrs, a Rust member by cargo.";
 
 fn main() -> ExitCode {
-    if std::env::args().skip(1).any(|a| a == "--version" || a == "-V") {
+    // `--version` is `hrs`'s own only before `--`: after it, the arguments
+    // are the program's (`hrs -- dx --version`).
+    if std::env::args().skip(1).take_while(|a| a != "--").any(|a| a == "--version" || a == "-V") {
         println!("hrs {}", env!("CARGO_PKG_VERSION"));
         return ExitCode::SUCCESS;
     }
@@ -54,6 +68,12 @@ fn main() -> ExitCode {
         return ExitCode::from(2);
     };
     let rest: Vec<String> = args[1..].to_vec();
+
+    // At a workspace's root, without a `[package]`: each member in turn
+    // (2026-10-13; it was "no target under target/src/").
+    if let Some(code) = at_workspace_root(first, &rest) {
+        return code;
+    }
 
     match first.as_str() {
         "-h" | "--help" | "help" => {
@@ -65,7 +85,23 @@ fn main() -> ExitCode {
         // `hrs cargo <subcommand> [args]`: transpile, then any cargo
         // subcommand -- `hrs cargo leptos build`, `hrs cargo doc`.
         "cargo" if !rest.is_empty() => cargo_cmd(&rest[0], &rest[1..]),
-        "dx" => tool_cmd("dx", &rest),
+        // Pass 2 is any program the programmer names, found as the shell
+        // finds it: Harsh arbitrates no conflict between two programs of
+        // one name (the user's ruling, 2026-10-12; `hrs dx` is retired).
+        "--" if !rest.is_empty() => tool_cmd(&rest[0], &rest[1..]),
+        "--" => {
+            eprintln!("hrs: `hrs --` runs a program after transpiling: hrs -- <program> [args], e.g. hrs -- dx serve");
+            ExitCode::from(2)
+        }
+        "dx" => {
+            eprintln!("hrs: `hrs dx` is retired (0.8.0) -- Harsh runs any program after transpiling, found as your shell finds it: write `hrs -- dx {}`", rest.join(" "));
+            ExitCode::from(2)
+        }
+        "which" if rest.len() == 1 => which(&rest[0]),
+        "which" => {
+            eprintln!("hrs: hrs which <program> -- every program of that name on PATH, in order");
+            ExitCode::from(2)
+        }
         "watch" => watch(&rest),
         "new" => new_project(&rest),
         "publish" => publish(&rest),
@@ -77,6 +113,66 @@ fn main() -> ExitCode {
         "dist" => dist(&rest),
         _ => single_file(&args),
     }
+}
+
+/// `hrs build`, `check`, `test`, `lint`, `fmt` and `hrs cargo …` at a
+/// workspace's root run in each member, in `members`' order: a Harsh member
+/// by `hrs` in its folder, a Rust member by cargo (`fmt`, Harsh's only, skips
+/// it). The first failure stops the run, as cargo's would. A command that
+/// acts on one program -- `run`, `--`, `watch`, `export`, `publish`, `add`
+/// -- is refused, naming the members. `None` when the folder is not a
+/// workspace's root, or the command is another.
+fn at_workspace_root(first: &str, rest: &[String]) -> Option<ExitCode> {
+    let per_member = matches!(first, "build" | "check" | "test" | "lint")
+        || (first == "cargo" && !rest.is_empty())
+        || (first == "fmt" && rest.iter().all(|a| a == "--check"));
+    let one_program = matches!(first, "run" | "--" | "watch" | "export" | "publish" | "add");
+    if !per_member && !one_program {
+        return None;
+    }
+    let root = Project::find().ok()?.root;
+    let members = driver::workspace_members(&root)?;
+    let rel = |m: &PathBuf| m.strip_prefix(&root).unwrap_or(m).display().to_string();
+    if one_program {
+        let names: Vec<String> = members.iter().map(rel).collect();
+        eprintln!(
+            "hrs: `hrs {first}` acts on one program, and {} is a workspace's root: run it in a member's folder ({})",
+            root.display(),
+            names.join(", ")
+        );
+        return Some(ExitCode::from(2));
+    }
+    if members.is_empty() {
+        eprintln!("hrs: {} is a workspace's root with no members", root.display());
+        return Some(ExitCode::FAILURE);
+    }
+    let exe = std::env::current_exe().unwrap_or_else(|_| PathBuf::from("hrs"));
+    for m in &members {
+        let harsh = driver::is_harsh_member(m);
+        if !harsh && first == "fmt" {
+            continue;
+        }
+        eprintln!("hrs: workspace member {}{}", rel(m), if harsh { "" } else { " (Rust, by cargo)" });
+        let status = if harsh {
+            std::process::Command::new(&exe).arg(first).args(rest).current_dir(m).status()
+        } else {
+            let (sub, args) = match first {
+                "lint" => ("clippy", rest),
+                "cargo" => (rest[0].as_str(), &rest[1..]),
+                s => (s, rest),
+            };
+            std::process::Command::new("cargo").arg(sub).args(args).current_dir(m).status()
+        };
+        match status {
+            Ok(s) if s.success() => {}
+            Ok(_) => return Some(ExitCode::FAILURE),
+            Err(e) => {
+                eprintln!("hrs: {}: {e}", rel(m));
+                return Some(ExitCode::FAILURE);
+            }
+        }
+    }
+    Some(ExitCode::SUCCESS)
 }
 
 /// `hrs add <crate>..`: Harsh crates into the project's Hrs.toml (made if
@@ -381,8 +477,97 @@ fn build_tree(p: &Project) -> Result<Vec<PathBuf>, String> {
     Ok(maps)
 }
 
-/// `hrs dx …`: pass 1, then `dx` in the generated project (S3, 2026-10-06).
+/// Every executable named `name` on PATH, in PATH's order: the first is the
+/// one a shell -- and `hrs --` -- runs.
+fn on_path(name: &str) -> Vec<PathBuf> {
+    let Some(path) = std::env::var_os("PATH") else { return Vec::new() };
+    let exts: Vec<String> = if cfg!(windows) {
+        std::env::var("PATHEXT").unwrap_or_else(|_| ".EXE;.CMD;.BAT".into()).split(';').map(|e| e.to_lowercase()).collect()
+    } else {
+        vec![String::new()]
+    };
+    let mut out: Vec<PathBuf> = Vec::new();
+    for dir in std::env::split_paths(&path) {
+        for ext in &exts {
+            let p = dir.join(format!("{name}{ext}"));
+            if is_executable(&p) && !out.iter().any(|q| q == &p) {
+                out.push(p);
+            }
+        }
+    }
+    out
+}
+
+fn is_executable(p: &std::path::Path) -> bool {
+    let Ok(m) = std::fs::metadata(p) else { return false };
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        m.is_file() && m.permissions().mode() & 0o111 != 0
+    }
+    #[cfg(not(unix))]
+    {
+        m.is_file()
+    }
+}
+
+/// `hrs which <program>`: every program of that name on PATH, in order, with
+/// the first line its `--version` prints -- so two programs sharing a name
+/// (Dioxus's `dx` and Deno's) are seen at once. Harsh decides nothing.
+fn which(name: &str) -> ExitCode {
+    let found = on_path(name);
+    if found.is_empty() {
+        eprintln!("hrs: no program named `{name}` on PATH");
+        return ExitCode::FAILURE;
+    }
+    for (n, p) in found.iter().enumerate() {
+        let version = version_of(p);
+        let mark = if n == 0 { "   <- runs" } else { "" };
+        println!("{}    {}{}", p.display(), version, mark);
+    }
+    ExitCode::SUCCESS
+}
+
+/// The first line a program prints for `--version`, waiting at most two
+/// seconds; empty when it prints nothing or does not finish.
+fn version_of(p: &std::path::Path) -> String {
+    use std::process::{Command, Stdio};
+    let Ok(mut child) = Command::new(p).arg("--version").stdin(Stdio::null()).stdout(Stdio::piped()).stderr(Stdio::piped()).spawn() else {
+        return String::new();
+    };
+    let start = std::time::Instant::now();
+    loop {
+        match child.try_wait() {
+            Ok(Some(_)) => break,
+            Ok(None) if start.elapsed() < std::time::Duration::from_secs(2) => std::thread::sleep(std::time::Duration::from_millis(20)),
+            _ => {
+                let _ = child.kill();
+                return String::new();
+            }
+        }
+    }
+    let Ok(out) = child.wait_with_output() else { return String::new() };
+    let text = if out.stdout.is_empty() { out.stderr } else { out.stdout };
+    String::from_utf8_lossy(&text).lines().next().unwrap_or("").trim().to_string()
+}
+
+/// `hrs -- <program> [args]`: pass 1, then the program in the generated
+/// project. The program is found as a shell finds it -- a name on PATH, a
+/// path as written, relative to where `hrs` was run -- and when PATH holds
+/// more than one program of that name, a note says which runs (2026-10-12).
 fn tool_cmd(prog: &str, args: &[String]) -> ExitCode {
+    // A path is the caller's: resolved from where `hrs` runs, not from
+    // `target/src/`, where the program will.
+    let prog: String = if prog.contains('/') || prog.contains('\\') {
+        std::fs::canonicalize(prog).map(|p| p.display().to_string()).unwrap_or_else(|_| prog.to_string())
+    } else {
+        let found = on_path(prog);
+        if found.len() > 1 {
+            eprintln!("hrs: {} programs named `{prog}` on PATH; running {} (`hrs which {prog}` lists them)", found.len(), found[0].display());
+        }
+        prog.to_string()
+    };
+    let prog = prog.as_str();
     let p = match Project::find() {
         Ok(p) => p,
         Err(e) => {

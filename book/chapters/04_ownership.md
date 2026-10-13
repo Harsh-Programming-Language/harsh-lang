@@ -236,8 +236,8 @@ error[E0596]: cannot borrow `*some_string` as mutable, as it is behind a `&` ref
   --> borrow_mut_err.hrs:2:5
    |
  2 |     some_string <- push_str ", world"
-   |     ^^^^^^^^^^^ `some_string` is a `&` reference, so the data it refers to cannot be borrowed as mutable
-   = help: consider changing this to be a mutable reference (hrs 1:25)
+   |     ^^^^^^^^^^^ `some_string` is a `&` reference, so it cannot be borrowed as mutable
+   = help: consider changing this to be a mutable reference (hrs 1:24)
 ```
 
 A plain `&` reference is a promise to only read. To change something through a reference you need a **mutable reference**, `&mut`, and the value you borrow from has to be `mut` in the first place:
@@ -370,7 +370,8 @@ error[E0106]: missing lifetime specifier
  1 | fn dangle$ -> &String:
    |               ^ expected named lifetime parameter
    = help: this function's return type contains a borrowed value, but there is no value for it to be borrowed from
-   = help: consider using the `'static` lifetime (hrs 1:16)
+   = help: consider using the `'static` lifetime, but this is uncommon unless you're returning a borrowed value from a `const` or a `static` (hrs 1:16)
+   = help: instead, you are more likely to want to return an owned value (hrs 1:15)
 ```
 
 `s` is created inside `dangle`, so it is dropped when `dangle` returns; a reference to it would point at freed memory. The compiler's message is about *lifetimes*, a word chapter 10 explains in full — for now, read the first `help`: the return type is a borrowed value and there is nothing in this function it could be borrowed *from*. The fix is to return the `String` itself, moving it out to the caller:

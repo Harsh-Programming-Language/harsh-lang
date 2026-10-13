@@ -310,6 +310,30 @@ fn bracket_interiors(toks: &[Token], a: usize, b: usize, out: &mut Vec<(usize, J
     }
 }
 
+/// The groups after a range's `..` in an atom are expression regions of
+/// their own: `..(split n)`, `0..(split n)` and `..=(split n)` apply `split`
+/// (H14, Docreview 2026-10-12: only a group that starts the atom was
+/// applied, so these came out `..(split n)`, Rust that does not parse).
+fn range_groups(toks: &[Token], a: usize, b: usize, out: &mut Vec<(usize, Jx)>) {
+    let mut i = a;
+    let mut depth = 0i32;
+    while i < b {
+        match toks[i].kind {
+            Tk::Open('(') if depth == 0 && i > a && toks[i - 1].kind == Tk::DotDot => {
+                if let Some(c) = matching_close_idx(toks, i, b) {
+                    split_group(toks, i + 1, c, out);
+                    i = c + 1;
+                    continue;
+                }
+            }
+            Tk::Open(_) => depth += 1,
+            Tk::Close(_) => depth -= 1,
+            _ => {}
+        }
+        i += 1;
+    }
+}
+
 /// A `[..]` written tight against what precedes it is an index and part of
 /// the atom: `f arr[1]` is `f(arr[1])`, as `t.0` is part of `t`. Written with
 /// a space it is an index too (brackets never apply), but inside an
@@ -705,6 +729,7 @@ fn apply_region(toks: &[Token], from: usize, to: usize, out: &mut Vec<(usize, Jx
         // arrives with the block's tail. It is the last argument.
         let mut open_last = false;
         bracket_interiors(toks, i, head_end, out);
+        range_groups(toks, i, head_end, out);
         let bang_head = head_end > i && toks[head_end - 1].kind == Tk::Punct && toks[head_end - 1].text == "!";
         while k < to {
             // A bracket right after a macro's bang is its first argument, an
@@ -748,19 +773,26 @@ fn apply_region(toks: &[Token], from: usize, to: usize, out: &mut Vec<(usize, Jx
         // The head may itself be a group -- `(add 10) 7` applies the closure
         // that `add 10` returns.
         if toks[i].kind == Tk::Open('(') {
-            // A call isolated so that a tuple index applies to its result,
-            // `(f src).0`: Harsh's isolation, which Rust's call syntax does
-            // not need -- `f(src).0` (2026-10-05). An operation keeps them:
-            // `(a + b).0` needs them in Rust too.
+            // A call isolated so that a tuple index or an index applies to
+            // its result, `(f src).0`, `(f src)[i]`: Harsh's isolation, which
+            // Rust's call syntax does not need -- `f(src).0` (2026-10-05).
+            // An operation keeps them: `(a + b).0` needs them in Rust too.
+            let mut group_end = head_end - 1;
             if let Some(c) = matching_close_idx(toks, i, head_end) {
-                let indexed = toks.get(c + 1).map_or(false, |t| t.kind == Tk::TupleIdx);
+                // The group's own contents only: an index after it,
+                // `(g v)[f x]`, is applied once, as any index is (it was
+                // applied twice, `f((x))`, found 0.7.3).
+                group_end = c;
+                // An index the same, tight after the group: `(cols l)[i]` is
+                // `cols(l)[i]` (0.7.3).
+                let indexed = toks.get(c + 1).map_or(false, |t| t.kind == Tk::TupleIdx || (t.kind == Tk::Open('[') && t.span.lo == toks[c].span.hi));
                 let call = c > i + 1 && toks[i + 1].kind == Tk::Ident && atom_end(toks, i + 1, c).map_or(false, |e| e < c && is_application(toks, e, c));
                 if indexed && call {
                     out.push((i, Jx::Drop));
                     out.push((c, Jx::Drop));
                 }
             }
-            split_group(toks, i + 1, head_end - 1, out);
+            split_group(toks, i + 1, group_end, out);
         }
         if args.is_empty() {
             i = head_end.max(i + 1);
@@ -772,8 +804,11 @@ fn apply_region(toks: &[Token], from: usize, to: usize, out: &mut Vec<(usize, Jx
         // The unit value `()` is a group too, and the one that must be wrapped
         // however many arguments there are: `f ()` is `f(())`.
         let is_unit = |a: usize, b: usize| toks[a].kind == Tk::Open('(') && b - a == 2;
+        // An argument that starts with a group is that group: `f (x)..` is
+        // `f(x)..`, as `hrs-from` writes it (`min <- min (a - b)..`).
+        let is_group = |a: usize, _b: usize| toks[a].kind == Tk::Open('(');
         let single_group = args.len() == 1
-            && toks[args[0].0].kind == Tk::Open('(')
+            && is_group(args[0].0, args[0].1)
             && !is_unit(args[0].0, args[0].1)
             && !has_top_comma(toks, args[0].0 + 1, args[0].1 - 1);
         if open_last {
@@ -798,16 +833,17 @@ fn apply_region(toks: &[Token], from: usize, to: usize, out: &mut Vec<(usize, Jx
             }
             // The open group's inside is Harsh too: `Some (if toks <- get c:`.
             apply_region(toks, last_open + 1, to, out);
-            let is_unit = |a: usize, b: usize| toks[a].kind == Tk::Open('(') && b - a == 2;
             for (a, b) in &args[..args.len() - 1] {
-                if toks[*a].kind == Tk::Open('(') && !is_unit(*a, *b) && !has_top_comma(toks, a + 1, b - 1) {
+                if is_group(*a, *b) && !is_unit(*a, *b) && !has_top_comma(toks, a + 1, b - 1) {
                     out.push((*a, Jx::Drop));
                     out.push((*b - 1, Jx::Drop));
                 }
             }
             for (a, b) in &args[..args.len() - 1] {
-                if toks[*a].kind == Tk::Open('(') {
+                if is_group(*a, *b) {
                     split_group(toks, a + 1, b - 1, out);
+                } else {
+                    range_groups(toks, *a, *b, out);
                 }
             }
             i = to;
@@ -829,7 +865,7 @@ fn apply_region(toks: &[Token], from: usize, to: usize, out: &mut Vec<(usize, Jx
         // top-level commas is a tuple and keeps them.
         if args.len() > 1 {
             for (a, b) in &args {
-                if toks[*a].kind == Tk::Open('(') && !is_unit(*a, *b) && !has_top_comma(toks, a + 1, b - 1) {
+                if is_group(*a, *b) && !is_unit(*a, *b) && !has_top_comma(toks, a + 1, b - 1) {
                     out.push((*a, Jx::Drop));
                     out.push((*b - 1, Jx::Drop));
                 }
@@ -838,7 +874,7 @@ fn apply_region(toks: &[Token], from: usize, to: usize, out: &mut Vec<(usize, Jx
         // Each argument is itself an expression region. For a closure, the
         // params are not part of it -- only the body.
         for (a, b) in &args {
-            if toks[*a].kind == Tk::Open('(') {
+            if is_group(*a, *b) {
                 split_group(toks, a + 1, b - 1, out);
             } else if let Some(p) = closure_params_end(toks, *a, *b) {
                 if p < *b {
@@ -983,33 +1019,6 @@ pub fn regions(toks: &[Token], stmt_block: bool, is_header: bool) -> Vec<(usize,
         return out;
     }
 
-    // "Top level" is the depth the line ends at: a block keyword opened
-    // inside a group left open -- `Some (if c:` -- governs the header from
-    // there (parens are transparent to layout).
-    let end_depth: i32 = {
-        let mut d = 0i32;
-        for &i in &sig {
-            match toks[i].kind {
-                Tk::Open(_) => d += 1,
-                Tk::Close(_) => d -= 1,
-                _ => {}
-            }
-        }
-        d.max(0)
-    };
-    let top_level = |pred: &dyn Fn(&Token) -> bool| -> Option<usize> {
-        let mut d = 0i32;
-        for &i in &sig {
-            match toks[i].kind {
-                Tk::Open(_) => d += 1,
-                Tk::Close(_) => d -= 1,
-                _ if d == end_depth && pred(&toks[i]) => return Some(i),
-                _ => {}
-            }
-        }
-        None
-    };
-
     // `union U\\ a: u32, b: f32` inline: `union` is a contextual keyword, so
     // it is not refused as a callee the way `struct` is, and `union U` was
     // read as an application and emitted `union(U) {` (found 2026-09-20).
@@ -1032,9 +1041,6 @@ pub fn regions(toks: &[Token], stmt_block: bool, is_header: bool) -> Vec<(usize,
         // Every other header juxtaposes whole, because a match arm's pattern,
         // an `if let` pattern and a scrutinee are all ordinary applications.
         let has_fn = sig.iter().any(|&i| toks[i].is_kw("fn"));
-        let kw = sig.iter().map(|&i| &toks[i]).find(|t| {
-            t.kind == Tk::Ident && matches!(t.text.as_str(), "match" | "if" | "while" | "for")
-        });
         // `macro_rules! name:` is a definition, not an application.
         if toks[sig[0]].is_kw("macro_rules") {
             return Vec::new();
@@ -1049,76 +1055,64 @@ pub fn regions(toks: &[Token], stmt_block: bool, is_header: bool) -> Vec<(usize,
             }
             return if sig[0] < stop { vec![(sig[0], stop)] } else { Vec::new() };
         }
-        let _ = kw;
-        let kw: Option<&Token> = None;
-        let Some(kw) = kw else {
-            // `let PAT = EXPR else:` has no scrutinee keyword but is still an
-            // ordinary statement up to the block-opening colon.
-            if toks[sig[0]].is_kw("let") {
-                return vec![(sig[0], *sig.last().unwrap())];
-            }
-            // A `fn` header: parameter *patterns* juxtapose, so
-            // `Query params: Query<HelloParams>` becomes `Query(params): ..`.
-            // Only the inside of each parameter group is exposed; the types and
-            // the signature itself are not.
-            if sig.iter().any(|&i| toks[i].is_kw("fn")) {
-                let mut out = Vec::new();
-                let mut d = 0i32;
-                let mut start = None;
-                for &i in &sig {
-                    match toks[i].kind {
-                        Tk::Open('(') => {
-                            d += 1;
-                            if d == 1 {
-                                start = Some(i + 1);
-                            }
+        // `let PAT = EXPR else:` has no scrutinee keyword but is still an
+        // ordinary statement up to the block-opening colon.
+        if toks[sig[0]].is_kw("let") {
+            return vec![(sig[0], *sig.last().unwrap())];
+        }
+        // A `fn` header: parameter *patterns* juxtapose, so
+        // `Query params: Query<HelloParams>` becomes `Query(params): ..`.
+        // Only the inside of each parameter group is exposed; the types and
+        // the signature itself are not.
+        if sig.iter().any(|&i| toks[i].is_kw("fn")) {
+            let mut out = Vec::new();
+            let mut d = 0i32;
+            let mut start = None;
+            for &i in &sig {
+                match toks[i].kind {
+                    Tk::Open('(') => {
+                        d += 1;
+                        if d == 1 {
+                            start = Some(i + 1);
                         }
-                        Tk::Close(')') => {
-                            d -= 1;
-                            if d == 0 {
-                                if let Some(s) = start.take() {
-                                    // Each parameter's *pattern* -- up to its
-                                    // type colon -- juxtaposes; the type does
-                                    // not, so `impl Fn(i32, i32)` keeps its
-                                    // argument list rather than becoming a
-                                    // tuple.
-                                    let mut seg = s;
-                                    let mut dd = 0i32;
-                                    let mut colon: Option<usize> = None;
-                                    for j in s..i {
-                                        match toks[j].kind {
-                                            Tk::Open(_) => dd += 1,
-                                            Tk::Close(_) => dd -= 1,
-                                            Tk::Colon if dd == 0 && colon.is_none() => colon = Some(j),
-                                            Tk::Comma if dd == 0 => {
-                                                out.push((seg, colon.unwrap_or(j)));
-                                                seg = j + 1;
-                                                colon = None;
-                                            }
-                                            _ => {}
+                    }
+                    Tk::Close(')') => {
+                        d -= 1;
+                        if d == 0 {
+                            if let Some(s) = start.take() {
+                                // Each parameter's *pattern* -- up to its
+                                // type colon -- juxtaposes; the type does
+                                // not, so `impl Fn(i32, i32)` keeps its
+                                // argument list rather than becoming a
+                                // tuple.
+                                let mut seg = s;
+                                let mut dd = 0i32;
+                                let mut colon: Option<usize> = None;
+                                for j in s..i {
+                                    match toks[j].kind {
+                                        Tk::Open(_) => dd += 1,
+                                        Tk::Close(_) => dd -= 1,
+                                        Tk::Colon if dd == 0 && colon.is_none() => colon = Some(j),
+                                        Tk::Comma if dd == 0 => {
+                                            out.push((seg, colon.unwrap_or(j)));
+                                            seg = j + 1;
+                                            colon = None;
                                         }
+                                        _ => {}
                                     }
-                                    if seg < i {
-                                        out.push((seg, colon.unwrap_or(i)));
-                                    }
+                                }
+                                if seg < i {
+                                    out.push((seg, colon.unwrap_or(i)));
                                 }
                             }
                         }
-                        _ => {}
                     }
+                    _ => {}
                 }
-                return out;
             }
-            return Vec::new();
-        };
-        let start = match kw.text.as_str() {
-            "for" => top_level(&|t| t.is_kw("in")).map(|i| i + 1),
-            // The pattern in `if let PAT = EXPR:` juxtaposes as well, so the
-            // region runs from the keyword to the block colon.
-            _ => top_level(&|t| t.text == kw.text).map(|i| i + 1),
-        };
-        let stop = *sig.last().unwrap(); // the block-opening `:`
-        return start.filter(|&s| s < stop).map(|s| vec![(s, stop)]).unwrap_or_default();
+            return out;
+        }
+        return Vec::new();
     }
 
     // A macro call at item level -- `compile_error! "msg"`, a crate's
@@ -1687,7 +1681,8 @@ fn matching_close_idx(toks: &[Token], i: usize, end: usize) -> Option<usize> {
 ///
 /// This runs on each logical line before juxtaposition, which then wraps the
 /// emitted runs into calls; the source map and the separator rules never see a
-/// pipe. The arity table is read here and nowhere else.
+/// pipe. In the transpiler the arity table is read here and nowhere else;
+/// `columns.rs` reads it too, for the cursor only (GOVERNANCE, 2026-10-12).
 pub fn rewrite_pipes(
     toks: &[Token],
     arities: &std::collections::HashMap<String, usize>,
@@ -2069,25 +2064,41 @@ impl<'a> Pipes<'a> {
     }
 }
 
-/// The constructors the files being transpiled declare -- every `struct` and
-/// every enum variant -- beside the prelude's `Some`, `Ok`, `Err`. Filled by
-/// `collect_arities`, which reads each file's declarations before
-/// juxtaposition; read by `is_constructor_head`. A name is a constructor
-/// because it is declared one, never because of its case (the user,
-/// 2026-10-05: Rust does not care how a name is spelt). The set only grows.
-static CONSTRUCTORS: std::sync::Mutex<Vec<String>> = std::sync::Mutex::new(Vec::new());
+// The constructors the files being transpiled declare -- every `struct` and
+// every enum variant -- beside the prelude's `Some`, `Ok`, `Err`. Filled by
+// `collect_arities`, which reads each file's declarations before
+// juxtaposition; read by `is_constructor_head`. A name is a constructor
+// because it is declared one, never because of its case (the user,
+// 2026-10-05: Rust does not care how a name is spelt). A transpilation
+// starts it afresh (`reset_constructors`).
+//
+// One table per thread (0.8.2): a transpilation runs on one thread, and
+// with one table for the whole process two transpilations at once -- tests
+// run in parallel, a language server -- reset and filled each other's, so a
+// declared constructor could be forgotten mid-file and `Wrap &x` read as a
+// bit-and (found as a test failing once in 300 runs).
+thread_local! {
+    static CONSTRUCTORS: std::cell::RefCell<Vec<String>> = const { std::cell::RefCell::new(Vec::new()) };
+}
+
+fn is_declared_constructor(name: &str) -> bool {
+    CONSTRUCTORS.with(|c| c.borrow().iter().any(|n| n == name))
+}
 
 /// Forget the constructors recorded so far: a transpilation reads its own
 /// files' declarations, never another's (the table only grew, and a name one
 /// file declared leaked into the next, 2026-10-06).
 pub fn reset_constructors() {
-    if let Ok(mut c) = CONSTRUCTORS.lock() {
-        c.clear();
-    }
+    CONSTRUCTORS.with(|c| c.borrow_mut().clear());
 }
 
 /// The constructors `toks` declare: `struct Name`, and each variant of
-/// `enum Name` -- the first name on each line of its block.
+/// `enum Name`. A variant is the first name of a line one level under the
+/// `enum` -- never a deeper line, which holds a record variant's fields
+/// (Docreview's H13: the fields `first`, `messages` … were taken for
+/// constructors, and `first & 0x7f` became `first(&0x7f)`) -- or, declared
+/// inline, `enum Shape\ Empty, Circle f64, (Named\ name: String)`, the first
+/// name of each entry after the `\`.
 pub fn declared_constructors(toks: &[Token]) -> Vec<String> {
     let mut found: Vec<String> = Vec::new();
     let mut i = 0usize;
@@ -2096,16 +2107,36 @@ pub fn declared_constructors(toks: &[Token]) -> Vec<String> {
             found.push(toks[i + 1].text.clone());
         }
         if toks[i].is_kw("enum") && toks[i + 1].kind == Tk::Ident {
-            // The enum's line indentation; its variants are the first names
-            // of the deeper lines that follow, until the block ends.
             let ind = (0..=i).rev().find_map(|k| toks[k].line_start).unwrap_or(0);
+            // The header line: an inline list of variants after a `\`.
             let mut k = i + 2;
+            let mut depth = 0i32;
+            let mut entry_start = false;
+            while k < toks.len() && toks[k].line_start.is_none() {
+                match &toks[k].kind {
+                    Tk::Open(_) => depth += 1,
+                    Tk::Close(_) => depth -= 1,
+                    Tk::Backslash if depth == 0 && !entry_start => entry_start = true,
+                    Tk::Comma if depth == 0 => entry_start = true,
+                    // `(Named\ name: String)`, a record variant isolated in
+                    // the list, gives the first name inside its paren.
+                    Tk::Ident if entry_start => {
+                        found.push(toks[k].text.clone());
+                        entry_start = false;
+                    }
+                    _ => {}
+                }
+                k += 1;
+            }
+            // The body beneath: the variants' level is the first deeper line's.
+            let mut level: Option<usize> = None;
             while k < toks.len() {
                 if let Some(li) = toks[k].line_start {
                     if li <= ind {
                         break;
                     }
-                    if toks[k].kind == Tk::Ident && !toks[k].is_comment() {
+                    let lv = *level.get_or_insert(li);
+                    if li == lv && toks[k].kind == Tk::Ident && !toks[k].is_comment() {
                         found.push(toks[k].text.clone());
                     }
                 }
@@ -2123,13 +2154,14 @@ pub fn declared_constructors(toks: &[Token]) -> Vec<String> {
 /// other files.
 fn collect_constructors(toks: &[Token]) {
     let found = declared_constructors(toks);
-    if let Ok(mut c) = CONSTRUCTORS.lock() {
+    CONSTRUCTORS.with(|c| {
+        let mut c = c.borrow_mut();
         for f in found {
             if !c.contains(&f) {
                 c.push(f);
             }
         }
-    }
+    });
 }
 
 /// Parameter counts of every `fn` in a token stream, by name. Arity is the
@@ -2156,15 +2188,29 @@ pub fn collect_arities(toks: &[Token]) -> std::collections::HashMap<String, usiz
             let mut n = 0usize;
             let mut k = j;
             let mut bare_seen = false;
+            let mut annotated = false;
+            // The header ends with its line: a line at or left of the `fn`'s
+            // is the body or the next item, never more parameters.
+            let fn_ind = (0..=i).rev().find_map(|q| toks[q].line_start).unwrap_or(0);
             while k < toks.len() {
                 let t = &toks[k];
                 if t.text == "->" || t.is_kw("where") || t.is_kw("do") {
                     break;
                 }
+                if t.line_start.map_or(false, |li| li <= fn_ind) {
+                    break;
+                }
                 if t.kind == Tk::Colon {
-                    // A colon at depth 0 that is not inside a group: either a
-                    // bare parameter's type annotation or the block opener.
-                    if bare_seen { k += 1; continue; }
+                    // A colon at depth 0 that is not inside a group: a bare
+                    // parameter's type annotation, once, or the block opener.
+                    // (It skipped every colon after a bare parameter, and with
+                    // no `->` ran on into the next function: found writing the
+                    // developer book, 0.7.3.)
+                    if bare_seen && !annotated {
+                        annotated = true;
+                        k += 1;
+                        continue;
+                    }
                     break;
                 }
                 if t.kind == Tk::Open('(') {
@@ -2234,20 +2280,20 @@ fn closes_turbofish(toks: &[Token], from: usize, at: usize) -> bool {
     false
 }
 
+/// Is `name` a constructor -- declared by the files read so far, or the
+/// prelude's? (The formatter's layout of `&` asks too.)
+pub fn is_constructor_name(name: &str) -> bool {
+    matches!(name, "Some" | "Ok" | "Err") || is_declared_constructor(name)
+}
+
 /// The head `toks[i..head_end]` is a constructor: its last name (`Some`,
 /// `Point`, `Route.Home`'s `Home`) is one the files declare, or the
 /// prelude's. Any other name -- a function, a constant, a constructor from
 /// another crate -- keeps the isolation rule: `f (&x)`.
-/// Is `name` a constructor -- declared by the files read so far, or the
-/// prelude's? (The formatter's layout of `&` asks too.)
-pub fn is_constructor_name(name: &str) -> bool {
-    matches!(name, "Some" | "Ok" | "Err") || CONSTRUCTORS.lock().map_or(false, |c| c.iter().any(|n| n == name))
-}
-
 fn is_constructor_head(toks: &[Token], i: usize, head_end: usize) -> bool {
     let Some(last) = (i..head_end).rev().find(|&k| toks[k].kind == Tk::Ident) else { return false };
     let name = toks[last].text.as_str();
-    matches!(name, "Some" | "Ok" | "Err") || CONSTRUCTORS.lock().map_or(false, |c| c.iter().any(|n| n == name))
+    matches!(name, "Some" | "Ok" | "Err") || is_declared_constructor(name)
 }
 
 /// `&x`, `& x`, `&mut x`, `& mut x`, `mut x`, `ref x`, `ref mut x` starting at

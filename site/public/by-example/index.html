@@ -454,7 +454,7 @@ returning something wrong:</p>
     <span class="mac">println!</span> <span class="str">"reaching for element {n}"</span>
     <span class="mac">println!</span> <span class="str">"{}"</span> xs<span class="p">[</span>n<span class="p">]</span></code></pre>
 <pre class="code"><code>reaching for element 5
-thread 'main' panicked at out_of_range.hrs:6:20:</code></pre>
+thread 'main' (24720) panicked at out_of_range.hrs:6:20:</code></pre>
 <h2 id="3-custom-types">3. Custom types</h2>
 <h3 id="3-1-structures">3.1 Structures</h3>
 <pre class="code harsh"><code><span class="attr">#[derive Debug]</span>
@@ -503,6 +503,15 @@ inline after a <code>\</code>.</p>
 the opener starts its own line after the <code>=</code>. Taking one apart is the mirror
 image — <code>let Pair x y = pair</code> — which is the general rule that <strong>matching is
 constructing</strong>, read backwards.</p>
+<p>Handed to a function, a literal is isolated like any argument of several
+tokens, a constructor's included: <code>people &lt;- push (Person\ name = n, age = 27)</code>,
+<code>Some (Person\ …)</code>; written bare, it is refused. Over several lines, its
+fields stand one unit past its name and its <code>)</code> under its <code>(</code>:</p>
+<pre><code>people &lt;- push (Person\
+                    name = String.from "Ada"
+                    age = 36
+               )
+</code></pre>
 <h3 id="3-2-enums">3.2 Enums</h3>
 <pre class="code harsh"><code><span class="com">// A variant can carry nothing, a payload, or named fields.</span>
 <span class="attr">#[derive Debug]</span>
@@ -522,12 +531,13 @@ constructing</strong>, read backwards.</p>
         <span class="t">Event</span><span class="p">.</span><span class="t">Paste</span>\ text<span class="p">,</span> at <span class="op">=&gt;</span> <span class="mac">format!</span> <span class="str">"pasted {:?} at {}"</span> text at
 
 <span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
-    <span class="k">let</span> events <span class="p">=</span> <span class="p">[</span>
-        <span class="t">Event</span><span class="p">.</span><span class="t">PageLoad</span><span class="p">,</span>
-        <span class="t">Event</span><span class="p">.</span><span class="t">Click</span> <span class="num">20</span> <span class="num">80</span><span class="p">,</span>
-        <span class="t">Event</span><span class="p">.</span><span class="t">KeyPress</span> <span class="str">'q'</span><span class="p">,</span>
-        <span class="t">Event</span><span class="p">.</span><span class="t">Paste</span>\ text <span class="p">=</span> <span class="t">String</span><span class="p">.</span>from <span class="str">"hi"</span><span class="p">,</span> at <span class="p">=</span> <span class="num">3</span><span class="p">,</span>
-    <span class="p">]</span>
+    <span class="k">let</span> events <span class="p">=</span>
+        <span class="p">[</span>
+            <span class="t">Event</span><span class="p">.</span><span class="t">PageLoad</span><span class="p">,</span>
+            <span class="t">Event</span><span class="p">.</span><span class="t">Click</span> <span class="num">20</span> <span class="num">80</span><span class="p">,</span>
+            <span class="t">Event</span><span class="p">.</span><span class="t">KeyPress</span> <span class="str">'q'</span><span class="p">,</span>
+            <span class="t">Event</span><span class="p">.</span><span class="t">Paste</span>\ text <span class="p">=</span> <span class="t">String</span><span class="p">.</span>from <span class="str">"hi"</span><span class="p">,</span> at <span class="p">=</span> <span class="num">3</span><span class="p">,</span>
+        <span class="p">]</span>
     <span class="k">for</span> e <span class="k">in</span> events<span class="p">:</span>
         <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span>describe e<span class="p">)</span></code></pre>
 <pre class="code"><code>the page loaded
@@ -1046,6 +1056,50 @@ reference. The prelude's <code>g~</code> and <code>m~</code> are the first (page
 <p>Imported from Rust libraries, called by Harsh's rules: <code>vec! 1 2 3</code>,
 <code>#[derive Debug Serialize]</code>, <code>#[tokio.main]</code>; a stream that is a language of
 its own goes in braces, with Harsh in holes, <code>@: … :@</code> (23.8).</p>
+<p>A hole is an expression that calls on a variable, a function or a name the
+DSL binds, or uses an operator (<code>.</code> and <code>::</code> too); a single word is exempt,
+<code>{count}</code>. Look in the strings' format slots, after a key's <code>:</code> in <code>json!</code>,
+in a splice <code>( … )</code> in Maud, after an attribute's <code>:</code> or <code>=</code>, in a brace pair
+of its own, after the DSL's <code>for … in</code> and <code>if</code>. The Book's 23.8 and the
+guide to macros have the full catalogue.</p>
+<pre class="code"><code>[dependencies]
+serde_json = "1"</code></pre>
+<pre class="code harsh"><code><span class="k">use</span> serde_json<span class="p">.</span>json
+
+<span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="k">let</span> name <span class="p">=</span> <span class="str">"Ada"</span>
+    <span class="k">let</span> langs <span class="p">=</span> <span class="mac">vec!</span> <span class="str">"Rust"</span> <span class="str">"Harsh"</span>
+    <span class="k">let</span> v <span class="p">=</span> <span class="mac">json!</span> <span class="p">{</span><span class="p">{</span>
+        <span class="str">"name"</span><span class="p">:</span> <span class="p">@</span><span class="p">:</span> name <span class="op">&lt;-</span> to_uppercase<span class="defer">$</span> <span class="p">:</span><span class="p">@</span><span class="p">,</span>
+        <span class="str">"age"</span><span class="p">:</span> <span class="num">36</span><span class="p">,</span>
+        <span class="str">"langs"</span><span class="p">:</span> langs<span class="p">,</span>
+        <span class="str">"count"</span><span class="p">:</span> <span class="p">@</span><span class="p">:</span> langs <span class="op">&lt;-</span> len<span class="defer">$</span> <span class="p">+</span> <span class="num">1</span> <span class="p">:</span><span class="p">@</span><span class="p">,</span>
+        <span class="str">"tags"</span><span class="p">:</span> <span class="p">[</span><span class="p">{</span> <span class="str">"id"</span><span class="p">:</span> <span class="num">1</span><span class="p">,</span> <span class="str">"main"</span><span class="p">:</span> <span class="p">@</span><span class="p">:</span> langs <span class="op">&lt;-</span> first<span class="defer">$</span> <span class="p">:</span><span class="p">@</span> <span class="p">}</span><span class="p">]</span>
+    <span class="p">}</span><span class="p">}</span>
+    <span class="mac">println!</span> <span class="str">"{v}"</span></code></pre>
+<pre class="code"><code>{"age":36,"count":3,"langs":["Rust","Harsh"],"name":"ADA","tags":[{"id":1,"main":"Rust"}]}</code></pre>
+<pre class="code"><code>[dependencies]
+maud = "0.27"</code></pre>
+<pre class="code harsh"><code><span class="k">use</span> maud<span class="p">.</span><span class="p">(</span>html<span class="p">,</span> <span class="t">Markup</span><span class="p">)</span>
+
+<span class="k">fn</span> page <span class="p">(</span>title<span class="p">:</span> <span class="p">&amp;</span>str<span class="p">)</span> <span class="p">(</span>items<span class="p">:</span> <span class="p">&amp;</span><span class="p">[</span><span class="p">&amp;</span>str<span class="p">]</span><span class="p">)</span> <span class="op">-&gt;</span> <span class="t">Markup</span><span class="p">:</span>
+    <span class="mac">html!</span> <span class="p">{</span>
+        h1 <span class="p">{</span> <span class="p">(</span>title<span class="p">)</span> <span class="p">}</span>
+        p<span class="p">.</span>intro <span class="p">{</span> <span class="str">"Items: "</span> <span class="p">(</span><span class="p">@</span><span class="p">:</span> items <span class="op">&lt;-</span> len<span class="defer">$</span> <span class="p">:</span><span class="p">@</span><span class="p">)</span> <span class="p">}</span>
+        a href<span class="p">=</span><span class="p">(</span><span class="p">@</span><span class="p">:</span> <span class="mac">format!</span> <span class="str">"/items/{}"</span> <span class="p">(</span>items <span class="op">&lt;-</span> len<span class="defer">$</span><span class="p">)</span> <span class="p">:</span><span class="p">@</span><span class="p">)</span> <span class="p">{</span> <span class="str">"next"</span> <span class="p">}</span>
+        ul <span class="p">{</span>
+            <span class="p">@</span><span class="k">for</span> item <span class="k">in</span> items <span class="p">{</span>
+                li <span class="p">{</span> <span class="p">(</span><span class="p">@</span><span class="p">:</span> item <span class="op">&lt;-</span> to_uppercase<span class="defer">$</span> <span class="p">:</span><span class="p">@</span><span class="p">)</span> <span class="p">}</span>
+            <span class="p">}</span>
+        <span class="p">}</span>
+        <span class="p">@</span><span class="k">if</span> <span class="p">@</span><span class="p">:</span> items <span class="op">&lt;-</span> is_empty<span class="defer">$</span> <span class="p">:</span><span class="p">@</span> <span class="p">{</span>
+            p <span class="p">{</span> <span class="str">"none"</span> <span class="p">}</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+
+<span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span>page <span class="str">"Fruit"</span> <span class="p">(</span><span class="p">&amp;</span><span class="p">[</span><span class="str">"apple"</span><span class="p">,</span> <span class="str">"pear"</span><span class="p">]</span><span class="p">)</span> <span class="op">&lt;-</span> into_string<span class="defer">$</span><span class="p">)</span></code></pre>
+<pre class="code"><code>&lt;h1&gt;Fruit&lt;/h1&gt;&lt;p class="intro"&gt;Items: 2&lt;/p&gt;&lt;a href="/items/2"&gt;next&lt;/a&gt;&lt;ul&gt;&lt;li&gt;APPLE&lt;/li&gt;&lt;li&gt;PEAR&lt;/li&gt;&lt;/ul&gt;</code></pre>
 <h3 id="precedence">Precedence</h3>
 <p>Application binds tighter than anything but an atom: <code>add 1 2 * 10</code> adds,
 then multiplies. The chain <code>&lt;-</code> comes next, then <code>?</code> and the prefix operators
@@ -1143,14 +1197,14 @@ and small copyable values such as integers are copied rather than moved.</p>
     consume a
     <span class="mac">println!</span> <span class="str">"{a}"</span></code></pre>
 <pre class="code"><code>error[E0382]: borrow of moved value: `a`
-  --&gt; use_after_move.hrs:7:15
+  --&gt; use_after_move.hrs:7:16
    |
  5 |     let a = String.from "hello"
    |         - move occurs because `a` has type `String`, which does not implement the `Copy` trait
  6 |     consume a
    |             - value moved here
  7 |     println! "{a}"
-   |               ^^^ value borrowed here after move
+   |                ^ value borrowed here after move
    = note: consider changing this parameter type in function `consume` to borrow instead if owning the value isn't necessary (hrs 1:16)
    = help: consider cloning the value if the performance cost is acceptable (hrs 6:14)</code></pre>
 <p>The error arrives on the Harsh line that caused it, not on the generated Rust.</p>
@@ -1672,10 +1726,10 @@ hrs expand FILE       the file with its Harsh macros unfolded
 hrs export DIR        the project as a plain Rust crate
 </code></pre>
 <p>A project keeps its Harsh in <code>src/**.hrs</code>. The generated Rust goes to
-<code>target/hrs/</code>, and <code>Cargo.toml</code> points at it:</p>
+<code>target/src/</code>, and <code>Cargo.toml</code> points at it:</p>
 <pre><code>[[bin]]
 name = "myapp"
-path = "target/hrs/main.rs"
+path = "target/src/main.rs"
 </code></pre>
 <p>One manifest, ordinary dependencies, nothing extra to ignore — cargo already
 ignores <code>/target</code>.</p>
@@ -2079,9 +2133,30 @@ hrs_std = "0.1"</code></pre>
     <span class="k">let</span> fitted <span class="p">=</span> <span class="p">&amp;</span>x <span class="p">*</span> <span class="p">&amp;</span>beta
     <span class="mac">println!</span> <span class="str">"residual {:.2}"</span> <span class="p">(</span><span class="p">(</span><span class="p">&amp;</span>score <span class="p">-</span> <span class="p">&amp;</span>fitted<span class="p">)</span> <span class="op">&lt;-</span> norm<span class="defer">$</span><span class="p">)</span>
     <span class="mac">println!</span> <span class="str">"7 hours: {:.1}"</span> <span class="p">(</span>beta<span class="p">[</span><span class="num">0</span><span class="p">]</span> <span class="p">+</span> beta<span class="p">[</span><span class="num">1</span><span class="p">]</span> <span class="p">*</span> <span class="num">7.0</span><span class="p">)</span></code></pre>
-<pre class="code"><code>score = 47.20 + 4.37 × hours
+<pre class="code"><code>warning[unused_parens]: unnecessary parentheses around closure body
+  --&gt; /tmp/harsh-by-example/projects/17_matrices/regression/src/main.hrs:10:38
+   |
+10 |     let x = Matrix.from_rows (list~ (vec! 1.0 h) for h in hours)
+   |                                      ^
+12 |     // Julia's `β = X \ y`: for a tall matrix, the least-squares fit.
+   |         ^
+   = note: in the expansion of `hrs_std.g~` called at /tmp/harsh-by-example/projects/17_matrices/regression/src/main.hrs:12:56
+12 |     // Julia's `β = X \ y`: for a tall matrix, the least-squares fit.
+   = note: `#[warn(unused_parens)]` (part of `#[warn(unused)]`) on by default
+   = help: remove these parentheses (hrs 10:38)
+
+warning[unused_parens]: unnecessary parentheses around closure body
+  --&gt; /tmp/harsh-by-example/projects/17_matrices/regression/src/main.hrs:10:37
+   |
+10 |     let x = Matrix.from_rows (list~ (vec! 1.0 h) for h in hours)
+   |                                     ^
+   |                                                ^
+   = help: remove these parentheses (hrs 10:37)
+
+score = 47.20 + 4.37 × hours
 residual 1.76
-7 hours: 77.8</code></pre>
+7 hours: 77.8
+hrs: 0 error(s), 2 warning(s)</code></pre>
 <p>With more rows than columns, <code>solve</code> returns the least-squares fit, as Julia's
 <code>X \ y</code> does: linear regression in one line, with the design matrix built by
 a comprehension. Chapter 16 of the Book explains each step.</p>

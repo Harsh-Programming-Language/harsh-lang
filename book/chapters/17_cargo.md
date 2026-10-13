@@ -49,7 +49,7 @@ $ hrs test
 running 1 test
 test target/src/lib.rs - add_one (line 10) ... ok
 
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.17s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.07s
 ```
 
 `cargo doc --open` renders every `///` and `//!` in the crate as HTML, with the Markdown inside them — headings, code blocks, links — laid out. The conventional sections are `# Examples`, `# Panics` (when the function can), `# Errors` (what `Err`s it returns) and `# Safety` (for `unsafe` functions). The example in the `///` is Harsh, like everything else in the file, and `cargo test` *runs it* — every code block in a doc comment is a test, so documentation cannot drift from the code without failing the build.
@@ -188,6 +188,18 @@ members = ["adder", "add_one"]
 ```
 
 and each member is an ordinary package in its own directory, depending on its siblings by path (`add_one = { path = "../add_one" }`). Run `hrs build` or `hrs run` in the member you want: `hrs` first transpiles the Harsh libraries it depends on by path, each only when its sources changed, and cargo then builds them all. A library written in Rust is cargo's, and needs nothing from `hrs`.
+
+At the workspace's root, `hrs build`, `hrs check`, `hrs test`, `hrs lint`, `hrs fmt` and `hrs cargo …` go through the members in the order `members` lists them (a trailing `*` takes every package in that folder; `exclude` leaves one out). Each Harsh member is built by `hrs` in its own folder, each Rust member by cargo, and `hrs fmt` skips the Rust ones. The first failure stops the run:
+
+```console
+$ hrs test
+hrs: workspace member adder
+...
+hrs: workspace member add_one
+...
+```
+
+`hrs run` acts on one program, so at the root it is refused, and the message names the members: run it in the one you want.
 
 ## 17.5 Installing binaries
 

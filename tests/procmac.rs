@@ -460,9 +460,7 @@ fn the_standard_distribution_needs_no_registry() {
     );
     write(&root.join("src/lib.hrs"), "use hrs_proc_macro.TokenStream\nuse hrs_quote.quote\nuse hrs_syn.{parse_macro_input, DeriveInput}\n\n#[proc_macro_derive~ HelloMacro]\npub fn hello_macro_derive (input: TokenStream) -> TokenStream:\n    // Construct a representation of Harsh code as a syntax tree\n    // that we can manipulate.\n    let ast = parse_macro_input! { input as DeriveInput }\n\n    // Build the trait implementation.\n    impl_hello_macro (&ast)\n\nfn impl_hello_macro (ast: &DeriveInput) -> TokenStream:\n    let name = &ast <- ident\n    let generated = quote~ do:\n        impl HelloMacro for #name\n            fn hello_macro$:\n                println! \"Hello, Macro! My name is {}!\" (stringify! #name)\n    generated\n");
     let app = consumer(&s.0, "trait HelloMacro\n    fn hello_macro$\n\n#[derive~ HelloMacro]\nstruct Pancakes\n\nfn main$:\n    Pancakes.hello_macro$\n    let a = m~ [1.0_f64 2.0; 3.0 4.0]\n    println! \"{:?}\" (a <- size$)\n", true);
-    let manifest = fs::read_to_string(app.join("Cargo.toml")).unwrap();
     // 0.3.0: Harsh's dependencies are in Hrs.toml, beside Cargo.toml.
-    fs::write(app.join("Cargo.toml"), &manifest).unwrap();
     fs::write(app.join("Hrs.toml"), "[dependencies]\nhrs_std = \"0.1\"\n").unwrap();
     let out = hrs("run", &app);
     assert!(out.status.success(), "{}", text(&out));
@@ -487,7 +485,7 @@ fn a_version_the_distribution_cannot_serve_says_what_it_ships() {
     let out = hrs("run", &app);
     assert!(!out.status.success());
     let t = text(&out);
-    assert!(t.contains("this hrs ships hrs_proc_macro 0.2.0") && t.contains("ask for \"0.2\""), "{t}");
+    assert!(t.contains("this hrs ships hrs_proc_macro 0.2.1") && t.contains("ask for \"0.2\""), "{t}");
     assert!(!t.contains("crates.io index"), "{t}");
 }
 
@@ -538,8 +536,6 @@ fn a_library_reexports_a_harsh_derive_to_its_users() {
 fn export_takes_hrs_std_in_as_its_own_code() {
     let s = Scratch::new("exportstd");
     let app = consumer(&s.0, "fn main$:\n    let a = m~ [1.0_f64 2.0; 3.0 4.0]\n    println! \"{:?}\" (a <- size$)\n", false);
-    let manifest = fs::read_to_string(app.join("Cargo.toml")).unwrap();
-    fs::write(app.join("Cargo.toml"), manifest).unwrap();
     fs::write(app.join("Hrs.toml"), "[dependencies]\nhrs_std = \"0.1\"\n").unwrap();
     let out_dir = s.0.join("exported");
     let out = hrs_args(&["export", &out_dir.display().to_string()], &app);

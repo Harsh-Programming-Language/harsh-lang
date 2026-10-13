@@ -20,7 +20,7 @@
 ; The block-opening `:` and `=>` read as structure rather than punctuation.
 (header opener: _ @punctuation.special)
 
-; A name directly before an argument run is being called.
+; `fn` opening a header is the function keyword.
 (header (keyword) @keyword.function
   (#match? @keyword.function "^(fn)$"))
 
@@ -33,3 +33,8 @@
 ; A block opened inside a paren -- an isolated closure body -- reads as
 ; structure, like any other block opener.
 (paren_block opener: _ @punctuation.special)
+
+; Holes in a DSL body: `@: … :@`, and the `@@:` escape.
+(hole_open) @punctuation.special
+(hole_close) @punctuation.special
+(hole_escape) @string.escape

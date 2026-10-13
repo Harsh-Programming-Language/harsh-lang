@@ -871,7 +871,7 @@ fn paren_blocks() {
     assert!(got.contains("P {\n") && got.contains("y: 2,\n") && got.contains("};\n    g()"), "{got}");
     // Braces over several lines are an error naming `:` / `do:`.
     assert!(layout_err("fn main$:\n    unsafe {\n        x$\n    }\n").contains("written with `:` or `do:`"));
-    assert!(layout_err("fn main$:\n    let v = m! {\n        a\n    }\n").contains("`name! do:`"));
+    assert!(layout_err("fn main$:\n    let v = m! {\n        a\n    }\n").contains("Harsh in holes `@: … :@`"));
     // ... except a brace group handed as an argument.
     let got = transpile("fn main$:\n    let b = json! ({\n        \"a\": 1\n    })\n    b\n");
     assert!(got.contains("json!({"), "{got}");
@@ -1026,7 +1026,7 @@ fn dollar_applies_to_nothing() {
     // The converter writes `$` for an empty call and `()` for a unit argument.
     let back = harsh_lang::unbrace::convert("fn f() -> i32 { g(()) + h::<i32>() }\n").expect("convert");
     assert!(back.contains("fn f$ -> i32:"), "{back}");
-    assert!(back.contains("g () + h.<i32>$") || back.contains("g () + h.<i32>$") || back.contains("h.<i32>$"), "{back}");
+    assert!(back.contains("g () + h.<i32>$") || back.contains("h.<i32>$"), "{back}");
 }
 
 /// A lone parameter may be bare; with more, every one is a group.
@@ -1054,9 +1054,6 @@ fn rejects_bare_parameter_followed_by_group() {
     assert!(err.msg.contains("`(&self) (`"), "{}", err.msg);
 }
 
-/// A Rust macro's brace body is Rust, even in Harsh, and copied verbatim; only
-/// its holes, `@: … :@`, are Harsh (the user's principle 2 and ruling 16,
-/// "always closing", 2026-09-23). It replaced the rule that a brace body was
 /// A character of several bytes inside a hole -- or on either side of its
 /// marks -- is carried through, not a panic (found 2026-09-26 writing the
 /// website: the hole scan stepped one byte at a time and sliced inside `…`).
@@ -1072,6 +1069,9 @@ fn a_hole_carries_characters_of_several_bytes() {
     ]);
 }
 
+/// A Rust macro's brace body is Rust, even in Harsh, and copied verbatim; only
+/// its holes, `@: … :@`, are Harsh (the user's principle 2 and ruling 16,
+/// "always closing", 2026-09-23). It replaced the rule that a brace body was
 /// Harsh on one line.
 #[test]
 fn a_macro_brace_body_is_rust_and_its_holes_are_harsh() {
@@ -1205,8 +1205,8 @@ fn converter_macros() {
     let harsh = convert(rust);
     // The markup is `view!`'s and stays as written; its Rust is in holes.
     for want in [
-        "<p>{@: count :@}</p>",
-        "<button on:click=@: move |_| set_count <- update (|n| * n += 1) :@>\"+\"</button>",
+        "<p>{count}</p>",
+        "<button on:click=@: move |_| set_count <- update (|n| *n += 1) :@>\"+\"</button>",
         "<Greeting name={@: \"World\" <- to_string$ :@} />",
         "<input type=\"text\" prop:value=@: name <- get$ :@ on:input=@: move |ev| set_name (event_target_value (&ev)) :@ />",
     ] {
@@ -1234,7 +1234,8 @@ fn bare_parameter_before_where_clause() {
 /// the old test exposed: raw identifiers.
 #[test]
 fn converter_brace_tree() {
-    let rust = "fn main() {\n    rsx! {\n        div {\n            class: \"app\",\n            onclick: move |_| count.set(count() + 1),\n            \"Hello {count}\"\n            for item in items.iter() {\n                li { \"{item}\" }\n            }\n            Button {\n                onclick: move |_| reset(),\n                \"Reset\"\n            }\n            {count}\n            input { r#type: \"text\", ..attrs }\n        }\n    }\n}\n";
+    // `reset` is declared: a hole names a binding (2026-10-12).
+    let rust = "fn reset() {\n    println!(\"reset\");\n}\nfn main() {\n    rsx! {\n        div {\n            class: \"app\",\n            onclick: move |_| count.set(count() + 1),\n            \"Hello {count}\"\n            for item in items.iter() {\n                li { \"{item}\" }\n            }\n            Button {\n                onclick: move |_| reset(),\n                \"Reset\"\n            }\n            {count}\n            input { r#type: \"text\", ..attrs }\n        }\n    }\n}\n";
     let harsh = convert(rust);
     // The tree is `rsx!`'s and stays as written; every piece of Rust in it
     // becomes a hole: an attribute's value, a `for`'s expression, a child.
@@ -1243,7 +1244,8 @@ fn converter_brace_tree() {
         "            onclick: @: move |_| count <- set (count$ + 1) :@,\n",
         "            for item in @: items <- iter$ :@ {\n                li { \"{item}\" }\n",
         "                onclick: @: move |_| reset$ :@,\n",
-        "            {@: count :@}\n",
+        // A single word is no hole (2026-10-12).
+        "            {count}\n",
         "            input { r#type: \"text\", ..attrs }\n",
     ] {
         assert!(harsh.contains(want), "\n  expected: {want:?}\n  got:\n{harsh}");
@@ -1354,8 +1356,8 @@ fn converter_leptos_shapes() {
     let harsh = convert(rust);
     for want in [
         "pub fn Card\n    /// The service.\n    (service: Service)\n    /// Stagger.\n    (#[prop (default = 0.0)] delay: f32)\n    -> impl IntoView:\n",
-        "<- map (|item|:\n            let y = item\n            view! { <li aria-label=\"x\">{@: y :@}</li> }\n    ) <- collect_view$\n",
-        "<- then (||:\n            view! { <li>{@: extra :@}</li> }\n    )\n",
+        "<- map (|item|:\n            let y = item\n            view! { <li aria-label=\"x\">{y}</li> }\n    ) <- collect_view$\n",
+        "<- then (||:\n            view! { <li>{extra}</li> }\n    )\n",
         "    let b = (\n        if c:\n            vec! 1\n        else:\n            y <- clone$\n    ) <- into_iter$ <- count$\n",
         "    do:\n        let z = 1\n        f z\n        ()\n",
         "    leptos_routes (&opts) routes (do:\n        let o = o <- clone$\n        move || shell (o <- clone$)\n    )\n",
@@ -1820,7 +1822,7 @@ fn a_matrix_literal_follows_julias_grammar() {
     // A vector: a comma list, or one entry per line -- the same tokens.
     assert_eq!(
         flat("fn main$:\n    let v = v~ [1, 2, 3]\n"),
-        flat("fn main$:\n    let v =\n        v~ [1\n            2\n            3]\n").replace("letv=", "letv=")
+        flat("fn main$:\n    let v =\n        v~ [1\n            2\n            3]\n")
     );
 }
 
@@ -2099,7 +2101,7 @@ fn converter_writes_holes_in_a_dsl_body() {
     }
     assert!(!harsh.contains("class:@:"), "a namespaced attribute read as a tree's:\n{harsh}");
     // An `if` expression inside a value is part of it, braces and all.
-    let harsh = convert("fn main() {\n    let v = view! { <p class=if c { \"a\" } else { \"b\" }>\"x\"</p> };\n}\n");
+    let harsh = convert("fn main() {\n    let c = true;\n    let v = view! { <p class=if c { \"a\" } else { \"b\" }>\"x\"</p> };\n}\n");
     let flat: String = harsh.split_whitespace().collect();
     assert!(flat.contains("class=@:ifc:\"a\"else:\"b\":@>"), "{harsh}");
     assert!(harsh_lang::driver::transpile_str(&harsh).unwrap().contains("class=if c {"), "{harsh}");
@@ -2115,11 +2117,13 @@ fn converter_writes_holes_in_a_dsl_body() {
 /// literal stay as written (2026-09-23).
 #[test]
 fn converter_writes_holes_in_select_arms() {
-    let rust = "async fn race(rx: Receiver<u8>) -> u8 {\n    tokio::select! {\n        n = slow(\"slow\") => n,\n        Some(v) = rx.recv() => {\n            println!(\"{v}\");\n            v\n        }\n        _ = sleep(Duration::from_millis(5)) => 0,\n        else => 1,\n    }\n}\n";
+    let rust = "async fn slow(s: &str) -> u8 {\n    0\n}\nasync fn race(rx: Receiver<u8>) -> u8 {\n    tokio::select! {\n        n = slow(\"slow\") => n,\n        Some(v) = rx.recv() => {\n            println!(\"{v}\");\n            v\n        }\n        _ = sleep(Duration::from_millis(5)) => 0,\n        else => 1,\n    }\n}\n";
     let harsh = convert(rust);
     for want in [
-        "n = @: slow \"slow\" :@ => @: n :@,",
-        "@: Some v :@ = @: rx <- recv$ :@ => {",
+        "n = @: slow \"slow\" :@ => n,",
+        // A block handler is one value, an explicit block (0.7.5: its
+        // statements were left as Rust).
+        "@: Some v :@ = @: rx <- recv$ :@ => @: do:\n            println! \"{v}\"\n            v\n        :@",
         "_ = @: sleep (Duration.from_millis 5) :@ => 0,",
         "else => 1,",
     ] {
@@ -2142,7 +2146,7 @@ fn converter_writes_a_dsl_stream_in_braces() {
         "let a = vec! 1 2 3",
         "let b = matches! x (Some 1 | None)",
         "let d = sql! {SELECT name FROM users WHERE id = 1}",
-        "let e = html! {<p class=\"x\">{@: name :@}</p>}",
+        "let e = html! {<p class=\"x\">{name}</p>}",
         "let f = json! {{ \"id\": 1, \"tags\": [\"a\", \"b\"] }}",
         "let g = json! {{ \"id\": @: user <- id :@, \"ok\": true }}",
     ] {
@@ -2153,7 +2157,7 @@ fn converter_writes_a_dsl_stream_in_braces() {
     assert!(!back.contains("SELECT("), "{back}");
     // Nested JSON: arrays of objects are structure; the holes are the leaves
     // (sr-auto's `ai.rs`, where the whole array was first taken for one hole).
-    let rust = "fn main() {\n    let body = json!({ \"parts\": [{ \"text\": prompt() }], \"n\": [1, 2] });\n}\n";
+    let rust = "fn prompt() -> String {\n    String::new()\n}\nfn main() {\n    let body = json!({ \"parts\": [{ \"text\": prompt() }], \"n\": [1, 2] });\n}\n";
     let harsh = convert(rust);
     assert!(harsh.contains("\"parts\": [{ \"text\": @: prompt$ :@ }], \"n\": [1, 2]"), "{harsh}");
     assert_eq!(norm_tokens(rust), norm_tokens(&transpile(&harsh)));
@@ -2239,14 +2243,12 @@ fn a_derive_or_attribute_needs_its_macro() {
     assert!(out.starts_with("#[derive(Debug, Clone)]\n#[tokio::main]\n"), "{out}");
 }
 
-/// **Known converter gap, open (found 2026-09-24 by the self-host, in
-/// `src/procmac.rs`).** An `if` used as a struct literal's field value, with a
-/// string continued over lines (`"…\`) in one branch, comes out of `hrs-from`
-/// in inline braces spanning two lines -- `m = if a {"x \` / ` y" <- into$ }
-/// else {…}` -- which the transpiler refuses ("a block over several lines is
-/// written with `:` or `do:`"). The same `if` in a `let` converts. Ignored so
-/// that every `cargo test` reports it until it is fixed; remove the `ignore`
-/// with the fix, and `procmac.rs` may then build its message in place again.
+/// An `if` used as a struct literal's field value, with a string continued
+/// over lines (`"…\`) in one branch, round-trips through `hrs-from`. A
+/// converter gap found 2026-09-24 by the self-host (in `src/procmac.rs`), now
+/// fixed: it came out in inline braces spanning two lines -- `m = if a {"x \`
+/// / ` y" <- into$ } else {…}` -- which the transpiler refuses ("a block over
+/// several lines is written with `:` or `do:`"). This test pins the fix.
 #[test]
 fn converter_writes_an_if_with_a_continued_string_as_a_field_value() {
     let rust = "fn f(a: bool) -> E {\n    E { m: if a { \"x \\\n y\".into() } else { \"y\".into() } }\n}\n";
@@ -2271,19 +2273,18 @@ fn an_inline_proc_macro_mark_leaves_the_item_where_it_stood() {
 /// `#[derive Debug] struct P` / `    x: i32` -- emits `struct P\n    x {\n
 /// i32,\n}`, invalid Rust; on its own line the attribute works, and inline
 /// before a `fn` it works. Harsh is a superset of Rust, so the inline form
-/// is owed. Ignored so every `cargo test` reports it until it is fixed.
+/// is owed. This test pins the fix.
 #[test]
 fn an_inline_attribute_before_a_struct_keeps_its_fields() {
     let rust = transpile("#[derive Debug] struct P\n    x: i32\n");
     assert_eq!(norm_tokens(&rust), norm_tokens("#[derive(Debug)] struct P { x: i32, }"));
 }
 
-/// **Known converter gap, open (found 2026-09-24 by the self-host, in
-/// `mac::expand_derive`).** A guard arm followed by an arm whose value is a
-/// `match`: `hrs-from` writes the inner `match` with `:` and its arms on one
-/// line (`Some _ => match g h:` / `Some c => h = c + 1, None => break,`),
-/// which the transpiler refuses. Without the guard it converts. Ignored so
-/// every `cargo test` reports it until it is fixed.
+/// A guard arm followed by an arm whose value is a `match` round-trips
+/// through `hrs-from`. A converter gap found 2026-09-24 by the self-host (in
+/// `mac::expand_derive`), now fixed: the inner `match` was written with `:`
+/// and its arms on one line (`Some _ => match g h:` / `Some c => h = c + 1,
+/// None => break,`), which the transpiler refuses. This test pins the fix.
 #[test]
 fn converter_writes_a_match_after_a_guard_arm() {
     let rust = "fn f(v: &[i32]) -> usize {\n    let mut h = 0;\n    loop {\n        match v.get(h) {\n            Some(t) if *t > 0 => h += 1,\n            Some(_) => match g(h) {\n                Some(c) => h = c + 1,\n                None => break,\n            },\n            None => return 0,\n        }\n    }\n    h\n}\nfn g(i: usize) -> Option<usize> { Some(i) }\n";
@@ -2292,12 +2293,10 @@ fn converter_writes_a_match_after_a_guard_arm() {
     assert_eq!(norm_tokens(&back), norm_tokens(rust), "\n--- harsh:\n{harsh}");
 }
 
-/// **Known converter gap, open (found 2026-09-24 by the self-host, in
-/// `driver.rs`).** An attribute between two runs of doc comments -- valid
-/// Rust -- is converted so that the item beneath is over-indented, and the
-/// transpiler refuses it. With the docs first and the attribute right above
-/// the item, it converts. Ignored so every `cargo test` reports it until it
-/// is fixed.
+/// An attribute between two runs of doc comments -- valid Rust -- round-trips
+/// through `hrs-from`. A converter gap found 2026-09-24 by the self-host (in
+/// `driver.rs`), now fixed: the item beneath came out over-indented, and the
+/// transpiler refused it. This test pins the fix.
 #[test]
 fn converter_keeps_an_item_after_an_attribute_between_doc_comments() {
     let rust = "struct P;\nimpl P {\n    /// First.\n    #[inline]\n    /// Second.\n    pub fn f(&self) -> i32 {\n        1\n    }\n}\n";
@@ -2331,11 +2330,11 @@ fn a_structs_where_clause_stands_on_its_header_line() {
     assert!(e.contains("stands on its header line"), "{e}");
 }
 
-/// **Known converter gap, open (found 2026-09-24 by the self-host, in
-/// `procmac.rs`).** An `if` expression as a macro argument,
-/// `format!` with its arguments one per line, `if c { a } else { b }` among them: `hrs-from` writes block `if`s
-/// inside the parentheses, and the `else` loses its `if`. Ignored so every
-/// `cargo test` reports it until it is fixed.
+/// An `if` expression as a macro argument -- `format!` with its arguments
+/// one per line, `if c { a } else { b }` among them -- round-trips through
+/// `hrs-from`. A converter gap found 2026-09-24 by the self-host (in
+/// `procmac.rs`), now fixed: block `if`s were written inside the
+/// parentheses, and the `else` lost its `if`. This test pins the fix.
 #[test]
 fn converter_writes_an_if_as_a_macro_argument() {
     // The arguments one per line, as rustfmt lays out a long call; on one
@@ -2568,7 +2567,8 @@ fn a_literal_inside_a_literal_is_parenthesised() {
     assert!(rust.is_ok());
     assert!(t("    let d =\n        D\\\n            inner = A\\ n = 1, g = true\n            good = true\n").is_ok());
     // Patterns and arrays are not nested literals.
-    assert!(t("    let P\\ x, y = P\\ x = 6, y = 7\n").is_ok() || true);
+    let r = t("    let P\\ x, y = P\\ x = 6, y = 7\n");
+    assert!(r.is_ok(), "{:?}", r.err());
     assert!(t("    let v = [\n        A\\ n = 1, g = true,\n        A\\ n = 2, g = false,\n    ]\n").is_ok());
 }
 
@@ -2826,3 +2826,13 @@ fn if_after_a_continued_string() {
     assert!(back.contains("if lib"), "{h}\n{back}");
 }
 
+
+/// A range or a rest pattern after a comma is spaced like any item
+/// (found 2026-10-13: `&a[(0..2, ..)]` came back as `(0..2,..)`).
+#[test]
+fn the_converter_spaces_a_range_after_a_comma() {
+    let h = convert("fn main() {\n    let y = &a[(0..2, ..)];\n    let s = (a, ..=3);\n    let p = &v[..];\n}\n");
+    assert!(h.contains("&a[(0..2, ..)]"), "{h}");
+    assert!(h.contains("(a, ..=3)"), "{h}");
+    assert!(h.contains("&v[..]"), "{h}");
+}

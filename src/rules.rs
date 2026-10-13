@@ -16,10 +16,6 @@ pub const BLOCK_KEYWORDS: [&str; 15] = [
 pub const MODIFIERS: [&str; 7] =
     ["pub", "async", "unsafe", "const", "extern", "default", "move"];
 
-/// Leading keywords whose line always terminates with `;`, even as the last
-/// line of a block, because they are statements rather than tail expressions.
-/// `return` is deliberately absent: `{ return x }` is valid Rust, so forcing a
-/// semicolon there would make the round trip inexact for no benefit.
 /// Macros whose call is a statement -- they produce `()` or never return:
 /// the converter writes no `()` after them as a block's last line, and a
 /// round trip treats them with and without their final `;` as one
@@ -35,6 +31,10 @@ pub fn unit_macro_call(toks: &[crate::lex::Token]) -> bool {
     sig.len() >= 2 && UNIT_MACROS.contains(&sig[0].text.as_str()) && sig[1].text == "!"
 }
 
+/// Leading keywords whose line always terminates with `;`, even as the last
+/// line of a block, because they are statements rather than tail expressions.
+/// `return` is deliberately absent: `{ return x }` is valid Rust, so forcing a
+/// semicolon there would make the round trip inexact for no benefit.
 pub const ALWAYS_SEMI: [&str; 7] =
     ["let", "use", "const", "static", "type", "mod", "extern"];
 
@@ -89,6 +89,15 @@ pub fn fn_param_groups(toks: &[Token]) -> Option<Vec<(usize, usize)>> {
                 Tk::Gt => {
                     gd -= 1;
                     if gd == 0 {
+                        i += 1;
+                        break;
+                    }
+                }
+                // `>>` closes two lists: `fn f<T: Into<Vec<u8>>> (..)` (found
+                // writing the developer book, 0.7.3).
+                Tk::Punct if toks[i].text == ">>" => {
+                    gd -= 2;
+                    if gd <= 0 {
                         i += 1;
                         break;
                     }

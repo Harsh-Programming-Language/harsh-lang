@@ -1,0 +1,10 @@
+use std::cell::RefCell;
+
+thread_local! {
+    static LOG: RefCell<Vec<String>> = RefCell::new(Vec::with_capacity(8));
+}
+
+fn main() {
+    LOG.with(|l| l.borrow_mut().push("start".to_string()));
+    LOG.with(|l| println!("{:?}", l.borrow()));
+}

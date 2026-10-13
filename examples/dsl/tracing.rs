@@ -1,0 +1,9 @@
+use tracing::{debug, info};
+
+fn main() {
+    tracing_subscriber::fmt().without_time().with_ansi(false).with_max_level(tracing::Level::DEBUG).init();
+    let user = "ada";
+    let items = vec![1, 2, 3];
+    info!(user = %user, count = items.len(), "processed {} items", items.len());
+    debug!(target: "app", ?items, "starting");
+}

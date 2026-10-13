@@ -111,7 +111,8 @@ pub fn blank_out(src: &str, zones: &[Zone]) -> String {
             out.extend(std::iter::repeat(' ').take(first_line_len - marker.len()));
         } else {
             // A zone whose first line is shorter than the marker cannot be
-            // padded to shape; blank it and let `restore` place it by order.
+            // padded to shape; blank it and let `restore` put it at the top.
+            // (No definition is that short since the marker became short.)
             out.extend(std::iter::repeat(' ').take(first_line_len));
         }
         for ch in text[first_line_len..].chars() {
@@ -123,8 +124,13 @@ pub fn blank_out(src: &str, zones: &[Zone]) -> String {
     out
 }
 
-/// The marker's body. Chosen to be impossible in ordinary source.
-pub const MARKER: &str = "__hrs_raw_zone_";
+/// The marker's body. Chosen to be impossible in ordinary source, and short:
+/// `//__hrsz_12` fits the first line of the shortest definition,
+/// `macro_rules!m{` (14 bytes). The longer `__hrs_raw_zone_` did not fit a
+/// one- or two-letter name, so such a zone was blanked without a marker and
+/// put back at the top of the file, away from where it was written (found
+/// writing the developer book, 0.7.3).
+pub const MARKER: &str = "__hrsz_";
 
 /// Put each zone's text back into generated Rust, where its marker stands.
 pub fn restore(generated: &mut String, src: &str, zones: &[Zone]) {

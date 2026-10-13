@@ -1,3 +1,7 @@
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 //! The source map through a macro expansion: an error inside expanded code
 //! points at the definition's line, and a note names the call that produced
 //! it. Driven through the real binaries, as a build would.

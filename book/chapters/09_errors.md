@@ -14,7 +14,7 @@ fn main$:
 
 ```text
 about to fail
-thread 'main' panicked at panic.hrs:4:
+thread 'main' (18260) panicked at panic.hrs:4:
 crash and burn
 ```
 
@@ -30,7 +30,7 @@ fn main$:
 ```
 
 ```text
-thread 'main' panicked at panic_index.hrs:4:
+thread 'main' (18276) panicked at panic_index.hrs:4:
 index out of bounds: the len is 3 but the index is 99
 ```
 
@@ -63,7 +63,7 @@ fn main$:
 ```
 
 ```text
-thread 'main' panicked at result_match.hrs:10:
+thread 'main' (18292) panicked at result_match.hrs:10:
 Problem opening the file: Os { code: 2, kind: NotFound, message: "No such file or directory" }
 ```
 
@@ -112,7 +112,7 @@ fn main$:
 ```
 
 ```text
-thread 'main' panicked at unwrap_expect.hrs:5:
+thread 'main' (18324) panicked at unwrap_expect.hrs:5:
 called `Result::unwrap()` on an `Err` value: Os { code: 2, kind: NotFound, message: "No such file or directory" }
 ```
 
@@ -130,7 +130,7 @@ fn main$:
 ```
 
 ```text
-thread 'main' panicked at expect.hrs:7:
+thread 'main' (18340) panicked at expect.hrs:7:
 hello.txt should be included in this project: Os { code: 2, kind: NotFound, message: "No such file or directory" }
 ```
 
@@ -238,7 +238,7 @@ error[E0277]: the `?` operator can only be used in a function that returns `Resu
    | -------- this function should return `Result` or `Option` to accept `?`
  4 |     let greeting_file = File.open "hello.txt"?
    |                                              ^ cannot use the `?` operator in a function that returns `()`
-   = help: the trait `FromResidual<Result<Infallible, std::io::Error>>` is not implemented for `()`
+   = help: consider adding return type (hrs 3:9)
 ```
 
 The compiler says exactly what is missing: `main` returns `()`, and `?` needs somewhere to send the error. `main` may return a `Result`:
@@ -298,7 +298,7 @@ fn main$:
 
 ```text
 50
-thread 'main' panicked at guess_validate.hrs:9:
+thread 'main' (18434) panicked at guess_validate.hrs:9:
 Guess value must be between 1 and 100, got 200.
 ```
 

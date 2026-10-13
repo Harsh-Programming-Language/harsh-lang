@@ -7,7 +7,8 @@
 //! meets the ordinary rules.
 //!
 //! This module reads a definition into a tree and says what is wrong with it,
-//! on the author's own lines. It does not expand anything yet.
+//! on the author's own lines, and expands every call (since 0.1.9): see
+//! `expand_all` and the stages below.
 //!
 //! # The shape of a definition
 //!
@@ -830,7 +831,7 @@ fn atom_end(call: &[Token], at: usize) -> usize {
     }
 }
 
-/// The index just past the `)` that closes the group opening at `at`.
+/// The index of the closer matching the group opening at `at`.
 fn matching_close(toks: &[Token], at: usize) -> Option<usize> {
     let mut d = 0i32;
     for (k, t) in toks.iter().enumerate().skip(at) {
@@ -1285,7 +1286,6 @@ fn whole_line_repetition(
     Ok(Some((inner, sep, rounds)))
 }
 
-/// How many rounds a repetition runs: the length of the bindings it uses.
 /// Follow a path of round indices into a nested binding.
 fn at_path<'a>(b: &'a Binding, path: &[usize]) -> Option<&'a Binding> {
     let mut cur = b;
@@ -1298,6 +1298,7 @@ fn at_path<'a>(b: &'a Binding, path: &[usize]) -> Option<&'a Binding> {
     Some(cur)
 }
 
+/// How many rounds a repetition runs: the length of the bindings it uses.
 fn rounds_for(body: &[Token], b: &Bindings, path: &[usize]) -> Result<usize, Error> {
     let mut found: Option<(String, usize)> = None;
     let mut i = 0;
@@ -1821,8 +1822,8 @@ mod hygiene_tests {
 ///
 /// `m~ [1 2; 3 4]` and `v~ [1, 2, 3]` are Julia's matrix and vector
 /// literals -- spaces between entries, `;` between rows; commas make a
-/// vector, as in Julia. Unlike the others they expand to a *type*,
-/// `hrs_std.Matrix` / `hrs_std.Vector`, so a project that calls them needs
+/// vector, as in Julia. Unlike the others they build values of
+/// `hrs_std`'s types, `hrs_std.Matrix` / `hrs_std.Vector`, so a project that calls them needs
 /// the `hrs_std` crate; `hrs` says so, with the line to add, when it is
 /// missing (`driver::check_hrs_std`).
 ///
@@ -1992,9 +1993,6 @@ fn read_arms(toks: &[Token]) -> Result<Vec<Arm>, Error> {
     Ok(arms)
 }
 
-/// Every `name~ …` call of a known macro, as a range over the stream.
-/// Returns the definition, where the call begins (its path, if qualified),
-/// where it ends, and where its stream begins.
 /// What a `name~` call resolves to.
 #[derive(Debug, Clone, PartialEq, Eq)]
 enum Target {
@@ -2073,12 +2071,6 @@ fn find_call(
     None
 }
 
-/// Expand every Harsh macro in a file, in passes, until none is left.
-///
-/// The definitions are removed and each call is replaced by its expansion, so
-/// what leaves this function is ordinary Harsh: the transpiler then does to it
-/// exactly what it does to hand-written code, and the emitted Rust holds no
-/// macro at all.
 /// One expansion that happened in a file: which macro, and where it was
 /// called. Tokens the expansion produced carry `ctx`, so a diagnostic inside
 /// the expanded code can be pointed back at the call as well as at the
@@ -2190,6 +2182,12 @@ pub fn at_call(span: Span, trace: &[Expansion]) -> Span {
         .unwrap_or(Span { lo: x.call_lo, hi: x.call_hi })
 }
 
+/// Expand every Harsh macro in a file, in passes, until none is left.
+///
+/// The definitions are removed and each call is replaced by its expansion, so
+/// what leaves this function is ordinary Harsh: the transpiler then does to it
+/// exactly what it does to hand-written code, and the emitted Rust holds no
+/// macro at all.
 pub fn expand_all(toks: Vec<Token>, taken: &[String]) -> Result<Vec<Token>, Error> {
     expand_all_traced(toks, taken).map(|(t, _)| t)
 }
@@ -2289,7 +2287,7 @@ pub fn expand_all_with(
     let limit = recursion_limit(&out);
     let mut ctx = 0u32;
     let mut regions = 0u32;
-    for pass in 0..limit {
+    for _ in 0..limit {
         // An attribute macro runs first, as in Rust -- a derive on the same
         // item sees the item only once the attribute macros have run.
         if let Some(at) = find_attribute(&out) {
@@ -2305,7 +2303,6 @@ pub fn expand_all_with(
         let Some((target, at, end, args)) = find_call(&out, &defs, own, procs, quote, 0) else {
             return Ok((out, trace));
         };
-        let _ = pass;
         ctx += 1;
         let name = match &target {
             Target::Def(d) => defs[*d].name.clone(),

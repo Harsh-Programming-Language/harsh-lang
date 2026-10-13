@@ -258,11 +258,12 @@ fn main$:
 ```
 
 ```text
-error[E0433]: failed to resolve: use of undeclared crate or module `hosting`
+error[E0433]: cannot find module or crate `hosting` in this scope
   --> use_scope.hrs:10:9
    |
 10 |         hosting.add_to_waitlist$          // `use` above is in the parent, not here
-   |         ^^^^^^^ use of undeclared crate or module `hosting`
+   |         ^^^^^^^ use of unresolved module or unlinked crate `hosting`
+   = help: you might be missing a crate named `hosting`
    = help: consider importing this module through its public re-export (hrs 9:5)
 ```
 

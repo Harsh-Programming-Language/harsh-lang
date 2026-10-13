@@ -165,6 +165,18 @@ pre.code:hover .copy,.copy:focus-visible{opacity:1}
 <li class="d1"><a href="#calling-a-macro-the-shapes">Calling a macro: the shapes</a></li>
 <li class="d1"><a href="#derives-and-attributes">Derives and attributes</a></li>
 <li class="d1"><a href="#rule-1-a-rust-macro-s-brace-body-is-rust-its-holes-are-harsh">Rule 1 — a Rust macro&#x27;s brace body is Rust; its holes are Harsh</a></li>
+<li class="d1"><a href="#where-the-holes-go-the-dsls-of-popular-libraries">Where the holes go: the DSLs of popular libraries</a></li>
+<li class="d2"><a href="#leptos-view">Leptos `view!`</a></li>
+<li class="d2"><a href="#dioxus-rsx">Dioxus `rsx!`</a></li>
+<li class="d2"><a href="#yew-html">Yew `html!`</a></li>
+<li class="d2"><a href="#maud-html">Maud `html!`</a></li>
+<li class="d2"><a href="#serdejson-json">serde_json `json!`</a></li>
+<li class="d2"><a href="#tokio-select">Tokio `select!`</a></li>
+<li class="d2"><a href="#std-threadlocal">std `thread_local!`</a></li>
+<li class="d2"><a href="#lazystatic">`lazy_static!`</a></li>
+<li class="d2"><a href="#bitflags">`bitflags!`</a></li>
+<li class="d2"><a href="#tracing-s-info-and-debug">`tracing`&#x27;s `info!` and `debug!`</a></li>
+<li class="d2"><a href="#lists-vec-format-asserteq-matches">Lists: `vec!`, `format!`, `assert_eq!`, `matches!`</a></li>
 <li class="d0"><a href="#what-does-not-change">What does not change</a></li>
 </ul></nav>
       <main>
@@ -346,7 +358,7 @@ version = "0.1.0"
 edition = "2021"
 
 [lib]
-path = "target/hrs/lib.rs"
+path = "target/src/lib.rs"
 
 [dependencies]
 hrs_proc_macro = "0.2"
@@ -385,7 +397,7 @@ proc-macros = ["../hello"]</code></pre>
   <code>src/lib.hrs</code>. A crate marked <code>proc-macro = true</code> registers at least one;
   an unmarked crate registers none.</li>
 <li><strong>How it runs:</strong> <code>hrs build</code>, <code>hrs run</code> and <code>hrs expand</code> transpile the
-  listed crates and build a small runner under <code>target/hrs/proc-macros/</code>
+  listed crates and build a small runner under <code>target/src/proc-macros/</code>
   (cargo's own freshness check makes later builds a no-op), then run it
   once per call. Changing a macro retranspiles its callers.</li>
 <li><strong>Not yet:</strong> the attribute form; tokens with spans; a proc-macro crate
@@ -560,26 +572,497 @@ tokio<span class="p">.</span><span class="mac">select!</span> <span class="p">{<
 <li>A hole may hold a macro call with braces of its own, and holes in those.</li>
 <li><code>@@:</code> is a literal <code>@:</code> in the body's text; <code>@:</code> outside a body is refused.</li>
 <li>The body may span lines, as in Rust; the formatter never touches it.</li>
+<li><strong>A hole is one expression, not a block</strong> (decided 2026-10-06). It adds
+  nothing around its Rust: no braces, no <code>;</code>. What the macro's syntax needs
+  around it -- <code>thread_local!</code>'s <code>;</code> between items, an attribute's <code>,</code> -- is
+  written outside, <code>static FLAG: Cell&lt;bool&gt; = @: Cell.new false :@;</code>.
+  Several statements in a hole's place are an explicit block:
+  <code>@: { let v = Cell.new false; v } :@</code>.</li>
+<li><strong>A hole's code is read as Harsh</strong>, so a mark inside one of its strings,
+  characters or comments is text: <code>{@: format! "a:@b" :@}</code> closes at the
+  last <code>:@</code>.</li>
 <li>Holes have two writers: the author, writing Harsh, and <code>hrs-from</code>,
-  converting Rust -- which finds each piece of Rust code in a body by shape
-  (a <code>{ … }</code> group; a value after <code>name=</code> or <code>name:</code>; a <code>for</code>/<code>if</code>
-  expression; a <code>select!</code> arm's pattern, future and handler), keeps a
-  literal as written, and writes the rest as holes. A piece it cannot write
-  as Harsh stops it, named by line.</li>
-<li>A <code>~</code> call's stream is its macro's too, but holes have no meaning in it: a
-  Harsh macro's fragments land in a Harsh transcriber.</li>
-<li><strong>A <code>~</code> macro's author expands to valid Harsh</strong> (the user's rule,
+  converting Rust. What looks like Rust in a macro is the macro's language
+  written in Rust's syntax, so the converter judges only shape, by a rule a
+  reader can apply by eye:</li>
+<li>a hole may start after a top-level <code>:</code> or <code>=</code>, inside a brace pair by
+     itself, in a format string's slot, in a paren splice among the DSL's
+     text, after the DSL's own <code>for … in</code> or <code>if</code>, or in an arm's pattern,
+     future or handler -- wherever the library's documentation writes a
+     Rust expression (the table below);</li>
+<li>it ends at the segment's end -- the next top-level <code>,</code> or <code>;</code>, the end
+     of the line, or the closing bracket;</li>
+<li>it covers the longest stretch from such a start that Rust's own parser
+     reads as one expression;</li>
+<li>and it is a hole only when that stretch is more than a single word and
+     calls on a binding or uses an operator (2026-10-12; the catalogue
+     below has the rule and the binding table).</li>
+</ul>
+<p>So <code>static FLAG: Cell&lt;bool&gt; = Cell::new(false);</code> gets its hole after the
+  <code>=</code> (<code>Cell&lt;bool&gt; = …</code> is no expression), <code>onclick: move |_| n.set(0),</code>
+  after the <code>:</code>, and <code>quick_error!</code>'s clauses -- <code>from()</code>,
+  <code>display("…", err)</code> -- none. Everything else is the macro's text, copied
+  as written; a hole that would not come back identical stops the
+  conversion, named by line, so a macro's body always survives the round
+  trip or is not converted at all.
+- A <code>~</code> call's stream is its macro's too, but holes have no meaning in it: a
+  Harsh macro's fragments land in a Harsh transcriber.
+- <strong>A <code>~</code> macro's author expands to valid Harsh</strong> (the user's rule,
   2026-09-23). If the expansion calls a Rust macro with a brace body, the
   author writes its holes, as <code>filled~</code> does: <code>vec! { @: $elem :@; @: $n :@ }</code>.
   The transpiler reads an expansion exactly as it reads a file; anything
-  that is not valid Harsh is an error, never repaired.</li>
-</ul>
+  that is not valid Harsh is an error, never repaired.</p>
 <p><em>Retired 2026-09-23, with this rule's arrival:</em> the old rules 1 (a <code>do:</code>
 body of markup, "HSX"), 2 (a macro <code>do:</code> body as a Harsh block), 3 (a brace
 body as Harsh on one line) and 6 (a brace tree written with Harsh's layout),
 and the <code>#:</code> block. <code>m! do:</code> and <code>#:</code> are refused with the braces named. They
 put Harsh inside a macro's language by guessing its grammar; Harsh no longer
 guesses.</p>
+<h3 id="where-the-holes-go-the-dsls-of-popular-libraries">Where the holes go: the DSLs of popular libraries</h3>
+<p><strong>A hole is a Rust expression in a macro's body that calls on something bound
+outside the DSL's own language -- a variable, a function, a name the DSL
+binds -- or uses an operator, which is a function too (<code>+</code> is <code>Add::add</code>),
+the access operators <code>.</code> and <code>::</code> included. A single word is exempt</strong> (the
+user's rule, 2026-10-12): <code>{count}</code>, <code>(title)</code> and <code>=&gt; n</code> read the same in
+both languages. So <code>user.id</code>, <code>Duration::ZERO</code>, <code>3 + 5</code>, <code>&amp;x</code> and
+<code>items.len()</code> are holes; <code>count</code>, <code>x</code> and <code>4</code> are not.</p>
+<p>Where to look -- the places a library takes a Rust expression, string slots
+first:</p>
+<table>
+<thead>
+<tr>
+<th>Where</th>
+<th>Seen in</th>
+<th>In Harsh</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>a format slot in the DSL's strings</td>
+<td><code>rsx!</code></td>
+<td><code>"Twice: {@: count$ * 2 :@}"</code></td>
+</tr>
+<tr>
+<td>a brace pair of its own, <code>{…}</code></td>
+<td><code>view!</code>, Yew's <code>html!</code>, <code>rsx!</code></td>
+<td><code>{@: *counter :@}</code></td>
+</tr>
+<tr>
+<td>a value after <code>name:</code> or <code>name =</code></td>
+<td><code>rsx!</code>, <code>view!</code>, <code>json!</code>, <code>thread_local!</code>, <code>lazy_static!</code>, <code>bitflags!</code></td>
+<td><code>disabled: @: count$ &lt;= 0 :@</code></td>
+</tr>
+<tr>
+<td>a splice in parentheses, <code>(…)</code></td>
+<td>Maud's <code>html!</code></td>
+<td><code>(@: items &lt;- len$ :@)</code></td>
+</tr>
+<tr>
+<td>the DSL's control flow: <code>for … in ITER {</code>, <code>if COND {</code></td>
+<td><code>rsx!</code>, Yew, Maud (<code>@for</code>, <code>@if</code>)</td>
+<td><code>if @: count$ &gt; 3 :@ {</code></td>
+</tr>
+<tr>
+<td>an arm: pattern, future, handler</td>
+<td><code>select!</code></td>
+<td><code>@: Some v :@ = @: rx &lt;- recv$ :@ =&gt; @: v * 2 :@,</code></td>
+</tr>
+</tbody>
+</table>
+<p>Who is bound, for <code>hrs-from</code>, is a table, never a guess from a name's case:
+the standard prelude, the file's items, the names its <code>use</code>s import, the
+bindings in scope at the macro call (the function's parameters, its <code>let</code>s,
+<code>for</code>s and patterns), the names the DSL binds itself (Leptos's <code>let:item</code>,
+<code>for item in …</code>, <code>select!</code>'s <code>Some(v)</code>), and an expression's own closure
+parameters. A glob import, <code>use leptos::prelude::*</code>, brings names nobody can
+list without the crate: a stretch built only from them -- Leptos's
+<code>fallback=|| view! { … }</code> below, Yew's <code>classes!("btn", "big")</code> -- is left
+as written, and <code>hrs-from</code> says so, naming the line. An author may still
+write a hole there. Text the DSL owns stays as written however Rust-like it
+looks: <code>quick_error!</code>'s <code>display("…", err)</code> binds nothing outside; but SQL's
+<code>WHERE total = price * 2</code> becomes a hole, through its operator.</p>
+<p>A macro whose stream is a list of values is no DSL at all: it is juxtaposed,
+<code>vec! 1 2 3</code>.</p>
+<p>Each example below is the library's own Rust, compiled against the crate
+named, and the Harsh an author writes for it, which <code>hrs</code> turns back into
+that Rust; <code>hrs-from</code> puts its holes in exactly the same places. All of them
+are in the repository, <code>examples/dsl/</code>, and tested
+(<code>tests/dsl_libraries.rs</code>).</p>
+<h4 id="leptos-view">Leptos <code>view!</code></h4>
+<p><em>leptos 0.8.</em> Markup. Rust goes in an attribute's value after <code>=</code> (<code>on:click=</code>, <code>when=</code>), in a brace pair of its own (<code>{move || …}</code>), and in a <code>{…}</code> value that holds a comparison -- in markup a bare <code>&gt;</code> ends the tag, so Leptos itself wants <code>class:big={move || count.get() &gt; 10}</code>. <code>{count}</code> and <code>{double}</code> are single words; <code>fallback=|| view! { … }</code> names only the glob's <code>view!</code>, so <code>hrs-from</code> leaves it as written and says so.</p>
+<pre class="code harsh"><code><span class="k">use</span> leptos<span class="p">.</span>prelude<span class="p">.</span><span class="p">*</span>
+
+<span class="attr">#[component]</span>
+<span class="k">fn</span> <span class="t">Counter</span> initial<span class="p">:</span> i32 <span class="op">-&gt;</span> <span class="k">impl</span> <span class="t">IntoView</span><span class="p">:</span>
+    <span class="k">let</span> <span class="p">(</span>count<span class="p">,</span> set_count<span class="p">)</span> <span class="p">=</span> signal initial
+    <span class="k">let</span> double <span class="p">=</span> <span class="k">move</span> <span class="op">||</span> count <span class="op">&lt;-</span> get<span class="defer">$</span> <span class="p">*</span> <span class="num">2</span>
+    <span class="mac">view!</span> <span class="p">{</span>
+        <span class="p">&lt;</span>button
+            on<span class="p">:</span>click<span class="p">=</span><span class="p">@</span><span class="p">:</span> <span class="k">move</span> <span class="p">|</span>_<span class="p">|</span> set_count <span class="op">&lt;-</span> update <span class="p">(</span><span class="p">|</span>n<span class="p">|</span> <span class="p">*</span>n <span class="op">+=</span> <span class="num">1</span><span class="p">)</span> <span class="p">:</span><span class="p">@</span>
+            class<span class="p">:</span>big<span class="p">=</span><span class="p">{</span><span class="p">@</span><span class="p">:</span> <span class="k">move</span> <span class="op">||</span> count <span class="op">&lt;-</span> get<span class="defer">$</span> <span class="p">&gt;</span> <span class="num">10</span> <span class="p">:</span><span class="p">@</span><span class="p">}</span>
+        <span class="p">&gt;</span>
+            <span class="str">"Clicked "</span> <span class="p">{</span>count<span class="p">}</span> <span class="str">" times"</span>
+        <span class="p">&lt;</span><span class="p">/</span>button<span class="p">&gt;</span>
+        <span class="p">&lt;</span>p<span class="p">&gt;</span><span class="str">"Double: "</span> <span class="p">{</span>double<span class="p">}</span> <span class="str">" / next: "</span> <span class="p">{</span><span class="p">@</span><span class="p">:</span> <span class="k">move</span> <span class="op">||</span> count <span class="op">&lt;-</span> get<span class="defer">$</span> <span class="p">+</span> <span class="num">1</span> <span class="p">:</span><span class="p">@</span><span class="p">}</span><span class="p">&lt;</span><span class="p">/</span>p<span class="p">&gt;</span>
+        <span class="p">&lt;</span><span class="t">Show</span> when<span class="p">=</span><span class="p">@</span><span class="p">:</span> <span class="k">move</span> <span class="op">||</span> count <span class="op">&lt;-</span> get<span class="defer">$</span> <span class="p">%</span> <span class="num">2</span> <span class="op">==</span> <span class="num">0</span> <span class="p">:</span><span class="p">@</span> fallback<span class="p">=</span><span class="op">||</span> <span class="mac">view!</span> <span class="p">{</span> <span class="p">&lt;</span>p<span class="p">&gt;</span><span class="str">"odd"</span><span class="p">&lt;</span><span class="p">/</span>p<span class="p">&gt;</span> <span class="p">}</span><span class="p">&gt;</span>
+            <span class="p">&lt;</span>p<span class="p">&gt;</span><span class="str">"even"</span><span class="p">&lt;</span><span class="p">/</span>p<span class="p">&gt;</span>
+        <span class="p">&lt;</span><span class="p">/</span><span class="t">Show</span><span class="p">&gt;</span>
+    <span class="p">}</span>
+
+<span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    mount_to_body <span class="p">(</span><span class="op">||</span> <span class="mac">view!</span> <span class="p">{</span> <span class="p">&lt;</span><span class="t">Counter</span> initial<span class="p">=</span><span class="num">3</span><span class="p">/</span><span class="p">&gt;</span> <span class="p">}</span><span class="p">)</span></code></pre>
+<pre class="code rust"><code><span class="k">use</span> leptos<span class="op">::</span>prelude<span class="op">::</span><span class="p">*</span><span class="p">;</span>
+
+<span class="attr">#[component]</span>
+<span class="k">fn</span> <span class="t">Counter</span><span class="p">(</span>initial<span class="p">:</span> i32<span class="p">)</span> <span class="op">-&gt;</span> <span class="k">impl</span> <span class="t">IntoView</span> <span class="p">{</span>
+    <span class="k">let</span> <span class="p">(</span>count<span class="p">,</span> set_count<span class="p">)</span> <span class="p">=</span> signal<span class="p">(</span>initial<span class="p">)</span><span class="p">;</span>
+    <span class="k">let</span> double <span class="p">=</span> <span class="k">move</span> <span class="op">||</span> count<span class="p">.</span>get<span class="p">(</span><span class="p">)</span> <span class="p">*</span> <span class="num">2</span><span class="p">;</span>
+    <span class="mac">view!</span> <span class="p">{</span>
+        <span class="p">&lt;</span>button
+            on<span class="p">:</span>click<span class="p">=</span><span class="k">move</span> <span class="p">|</span>_<span class="p">|</span> set_count<span class="p">.</span>update<span class="p">(</span><span class="p">|</span>n<span class="p">|</span> <span class="p">*</span>n <span class="op">+=</span> <span class="num">1</span><span class="p">)</span>
+            class<span class="p">:</span>big<span class="p">=</span><span class="p">{</span><span class="k">move</span> <span class="op">||</span> count<span class="p">.</span>get<span class="p">(</span><span class="p">)</span> <span class="p">&gt;</span> <span class="num">10</span><span class="p">}</span>
+        <span class="p">&gt;</span>
+            <span class="str">"Clicked "</span> <span class="p">{</span>count<span class="p">}</span> <span class="str">" times"</span>
+        <span class="p">&lt;</span><span class="p">/</span>button<span class="p">&gt;</span>
+        <span class="p">&lt;</span>p<span class="p">&gt;</span><span class="str">"Double: "</span> <span class="p">{</span>double<span class="p">}</span> <span class="str">" / next: "</span> <span class="p">{</span><span class="k">move</span> <span class="op">||</span> count<span class="p">.</span>get<span class="p">(</span><span class="p">)</span> <span class="p">+</span> <span class="num">1</span><span class="p">}</span><span class="p">&lt;</span><span class="p">/</span>p<span class="p">&gt;</span>
+        <span class="p">&lt;</span><span class="t">Show</span> when<span class="p">=</span><span class="k">move</span> <span class="op">||</span> count<span class="p">.</span>get<span class="p">(</span><span class="p">)</span> <span class="p">%</span> <span class="num">2</span> <span class="op">==</span> <span class="num">0</span> fallback<span class="p">=</span><span class="op">||</span> <span class="mac">view!</span> <span class="p">{</span> <span class="p">&lt;</span>p<span class="p">&gt;</span><span class="str">"odd"</span><span class="p">&lt;</span><span class="p">/</span>p<span class="p">&gt;</span> <span class="p">}</span><span class="p">&gt;</span>
+            <span class="p">&lt;</span>p<span class="p">&gt;</span><span class="str">"even"</span><span class="p">&lt;</span><span class="p">/</span>p<span class="p">&gt;</span>
+        <span class="p">&lt;</span><span class="p">/</span><span class="t">Show</span><span class="p">&gt;</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+
+<span class="k">fn</span> main<span class="p">(</span><span class="p">)</span> <span class="p">{</span>
+    mount_to_body<span class="p">(</span><span class="op">||</span> <span class="mac">view!</span> <span class="p">{</span> <span class="p">&lt;</span><span class="t">Counter</span> initial<span class="p">=</span><span class="num">3</span><span class="p">/</span><span class="p">&gt;</span> <span class="p">}</span><span class="p">)</span>
+<span class="p">}</span></code></pre>
+<h4 id="dioxus-rsx">Dioxus <code>rsx!</code></h4>
+<p><em>dioxus 0.6.</em> A tree. Rust goes after an attribute's <code>:</code> (<code>onclick:</code>, <code>disabled:</code>, <code>class:</code>), in a string's format slot (<code>"Twice: {count() * 2}"</code>), and in the tree's own control flow, after <code>for … in</code> and <code>if</code>, up to the body's <code>{</code>.</p>
+<pre class="code harsh"><code><span class="k">use</span> dioxus<span class="p">.</span>prelude<span class="p">.</span><span class="p">*</span>
+
+<span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    dioxus<span class="p">.</span>launch <span class="t">App</span>
+    <span class="p">(</span><span class="p">)</span>
+
+<span class="attr">#[component]</span>
+<span class="k">fn</span> <span class="t">App</span><span class="defer">$</span> <span class="op">-&gt;</span> <span class="t">Element</span><span class="p">:</span>
+    <span class="k">let</span> <span class="k">mut</span> count <span class="p">=</span> use_signal <span class="p">(</span><span class="op">||</span> <span class="num">0</span><span class="p">)</span>
+    <span class="k">let</span> items <span class="p">=</span> <span class="mac">vec!</span> <span class="str">"apple"</span> <span class="str">"pear"</span>
+    <span class="mac">rsx!</span> <span class="p">{</span>
+        h1 <span class="p">{</span> <span class="str">"High-five counter: {count}"</span> <span class="p">}</span>
+        button <span class="p">{</span> onclick<span class="p">:</span> <span class="p">@</span><span class="p">:</span> <span class="k">move</span> <span class="p">|</span>_<span class="p">|</span> count <span class="op">+=</span> <span class="num">1</span> <span class="p">:</span><span class="p">@</span><span class="p">,</span> <span class="str">"Up high!"</span> <span class="p">}</span>
+        button <span class="p">{</span> onclick<span class="p">:</span> <span class="p">@</span><span class="p">:</span> <span class="k">move</span> <span class="p">|</span>_<span class="p">|</span> count <span class="op">-=</span> <span class="num">1</span> <span class="p">:</span><span class="p">@</span><span class="p">,</span> disabled<span class="p">:</span> <span class="p">@</span><span class="p">:</span> count<span class="defer">$</span> <span class="op">&lt;=</span> <span class="num">0</span> <span class="p">:</span><span class="p">@</span><span class="p">,</span> <span class="str">"Down low!"</span> <span class="p">}</span>
+        p <span class="p">{</span> <span class="str">"Twice: {@: count$ * 2 :@}"</span> <span class="p">}</span>
+        <span class="k">for</span> item <span class="k">in</span> <span class="p">@</span><span class="p">:</span> items <span class="op">&lt;-</span> iter<span class="defer">$</span> <span class="p">:</span><span class="p">@</span> <span class="p">{</span>
+            li <span class="p">{</span> key<span class="p">:</span> <span class="str">"{item}"</span><span class="p">,</span> <span class="str">"{item}"</span> <span class="p">}</span>
+        <span class="p">}</span>
+        <span class="k">if</span> <span class="p">@</span><span class="p">:</span> count<span class="defer">$</span> <span class="p">&gt;</span> <span class="num">3</span> <span class="p">:</span><span class="p">@</span> <span class="p">{</span>
+            p <span class="p">{</span> class<span class="p">:</span> <span class="p">@</span><span class="p">:</span> <span class="k">if</span> count<span class="defer">$</span> <span class="p">&gt;</span> <span class="num">10</span><span class="p">:</span> <span class="str">"hot"</span> <span class="k">else</span><span class="p">:</span> <span class="str">"warm"</span> <span class="p">:</span><span class="p">@</span><span class="p">,</span> <span class="str">"Getting big"</span> <span class="p">}</span>
+        <span class="p">}</span>
+    <span class="p">}</span></code></pre>
+<pre class="code rust"><code><span class="k">use</span> dioxus<span class="op">::</span>prelude<span class="op">::</span><span class="p">*</span><span class="p">;</span>
+
+<span class="k">fn</span> main<span class="p">(</span><span class="p">)</span> <span class="p">{</span>
+    dioxus<span class="op">::</span>launch<span class="p">(</span><span class="t">App</span><span class="p">)</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="attr">#[component]</span>
+<span class="k">fn</span> <span class="t">App</span><span class="p">(</span><span class="p">)</span> <span class="op">-&gt;</span> <span class="t">Element</span> <span class="p">{</span>
+    <span class="k">let</span> <span class="k">mut</span> count <span class="p">=</span> use_signal<span class="p">(</span><span class="op">||</span> <span class="num">0</span><span class="p">)</span><span class="p">;</span>
+    <span class="k">let</span> items <span class="p">=</span> <span class="mac">vec!</span><span class="p">[</span><span class="str">"apple"</span><span class="p">,</span> <span class="str">"pear"</span><span class="p">]</span><span class="p">;</span>
+    <span class="mac">rsx!</span> <span class="p">{</span>
+        h1 <span class="p">{</span> <span class="str">"High-five counter: {count}"</span> <span class="p">}</span>
+        button <span class="p">{</span> onclick<span class="p">:</span> <span class="k">move</span> <span class="p">|</span>_<span class="p">|</span> count <span class="op">+=</span> <span class="num">1</span><span class="p">,</span> <span class="str">"Up high!"</span> <span class="p">}</span>
+        button <span class="p">{</span> onclick<span class="p">:</span> <span class="k">move</span> <span class="p">|</span>_<span class="p">|</span> count <span class="op">-=</span> <span class="num">1</span><span class="p">,</span> disabled<span class="p">:</span> count<span class="p">(</span><span class="p">)</span> <span class="op">&lt;=</span> <span class="num">0</span><span class="p">,</span> <span class="str">"Down low!"</span> <span class="p">}</span>
+        p <span class="p">{</span> <span class="str">"Twice: {count() * 2}"</span> <span class="p">}</span>
+        <span class="k">for</span> item <span class="k">in</span> items<span class="p">.</span>iter<span class="p">(</span><span class="p">)</span> <span class="p">{</span>
+            li <span class="p">{</span> key<span class="p">:</span> <span class="str">"{item}"</span><span class="p">,</span> <span class="str">"{item}"</span> <span class="p">}</span>
+        <span class="p">}</span>
+        <span class="k">if</span> count<span class="p">(</span><span class="p">)</span> <span class="p">&gt;</span> <span class="num">3</span> <span class="p">{</span>
+            p <span class="p">{</span> class<span class="p">:</span> <span class="k">if</span> count<span class="p">(</span><span class="p">)</span> <span class="p">&gt;</span> <span class="num">10</span> <span class="p">{</span> <span class="str">"hot"</span> <span class="p">}</span> <span class="k">else</span> <span class="p">{</span> <span class="str">"warm"</span> <span class="p">}</span><span class="p">,</span> <span class="str">"Getting big"</span> <span class="p">}</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span></code></pre>
+<h4 id="yew-html">Yew <code>html!</code></h4>
+<p><em>yew 0.21.</em> Markup with Rust in braces: an attribute's <code>{…}</code> value, a child <code>{ … }</code>, Yew's <code>{ for ITER }</code> (its <code>for</code> is Yew's, the iterator Rust) and <code>if COND { … }</code>. <code>{onclick}</code> and <code>{ "+1" }</code> are a name and a literal: no hole.</p>
+<pre class="code harsh"><code><span class="k">use</span> yew<span class="p">.</span>prelude<span class="p">.</span><span class="p">*</span>
+
+<span class="attr">#[function_component App]</span>
+<span class="k">fn</span> app<span class="defer">$</span> <span class="op">-&gt;</span> <span class="t">Html</span><span class="p">:</span>
+    <span class="k">let</span> counter <span class="p">=</span> use_state <span class="p">(</span><span class="op">||</span> <span class="num">0</span><span class="p">)</span>
+    <span class="k">let</span> onclick <span class="p">=</span> <span class="k">do</span><span class="p">:</span>
+        <span class="k">let</span> counter <span class="p">=</span> counter <span class="op">&lt;-</span> clone<span class="defer">$</span>
+        <span class="k">move</span> <span class="p">|</span>_<span class="p">|</span> counter <span class="op">&lt;-</span> set <span class="p">(</span><span class="p">*</span>counter <span class="p">+</span> <span class="num">1</span><span class="p">)</span>
+    <span class="mac">html!</span> <span class="p">{</span>
+        <span class="p">&lt;</span>div class<span class="p">=</span><span class="p">{</span><span class="p">@</span><span class="p">:</span> <span class="mac">classes!</span> <span class="str">"app"</span> <span class="p">(</span><span class="p">(</span><span class="p">*</span>counter <span class="p">&gt;</span> <span class="num">5</span><span class="p">)</span> <span class="op">&lt;-</span> then <span class="p">(</span><span class="op">||</span> <span class="str">"big"</span><span class="p">)</span><span class="p">)</span> <span class="p">:</span><span class="p">@</span><span class="p">}</span><span class="p">&gt;</span>
+            <span class="p">&lt;</span>button <span class="p">{</span>onclick<span class="p">}</span><span class="p">&gt;</span><span class="p">{</span> <span class="str">"+1"</span> <span class="p">}</span><span class="p">&lt;</span><span class="p">/</span>button<span class="p">&gt;</span>
+            <span class="p">&lt;</span>p<span class="p">&gt;</span><span class="p">{</span><span class="p">@</span><span class="p">:</span> <span class="p">*</span>counter <span class="p">:</span><span class="p">@</span><span class="p">}</span><span class="p">&lt;</span><span class="p">/</span>p<span class="p">&gt;</span>
+            <span class="p">&lt;</span>p<span class="p">&gt;</span><span class="p">{</span><span class="p">@</span><span class="p">:</span> <span class="mac">format!</span> <span class="str">"Twice: {}"</span> <span class="p">(</span><span class="p">*</span>counter <span class="p">*</span> <span class="num">2</span><span class="p">)</span> <span class="p">:</span><span class="p">@</span><span class="p">}</span><span class="p">&lt;</span><span class="p">/</span>p<span class="p">&gt;</span>
+            <span class="p">{</span> <span class="k">for</span> <span class="p">@</span><span class="p">:</span> <span class="p">(</span><span class="num">0</span><span class="op">..</span><span class="p">*</span>counter<span class="p">)</span> <span class="op">&lt;-</span> map <span class="p">(</span><span class="p">|</span>i<span class="p">|</span> <span class="mac">html!</span> <span class="p">{</span> <span class="p">&lt;</span>span key<span class="p">=</span><span class="p">{</span>i<span class="p">}</span><span class="p">&gt;</span><span class="p">{</span> i <span class="p">}</span><span class="p">&lt;</span><span class="p">/</span>span<span class="p">&gt;</span> <span class="p">}</span><span class="p">)</span> <span class="p">:</span><span class="p">@</span> <span class="p">}</span>
+            <span class="k">if</span> <span class="p">@</span><span class="p">:</span> <span class="p">*</span>counter <span class="p">&gt;</span> <span class="num">3</span> <span class="p">:</span><span class="p">@</span> <span class="p">{</span> <span class="p">&lt;</span>p<span class="p">&gt;</span><span class="p">{</span> <span class="str">"big"</span> <span class="p">}</span><span class="p">&lt;</span><span class="p">/</span>p<span class="p">&gt;</span> <span class="p">}</span>
+        <span class="p">&lt;</span><span class="p">/</span>div<span class="p">&gt;</span>
+    <span class="p">}</span>
+
+<span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    yew<span class="p">.</span><span class="t">Renderer</span><span class="p">.</span><span class="p">&lt;</span><span class="t">App</span><span class="p">&gt;</span><span class="p">.</span>new<span class="defer">$</span> <span class="op">&lt;-</span> render<span class="defer">$</span>
+    <span class="p">(</span><span class="p">)</span></code></pre>
+<pre class="code rust"><code><span class="k">use</span> yew<span class="op">::</span>prelude<span class="op">::</span><span class="p">*</span><span class="p">;</span>
+
+<span class="attr">#[function_component(App)]</span>
+<span class="k">fn</span> app<span class="p">(</span><span class="p">)</span> <span class="op">-&gt;</span> <span class="t">Html</span> <span class="p">{</span>
+    <span class="k">let</span> counter <span class="p">=</span> use_state<span class="p">(</span><span class="op">||</span> <span class="num">0</span><span class="p">)</span><span class="p">;</span>
+    <span class="k">let</span> onclick <span class="p">=</span> <span class="p">{</span>
+        <span class="k">let</span> counter <span class="p">=</span> counter<span class="p">.</span>clone<span class="p">(</span><span class="p">)</span><span class="p">;</span>
+        <span class="k">move</span> <span class="p">|</span>_<span class="p">|</span> counter<span class="p">.</span>set<span class="p">(</span><span class="p">*</span>counter <span class="p">+</span> <span class="num">1</span><span class="p">)</span>
+    <span class="p">}</span><span class="p">;</span>
+    <span class="mac">html!</span> <span class="p">{</span>
+        <span class="p">&lt;</span>div class<span class="p">=</span><span class="p">{</span><span class="mac">classes!</span><span class="p">(</span><span class="str">"app"</span><span class="p">,</span> <span class="p">(</span><span class="p">*</span>counter <span class="p">&gt;</span> <span class="num">5</span><span class="p">)</span><span class="p">.</span>then<span class="p">(</span><span class="op">||</span> <span class="str">"big"</span><span class="p">)</span><span class="p">)</span><span class="p">}</span><span class="p">&gt;</span>
+            <span class="p">&lt;</span>button <span class="p">{</span>onclick<span class="p">}</span><span class="p">&gt;</span><span class="p">{</span> <span class="str">"+1"</span> <span class="p">}</span><span class="p">&lt;</span><span class="p">/</span>button<span class="p">&gt;</span>
+            <span class="p">&lt;</span>p<span class="p">&gt;</span><span class="p">{</span> <span class="p">*</span>counter <span class="p">}</span><span class="p">&lt;</span><span class="p">/</span>p<span class="p">&gt;</span>
+            <span class="p">&lt;</span>p<span class="p">&gt;</span><span class="p">{</span> <span class="mac">format!</span><span class="p">(</span><span class="str">"Twice: {}"</span><span class="p">,</span> <span class="p">*</span>counter <span class="p">*</span> <span class="num">2</span><span class="p">)</span> <span class="p">}</span><span class="p">&lt;</span><span class="p">/</span>p<span class="p">&gt;</span>
+            <span class="p">{</span> <span class="k">for</span> <span class="p">(</span><span class="num">0</span><span class="op">..</span><span class="p">*</span>counter<span class="p">)</span><span class="p">.</span>map<span class="p">(</span><span class="p">|</span>i<span class="p">|</span> <span class="mac">html!</span> <span class="p">{</span> <span class="p">&lt;</span>span key<span class="p">=</span><span class="p">{</span>i<span class="p">}</span><span class="p">&gt;</span><span class="p">{</span> i <span class="p">}</span><span class="p">&lt;</span><span class="p">/</span>span<span class="p">&gt;</span> <span class="p">}</span><span class="p">)</span> <span class="p">}</span>
+            <span class="k">if</span> <span class="p">*</span>counter <span class="p">&gt;</span> <span class="num">3</span> <span class="p">{</span> <span class="p">&lt;</span>p<span class="p">&gt;</span><span class="p">{</span> <span class="str">"big"</span> <span class="p">}</span><span class="p">&lt;</span><span class="p">/</span>p<span class="p">&gt;</span> <span class="p">}</span>
+        <span class="p">&lt;</span><span class="p">/</span>div<span class="p">&gt;</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+
+<span class="k">fn</span> main<span class="p">(</span><span class="p">)</span> <span class="p">{</span>
+    yew<span class="op">::</span><span class="t">Renderer</span><span class="op">::</span><span class="p">&lt;</span><span class="t">App</span><span class="p">&gt;</span><span class="op">::</span>new<span class="p">(</span><span class="p">)</span><span class="p">.</span>render<span class="p">(</span><span class="p">)</span><span class="p">;</span>
+<span class="p">}</span></code></pre>
+<h4 id="maud-html">Maud <code>html!</code></h4>
+<p><em>maud 0.27.</em> Splices. Rust goes in a paren group among the text, <code>(items.len())</code>, as an attribute's value, <code>href=(…)</code> -- the parens are Maud's, the hole inside them -- and after Maud's <code>@for … in</code> and <code>@if</code>.</p>
+<pre class="code harsh"><code><span class="k">use</span> maud<span class="p">.</span><span class="p">(</span>html<span class="p">,</span> <span class="t">Markup</span><span class="p">)</span>
+
+<span class="k">fn</span> page <span class="p">(</span>title<span class="p">:</span> <span class="p">&amp;</span>str<span class="p">)</span> <span class="p">(</span>items<span class="p">:</span> <span class="p">&amp;</span><span class="p">[</span><span class="p">&amp;</span>str<span class="p">]</span><span class="p">)</span> <span class="op">-&gt;</span> <span class="t">Markup</span><span class="p">:</span>
+    <span class="mac">html!</span> <span class="p">{</span>
+        h1 <span class="p">{</span> <span class="p">(</span>title<span class="p">)</span> <span class="p">}</span>
+        p<span class="p">.</span>intro <span class="p">{</span> <span class="str">"Items: "</span> <span class="p">(</span><span class="p">@</span><span class="p">:</span> items <span class="op">&lt;-</span> len<span class="defer">$</span> <span class="p">:</span><span class="p">@</span><span class="p">)</span> <span class="p">}</span>
+        a href<span class="p">=</span><span class="p">(</span><span class="p">@</span><span class="p">:</span> <span class="mac">format!</span> <span class="str">"/items/{}"</span> <span class="p">(</span>items <span class="op">&lt;-</span> len<span class="defer">$</span><span class="p">)</span> <span class="p">:</span><span class="p">@</span><span class="p">)</span> <span class="p">{</span> <span class="str">"next"</span> <span class="p">}</span>
+        ul <span class="p">{</span>
+            <span class="p">@</span><span class="k">for</span> item <span class="k">in</span> items <span class="p">{</span>
+                li <span class="p">{</span> <span class="p">(</span><span class="p">@</span><span class="p">:</span> item <span class="op">&lt;-</span> to_uppercase<span class="defer">$</span> <span class="p">:</span><span class="p">@</span><span class="p">)</span> <span class="p">}</span>
+            <span class="p">}</span>
+        <span class="p">}</span>
+        <span class="p">@</span><span class="k">if</span> <span class="p">@</span><span class="p">:</span> items <span class="op">&lt;-</span> is_empty<span class="defer">$</span> <span class="p">:</span><span class="p">@</span> <span class="p">{</span>
+            p <span class="p">{</span> <span class="str">"none"</span> <span class="p">}</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+
+<span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span>page <span class="str">"Fruit"</span> <span class="p">(</span><span class="p">&amp;</span><span class="p">[</span><span class="str">"apple"</span><span class="p">,</span> <span class="str">"pear"</span><span class="p">]</span><span class="p">)</span> <span class="op">&lt;-</span> into_string<span class="defer">$</span><span class="p">)</span></code></pre>
+<pre class="code rust"><code><span class="k">use</span> maud<span class="op">::</span><span class="p">{</span>html<span class="p">,</span> <span class="t">Markup</span><span class="p">}</span><span class="p">;</span>
+
+<span class="k">fn</span> page<span class="p">(</span>title<span class="p">:</span> <span class="p">&amp;</span>str<span class="p">,</span> items<span class="p">:</span> <span class="p">&amp;</span><span class="p">[</span><span class="p">&amp;</span>str<span class="p">]</span><span class="p">)</span> <span class="op">-&gt;</span> <span class="t">Markup</span> <span class="p">{</span>
+    <span class="mac">html!</span> <span class="p">{</span>
+        h1 <span class="p">{</span> <span class="p">(</span>title<span class="p">)</span> <span class="p">}</span>
+        p<span class="p">.</span>intro <span class="p">{</span> <span class="str">"Items: "</span> <span class="p">(</span>items<span class="p">.</span>len<span class="p">(</span><span class="p">)</span><span class="p">)</span> <span class="p">}</span>
+        a href<span class="p">=</span><span class="p">(</span><span class="mac">format!</span><span class="p">(</span><span class="str">"/items/{}"</span><span class="p">,</span> items<span class="p">.</span>len<span class="p">(</span><span class="p">)</span><span class="p">)</span><span class="p">)</span> <span class="p">{</span> <span class="str">"next"</span> <span class="p">}</span>
+        ul <span class="p">{</span>
+            <span class="p">@</span><span class="k">for</span> item <span class="k">in</span> items <span class="p">{</span>
+                li <span class="p">{</span> <span class="p">(</span>item<span class="p">.</span>to_uppercase<span class="p">(</span><span class="p">)</span><span class="p">)</span> <span class="p">}</span>
+            <span class="p">}</span>
+        <span class="p">}</span>
+        <span class="p">@</span><span class="k">if</span> items<span class="p">.</span>is_empty<span class="p">(</span><span class="p">)</span> <span class="p">{</span>
+            p <span class="p">{</span> <span class="str">"none"</span> <span class="p">}</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+
+<span class="k">fn</span> main<span class="p">(</span><span class="p">)</span> <span class="p">{</span>
+    <span class="mac">println!</span><span class="p">(</span><span class="str">"{}"</span><span class="p">,</span> page<span class="p">(</span><span class="str">"Fruit"</span><span class="p">,</span> <span class="p">&amp;</span><span class="p">[</span><span class="str">"apple"</span><span class="p">,</span> <span class="str">"pear"</span><span class="p">]</span><span class="p">)</span><span class="p">.</span>into_string<span class="p">(</span><span class="p">)</span><span class="p">)</span><span class="p">;</span>
+<span class="p">}</span></code></pre>
+<h4 id="serdejson-json">serde_json <code>json!</code></h4>
+<p><em>serde_json 1.</em> JSON with Rust values: after each key's <code>:</code>. Literals, arrays of literals and nested objects stay as written; a value inside a nested object is a hole like any other.</p>
+<pre class="code harsh"><code><span class="k">use</span> serde_json<span class="p">.</span>json
+
+<span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="k">let</span> name <span class="p">=</span> <span class="str">"Ada"</span>
+    <span class="k">let</span> langs <span class="p">=</span> <span class="mac">vec!</span> <span class="str">"Rust"</span> <span class="str">"Harsh"</span>
+    <span class="k">let</span> v <span class="p">=</span> <span class="mac">json!</span> <span class="p">{</span><span class="p">{</span>
+        <span class="str">"name"</span><span class="p">:</span> <span class="p">@</span><span class="p">:</span> name <span class="op">&lt;-</span> to_uppercase<span class="defer">$</span> <span class="p">:</span><span class="p">@</span><span class="p">,</span>
+        <span class="str">"age"</span><span class="p">:</span> <span class="num">36</span><span class="p">,</span>
+        <span class="str">"langs"</span><span class="p">:</span> langs<span class="p">,</span>
+        <span class="str">"count"</span><span class="p">:</span> <span class="p">@</span><span class="p">:</span> langs <span class="op">&lt;-</span> len<span class="defer">$</span> <span class="p">+</span> <span class="num">1</span> <span class="p">:</span><span class="p">@</span><span class="p">,</span>
+        <span class="str">"tags"</span><span class="p">:</span> <span class="p">[</span><span class="p">{</span> <span class="str">"id"</span><span class="p">:</span> <span class="num">1</span><span class="p">,</span> <span class="str">"main"</span><span class="p">:</span> <span class="p">@</span><span class="p">:</span> langs <span class="op">&lt;-</span> first<span class="defer">$</span> <span class="p">:</span><span class="p">@</span> <span class="p">}</span><span class="p">]</span>
+    <span class="p">}</span><span class="p">}</span>
+    <span class="mac">println!</span> <span class="str">"{v}"</span></code></pre>
+<pre class="code rust"><code><span class="k">use</span> serde_json<span class="op">::</span>json<span class="p">;</span>
+
+<span class="k">fn</span> main<span class="p">(</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">let</span> name <span class="p">=</span> <span class="str">"Ada"</span><span class="p">;</span>
+    <span class="k">let</span> langs <span class="p">=</span> <span class="mac">vec!</span><span class="p">[</span><span class="str">"Rust"</span><span class="p">,</span> <span class="str">"Harsh"</span><span class="p">]</span><span class="p">;</span>
+    <span class="k">let</span> v <span class="p">=</span> <span class="mac">json!</span><span class="p">(</span><span class="p">{</span>
+        <span class="str">"name"</span><span class="p">:</span> name<span class="p">.</span>to_uppercase<span class="p">(</span><span class="p">)</span><span class="p">,</span>
+        <span class="str">"age"</span><span class="p">:</span> <span class="num">36</span><span class="p">,</span>
+        <span class="str">"langs"</span><span class="p">:</span> langs<span class="p">,</span>
+        <span class="str">"count"</span><span class="p">:</span> langs<span class="p">.</span>len<span class="p">(</span><span class="p">)</span> <span class="p">+</span> <span class="num">1</span><span class="p">,</span>
+        <span class="str">"tags"</span><span class="p">:</span> <span class="p">[</span><span class="p">{</span> <span class="str">"id"</span><span class="p">:</span> <span class="num">1</span><span class="p">,</span> <span class="str">"main"</span><span class="p">:</span> langs<span class="p">.</span>first<span class="p">(</span><span class="p">)</span> <span class="p">}</span><span class="p">]</span>
+    <span class="p">}</span><span class="p">)</span><span class="p">;</span>
+    <span class="mac">println!</span><span class="p">(</span><span class="str">"{v}"</span><span class="p">)</span><span class="p">;</span>
+<span class="p">}</span></code></pre>
+<h4 id="tokio-select">Tokio <code>select!</code></h4>
+<p><em>tokio 1.</em> Arms, <code>pattern = future =&gt; handler,</code>: the pattern (unless it is <code>_</code>), the future and the handler are each Rust. A handler that is a block is one value, an explicit block: <code>=&gt; @: do: … :@</code>.</p>
+<pre class="code harsh"><code><span class="k">use</span> tokio<span class="p">.</span>sync<span class="p">.</span>mpsc
+<span class="k">use</span> tokio<span class="p">.</span>time<span class="p">.</span><span class="p">(</span>sleep<span class="p">,</span> <span class="t">Duration</span><span class="p">)</span>
+
+<span class="attr">#[tokio.main]</span>
+<span class="k">async</span> <span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="k">let</span> <span class="p">(</span>tx<span class="p">,</span> <span class="k">mut</span> rx<span class="p">)</span> <span class="p">=</span> mpsc<span class="p">.</span>channel<span class="p">.</span><span class="p">&lt;</span>u32<span class="p">&gt;</span> <span class="num">4</span>
+    tokio<span class="p">.</span>spawn <span class="p">(</span><span class="k">async</span> <span class="k">move</span><span class="p">:</span>
+        tx <span class="op">&lt;-</span> send <span class="num">7</span> <span class="op">&lt;-</span> <span class="k">await</span> <span class="op">&lt;-</span> unwrap<span class="defer">$</span>
+        <span class="p">(</span><span class="p">)</span>
+    <span class="p">)</span>
+    <span class="k">let</span> got <span class="p">=</span> tokio<span class="p">.</span><span class="mac">select!</span> <span class="p">{</span>
+        <span class="p">@</span><span class="p">:</span> <span class="t">Some</span> v <span class="p">:</span><span class="p">@</span> <span class="p">=</span> <span class="p">@</span><span class="p">:</span> rx <span class="op">&lt;-</span> recv<span class="defer">$</span> <span class="p">:</span><span class="p">@</span> <span class="op">=&gt;</span> <span class="p">@</span><span class="p">:</span> v <span class="p">*</span> <span class="num">2</span> <span class="p">:</span><span class="p">@</span><span class="p">,</span>
+        _ <span class="p">=</span> <span class="p">@</span><span class="p">:</span> sleep <span class="p">(</span><span class="t">Duration</span><span class="p">.</span>from_secs <span class="num">1</span><span class="p">)</span> <span class="p">:</span><span class="p">@</span> <span class="op">=&gt;</span> <span class="p">@</span><span class="p">:</span> <span class="k">do</span><span class="p">:</span>
+            <span class="mac">println!</span> <span class="str">"timeout"</span>
+            <span class="num">0</span> <span class="p">:</span><span class="p">@</span>
+    <span class="p">}</span>
+    <span class="mac">println!</span> <span class="str">"got {got}"</span></code></pre>
+<pre class="code rust"><code><span class="k">use</span> tokio<span class="op">::</span>sync<span class="op">::</span>mpsc<span class="p">;</span>
+<span class="k">use</span> tokio<span class="op">::</span>time<span class="op">::</span><span class="p">{</span>sleep<span class="p">,</span> <span class="t">Duration</span><span class="p">}</span><span class="p">;</span>
+
+<span class="attr">#[tokio::main]</span>
+<span class="k">async</span> <span class="k">fn</span> main<span class="p">(</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">let</span> <span class="p">(</span>tx<span class="p">,</span> <span class="k">mut</span> rx<span class="p">)</span> <span class="p">=</span> mpsc<span class="op">::</span>channel<span class="op">::</span><span class="p">&lt;</span>u32<span class="p">&gt;</span><span class="p">(</span><span class="num">4</span><span class="p">)</span><span class="p">;</span>
+    tokio<span class="op">::</span>spawn<span class="p">(</span><span class="k">async</span> <span class="k">move</span> <span class="p">{</span>
+        tx<span class="p">.</span>send<span class="p">(</span><span class="num">7</span><span class="p">)</span><span class="p">.</span><span class="k">await</span><span class="p">.</span>unwrap<span class="p">(</span><span class="p">)</span><span class="p">;</span>
+    <span class="p">}</span><span class="p">)</span><span class="p">;</span>
+    <span class="k">let</span> got <span class="p">=</span> tokio<span class="op">::</span><span class="mac">select!</span> <span class="p">{</span>
+        <span class="t">Some</span><span class="p">(</span>v<span class="p">)</span> <span class="p">=</span> rx<span class="p">.</span>recv<span class="p">(</span><span class="p">)</span> <span class="op">=&gt;</span> v <span class="p">*</span> <span class="num">2</span><span class="p">,</span>
+        _ <span class="p">=</span> sleep<span class="p">(</span><span class="t">Duration</span><span class="op">::</span>from_secs<span class="p">(</span><span class="num">1</span><span class="p">)</span><span class="p">)</span> <span class="op">=&gt;</span> <span class="p">{</span>
+            <span class="mac">println!</span><span class="p">(</span><span class="str">"timeout"</span><span class="p">)</span><span class="p">;</span>
+            <span class="num">0</span>
+        <span class="p">}</span>
+    <span class="p">}</span><span class="p">;</span>
+    <span class="mac">println!</span><span class="p">(</span><span class="str">"got {got}"</span><span class="p">)</span><span class="p">;</span>
+<span class="p">}</span></code></pre>
+<h4 id="std-threadlocal">std <code>thread_local!</code></h4>
+<p><em>the standard library.</em> Declarations: the value after <code>=</code>. The type before it, <code>RefCell&lt;Vec&lt;String&gt;&gt;</code>, is the macro's text -- <code>Cell&lt;bool&gt; = …</code> is no expression -- and so is the <code>;</code> after the hole.</p>
+<pre class="code harsh"><code><span class="k">use</span> std<span class="p">.</span>cell<span class="p">.</span><span class="t">RefCell</span>
+
+<span class="mac">thread_local!</span> <span class="p">{</span>
+    <span class="k">static</span> <span class="t">LOG</span><span class="p">:</span> <span class="t">RefCell</span><span class="p">&lt;</span><span class="t">Vec</span><span class="p">&lt;</span><span class="t">String</span><span class="p">&gt;</span><span class="p">&gt;</span> <span class="p">=</span> <span class="p">@</span><span class="p">:</span> <span class="t">RefCell</span><span class="p">.</span>new <span class="p">(</span><span class="t">Vec</span><span class="p">.</span>with_capacity <span class="num">8</span><span class="p">)</span> <span class="p">:</span><span class="p">@</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="t">LOG</span> <span class="op">&lt;-</span> with <span class="p">(</span><span class="p">|</span>l<span class="p">|</span> l <span class="op">&lt;-</span> borrow_mut<span class="defer">$</span> <span class="op">&lt;-</span> push <span class="p">(</span><span class="str">"start"</span> <span class="op">&lt;-</span> to_string<span class="defer">$</span><span class="p">)</span><span class="p">)</span>
+    <span class="t">LOG</span> <span class="op">&lt;-</span> with <span class="p">(</span><span class="p">|</span>l<span class="p">|</span> <span class="mac">println!</span> <span class="str">"{:?}"</span> <span class="p">(</span>l <span class="op">&lt;-</span> borrow<span class="defer">$</span><span class="p">)</span><span class="p">)</span>
+    <span class="p">(</span><span class="p">)</span></code></pre>
+<pre class="code rust"><code><span class="k">use</span> std<span class="op">::</span>cell<span class="op">::</span><span class="t">RefCell</span><span class="p">;</span>
+
+<span class="mac">thread_local!</span> <span class="p">{</span>
+    <span class="k">static</span> <span class="t">LOG</span><span class="p">:</span> <span class="t">RefCell</span><span class="p">&lt;</span><span class="t">Vec</span><span class="p">&lt;</span><span class="t">String</span><span class="p">&gt;</span><span class="p">&gt;</span> <span class="p">=</span> <span class="t">RefCell</span><span class="op">::</span>new<span class="p">(</span><span class="t">Vec</span><span class="op">::</span>with_capacity<span class="p">(</span><span class="num">8</span><span class="p">)</span><span class="p">)</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="k">fn</span> main<span class="p">(</span><span class="p">)</span> <span class="p">{</span>
+    <span class="t">LOG</span><span class="p">.</span>with<span class="p">(</span><span class="p">|</span>l<span class="p">|</span> l<span class="p">.</span>borrow_mut<span class="p">(</span><span class="p">)</span><span class="p">.</span>push<span class="p">(</span><span class="str">"start"</span><span class="p">.</span>to_string<span class="p">(</span><span class="p">)</span><span class="p">)</span><span class="p">)</span><span class="p">;</span>
+    <span class="t">LOG</span><span class="p">.</span>with<span class="p">(</span><span class="p">|</span>l<span class="p">|</span> <span class="mac">println!</span><span class="p">(</span><span class="str">"{:?}"</span><span class="p">,</span> l<span class="p">.</span>borrow<span class="p">(</span><span class="p">)</span><span class="p">)</span><span class="p">)</span><span class="p">;</span>
+<span class="p">}</span></code></pre>
+<h4 id="lazystatic"><code>lazy_static!</code></h4>
+<p><em>lazy_static 1.</em> As <code>thread_local!</code>: the value after <code>=</code>, a block when it takes several statements.</p>
+<pre class="code harsh"><code><span class="k">use</span> lazy_static<span class="p">.</span>lazy_static
+<span class="k">use</span> std<span class="p">.</span>collections<span class="p">.</span><span class="t">HashMap</span>
+
+<span class="mac">lazy_static!</span> <span class="p">{</span>
+    <span class="k">static</span> <span class="k">ref</span> <span class="t">NAMES</span><span class="p">:</span> <span class="t">HashMap</span><span class="p">&lt;</span>u32<span class="p">,</span> <span class="p">&amp;</span>'static str<span class="p">&gt;</span> <span class="p">=</span> <span class="p">@</span><span class="p">:</span> <span class="k">do</span><span class="p">:</span>
+        <span class="k">let</span> <span class="k">mut</span> m <span class="p">=</span> <span class="t">HashMap</span><span class="p">.</span>new<span class="defer">$</span>
+        m <span class="op">&lt;-</span> insert <span class="num">0</span> <span class="str">"zero"</span>
+        m <span class="op">&lt;-</span> insert <span class="num">1</span> <span class="str">"one"</span>
+        m <span class="p">:</span><span class="p">@</span><span class="p">;</span>
+    <span class="k">static</span> <span class="k">ref</span> <span class="t">COUNT</span><span class="p">:</span> usize <span class="p">=</span> <span class="p">@</span><span class="p">:</span> <span class="t">NAMES</span> <span class="op">&lt;-</span> len<span class="defer">$</span> <span class="p">*</span> <span class="num">2</span> <span class="p">:</span><span class="p">@</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="mac">println!</span> <span class="str">"{} {}"</span> <span class="p">(</span><span class="t">NAMES</span><span class="p">[</span><span class="p">&amp;</span><span class="num">1</span><span class="p">]</span><span class="p">)</span> <span class="p">(</span><span class="p">*</span><span class="t">COUNT</span><span class="p">)</span></code></pre>
+<pre class="code rust"><code><span class="k">use</span> lazy_static<span class="op">::</span>lazy_static<span class="p">;</span>
+<span class="k">use</span> std<span class="op">::</span>collections<span class="op">::</span><span class="t">HashMap</span><span class="p">;</span>
+
+<span class="mac">lazy_static!</span> <span class="p">{</span>
+    <span class="k">static</span> <span class="k">ref</span> <span class="t">NAMES</span><span class="p">:</span> <span class="t">HashMap</span><span class="p">&lt;</span>u32<span class="p">,</span> <span class="p">&amp;</span>'static str<span class="p">&gt;</span> <span class="p">=</span> <span class="p">{</span>
+        <span class="k">let</span> <span class="k">mut</span> m <span class="p">=</span> <span class="t">HashMap</span><span class="op">::</span>new<span class="p">(</span><span class="p">)</span><span class="p">;</span>
+        m<span class="p">.</span>insert<span class="p">(</span><span class="num">0</span><span class="p">,</span> <span class="str">"zero"</span><span class="p">)</span><span class="p">;</span>
+        m<span class="p">.</span>insert<span class="p">(</span><span class="num">1</span><span class="p">,</span> <span class="str">"one"</span><span class="p">)</span><span class="p">;</span>
+        m
+    <span class="p">}</span><span class="p">;</span>
+    <span class="k">static</span> <span class="k">ref</span> <span class="t">COUNT</span><span class="p">:</span> usize <span class="p">=</span> <span class="t">NAMES</span><span class="p">.</span>len<span class="p">(</span><span class="p">)</span> <span class="p">*</span> <span class="num">2</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="k">fn</span> main<span class="p">(</span><span class="p">)</span> <span class="p">{</span>
+    <span class="mac">println!</span><span class="p">(</span><span class="str">"{} {}"</span><span class="p">,</span> <span class="t">NAMES</span><span class="p">[</span><span class="p">&amp;</span><span class="num">1</span><span class="p">]</span><span class="p">,</span> <span class="p">*</span><span class="t">COUNT</span><span class="p">)</span><span class="p">;</span>
+<span class="p">}</span></code></pre>
+<h4 id="bitflags"><code>bitflags!</code></h4>
+<p><em>bitflags 2.</em> A declaration in the macro's own grammar: <code>struct Perms: u32 { const … }</code> and the <code>#[derive(…)]</code> above it are the macro's text; only a constant's value after <code>=</code> is Rust, and a literal stays as written.</p>
+<pre class="code harsh"><code><span class="k">use</span> bitflags<span class="p">.</span>bitflags
+
+<span class="mac">bitflags!</span> <span class="p">{</span>
+    <span class="attr">#[derive(Debug, Clone, Copy, PartialEq, Eq)]</span>
+    <span class="k">pub</span> <span class="k">struct</span> <span class="t">Perms</span><span class="p">:</span> u32 <span class="p">{</span>
+        <span class="k">const</span> <span class="t">READ</span> <span class="p">=</span> <span class="num">0b001</span><span class="p">;</span>
+        <span class="k">const</span> <span class="t">WRITE</span> <span class="p">=</span> <span class="num">0b010</span><span class="p">;</span>
+        <span class="k">const</span> <span class="t">ALL</span> <span class="p">=</span> <span class="p">@</span><span class="p">:</span> <span class="k">Self</span><span class="p">.</span><span class="t">READ</span> <span class="op">&lt;-</span> bits<span class="defer">$</span> <span class="p">|</span> <span class="k">Self</span><span class="p">.</span><span class="t">WRITE</span> <span class="op">&lt;-</span> bits<span class="defer">$</span> <span class="p">:</span><span class="p">@</span><span class="p">;</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+
+<span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="k">let</span> p <span class="p">=</span> <span class="t">Perms</span><span class="p">.</span><span class="t">READ</span> <span class="p">|</span> <span class="t">Perms</span><span class="p">.</span><span class="t">WRITE</span>
+    <span class="mac">println!</span> <span class="str">"{:?} {}"</span> p <span class="p">(</span>p <span class="op">==</span> <span class="t">Perms</span><span class="p">.</span><span class="t">ALL</span><span class="p">)</span></code></pre>
+<pre class="code rust"><code><span class="k">use</span> bitflags<span class="op">::</span>bitflags<span class="p">;</span>
+
+<span class="mac">bitflags!</span> <span class="p">{</span>
+    <span class="attr">#[derive(Debug, Clone, Copy, PartialEq, Eq)]</span>
+    <span class="k">pub</span> <span class="k">struct</span> <span class="t">Perms</span><span class="p">:</span> u32 <span class="p">{</span>
+        <span class="k">const</span> <span class="t">READ</span> <span class="p">=</span> <span class="num">0b001</span><span class="p">;</span>
+        <span class="k">const</span> <span class="t">WRITE</span> <span class="p">=</span> <span class="num">0b010</span><span class="p">;</span>
+        <span class="k">const</span> <span class="t">ALL</span> <span class="p">=</span> <span class="k">Self</span><span class="op">::</span><span class="t">READ</span><span class="p">.</span>bits<span class="p">(</span><span class="p">)</span> <span class="p">|</span> <span class="k">Self</span><span class="op">::</span><span class="t">WRITE</span><span class="p">.</span>bits<span class="p">(</span><span class="p">)</span><span class="p">;</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+
+<span class="k">fn</span> main<span class="p">(</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">let</span> p <span class="p">=</span> <span class="t">Perms</span><span class="op">::</span><span class="t">READ</span> <span class="p">|</span> <span class="t">Perms</span><span class="op">::</span><span class="t">WRITE</span><span class="p">;</span>
+    <span class="mac">println!</span><span class="p">(</span><span class="str">"{:?} {}"</span><span class="p">,</span> p<span class="p">,</span> p <span class="op">==</span> <span class="t">Perms</span><span class="op">::</span><span class="t">ALL</span><span class="p">)</span><span class="p">;</span>
+<span class="p">}</span></code></pre>
+<h4 id="tracing-s-info-and-debug"><code>tracing</code>'s <code>info!</code> and <code>debug!</code></h4>
+<p><em>tracing 0.1.</em> Not a DSL in braces: the stream is a list -- fields, a message, its arguments -- so it is juxtaposed like any call, each field isolated: <code>(user = %user)</code>, <code>(?items)</code>, <code>(target: "app")</code>.</p>
+<pre class="code harsh"><code><span class="k">use</span> tracing<span class="p">.</span><span class="p">(</span>debug<span class="p">,</span> info<span class="p">)</span>
+
+<span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    tracing_subscriber<span class="p">.</span>fmt<span class="defer">$</span>
+        <span class="op">&lt;-</span> without_time<span class="defer">$</span>
+        <span class="op">&lt;-</span> with_ansi <span class="k">false</span>
+        <span class="op">&lt;-</span> with_max_level tracing<span class="p">.</span><span class="t">Level</span><span class="p">.</span><span class="t">DEBUG</span>
+        <span class="op">&lt;-</span> init<span class="defer">$</span>
+    <span class="k">let</span> user <span class="p">=</span> <span class="str">"ada"</span>
+    <span class="k">let</span> items <span class="p">=</span> <span class="mac">vec!</span> <span class="num">1</span> <span class="num">2</span> <span class="num">3</span>
+    <span class="mac">info!</span>
+        <span class="p">(</span>user <span class="p">=</span> <span class="p">%</span>user<span class="p">)</span>
+        <span class="p">(</span>count <span class="p">=</span> items <span class="op">&lt;-</span> len<span class="defer">$</span><span class="p">)</span>
+        <span class="str">"processed {} items"</span>
+        <span class="p">(</span>items <span class="op">&lt;-</span> len<span class="defer">$</span><span class="p">)</span>
+    <span class="mac">debug!</span> <span class="p">(</span>target<span class="p">:</span> <span class="str">"app"</span><span class="p">)</span> <span class="p">(</span><span class="p">?</span>items<span class="p">)</span> <span class="str">"starting"</span>
+    <span class="p">(</span><span class="p">)</span></code></pre>
+<pre class="code rust"><code><span class="k">use</span> tracing<span class="op">::</span><span class="p">{</span>debug<span class="p">,</span> info<span class="p">}</span><span class="p">;</span>
+
+<span class="k">fn</span> main<span class="p">(</span><span class="p">)</span> <span class="p">{</span>
+    tracing_subscriber<span class="op">::</span>fmt<span class="p">(</span><span class="p">)</span><span class="p">.</span>without_time<span class="p">(</span><span class="p">)</span><span class="p">.</span>with_ansi<span class="p">(</span><span class="k">false</span><span class="p">)</span><span class="p">.</span>with_max_level<span class="p">(</span>tracing<span class="op">::</span><span class="t">Level</span><span class="op">::</span><span class="t">DEBUG</span><span class="p">)</span><span class="p">.</span>init<span class="p">(</span><span class="p">)</span><span class="p">;</span>
+    <span class="k">let</span> user <span class="p">=</span> <span class="str">"ada"</span><span class="p">;</span>
+    <span class="k">let</span> items <span class="p">=</span> <span class="mac">vec!</span><span class="p">[</span><span class="num">1</span><span class="p">,</span> <span class="num">2</span><span class="p">,</span> <span class="num">3</span><span class="p">]</span><span class="p">;</span>
+    <span class="mac">info!</span><span class="p">(</span>user <span class="p">=</span> <span class="p">%</span>user<span class="p">,</span> count <span class="p">=</span> items<span class="p">.</span>len<span class="p">(</span><span class="p">)</span><span class="p">,</span> <span class="str">"processed {} items"</span><span class="p">,</span> items<span class="p">.</span>len<span class="p">(</span><span class="p">)</span><span class="p">)</span><span class="p">;</span>
+    <span class="mac">debug!</span><span class="p">(</span>target<span class="p">:</span> <span class="str">"app"</span><span class="p">,</span> <span class="p">?</span>items<span class="p">,</span> <span class="str">"starting"</span><span class="p">)</span><span class="p">;</span>
+<span class="p">}</span></code></pre>
+<h4 id="lists-vec-format-asserteq-matches">Lists: <code>vec!</code>, <code>format!</code>, <code>assert_eq!</code>, <code>matches!</code></h4>
+<p><em>the standard library.</em> Macros whose stream is a list of values are applied like functions -- juxtaposed, no braces, no holes. This is most macros.</p>
+<pre class="code harsh"><code><span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
+    <span class="k">let</span> v <span class="p">=</span> <span class="mac">vec!</span> <span class="num">1</span> <span class="num">2</span> <span class="num">3</span>
+    <span class="k">let</span> s <span class="p">=</span> <span class="mac">format!</span> <span class="str">"{} items, first {:?}"</span> <span class="p">(</span>v <span class="op">&lt;-</span> len<span class="defer">$</span><span class="p">)</span> <span class="p">(</span>v <span class="op">&lt;-</span> first<span class="defer">$</span><span class="p">)</span>
+    <span class="mac">assert_eq!</span> <span class="p">(</span>v <span class="op">&lt;-</span> iter<span class="defer">$</span> <span class="op">&lt;-</span> sum<span class="p">.</span><span class="p">&lt;</span>i32<span class="p">&gt;</span><span class="defer">$</span><span class="p">)</span> <span class="num">6</span> <span class="str">"sum of {:?}"</span> v
+    <span class="k">let</span> big <span class="p">=</span> <span class="mac">matches!</span> <span class="p">(</span>v <span class="op">&lt;-</span> last<span class="defer">$</span><span class="p">)</span> <span class="p">(</span><span class="t">Some</span> n <span class="k">if</span> <span class="p">*</span>n <span class="p">&gt;</span> <span class="num">2</span><span class="p">)</span>
+    <span class="mac">println!</span> <span class="str">"{s} {big}"</span></code></pre>
+<pre class="code rust"><code><span class="k">fn</span> main<span class="p">(</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">let</span> v <span class="p">=</span> <span class="mac">vec!</span><span class="p">[</span><span class="num">1</span><span class="p">,</span> <span class="num">2</span><span class="p">,</span> <span class="num">3</span><span class="p">]</span><span class="p">;</span>
+    <span class="k">let</span> s <span class="p">=</span> <span class="mac">format!</span><span class="p">(</span><span class="str">"{} items, first {:?}"</span><span class="p">,</span> v<span class="p">.</span>len<span class="p">(</span><span class="p">)</span><span class="p">,</span> v<span class="p">.</span>first<span class="p">(</span><span class="p">)</span><span class="p">)</span><span class="p">;</span>
+    <span class="mac">assert_eq!</span><span class="p">(</span>v<span class="p">.</span>iter<span class="p">(</span><span class="p">)</span><span class="p">.</span>sum<span class="op">::</span><span class="p">&lt;</span>i32<span class="p">&gt;</span><span class="p">(</span><span class="p">)</span><span class="p">,</span> <span class="num">6</span><span class="p">,</span> <span class="str">"sum of {:?}"</span><span class="p">,</span> v<span class="p">)</span><span class="p">;</span>
+    <span class="k">let</span> big <span class="p">=</span> <span class="mac">matches!</span><span class="p">(</span>v<span class="p">.</span>last<span class="p">(</span><span class="p">)</span><span class="p">,</span> <span class="t">Some</span><span class="p">(</span>n<span class="p">)</span> <span class="k">if</span> <span class="p">*</span>n <span class="p">&gt;</span> <span class="num">2</span><span class="p">)</span><span class="p">;</span>
+    <span class="mac">println!</span><span class="p">(</span><span class="str">"{s} {big}"</span><span class="p">)</span><span class="p">;</span>
+<span class="p">}</span></code></pre>
 <h2 id="what-does-not-change">What does not change</h2>
 <p>Calls are juxtaposed (<code>println! "{}" a</code>); <code>m! { … }</code> calls keep their braces, and a bracket after <code>!</code> is an array argument; the body of a <code>macro_rules~</code> transcriber may still be written in Rust's braces under rule 3 when that is wanted. Procedural macros are unaffected: they receive the transpiled tokens.</p>
     </main>

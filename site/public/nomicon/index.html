@@ -860,14 +860,14 @@ tracks every path and refuses a read that might come first.</p>
     <span class="com">// Refused: on the other path, `x` was never given a value.</span>
     <span class="mac">println!</span> <span class="str">"{x}"</span></code></pre>
 <pre class="code"><code>error[E0381]: used binding `x` is possibly-uninitialized
-  --&gt; checked.hrs:7:15
+  --&gt; checked.hrs:7:16
    |
  2 |     let x: i32
    |         - binding declared here but left uninitialized
  5 |         x = 1
    |         ----- binding initialized here in some conditions
  7 |     println! "{x}"
-   |               ^^^ `x` used here but it is possibly-uninitialized</code></pre>
+   |                ^ `x` used here but it is possibly-uninitialized</code></pre>
 <p><strong>In Harsh:</strong> the error points at the <code>.hrs</code> line of the read.</p>
 <h3 id="5-2-drop-flags">5.2 Drop Flags</h3>
 <p><em>Original: <a href="https://doc.rust-lang.org/nomicon/drop-flags.html">Drop Flags</a></em></p>

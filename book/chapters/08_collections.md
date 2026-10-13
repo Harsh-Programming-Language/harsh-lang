@@ -62,7 +62,7 @@ fn main$:
 
 ```text
 None
-thread 'main' panicked at vec_index_panic.hrs:7:
+thread 'main' (18072) panicked at vec_index_panic.hrs:7:
 index out of bounds: the len is 5 but the index is 100
 ```
 
@@ -89,7 +89,7 @@ error[E0502]: cannot borrow `v` as mutable because it is also borrowed as immuta
  4 |     v <- push 6
    |     ^^^^^^^^^^^^ mutable borrow occurs here
  5 |     println! "The first element is: {first}"
-   |                                     ------- immutable borrow later used here
+   |                                      ----- immutable borrow later used here
 ```
 
 Holding a reference to the first element and then pushing looks harmless — the first element is not moving. But it might: a `Vec` that runs out of room allocates a bigger buffer, copies everything across and frees the old one, and `first` would then point into freed memory. The compiler does not know whether this push will reallocate, and does not need to; it knows that `push` needs `&mut v` while `first` holds `&v`, and that is enough. The fix is the usual one: use `first` before the push, or copy the value out (`let first = v[0]` — an `i32` is `Copy`).
@@ -217,19 +217,16 @@ fn main$:
 ```
 
 ```text
-error[E0277]: the type `String` cannot be indexed by `{integer}`
-  --> string_index.hrs:3:13
+error[E0277]: the type `str` cannot be indexed by `{integer}`
+  --> string_index.hrs:3:16
    |
  3 |     let h = s1[0]
-   |             ^^^^^ `String` cannot be indexed by `{integer}`
-   = help: the trait `Index<{integer}>` is not implemented for `String`
-   = help: the following other types implement trait `Index<Idx>`:
-  <String as Index<RangeFull>>
-  <String as Index<std::ops::Range<usize>>>
-  <String as Index<RangeFrom<usize>>>
-  <String as Index<RangeTo<usize>>>
-  <String as Index<RangeInclusive<usize>>>
-  <String as Index<RangeToInclusive<usize>>>
+   |                ^ string indices are ranges of `usize`
+   = help: the trait `SliceIndex<str>` is not implemented for `{integer}`
+   = note: you can use `.chars().nth()` or `.bytes().nth()`
+for more information, see chapter 8 in The Book: <https://doc.rust-lang.org/book/ch08-02-strings.html#indexing-into-strings>
+   = help: `usize` implements trait `SliceIndex<T>`
+   = note: required for `String` to implement `Index<{integer}>`
 ```
 
 `s1[0]` does not compile, and the reason is the byte count above. A `String` is bytes; a character may be one to four of them; so "the first character" is not "byte zero", and Rust refuses to pretend it is. Indexing that returned a byte would be wrong for most of the world's text, and indexing that returned a character would have to scan from the start, which is not what `[i]` promises. So there is no `[i]`.
@@ -316,14 +313,14 @@ fn main$:
 
 ```text
 error[E0382]: borrow of moved value: `field_name`
-  --> map_own.hrs:10:15
+  --> map_own.hrs:10:16
    |
  4 |     let field_name = String.from "Favorite color"
    |         ---------- move occurs because `field_name` has type `String`, which does not implement the `Copy` trait
  8 |     map <- insert field_name field_value      // both moved into the map
    |                   ---------- value moved here
 10 |     println! "{field_name}"                   // no longer valid
-   |               ^^^^^^^^^^^^ value borrowed here after move
+   |                ^^^^^^^^^^ value borrowed here after move
    = help: consider cloning the value if the performance cost is acceptable (hrs 8:29)
 ```
 

@@ -295,9 +295,30 @@ fn main$:
 
 ```text
 $ hrs run
+warning[unused_parens]: unnecessary parentheses around closure body
+  --> /tmp/harsh-book/16_matrices_regression/src/main.hrs:10:38
+   |
+10 |     let x = Matrix.from_rows (list~ (vec! 1.0 h) for h in hours)
+   |                                      ^
+12 |     // Julia's `β = X \ y`: for a tall matrix, the least-squares fit.
+   |         ^
+   = note: in the expansion of `hrs_std.g~` called at /tmp/harsh-book/16_matrices_regression/src/main.hrs:12:56
+12 |     // Julia's `β = X \ y`: for a tall matrix, the least-squares fit.
+   = note: `#[warn(unused_parens)]` (part of `#[warn(unused)]`) on by default
+   = help: remove these parentheses (hrs 10:38)
+
+warning[unused_parens]: unnecessary parentheses around closure body
+  --> /tmp/harsh-book/16_matrices_regression/src/main.hrs:10:37
+   |
+10 |     let x = Matrix.from_rows (list~ (vec! 1.0 h) for h in hours)
+   |                                     ^
+   |                                                ^
+   = help: remove these parentheses (hrs 10:37)
+
 score = 47.20 + 4.37 × hours
 residual 1.76
 7 hours: 77.8
+hrs: 0 error(s), 2 warning(s)
 ```
 
 This is linear regression: a straight line through data that does not lie on one. Given students' hours and scores, find the intercept and slope that fit best.
@@ -452,7 +473,7 @@ fn main$:
 
 ```text
 $ hrs run
-thread 'main' panicked at main.rs:4:20:
+thread 'main' (20892) panicked at main.rs:4:20:
 DimensionMismatch: matrix A has dimensions (2, 3), matrix B has dimensions (2, 3)
 ```
 

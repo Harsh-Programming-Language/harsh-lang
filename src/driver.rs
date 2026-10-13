@@ -13,9 +13,14 @@
 //! path = "target/src/main.rs"
 //! ```
 //!
-//! One manifest, dependencies untouched, and nothing extra to gitignore since
-//! Cargo already ignores `/target`. Plain `cargo build` works once the tree has
-//! been transpiled; `hrs build` does both and remaps the diagnostics.
+//! Nothing extra to gitignore, since Cargo already ignores `/target`. A
+//! project without an `Hrs.toml` keeps one manifest, its dependencies
+//! untouched: plain `cargo build` works once the tree has been transpiled.
+//! With an `Hrs.toml` (0.3.0), `hrs build` is two passes: pass 1 transpiles
+//! the project and its Harsh crates and writes a generated manifest,
+//! `target/src/Cargo.toml` -- the user's `Cargo.toml` plus the Harsh
+//! dependencies (`Project::prepare`); pass 2 is Cargo on that manifest.
+//! `hrs build` runs both and remaps the diagnostics.
 
 use std::collections::BTreeMap;
 use std::fs;
@@ -272,10 +277,6 @@ impl Project {
         Ok(names)
     }
 
-    /// Build the runner of the proc macros this project uses, if it uses
-    /// any: each listed crate transpiled, the runner's sources written under
-    /// `target/src/proc-macros/` when they change, and cargo run over it --
-    /// cargo's own freshness check is the cache (decision P4).
     /// Transpile each Harsh project this one depends on by path, deepest
     /// first; `seen` guards against visiting one twice.
     fn transpile_path_dependencies(&self, seen: &mut Vec<PathBuf>) -> Result<(), String> {
@@ -341,6 +342,10 @@ impl Project {
         Ok(out)
     }
 
+    /// Build the runner of the proc macros this project uses, if it uses
+    /// any: each listed crate transpiled, the runner's sources written under
+    /// `target/src/proc-macros/` when they change, and cargo run over it --
+    /// cargo's own freshness check is the cache (decision P4).
     pub fn proc_runner(&self) -> Result<Option<crate::procmac::Runner>, String> {
         let meta = self.meta()?;
         // The macro crates to build the runner from: those this project lists
@@ -675,13 +680,6 @@ impl Project {
         Ok(Export { files, formatted })
     }
 
-    /// Run a cargo subcommand, remapping its diagnostics onto Harsh source.
-    ///
-    /// Needs the `remap` feature: rustc's JSON diagnostics are read and
-    /// remapped onto the Harsh sources. Without it the library is the pure
-    /// language -- lexer, layout, expander, emitter -- with no dependencies,
-    /// which is what `hrs_proc_macro` builds on.
-    #[cfg(feature = "remap")]
     /// Before Cargo, the Harsh level (the user's design, 2026-10-03): with
     /// an `Hrs.toml`, each Harsh crate it names by path is transpiled and
     /// prepared in turn (its own Harsh crates first), and the generated
@@ -783,12 +781,15 @@ impl Project {
         Ok(status.code().unwrap_or(1))
     }
 
+    /// Run a cargo subcommand, remapping its diagnostics onto Harsh source.
+    ///
+    /// Needs the `remap` feature: rustc's JSON diagnostics are read and
+    /// remapped onto the Harsh sources. Without it the library is the pure
+    /// language -- lexer, layout, expander, emitter -- with no dependencies,
+    /// which is what `hrs_proc_macro` builds on.
     #[cfg(feature = "remap")]
     pub fn cargo(&self, sub: &str, args: &[String], maps: &[PathBuf]) -> Result<i32, String> {
-        #[cfg(feature = "remap")]
         let generated = self.prepare(&mut Vec::new())?;
-        #[cfg(not(feature = "remap"))]
-        let generated: Option<PathBuf> = None;
         let result = self.cargo_run(sub, args, maps, generated.as_deref());
         if let Some(g) = &generated {
             let back = g.with_file_name("Cargo.lock");
@@ -1070,13 +1071,8 @@ fn collect(dir: &Path, src_root: &Path, gen_root: &Path, out: &mut Vec<Unit>) ->
     Ok(())
 }
 
-/// Equal mtimes count as stale. A source saved within the same clock tick as
-/// the previous transpile would otherwise be skipped forever; the cost of the
-/// tie going the other way is one redundant transpile.
-/// A generated file is also stale when the transpiler itself is newer than
-/// it: a `cargo install` of a new `hrs` must not leave the Rust the old one
-/// wrote in place. The executable's own mtime is the version stamp.
-/// `name = { path = "…" }` entries under `[dependencies]`: the paths.
+/// The paths of a manifest's path dependencies: each `name = { path = "…" }`
+/// entry under `[dependencies]`, read line by line.
 fn path_dependencies(manifest: &str) -> Vec<String> {
     let mut out = Vec::new();
     let mut in_deps = false;
@@ -1269,10 +1265,107 @@ pub fn migrate(cargo: &str, hrs: Option<&str>) -> (String, String, Vec<String>) 
     (kept.join("\n") + "\n", hrs, names)
 }
 
-/// The generated `Cargo.toml` (`target/src/Cargo.toml`): the user's, with
-/// every relative `path`/`build` made absolute (the file moved), its own
-/// `[workspace]` (so a workspace above it does not claim it), and `extra`
-/// dependency lines added to `[dependencies]`.
+/// A workspace's root, without a `[package]` of its own: its members'
+/// folders, in the order `members` lists them, a trailing `*` expanded to
+/// the folders beneath (sorted) that hold a `Cargo.toml`, `exclude` left out.
+/// `None` when `root`'s `Cargo.toml` is a package, or is no workspace
+/// (2026-10-13: `hrs` at a workspace's root was not a command).
+pub fn workspace_members(root: &Path) -> Option<Vec<PathBuf>> {
+    let text = fs::read_to_string(root.join("Cargo.toml")).ok()?;
+    let mut section = String::new();
+    let mut is_workspace = false;
+    let mut has_package = false;
+    let mut key = String::new();
+    let mut lists: std::collections::HashMap<String, Vec<String>> = Default::default();
+    let mut open = false;
+    for raw in text.lines() {
+        // A `#` starts a comment only outside a string.
+        let mut in_str = false;
+        let cut = raw.char_indices().find(|&(_, c)| {
+            if c == '"' {
+                in_str = !in_str;
+            }
+            c == '#' && !in_str
+        });
+        let line = cut.map_or(raw, |(i, _)| &raw[..i]).trim();
+        if line.is_empty() {
+            continue;
+        }
+        if !open && line.starts_with('[') {
+            section = line.replace(' ', "");
+            is_workspace |= section == "[workspace]";
+            has_package |= section == "[package]";
+            continue;
+        }
+        let mut rest = line;
+        if !open {
+            if section != "[workspace]" {
+                continue;
+            }
+            let Some((k, v)) = line.split_once('=') else { continue };
+            key = k.trim().to_string();
+            if key != "members" && key != "exclude" {
+                continue;
+            }
+            rest = v.trim();
+            let Some(r) = rest.strip_prefix('[') else { continue };
+            rest = r;
+            open = true;
+        }
+        let (items, closed) = match rest.split_once(']') {
+            Some((a, _)) => (a, true),
+            None => (rest, false),
+        };
+        for item in items.split(',') {
+            let item = item.trim().trim_matches('"').trim_matches('\'');
+            if !item.is_empty() {
+                lists.entry(key.clone()).or_default().push(item.to_string());
+            }
+        }
+        if closed {
+            open = false;
+        }
+    }
+    if !is_workspace || has_package {
+        return None;
+    }
+    // `./crates/old/` and `crates/old` name one folder.
+    let clean = |p: &str| p.trim_start_matches("./").trim_end_matches('/').to_string();
+    let exclude: Vec<PathBuf> = lists.get("exclude").into_iter().flatten().map(|e| root.join(clean(e))).collect();
+    let mut out = Vec::new();
+    for m in lists.get("members").into_iter().flatten() {
+        let m = clean(m);
+        let found: Vec<PathBuf> = if let Some(base) = m.strip_suffix("/*") {
+            let mut v: Vec<PathBuf> = fs::read_dir(root.join(base))
+                .map(|rd| rd.flatten().map(|e| e.path()).filter(|p| p.join("Cargo.toml").is_file()).collect())
+                .unwrap_or_default();
+            v.sort();
+            v
+        } else {
+            vec![root.join(m)]
+        };
+        for f in found {
+            if !exclude.contains(&f) && !out.contains(&f) {
+                out.push(f);
+            }
+        }
+    }
+    Some(out)
+}
+
+/// A member `hrs` builds: one with an `Hrs.toml`, or a `Cargo.toml` whose
+/// target's `path` is under `target/src/` (a comment naming it does not
+/// count). Any other member is Rust's, built by cargo.
+pub fn is_harsh_member(dir: &Path) -> bool {
+    dir.join(HRS_MANIFEST).is_file()
+        || fs::read_to_string(dir.join("Cargo.toml")).map_or(false, |t| {
+            t.lines().any(|l| {
+                let l = l.split('#').next().unwrap_or("").trim();
+                l.starts_with("path") && l.contains(GEN_DIR)
+            })
+        })
+}
+
 /// A workspace member's inherited fields written out (2026-10-03): the
 /// generated manifest is its own workspace, so `version.workspace = true`
 /// and `serde = { workspace = true, features = [..] }` take their values
@@ -1400,30 +1493,124 @@ fn cargo_dependency_names(text: &str) -> Vec<String> {
 }
 
 #[cfg(feature = "remap")]
-/// The project's own folders, linked into the generated project (S3,
+/// The project's top level, mirrored into the generated project (S3,
 /// 2026-10-06): Cargo builds there, so `CARGO_MANIFEST_DIR` is `target/src/`,
 /// and `asset!("/assets/main.css")` or `env!("CARGO_MANIFEST_DIR")` paths
-/// must find the project's real `assets/`, `migrations/`, … Every top-level
-/// folder but `src`, `target` and hidden ones; an existing link is kept.
+/// must find the project's `assets/`, `migrations/`, … Every top-level
+/// entry, folders and files alike (Docreview's H12, 0.7.3: `Dioxus.toml` was
+/// missing), but `src`, `target`, hidden ones and the manifests `hrs` writes
+/// there itself (`Cargo.toml`, `Cargo.lock`, `Hrs.toml`).
+///
+/// A mirror, not a symbolic link (ShopBill's S7, 0.8.2): Dioxus's `asset!`
+/// resolves a path through its links and requires the file to sit inside
+/// `CARGO_MANIFEST_DIR`, and a link led back out of `target/src/` to the
+/// project. Each folder is a real folder there and each file a hard link to
+/// the project's -- the same file, no copy -- or a copy where a link cannot
+/// be made (another disk). Run at every pass 1: a file added, changed or
+/// replaced (an editor that saves by writing a new file breaks a hard link)
+/// is linked again, one removed is removed. A symbolic link left by an
+/// earlier `hrs` is replaced.
 fn link_project_dirs(root: &Path, gen: &Path) {
     let Ok(entries) = fs::read_dir(root) else { return };
     for e in entries.flatten() {
         let name = e.file_name();
         let n = name.to_string_lossy();
-        if n.starts_with('.') || n == "src" || n == "target" || !e.path().is_dir() {
+        if n.starts_with('.') || ["src", "target", "Cargo.toml", "Cargo.lock", HRS_MANIFEST].contains(&n.as_ref()) {
             continue;
         }
-        let link = gen.join(&name);
-        if link.exists() || link.symlink_metadata().is_ok() {
-            continue;
-        }
-        #[cfg(unix)]
-        let _ = std::os::unix::fs::symlink(e.path(), &link);
-        #[cfg(windows)]
-        let _ = std::os::windows::fs::symlink_dir(e.path(), &link);
+        mirror_entry(&e.path(), &gen.join(&name));
     }
 }
 
+#[cfg(feature = "remap")]
+fn mirror_entry(src: &Path, dst: &Path) {
+    let Ok(meta) = fs::symlink_metadata(src) else { return };
+    if meta.file_type().is_symlink() {
+        // A link in the project stays a link: it is the project's choice.
+        if let Ok(to) = fs::read_link(src) {
+            if fs::read_link(dst).ok().as_deref() != Some(to.as_path()) {
+                remove_any(dst);
+                #[cfg(unix)]
+                let _ = std::os::unix::fs::symlink(&to, dst);
+                #[cfg(windows)]
+                let _ = if src.is_dir() { std::os::windows::fs::symlink_dir(&to, dst) } else { std::os::windows::fs::symlink_file(&to, dst) };
+            }
+        }
+        return;
+    }
+    if meta.is_dir() {
+        mirror_dir(src, dst);
+    } else {
+        mirror_file(src, &meta, dst);
+    }
+}
+
+#[cfg(feature = "remap")]
+fn mirror_dir(src: &Path, dst: &Path) {
+    let real_dir = fs::symlink_metadata(dst).map_or(false, |m| m.is_dir() && !m.file_type().is_symlink());
+    if !real_dir {
+        remove_any(dst);
+        if fs::create_dir_all(dst).is_err() {
+            return;
+        }
+    }
+    let mut names = std::collections::HashSet::new();
+    if let Ok(entries) = fs::read_dir(src) {
+        for e in entries.flatten() {
+            names.insert(e.file_name());
+            mirror_entry(&e.path(), &dst.join(e.file_name()));
+        }
+    }
+    // What the project no longer has goes from the mirror too.
+    if let Ok(entries) = fs::read_dir(dst) {
+        for e in entries.flatten() {
+            if !names.contains(&e.file_name()) {
+                remove_any(&e.path());
+            }
+        }
+    }
+}
+
+#[cfg(feature = "remap")]
+fn mirror_file(src: &Path, meta: &fs::Metadata, dst: &Path) {
+    // A hard link shares its file's length and time; a copy is given the
+    // file's time. Either way, equal means up to date.
+    if let Ok(d) = fs::symlink_metadata(dst) {
+        if d.is_file() && d.len() == meta.len() && d.modified().ok() == meta.modified().ok() {
+            return;
+        }
+    }
+    remove_any(dst);
+    if fs::hard_link(src, dst).is_ok() {
+        return;
+    }
+    if fs::copy(src, dst).is_ok() {
+        if let (Ok(t), Ok(f)) = (meta.modified(), fs::OpenOptions::new().write(true).open(dst)) {
+            let _ = f.set_modified(t);
+        }
+    }
+}
+
+#[cfg(feature = "remap")]
+fn remove_any(p: &Path) {
+    match fs::symlink_metadata(p) {
+        Ok(m) if m.is_dir() && !m.file_type().is_symlink() => {
+            let _ = fs::remove_dir_all(p);
+        }
+        Ok(_) => {
+            // A file, or a link (to a folder on Windows: `remove_dir`).
+            if fs::remove_file(p).is_err() {
+                let _ = fs::remove_dir(p);
+            }
+        }
+        Err(_) => {}
+    }
+}
+
+/// The generated `Cargo.toml` (`target/src/Cargo.toml`): the user's, with
+/// every relative `path`/`build` made absolute (the file moved), its own
+/// `[workspace]` (so a workspace above it does not claim it), and `extra`
+/// dependency lines added to `[dependencies]`.
 pub fn generated_manifest(cargo_text: &str, cargo_dir: &Path, extra: &[String]) -> String {
     let mut out = Vec::new();
     let mut has_deps = false;
@@ -1475,14 +1662,9 @@ pub fn dist_version(name: &str) -> Option<String> {
     Some(format!("{}.{}", parts.next()?, parts.next()?))
 }
 
-/// `hrs add name`: `manifest` with the Harsh crate `name` added to its
-/// `[dependencies]`, and what to tell the user. Only Harsh's own crates --
-/// the four of the distribution now, the registry's when it is built; a Rust
-/// crate is `cargo add`'s (the user's rule, 2026-09-29: one command per
-/// registry, so a name is never resolved against the wrong one).
-#[cfg(feature = "remap")]
 /// Insert `line` for `name` into a manifest's `[dependencies]`, unless
 /// `name` is there already.
+#[cfg(feature = "remap")]
 pub fn add_dependency_line(manifest: &str, name: &str, line: &str) -> Result<(String, String), String> {
     let lines: Vec<&str> = manifest.lines().collect();
     let key = |l: &str| l.split(['=', '.']).next().unwrap_or("").trim().to_string();
@@ -1506,6 +1688,11 @@ pub fn add_dependency_line(manifest: &str, name: &str, line: &str) -> Result<(St
     Ok((text, format!("added `{line}` to Hrs.toml")))
 }
 
+/// `hrs add name`: `manifest` with the Harsh crate `name` added to its
+/// `[dependencies]`, and what to tell the user. Only Harsh's own crates --
+/// the four of the distribution now, the registry's when it is built; a Rust
+/// crate is `cargo add`'s (the user's rule, 2026-09-29: one command per
+/// registry, so a name is never resolved against the wrong one).
 #[cfg(feature = "remap")]
 pub fn add_dependency(manifest: &str, name: &str) -> Result<(String, String), String> {
     if !DISTRIBUTION.contains(&name) {
@@ -1928,9 +2115,18 @@ fn expand_harsh_macros(
 /// website's Converter both call this, so they cannot disagree (the user,
 /// 2026-09-27).
 pub fn convert_str(rust: &str) -> Result<String, String> {
-    let mut out = format_if_sound(crate::unbrace::convert(rust)?);
+    convert_str_warned(rust).map(|(out, _)| out)
+}
+
+/// `convert_str`, with the conversion's warnings: each stretch of
+/// Rust-shaped text in a macro's body left as written for want of a binding
+/// (`bindings`, 2026-10-12).
+pub fn convert_str_warned(rust: &str) -> Result<(String, Vec<String>), String> {
+    let converted = crate::unbrace::convert(rust)?;
+    let warnings = crate::unbrace::take_warnings();
+    let mut out = format_if_sound(converted);
     crate::docex::to_harsh_in(&mut out);
-    Ok(out)
+    Ok((out, warnings))
 }
 
 /// The converter's output through the formatter -- when it transpiles. When
@@ -2031,10 +2227,24 @@ fn reread_anchors(toks: &[crate::lex::Token], work1: &str, dz: &[crate::dslzone:
         }
     }
     let shift_of = |pos: usize| -> isize { shifts.iter().filter(|s| s.0 < pos).map(|s| s.1).sum() };
+    // A token's offset is the blanked text's, where a placeholder longer than
+    // its body's first line pushed what follows along (`Zone::extra`): back
+    // to the file's own offset.
+    let mut work_opens = Vec::new();
+    let mut cum = 0usize;
+    for z in dz {
+        work_opens.push((z.open + cum, z.extra));
+        cum += z.extra;
+    }
+    let to_source = |w: usize| -> usize { w - work_opens.iter().filter(|&&(o, _)| w > o).map(|&(_, x)| x).sum::<usize>() };
     let mut out: Vec<(u32, u32, u32)> = raw
         .into_iter()
-        .filter(|&(at, _, _)| !shifts.iter().any(|s| at >= s.0 && at < s.0 + 9))
-        .map(|(at, src, len)| (((at as isize) + shift_of(at)) as u32, src as u32, len as u32))
+        // A token inside a placeholder is the placeholder's, whatever its
+        // length: `{/*Z1*/}` is 8 bytes, `{/*Z10*/}` 9 (it was taken as 9
+        // always, dropping the token right after a short one -- found writing
+        // the developer book, 0.7.3).
+        .filter(|&(at, _, _)| !shifts.iter().any(|s| at >= s.0 && at < s.0 + (s.3 as isize - s.1) as usize))
+        .map(|(at, src, len)| (((at as isize) + shift_of(at)) as u32, to_source(src) as u32, len as u32))
         .collect();
     let _ = work1;
     for s in &shifts {
@@ -2133,7 +2343,7 @@ pub fn transpile_one_procs(
     let toks = crate::procmac::lex(&work, &regs).map_err(|e| render_error(from, src, e.span, &e.msg))?;
     let (toks, expansions) = expand_harsh_macros(toks, from, src, procs)?;
     if let Some(text) = reread_expansion(&toks, src, &work1, &zs, &dz) {
-        // Back to the user's file, as in `transpile_one_with`.
+        // Back to the user's file, as in `transpile_one`.
         let anchors = reread_anchors(&toks, &work1, &dz);
         let out = transpile_one_procs(&text, from, rust, map, arities, procs)?;
         remap_reread(map, &anchors);

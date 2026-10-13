@@ -27,13 +27,13 @@ The server still learns no names or types: it asks rust-analyzer, which knows th
 
 ## Name-blind by construction
 
-The transpiler is a layout transformation: no types, no name resolution, no arity outside the pipes. The server is held to the same rule, and the way it is held to it is that it reads only three things:
+The transpiler is a layout transformation: no types, no name resolution, no arity outside the pipes. The server is held to the same rule, with one exception below,, and the way it is held to it is that it reads only three things:
 
 - **Token kinds and spans** from `lex::lex`. Identifiers are opaque; the server never compares one to another.
 - **The two layout rules** — a line whose last significant token is `:` or `=>` opens a block; a more-indented line anywhere else continues the current logical line — applied through `layout::logical_lines`, the same function the transpiler uses.
 - **The keyword table** in `rules.rs`, and only to the extent the layout pass already reads it. In the first version not even that: `:`, `=>`, `=` and `<-` decide everything.
 
-The arity table is for the pipes alone (`docs/GOVERNANCE.md`); the server does not read it. Nothing in the server would change if every identifier in the buffer were renamed.
+The arity table is the one exception (`docs/GOVERNANCE.md`, decided 2026-10-12): Enter after a call to a declared function given fewer arguments than it takes — `let s = add 1` — lands one unit past the callee, where the next argument goes; a pipe on the line turns this off, since the call is then a partial. Nothing else in the server would change if every identifier in the buffer were renamed.
 
 ## What the server needs to know about a line
 

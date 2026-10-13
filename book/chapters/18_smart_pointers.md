@@ -249,8 +249,8 @@ fn main$:
 ```
 
 ```text
-thread 'main' panicked at refcell_panic.hrs:7:
-already borrowed: BorrowMutError
+thread 'main' (21229) panicked at refcell_panic.hrs:7:
+RefCell already borrowed
 ```
 
 Two `borrow_mut$` guards alive at once is exactly what the compiler forbids for `&mut`, and `RefCell` panics with `already borrowed`. The rules did not change; only when they are checked did. Use `RefCell` when you know the code respects the rules and the compiler cannot see it — a value mutated through shared handles, a mock object recording calls in a test — and accept that the check has moved from build time to the first run that violates it.
@@ -272,10 +272,10 @@ struct Node
 fn main$:
     let leaf =
         Rc.new (Node\
-            value = 3
-            parent = RefCell.new (Weak.new$)
-            children = RefCell.new (vec!$)
-        )
+                    value = 3
+                    parent = RefCell.new (Weak.new$)
+                    children = RefCell.new (vec!$)
+               )
     println!
         "leaf strong = {}, weak = {}"
         (Rc.strong_count (&leaf))
@@ -284,10 +284,10 @@ fn main$:
     do:
         let branch =
             Rc.new (Node\
-                value = 5
-                parent = RefCell.new (Weak.new$)
-                children = RefCell.new (vec! (Rc.clone (&leaf)))
-            )
+                        value = 5
+                        parent = RefCell.new (Weak.new$)
+                        children = RefCell.new (vec! (Rc.clone (&leaf)))
+                   )
         *leaf <- parent <- borrow_mut$ = Rc.downgrade (&branch)
         println!
             "branch strong = {}, weak = {}"

@@ -83,9 +83,9 @@ error[E0005]: refutable pattern in local binding
  3 |     let Some x = some_option_value
    |         ^^^^^^^ pattern `None` not covered
    = note: `let` bindings require an "irrefutable pattern", like a `struct` or an `enum` with only one variant
-   = note: for more information, visit https://doc.rust-lang.org/book/ch18-02-refutability.html
+   = note: for more information, visit https://doc.rust-lang.org/book/ch19-02-refutability.html
    = note: the matched value is of type `Option<i32>`
-   = help: you might want to use `let else` to handle the variant that isn't matched (hrs 3:35)
+   = help: you might want to use `let...else` to handle the variant that isn't matched (hrs 3:35)
 ```
 
 `let Some x = value` has nowhere to go when `value` is `None`, and the help offers the fix from chapter 6, `let … else`. The other direction is a warning rather than an error: `if let x = 5` is legal and pointless, and the compiler says so.

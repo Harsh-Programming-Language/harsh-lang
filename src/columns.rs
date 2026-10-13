@@ -6,8 +6,10 @@
 //!
 //! The one question on-type formatting asks, answered from layout alone. The
 //! server reads token kinds, spans and the two layout rules through
-//! `layout::lines`; it never compares identifiers and never reads the arity
-//! table. Everything it returns is a column. See `docs/LSP.md`.
+//! `layout::lines`; it never compares identifiers. The arity table is its
+//! one exception: a call to a declared function given fewer arguments than
+//! it takes is waiting for the rest (GOVERNANCE, 2026-10-12). Everything it
+//! returns is a column. See `docs/LSP.md`.
 
 use crate::layout::{self, Line};
 use crate::lex::{self, Tk, Token};
@@ -159,9 +161,6 @@ fn last_physical_start(l: &Line) -> Option<usize> {
     l.toks.iter().rposition(|t| t.line_start.is_some())
 }
 
-/// Columns of every `<-` at bracket depth zero from token `from` on. Depth
-/// is counted from the start of the logical line, so an arrow inside a
-/// paren opened on an earlier physical line is not a chain arrow.
 /// When the line ends in a literal's `\`, the index of the first token of
 /// the literal's name (a path: `geometry.Vec2\`); `None` otherwise.
 fn literal_head(l: &Line) -> Option<usize> {
@@ -215,7 +214,7 @@ fn awaiting_arguments(l: &Line, arities: &std::collections::HashMap<String, usiz
     // A line ending in a macro's `!` cannot be complete: `println!` alone is
     // not an expression -- a macro applied to nothing is `m!$` -- so what
     // follows is its first argument. Name-blind, and no arity: a macro takes
-    // one argument or six, and the arity table is the pipes' alone.
+    // one argument or six, and the table knows only `fn` declarations.
     let last = *expr.last()?;
     if l.toks[last].kind == Tk::Punct
         && l.toks[last].text == "!"
@@ -263,6 +262,9 @@ fn awaiting_arguments(l: &Line, arities: &std::collections::HashMap<String, usiz
     }
 }
 
+/// Columns of every `<-` at bracket depth zero from token `from` on. Depth
+/// is counted from the start of the logical line, so an arrow inside a
+/// paren opened on an earlier physical line is not a chain arrow.
 fn arrow_cols(l: &Line, from: usize) -> Vec<usize> {
     let cols = token_cols(l);
     let mut depth = 0usize;
@@ -360,18 +362,12 @@ fn innermost_open(l: &Line) -> Option<usize> {
 /// anchor and the closer lands under it, so a group keeps one shape wherever
 /// it sits.
 fn anchor_col(l: &Line, open: usize) -> usize {
-    let cols = token_cols(l);
-    let mut i = open;
-    while i > 0 {
-        let t = &l.toks[i - 1];
-        let path_part = matches!(t.kind, Tk::Ident | Tk::Dot | Tk::PathSep)
-            || (t.kind == Tk::Punct && t.text == "!");
-        if !path_part {
-            break;
-        }
-        i -= 1;
-    }
-    cols[i]
+    // The formatter's rule, one function for both, so Enter and `hrs fmt`
+    // agree: `[where …]` anchors on its bracket, keywords are not a callee,
+    // and the earlier argument groups of the same call are walked over (the
+    // editor had its own simpler walk until 0.7.3 -- found writing the
+    // developer book).
+    token_cols(l)[crate::fmt::anchor_index(&l.toks, open)]
 }
 
 fn from_lines_with(lines: &[Line], unit: usize, arities: &std::collections::HashMap<String, usize>) -> Columns {

@@ -251,6 +251,7 @@ pre.code:hover .copy,.copy:focus-visible{opacity:1}
 <li>An enum is a union of variants, each one of the three forms spelled as that struct is: <code>Empty</code>, <code>Circle f64</code>, <code>Rect</code> with fields beneath or <code>Rect\ w: f64, h: f64</code>. (§6.1)</li>
 <li>A literal is the name, <code>\</code>, and <code>field = value</code> — inline to the end of its line or its group's <code>)</code>, or a field per line beneath. <code>..base</code> last. A literal that is one element of a tuple has its own parentheses. (§5.1)</li>
 <li>A literal inside a literal on one line is parenthesised, so the reader sees where it ends: <code>inner = (Animal\ name = n), good = true</code>; or the outer literal goes one field per line, where the line ends the inner one. A comma ending a field line is refused. (§5.1)</li>
+<li>A literal passed as an argument is isolated, a constructor's too: <code>cards &lt;- push (Card\ id = 1)</code>, <code>Ok (View\ title = t)</code>; written bare it is refused, the isolated form named; over several lines its fields stand one unit past its name and its <code>)</code> under its <code>(</code>. (§5)</li>
 <li><code>impl Point</code>, <code>trait Area</code>, <code>mod geometry</code>, <code>extern "C"</code> — headers with no mark, their items beneath. (§5.3, §10.2, §7.2, §20.1)</li>
 <li>A <code>where</code> clause on one line needs nothing; over several lines it is bracketed, <code>[where T: Debug]</code>, on its own line under the signature. (§10.2)</li>
 <li>Attributes apply inside their brackets: <code>#[derive Debug Clone]</code>, <code>#[cfg (feature = "x")]</code>. (§5.2)</li>
@@ -266,12 +267,12 @@ pre.code:hover .copy,.copy:focus-visible{opacity:1}
 <ul>
 <li><code>|x| x + 1</code> inline; <code>|x|:</code> with the body beneath; <code>|x: i32| -&gt; i32:</code> fully annotated; <code>move ||:</code> capturing by value. (§13.1)</li>
 <li>A closure's type is the trait applied to its parameter types: <code>Fn i32 -&gt; i32</code>, <code>Fn (i32) (i32) -&gt; i32</code>, <code>FnOnce$</code>. (§13.1)</li>
-<li>A chain of one or two links stays on its line within 72 columns; three or more go vertical, every <code>&lt;-</code> under the first, and <code>=</code> ends its line before one begins. A block-bodied closure in a chain is a paren block: <code>(</code>, the parameters, the body, <code>)</code> on its own line. (§13.2)</li>
+<li>A chain of one or two links stays on its line within 72 columns, a single link at any length (long arguments go beneath its method); three or more go vertical, every <code>&lt;-</code> under the first, and <code>=</code> ends its line before one begins. A block-bodied closure in a chain is a paren block: <code>(</code>, the parameters, the body, <code>)</code> on its own line. (§13.2)</li>
 <li><code>x |&gt; f</code> hands <code>x</code> to <code>f</code>; <code>f &lt;| x</code> the same from the right; both sides are atoms, and a chain or a closure is isolated first. Fewer values than the function takes defer the rest as one flat closure — <code>|&gt;</code> fills from the left, <code>&lt;|</code> from the right, both leave a hole in the middle — and the result is a value. A project function given too many is an error. (§13.3)</li>
 </ul>
 <h2 id="macros-and-markup-chapter-23">Macros and markup — chapter 23</h2>
 <ul>
-<li><code>macro_rules! twice</code> holds its arms beneath, no mark; a matcher is a parameter list, <code>( ($x:expr) )</code>; a transcriber is a block, <code>=&gt; do:</code>. Harsh's own macros are written <code>macro_rules~</code>, called with <code>~</code>, and expanded by <code>hrs</code>: they are gone from the Rust. (§20.5, chapter 23)</li>
+<li>Harsh's own macros are written <code>macro_rules~ twice</code>, their arms beneath with no mark; a matcher is a parameter list, <code>( ($x:expr) )</code>; a transcriber is a block, <code>=&gt; do:</code>. They are called with <code>~</code> and expanded by <code>hrs</code>: they are gone from the Rust. A <code>macro_rules! twice { … }</code> in a Harsh file is Rust's, copied byte for byte; its calls are Harsh calls, <code>twice! n</code>. (§20.5, chapter 23)</li>
 <li>A macro's own language — <code>select!</code>'s arms, <code>view!</code> markup, an <code>rsx!</code> tree — goes in braces, as Rust, byte for byte; the Harsh inside is a hole, <code>@: … :@</code>, always closed. (chapter 23)</li>
 <li>A fenced block in a <code>///</code> comment is Harsh, and the tool that runs it gets the Rust it expects. (§14.2)</li>
 </ul>

@@ -1424,7 +1424,7 @@ error[E0502]: cannot borrow `names` as mutable because it is also borrowed as im
  5 |     names <- push (String.from "Grace")
    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ mutable borrow occurs here
  6 |     println! "{first}"
-   |               ------- immutable borrow later used here
+   |                ----- immutable borrow later used here
 ```
 
 then the fix that keeps one value, by ending the first borrow before the

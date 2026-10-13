@@ -98,7 +98,6 @@ for f in general edge params brackets; do
 done
 
 say "Self-host: convert harsh-lang's own source and rebuild it"
-cp -r "$ROOT/src" "$ROOT/Cargo.toml" "$ROOT/Cargo.lock" "$WORK/" 2>/dev/null || true
 mkdir -p "$WORK/selfhost" && cp -r "$ROOT/src" "$ROOT/Cargo.toml" "$ROOT/Cargo.lock" "$WORK/selfhost/"
 ( cd "$WORK/selfhost"
   for f in src/*.rs src/bin/*.rs; do
@@ -112,9 +111,14 @@ mkdir -p "$WORK/selfhost" && cp -r "$ROOT/src" "$ROOT/Cargo.toml" "$ROOT/Cargo.l
       if diff -q "$WORK/sh-$f.rs" "$WORK/$f.rs" > /dev/null; then
           echo "  self-hosted $f output: identical"
       else
+          # A gate, not a report: a self-hosted transpiler that writes other
+          # Rust fails the check (it printed DIFFERS and carried on until
+          # 0.7.3).
           echo "  self-hosted $f output: DIFFERS"
+          diff "$WORK/sh-$f.rs" "$WORK/$f.rs" | head -20
+          exit 1
       fi
-  done )
+  done ) || exit 1
 
 say "Diagnostic remapping"
 mkdir -p "$WORK/diag/src"

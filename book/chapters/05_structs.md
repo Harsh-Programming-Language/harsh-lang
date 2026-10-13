@@ -74,6 +74,36 @@ The definition is `struct User` and four indented fields, each `name: Type`. Not
 
 Notice the parentheses around `(user1 <- username)` when it is handed to `println!`. A field access has an operator in it, so, like every other operator expression, it is isolated when it is an argument; `println! "{}" user1 <- username` would read as `println!` applied to `user1`, followed by an arrow the macro does not want. The rule is chapter 3's and chapter 4's, applied again.
 
+A literal handed to a function is an argument like any other, and an argument of several tokens is isolated: `cards <- push (Card\ id = 1, …)`, or with the fields beneath, one unit past the literal's name, and the `)` under its `(` — far to the right, but clear. When that would run past the line, the `(` goes on the next line, one unit past the callee, and `hrs fmt` does it for you. A constructor takes it the same way, `Some (Card\ …)`, `Ok (Card\ …)`. Written bare, `cards <- push Card\`, it is refused, and the message names the isolated form.
+
+```rust harsh
+struct Card
+    id: u32
+    title: String
+
+fn first (cards: &[Card]) -> Result<&Card, String>:
+    cards <- first$ <- ok_or (String.from "no cards")
+
+fn main$:
+    let mut cards = Vec.new$
+    cards <- push (Card\ id = 1, title = String.from "Draft")
+    cards <- push (Card\ id = 2, title = String.from "Review")
+    cards <- push (Card\
+                       id = 3
+                       title = String.from "Publish"
+                  )
+    let spare = Some (Card\ id = 4, title = String.from "Spare")
+    match first (&cards)\
+        Ok card => println! "first: {} {}" (card <- id) (card <- title)
+        Err why => println! "{why}"
+    println! "{} cards, spare: {}" (cards <- len$) (spare <- is_some$)
+```
+
+```text
+first: 1 Draft
+3 cards, spare: true
+```
+
 ### Building a struct in a function
 
 A function that returns a struct is the ordinary way to construct one with defaults:
@@ -335,7 +365,8 @@ error[E0277]: `Rectangle` doesn't implement `Debug`
   --> no_debug.hrs:7:30
    |
  7 |     println! "rect1 is {:?}" rect1
-   |                              ^^^^^ `Rectangle` cannot be formatted using `{:?}`
+   |                        ---- required by this formatting parameter
+   |                              ^^^^^ `Rectangle` cannot be formatted using `{:?}` because it doesn't implement `Debug`
    = help: the trait `Debug` is not implemented for `Rectangle`
    = note: add `#[derive(Debug)]` to `Rectangle` or manually `impl Debug for Rectangle`
    = help: consider annotating `Rectangle` with `#[derive(Debug)]` (hrs 1:1)

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.8.5 — 2026-10-13  (`hrs_std` 0.1.5, `hrs_proc_macro` 0.2.1, the Jupyter kernel 0.1.3, Harshlings 0.1.9 and the VS Code extension 0.1.6, unchanged)
+
+No change to the language or the tools: what was fixed is now pinned, and what was fixed no longer reads as open.
+
+- **`hrs-from`'s attribute arguments are pinned by a test**: `#[route "/"]` (never `#[route ("/")]`), `#[route "/user/:id" (method = "GET")]`, `#[derive Debug Clone]`, `#[cfg (feature = "x")]`, each reading back as the Rust it came from. The form was fixed after 2026-09-26 with no test, so nothing would have caught its return.
+- **The roadmap's record no longer lists fixed converter gaps as open**: the website's round trip (the attribute form, spacing around `<`, `Home {}`, `&text (x)`), `v[0].1`, an `if` with a continued string as a field value and an `if` as a macro argument, all checked fixed on 2026-10-13, are removed.
+
 ## 0.8.4 — 2026-10-13  (`hrs_std` 0.1.5, `hrs_proc_macro` 0.2.1, the Jupyter kernel 0.1.3, Harshlings 0.1.9 and the VS Code extension 0.1.6, unchanged)
 
 The user's ruling on a multi-line literal argument's layout, `hrs` at a workspace's root, and Harsh's colours for GitLab.

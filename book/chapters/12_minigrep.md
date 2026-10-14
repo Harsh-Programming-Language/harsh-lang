@@ -120,7 +120,7 @@ fn main$:
 ```text
 $ cargo run
 
-thread 'main' (18886) panicked at src/main.hrs:13:
+thread 'main' (30718) panicked at src/main.hrs:13:
 not enough arguments
 ```
 

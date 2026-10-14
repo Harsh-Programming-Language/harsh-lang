@@ -473,7 +473,7 @@ fn main$:
 
 ```text
 $ hrs run
-thread 'main' (20892) panicked at main.rs:4:20:
+thread 'main' (32724) panicked at main.rs:4:20:
 DimensionMismatch: matrix A has dimensions (2, 3), matrix B has dimensions (2, 3)
 ```
 

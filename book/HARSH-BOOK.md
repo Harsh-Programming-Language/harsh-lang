@@ -2680,7 +2680,7 @@ fn main$:
 
 ```text
 None
-thread 'main' (18072) panicked at vec_index_panic.hrs:7:
+thread 'main' (29903) panicked at vec_index_panic.hrs:7:
 index out of bounds: the len is 5 but the index is 100
 ```
 
@@ -3012,7 +3012,7 @@ fn main$:
 
 ```text
 about to fail
-thread 'main' (18260) panicked at panic.hrs:4:
+thread 'main' (30092) panicked at panic.hrs:4:
 crash and burn
 ```
 
@@ -3028,7 +3028,7 @@ fn main$:
 ```
 
 ```text
-thread 'main' (18276) panicked at panic_index.hrs:4:
+thread 'main' (30108) panicked at panic_index.hrs:4:
 index out of bounds: the len is 3 but the index is 99
 ```
 
@@ -3061,7 +3061,7 @@ fn main$:
 ```
 
 ```text
-thread 'main' (18292) panicked at result_match.hrs:10:
+thread 'main' (30124) panicked at result_match.hrs:10:
 Problem opening the file: Os { code: 2, kind: NotFound, message: "No such file or directory" }
 ```
 
@@ -3110,7 +3110,7 @@ fn main$:
 ```
 
 ```text
-thread 'main' (18324) panicked at unwrap_expect.hrs:5:
+thread 'main' (30156) panicked at unwrap_expect.hrs:5:
 called `Result::unwrap()` on an `Err` value: Os { code: 2, kind: NotFound, message: "No such file or directory" }
 ```
 
@@ -3128,7 +3128,7 @@ fn main$:
 ```
 
 ```text
-thread 'main' (18340) panicked at expect.hrs:7:
+thread 'main' (30172) panicked at expect.hrs:7:
 hello.txt should be included in this project: Os { code: 2, kind: NotFound, message: "No such file or directory" }
 ```
 
@@ -3296,7 +3296,7 @@ fn main$:
 
 ```text
 50
-thread 'main' (18434) panicked at guess_validate.hrs:9:
+thread 'main' (30266) panicked at guess_validate.hrs:9:
 Guess value must be between 1 and 100, got 200.
 ```
 
@@ -3900,7 +3900,7 @@ test tests::another ... FAILED
 test tests::exploration ... ok
 failures:
 ---- tests::another stdout ----
-thread 'tests::another' (18716) panicked at failing.hrs:11:
+thread 'tests::another' (30548) panicked at failing.hrs:11:
 Make this test fail
 failures:
     tests::another
@@ -3972,7 +3972,7 @@ running 1 test
 test tests::it_adds_two ... FAILED
 failures:
 ---- tests::it_adds_two stdout ----
-thread 'tests::it_adds_two' (18752) panicked at assert_eq_fail.hrs:13:
+thread 'tests::it_adds_two' (30584) panicked at assert_eq_fail.hrs:13:
 assertion `left == right` failed
   left: 5
  right: 4
@@ -4009,7 +4009,7 @@ running 1 test
 test tests::greeting_contains_name ... FAILED
 failures:
 ---- tests::greeting_contains_name stdout ----
-thread 'tests::greeting_contains_name' (18769) panicked at custom_message.hrs:13:
+thread 'tests::greeting_contains_name' (30601) panicked at custom_message.hrs:13:
 Greeting did not contain name, value was `Hello!`
 failures:
     tests::greeting_contains_name
@@ -4286,7 +4286,7 @@ fn main$:
 ```text
 $ cargo run
 
-thread 'main' (18886) panicked at src/main.hrs:13:
+thread 'main' (30718) panicked at src/main.hrs:13:
 not enough arguments
 ```
 
@@ -6622,7 +6622,7 @@ fn main$:
 
 ```text
 $ hrs run
-thread 'main' (20892) panicked at main.rs:4:20:
+thread 'main' (32724) panicked at main.rs:4:20:
 DimensionMismatch: matrix A has dimensions (2, 3), matrix B has dimensions (2, 3)
 ```
 
@@ -7100,7 +7100,7 @@ fn main$:
 ```
 
 ```text
-thread 'main' (21229) panicked at refcell_panic.hrs:7:
+thread 'main' (593) panicked at refcell_panic.hrs:7:
 RefCell already borrowed
 ```
 

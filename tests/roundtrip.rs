@@ -2836,3 +2836,20 @@ fn the_converter_spaces_a_range_after_a_comma() {
     assert!(h.contains("(a, ..=3)"), "{h}");
     assert!(h.contains("&v[..]"), "{h}");
 }
+
+/// An attribute's arguments are juxtaposed, and only an argument of several
+/// tokens is isolated (the user's ruling): `#[route("/")]` converts to
+/// `#[route "/"]`, never `#[route ("/")]` (found converting the website,
+/// 2026-09-26; fixed since, pinned 2026-10-13 so it cannot come back). Each
+/// form reads back as the Rust it came from (bodies with a value: an empty
+/// one reads back as `{ () }`, which is a different matter).
+#[test]
+fn the_converter_writes_attribute_arguments_bare() {
+    let rust = "#[route(\"/\")]\nfn home() -> u8 {\n    1\n}\n\n#[route(\"/user/:id\", method = \"GET\")]\nfn user() -> u8 {\n    2\n}\n\n#[derive(Debug, Clone)]\nstruct S;\n\n#[cfg(feature = \"x\")]\nfn f() -> u8 {\n    3\n}\n";
+    let h = convert(rust);
+    for want in ["#[route \"/\"]", "#[route \"/user/:id\" (method = \"GET\")]", "#[derive Debug Clone]", "#[cfg (feature = \"x\")]"] {
+        assert!(h.contains(want), "missing {want}:\n{h}");
+    }
+    assert!(!h.contains("#[route (\"/\")]"), "{h}");
+    assert_eq!(norm_tokens(&transpile(&h)), norm_tokens(rust), "{h}");
+}

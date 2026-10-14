@@ -14,7 +14,7 @@ fn main$:
 
 ```text
 about to fail
-thread 'main' (18260) panicked at panic.hrs:4:
+thread 'main' (30092) panicked at panic.hrs:4:
 crash and burn
 ```
 
@@ -30,7 +30,7 @@ fn main$:
 ```
 
 ```text
-thread 'main' (18276) panicked at panic_index.hrs:4:
+thread 'main' (30108) panicked at panic_index.hrs:4:
 index out of bounds: the len is 3 but the index is 99
 ```
 
@@ -63,7 +63,7 @@ fn main$:
 ```
 
 ```text
-thread 'main' (18292) panicked at result_match.hrs:10:
+thread 'main' (30124) panicked at result_match.hrs:10:
 Problem opening the file: Os { code: 2, kind: NotFound, message: "No such file or directory" }
 ```
 
@@ -112,7 +112,7 @@ fn main$:
 ```
 
 ```text
-thread 'main' (18324) panicked at unwrap_expect.hrs:5:
+thread 'main' (30156) panicked at unwrap_expect.hrs:5:
 called `Result::unwrap()` on an `Err` value: Os { code: 2, kind: NotFound, message: "No such file or directory" }
 ```
 
@@ -130,7 +130,7 @@ fn main$:
 ```
 
 ```text
-thread 'main' (18340) panicked at expect.hrs:7:
+thread 'main' (30172) panicked at expect.hrs:7:
 hello.txt should be included in this project: Os { code: 2, kind: NotFound, message: "No such file or directory" }
 ```
 
@@ -298,7 +298,7 @@ fn main$:
 
 ```text
 50
-thread 'main' (18434) panicked at guess_validate.hrs:9:
+thread 'main' (30266) panicked at guess_validate.hrs:9:
 Guess value must be between 1 and 100, got 200.
 ```
 

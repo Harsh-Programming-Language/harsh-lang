@@ -29,7 +29,7 @@ Sizing is relative: XS, S, M, L. "Blocked by" matters more than the estimate.
 
 ## Where things stand (2026-10-13)
 
-0.8.4 is the release in hand: the user's ruling on a multi-line literal argument's layout, `hrs` at a workspace's root, a Rouge lexer. 0.8.3 was documentation only. The website is
+0.8.5 is the release in hand: the converter's attribute form pinned by a test, and the record's fixed converter gaps removed. 0.8.4 brought the user's ruling on a multi-line literal argument's layout, `hrs` at a workspace's root and a Rouge lexer; 0.8.3 was documentation only. The website is
 live at https://harsh-lang.com/. `RELEASE.md` lists every product with its
 version, and publishing each is the user's. The changelog has every
 release.
@@ -375,13 +375,7 @@ items done since -- is kept in the handover and the changelog.)*
 
 ### Known bugs of September -- all fixed (checked 2026-10-13)
 
-Checked again on 2026-10-13 with hrs 0.8.3: the converter keeps `Home {}`,
-writes `#[route "/"]` (parentheses only around an argument of several tokens,
-`#[cfg (feature = "x")]`), spaces comparisons (`i < cs <- len$ && n > 2`),
-writes `&text (x)` tight, and reads `v[0].1` back; the tests once ignored
-(`converter_writes_an_if_with_a_continued_string_as_a_field_value`,
-`converter_writes_an_if_as_a_macro_argument`) run, none ignored. The
-width-reflowed layout was explained and fixed 2026-09-25 (`format_if_sound`).
+Every item below is fixed.
 
 - ~~**Matrix views undefined behaviour under Stacked Borrows**~~ -- **fixed
   2026-09-27 (0.1.37, `hrs_std` 0.1.3)**: views are values (`View`,
@@ -419,17 +413,6 @@ width-reflowed layout was explained and fixed 2026-09-25 (`format_if_sound`).
   the case (32 behaviours), which fails without the guards. Cosmetic, left:
   the converter writes a deref as `* counts` (the same Rust as `*counts`).
 
-- **Converter, found converting the website back (2026-09-26):** an empty
-  record variant `Home {}` converts to `Home` over a `()` line, which
-  transpiles to `Home { (), }` -- invalid Rust, the round trip broken; a
-  single-token attribute argument is isolated, `#[route ("/")]`; spaces
-  around `<` are dropped (`i < cs.len()` → `i<cs <- len$`); `&text(x)` →
-  `& text (x)`. None pinned yet.
-
-- **`hrs-from`: a tuple field right after an index, `v[0].1`**, does not read
-  back (found 2026-09-25 by the self-host, in a test; worked around with a
-  destructuring `let`). Not pinned yet.
-
 - ~~**A Harsh app could not use a Harsh library by path**~~ -- **found and
   fixed 2026-09-25** while building re-exports: `hrs` never transpiled a
   Harsh library the project depends on by path, so cargo found no Rust for
@@ -439,23 +422,6 @@ width-reflowed layout was explained and fixed 2026-09-25 (`format_if_sound`).
   corrected to say what `hrs` does. `hrs` at a workspace's root, without a
   `[package]`, was still not a command -- built 2026-10-13 (0.8.4).
 
-- **`hrs-from`: an `if` as a struct literal's field value, with a string
-  continued over lines in a branch** (found 2026-09-24 by the self-host in
-  `src/procmac.rs`, worked around there with a `let`). The converter writes
-  the `if` in inline braces that span two lines, which the transpiler
-  refuses. Pinned by the ignored test
-  `converter_writes_an_if_with_a_continued_string_as_a_field_value` in
-  `tests/roundtrip.rs` -- every `cargo test` reports it as ignored until
-  it is fixed. The user asked that this not be forgotten.
-  *Traced 2026-09-24:* inside a struct literal, Rust's own braces suspend
-  the layout, and a field's `if` keeps inline braces there on purpose
-  (`E\ m = if a {1 } else {2 }` -- a block on one line, which Harsh allows);
-  the converter never asks whether the block really is on one line, and a
-  string continued with `\` makes it two. The `if`-as-a-macro-argument gap
-  below is the same family (expression-position blocks inside a group).
-  A proper fix is a rule for when such a block may keep its braces and when
-  it must take block form inside the group -- a converter design change,
-  left for a session of its own.
 - ~~**An inline attribute before a `struct` with fields beneath**~~ --
   **fixed 2026-09-24**: `layout::decl_header` skips the line's leading
   `#[…]` groups; `an_inline_attribute_before_a_struct_keeps_its_fields` is a
@@ -473,26 +439,6 @@ width-reflowed layout was explained and fixed 2026-09-25 (`format_if_sound`).
   last transpiled a project; a different one makes every file stale once
   (`a_different_hrs_retranspiles_once`). A stamp rather than file times,
   since `hrs` rewrites a generated file only when its content changes.
-- **`hrs-from`: an `if` expression as a macro argument** (found 2026-09-24 by
-  the self-host in `procmac.rs`, worked around there): `format!("{}", if c
-  { a } else { b })` becomes block `if`s inside the parentheses, and the
-  `else` loses its `if`. Pinned by the ignored test
-  `converter_writes_an_if_as_a_macro_argument`.
-  *Traced 2026-09-25, the transpiler's half:* the approved form -- `(` on its
-  own line, the `if`/`else` beneath, `)` -- transpiles for **one** argument.
-  With two in a row, the layout pass absorbs the first group's closing `)`,
-  the next `(`, its `if c:` and body into the tail of the first group's
-  `else:` block, so only the second `else:` surfaces, with no `if` before it
-  (node dump: `Block format!…( if c:`, `Block else:`, `Block else:`). The fix
-  is in the layout: a block's tail ends at the `)` closing its group, and the
-  next `(` starts a sibling group. Then the converter writes that form.
-  *Tried 2026-09-25:* the `else` check was taught to look into a block's
-  tail -- and the input was accepted but the Rust was wrong, `format!("{} {}",
-  if … ) (if … )`: the second group became a call on the macro's result.
-  Juxtaposition does not carry an argument list across a block's tail.
-  Reverted (refusing beats miscompiling). The real fix is in the emitter's
-  juxtaposition; low priority -- the converter works around it with bindings,
-  and hand-written Harsh rarely meets it.
 - ~~**A `struct`'s `[where …]` clause emitted as a field**~~ -- **fixed
   2026-09-24.** Half a misreading: Harsh writes a declaration's where clause
   on its header line, `struct W<T> [where T: Clone]`, which was always

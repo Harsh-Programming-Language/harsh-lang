@@ -39,7 +39,8 @@ fn new_lib_makes_a_library_either_way_round() {
         assert!(hrs().args(args).current_dir(&d).status().unwrap().success());
         let root = d.join(name);
         let cargo = std::fs::read_to_string(root.join("Cargo.toml")).unwrap();
-        assert!(cargo.contains("[lib]\npath = \"target/src/lib.rs\"") && !cargo.contains("[[bin]]"), "{cargo}");
+        // 0.9.0: no target paths; cargo finds `export/src/lib.rs` itself.
+        assert!(!cargo.contains("path =") && !cargo.contains("[[bin]]"), "{cargo}");
         let lib = std::fs::read_to_string(root.join("src/lib.hrs")).unwrap();
         assert!(lib.contains("pub fn add") && lib.contains("#[test]"), "{lib}");
         assert!(!root.join("src/main.hrs").exists());
@@ -92,7 +93,18 @@ fn a_workspace_root_runs_each_member() {
     assert!(out.status.success(), "{err}");
     let order: Vec<_> = err.lines().filter(|l| l.starts_with("hrs: workspace member")).collect();
     assert_eq!(order, ["hrs: workspace member app", "hrs: workspace member crates/util", "hrs: workspace member rusty (Rust, by cargo)"], "{err}");
-    assert!(!d.join("crates/old/target").exists(), "an excluded member was built");
+    assert!(!d.join("crates/old/export").exists() && !d.join("export/crates/old").exists(), "an excluded member was built");
+    // 0.9.0, the user's option A (2026-10-14): one `export/` at the root is
+    // the Rust workspace -- each Harsh member transpiled at its place, the
+    // Rust member mirrored, one `target/` -- and `hrs`'s files in `.hrs/`.
+    let ex = d.join("export");
+    assert!(ex.join("Cargo.toml").is_file() && ex.join("target").is_dir());
+    assert!(ex.join("app/src/main.rs").is_file() && ex.join("crates/util/src/lib.rs").is_file());
+    assert!(ex.join("rusty/src/lib.rs").is_file() && !ex.join("crates/old").exists());
+    assert!(!d.join("app/export").exists() && !d.join("app/target").exists());
+    assert!(d.join(".hrs/members/app/maps/main.map.json").is_file());
+    let out = hrs().args(["-c", "build", "--quiet"]).current_dir(&d).output().unwrap();
+    assert!(out.status.success(), "{}", String::from_utf8_lossy(&out.stderr));
 
     let out = hrs().args(["fmt", "--check"]).current_dir(&d).output().unwrap();
     let err = String::from_utf8_lossy(&out.stderr);

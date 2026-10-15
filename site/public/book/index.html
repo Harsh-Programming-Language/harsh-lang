@@ -465,7 +465,7 @@ pre.code:hover .copy,.copy:focus-visible{opacity:1}
 <h3 id="how-to-read-it">How to read it</h3>
 <p>Every example is shown two ways: the <strong>Harsh</strong> you would write, and what it <strong>prints</strong> when run. Both are produced by the build from a single source file — the file is transpiled, compiled and run to make the page — so they cannot disagree. When an example is <em>meant</em> to fail, and learning Rust means learning what the compiler refuses and why, you see the Harsh and then the error the compiler reports, pointing at the line you wrote.</p>
 <blockquote>
-<p><strong>Harsh —</strong> Harsh is one spelling of Rust, and not the usual one. Rust as you will meet it in crates and in answers on the internet is written differently — the same language, the same meanings, other punctuation. Nothing in this book depends on that other spelling and none of it appears here. When you want the two set side by side, <em>The Harsh Language Guide</em> is where that comparison lives, and <code>hrs export</code> turns any project of yours into the other spelling to read.</p>
+<p><strong>Harsh —</strong> Harsh is one spelling of Rust, and not the usual one. Rust as you will meet it in crates and in answers on the internet is written differently — the same language, the same meanings, other punctuation. Nothing in this book depends on that other spelling and none of it appears here. When you want the two set side by side, <em>The Harsh Language Guide</em> is where that comparison lives, and every project of yours is in the other spelling too, in its <code>export/</code> folder, written there by each <code>hrs build</code>.</p>
 </blockquote>
 <p>The chapters follow the order of <em>The Rust Programming Language</em> (the "Rust Book"), because that order has been refined over years to introduce each idea exactly when you need it; the prose and the examples here are original.</p>
 <h3 id="setting-up">Setting up</h3>
@@ -491,10 +491,10 @@ hrs new hello &amp;&amp; cd hello &amp;&amp; hrs run                            
 <h3 id="1-2-what-hrs-run-did">1.2 What <code>hrs run</code> did</h3>
 <p><code>hrs run</code> is two steps that you will do a thousand times, so it is worth seeing them once.</p>
 <ol>
-<li><strong>Transpile.</strong> <code>hrs</code> reads <code>src/main.hrs</code> and writes <code>target/src/main.rs</code>, the same program in Rust's own spelling. It also writes a <em>source map</em>: which byte of the Rust came from which byte of the Harsh.</li>
-<li><strong>Compile and run.</strong> <code>cargo</code>, Rust's build tool, compiles the Rust and runs the binary. If the compiler complains, <code>hrs</code> uses the source map to turn every line number in the complaint into a line of your <code>.hrs</code> file.</li>
+<li><strong>Transpile.</strong> <code>hrs</code> reads <code>src/main.hrs</code> and writes <code>export/src/main.rs</code>, the same program in Rust's own spelling. <code>export/</code> is the whole project as Rust: its <code>Cargo.toml</code>, <code>src/</code> transpiled, and your other files beside them. <code>hrs</code> also writes a <em>source map</em>, which byte of the Rust came from which byte of the Harsh, into <code>.hrs/</code>, a folder of its own.</li>
+<li><strong>Compile and run.</strong> <code>cargo</code>, Rust's build tool, compiles the Rust in <code>export/</code> and runs the binary. If the compiler complains, <code>hrs</code> uses the source map to turn every line number in the complaint into a line of your <code>.hrs</code> file.</li>
 </ol>
-<p>You never read <code>target/src/main.rs</code> unless you want to; in daily use it is an intermediate file.</p>
+<p>You never read <code>export/src/main.rs</code> unless you want to; it is there when you do. <code>hrs new</code> tells git to ignore <code>export/</code> and <code>.hrs/</code>, as it ignores a Rust project's <code>target/</code>: both are written again from your <code>.hrs</code> files.</p>
 <h3 id="1-3-arguments">1.3 Arguments</h3>
 <p>Programs take input. The simplest input is what follows the program's name on the command line, which Rust hands you through the standard library:</p>
 <pre class="code harsh"><code><span class="k">use</span> std<span class="p">.</span>env
@@ -2185,7 +2185,7 @@ I'm growing Asparagus!</code></pre>
 <p>Three files. <code>src/main.hrs</code> declares <code>pub mod garden</code> with no body — just the declaration on a line — and the compiler looks for the body in <code>src/garden.hrs</code>. That file declares <code>pub mod vegetables</code> the same way, and the body of <em>that</em> is found in <code>src/garden/vegetables.hrs</code>: a module's children go in a directory named after it. The <code>use</code> at the top of <code>main.hrs</code> is then the ordinary thing, a path through the tree to the item wanted.</p>
 <p>Only the crate root ever needs to know the tree's shape; a file that declares a child module does not say where the child's file is, because there is only one place it can be. And nothing in the calling code changes when a module moves from inline to its own file — the path <code>crate.garden.vegetables.Asparagus</code> is the same either way. Moving code into files is a filing decision, and the module system keeps it from being anything more.</p>
 <blockquote>
-<p><strong>Harsh —</strong> The file layout is not Harsh's invention and Harsh does not touch it: <code>hrs build</code> transpiles every file under <code>src/</code> into <code>target/src/</code>, tree for tree and name for name, so the compiler finds each module exactly where the declaration says it is.</p>
+<p><strong>Harsh —</strong> The file layout is not Harsh's invention and Harsh does not touch it: <code>hrs build</code> transpiles every file under <code>src/</code> into <code>export/src/</code>, tree for tree and name for name, so the compiler finds each module exactly where the declaration says it is.</p>
 </blockquote>
 <h3 id="7-6-what-you-have">7.6 What you have</h3>
 <p>A package is what <code>hrs new</code> makes and a crate is what the compiler builds from its root. <code>mod</code> opens a module; everything in it is private until <code>pub</code> says otherwise, and <code>pub</code> on a struct still leaves each field private. Paths are <code>crate.</code> from the root, or relative, or <code>super.</code> from the parent, with <code>.</code> between segments. <code>use</code> shortens a path for one module — import the parent for a function, the type for a type — <code>as</code> renames, <code>pub use</code> re-exports, <code>(…)</code> groups, <code>*</code> takes all. A bodiless <code>mod name</code> puts the body in <code>name.hrs</code>, and its children in <code>name/</code>.</p>
@@ -2230,7 +2230,7 @@ None Some(1)</code></pre>
     <span class="k">let</span> does_not_exist <span class="p">=</span> <span class="p">&amp;</span>v<span class="p">[</span><span class="num">100</span><span class="p">]</span>        <span class="com">// this line panics at runtime</span>
     <span class="mac">println!</span> <span class="str">"{}"</span> does_not_exist</code></pre>
 <pre class="code"><code>None
-thread 'main' (29903) panicked at vec_index_panic.hrs:7:
+thread 'main' (16438) panicked at vec_index_panic.hrs:7:
 index out of bounds: the len is 5 but the index is 100</code></pre>
 <p>The program printed <code>None</code> for <code>get 100</code>, then reached <code>&amp;v[100]</code> and stopped, with the line. That is what a panic is: an unrecoverable error that ends the program with a message rather than reading memory it should not. Chapter 9 is about when to panic and when to return an <code>Option</code> or <code>Result</code> instead.</p>
 <h4 id="borrowing-a-vector">Borrowing a vector</h4>
@@ -2452,7 +2452,7 @@ Some(25) Some(50)</code></pre>
     <span class="mac">println!</span> <span class="str">"about to fail"</span>
     <span class="mac">panic!</span> <span class="str">"crash and burn"</span></code></pre>
 <pre class="code"><code>about to fail
-thread 'main' (30092) panicked at panic.hrs:4:
+thread 'main' (16627) panicked at panic.hrs:4:
 crash and burn</code></pre>
 <p>The program printed its first line, reached <code>panic!</code>, printed the message with the file and line, and exited. That is the whole mechanism. By default the panic <em>unwinds</em>: it walks back up the stack dropping every value on the way, so files close and memory is freed, and then the process ends. (A backtrace — the chain of calls that led here — is available with <code>RUST_BACKTRACE=1</code> in the environment; the book leaves it off.)</p>
 <p>Most panics are not written; they are hit:</p>
@@ -2460,7 +2460,7 @@ crash and burn</code></pre>
     <span class="k">let</span> v <span class="p">=</span> <span class="mac">vec!</span> <span class="num">1</span> <span class="num">2</span> <span class="num">3</span>
     v<span class="p">[</span><span class="num">99</span><span class="p">]</span>                           <span class="com">// the value is discarded; the index still runs</span>
     <span class="p">(</span><span class="p">)</span></code></pre>
-<pre class="code"><code>thread 'main' (30108) panicked at panic_index.hrs:4:
+<pre class="code"><code>thread 'main' (16643) panicked at panic_index.hrs:4:
 index out of bounds: the len is 3 but the index is 99</code></pre>
 <p>Chapter 8's index rule, seen from the other side. In C this reads whatever happens to be at that address — a <em>buffer over-read</em>, the root of a large fraction of security holes. Rust checks, and panics, and the panic is not the bug: the index was. The panic is the report.</p>
 <h3 id="9-2-recoverable-errors-with-result">9.2 Recoverable errors with <code>Result</code></h3>
@@ -2480,7 +2480,7 @@ index out of bounds: the len is 3 but the index is 99</code></pre>
             <span class="t">Err</span> error <span class="op">=&gt;</span> <span class="mac">panic!</span> <span class="str">"Problem opening the file: {error:?}"</span>
 
     <span class="k">let</span> _ <span class="p">=</span> greeting_file</code></pre>
-<pre class="code"><code>thread 'main' (30124) panicked at result_match.hrs:10:
+<pre class="code"><code>thread 'main' (16659) panicked at result_match.hrs:10:
 Problem opening the file: Os { code: 2, kind: NotFound, message: "No such file or directory" }</code></pre>
 <p>There is no <code>hello.txt</code>, so the <code>Err</code> arm ran and the program panicked with the error inside it. This is a recoverable error handled by choosing not to recover — which is fine for a program that cannot do anything without the file — and the point is that the choice was made in the code, visibly, rather than by the runtime.</p>
 <h4 id="matching-on-the-kind-of-error">Matching on the kind of error</h4>
@@ -2511,7 +2511,7 @@ Problem opening the file: Os { code: 2, kind: NotFound, message: "No such file o
 <span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
     <span class="k">let</span> f <span class="p">=</span> <span class="t">File</span><span class="p">.</span>open <span class="str">"hello.txt"</span> <span class="op">&lt;-</span> unwrap<span class="defer">$</span>
     <span class="k">let</span> _ <span class="p">=</span> f</code></pre>
-<pre class="code"><code>thread 'main' (30156) panicked at unwrap_expect.hrs:5:
+<pre class="code"><code>thread 'main' (16691) panicked at unwrap_expect.hrs:5:
 called `Result::unwrap()` on an `Err` value: Os { code: 2, kind: NotFound, message: "No such file or directory" }</code></pre>
 <p><code>unwrap$</code> is the <code>match</code> above with a generic message. <code>expect</code> is the same with <em>your</em> message:</p>
 <pre class="code harsh"><code><span class="k">use</span> std<span class="p">.</span>fs<span class="p">.</span><span class="t">File</span>
@@ -2522,7 +2522,7 @@ called `Result::unwrap()` on an `Err` value: Os { code: 2, kind: NotFound, messa
             <span class="op">&lt;-</span> expect <span class="str">"hello.txt should be included in this project"</span>
 
     <span class="k">let</span> _ <span class="p">=</span> f</code></pre>
-<pre class="code"><code>thread 'main' (30172) panicked at expect.hrs:7:
+<pre class="code"><code>thread 'main' (16707) panicked at expect.hrs:7:
 hello.txt should be included in this project: Os { code: 2, kind: NotFound, message: "No such file or directory" }</code></pre>
 <p>Prefer <code>expect</code>: when it fires, the message says what you were assuming, and that is what you need to know first. Both are right when the <code>Err</code> case really cannot happen — a literal that you know parses — or in a quick program where stopping is the correct response. In library code they are a smell, since the library does not know what the caller wants done.</p>
 <h4 id="propagating-errors">Propagating errors</h4>
@@ -2640,7 +2640,7 @@ None</code></pre>
     <span class="k">let</span> bad <span class="p">=</span> <span class="t">Guess</span><span class="p">.</span>new <span class="num">200</span>
     <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span>bad <span class="op">&lt;-</span> value<span class="defer">$</span><span class="p">)</span></code></pre>
 <pre class="code"><code>50
-thread 'main' (30266) panicked at guess_validate.hrs:9:
+thread 'main' (16801) panicked at guess_validate.hrs:9:
 Guess value must be between 1 and 100, got 200.</code></pre>
 <p><code>Guess.new</code> checks the range once; <code>value</code> is private, so a <code>Guess</code> cannot be made any other way; every function that takes a <code>Guess</code> can therefore trust it without checking. Making an invalid state impossible to construct is the strongest form of error handling, because the error has nowhere to occur.</p>
 <h3 id="9-4-what-you-have">9.4 What you have</h3>
@@ -3081,7 +3081,7 @@ test tests::another ... FAILED
 test tests::exploration ... ok
 failures:
 ---- tests::another stdout ----
-thread 'tests::another' (30548) panicked at failing.hrs:11:
+thread 'tests::another' (17083) panicked at failing.hrs:11:
 Make this test fail
 failures:
     tests::another
@@ -3136,7 +3136,7 @@ running 1 test
 test tests::it_adds_two ... FAILED
 failures:
 ---- tests::it_adds_two stdout ----
-thread 'tests::it_adds_two' (30584) panicked at assert_eq_fail.hrs:13:
+thread 'tests::it_adds_two' (17119) panicked at assert_eq_fail.hrs:13:
 assertion `left == right` failed
   left: 5
  right: 4
@@ -3164,7 +3164,7 @@ running 1 test
 test tests::greeting_contains_name ... FAILED
 failures:
 ---- tests::greeting_contains_name stdout ----
-thread 'tests::greeting_contains_name' (30601) panicked at custom_message.hrs:13:
+thread 'tests::greeting_contains_name' (17136) panicked at custom_message.hrs:13:
 Greeting did not contain name, value was `Hello!`
 failures:
     tests::greeting_contains_name
@@ -3365,7 +3365,7 @@ To an admiring bog!</code></pre>
     <span class="mac">println!</span> <span class="str">"With text:\n{contents}"</span></code></pre>
 <pre class="code"><code>$ cargo run
 
-thread 'main' (30718) panicked at src/main.hrs:13:
+thread 'main' (17253) panicked at src/main.hrs:13:
 not enough arguments</code></pre>
 <p><code>Config</code> names the two values, and <code>Config.new</code> builds one from the argument list — cloning the strings, which costs a little and keeps the ownership story simple: the <code>Config</code> owns its fields, and <code>args</code> is untouched. The check for too few arguments is in the one place the arguments are looked at. Run with none and the check fires — as a panic, which is the right <em>check</em> with the wrong <em>response</em>: a panic is for bugs, and a user forgetting an argument is not a bug.</p>
 <p><code>src/main.hrs</code></p>
@@ -5158,7 +5158,7 @@ hrs_std = "0.1"</code></pre>
     <span class="com">// A 2×3 matrix times a 2×3 matrix: the inner sizes, 3 and 2, differ.</span>
     <span class="mac">println!</span> <span class="str">"{}"</span> <span class="p">(</span><span class="p">&amp;</span>a <span class="p">*</span> <span class="p">&amp;</span>a<span class="p">)</span></code></pre>
 <pre class="code"><code>$ hrs run
-thread 'main' (32724) panicked at main.rs:4:20:
+thread 'main' (18853) panicked at src/main.hrs:4:20:
 DimensionMismatch: matrix A has dimensions (2, 3), matrix B has dimensions (2, 3)</code></pre>
 <p>A product needs the columns of the left matrix to match the rows of the right. Sizes are known when the program runs, not when it compiles, so a mismatch is caught then and reported in Julia's words: <code>DimensionMismatch</code>, with the two sizes.</p>
 <h3 id="16-10-what-you-have">16.10 What you have</h3>
@@ -5199,9 +5199,9 @@ opt-level = 3</code></pre>
    Doc-tests my_crate
 
 running 1 test
-test target/src/lib.rs - add_one (line 10) ... ok
+test src/lib.rs - add_one (line 10) ... ok
 
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.07s</code></pre>
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.06s</code></pre>
 <p><code>cargo doc --open</code> renders every <code>///</code> and <code>//!</code> in the crate as HTML, with the Markdown inside them — headings, code blocks, links — laid out. The conventional sections are <code># Examples</code>, <code># Panics</code> (when the function can), <code># Errors</code> (what <code>Err</code>s it returns) and <code># Safety</code> (for <code>unsafe</code> functions). The example in the <code>///</code> is Harsh, like everything else in the file, and <code>cargo test</code> <em>runs it</em> — every code block in a doc comment is a test, so documentation cannot drift from the code without failing the build.</p>
 <blockquote>
 <p><strong>Harsh —</strong> A fenced block in a doc comment is the one kind of comment the transpiler reads. The documentation tool lifts such a block out, compiles it and runs it — it is code, not prose — so it is written in Harsh and the transpiler writes out the Rust that tool expects, the same translation it does everywhere else. A fence tagged with another language — <code>text</code>, <code>toml</code> — is prose and is left exactly as you wrote it. A line beginning <code>#</code> inside the fence is the documentation tool's own mark for <em>compile this but do not show it</em>, and it survives the translation.</p>
@@ -5249,10 +5249,10 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fini
 <pre class="code"><code>Orange</code></pre>
 <p>Inside, <code>PrimaryColor</code> lives in <code>kinds</code> and <code>mix</code> in <code>utils</code>, which is a sensible arrangement for the authors. A user does not care, and without the re-exports would have to write <code>art.utils.mix</code> and <code>art.kinds.PrimaryColor</code> and know which was where. The three <code>pub use</code> lines put all of them at the top of the crate; <code>cargo doc</code> lists the re-exports on the front page, and the user's <code>use art.(mix, PrimaryColor)</code> is the whole of what they learn about the layout.</p>
 <h3 id="17-3-publishing">17.3 Publishing</h3>
-<p><code>crates.io</code> is the registry <code>cargo</code> fetches dependencies from, and publishing to it is <code>cargo publish</code> after <code>cargo login</code> once with a token from the site. <code>Cargo.toml</code> needs <code>name</code> (unique on the registry), <code>version</code>, <code>description</code> and <code>license</code> before the registry will accept it; a publish is permanent, since other crates may depend on it — versions can be <em>yanked</em> (<code>cargo yank --vers 1.0.1</code>) to stop new projects picking them up, but never deleted. For a Harsh crate, <code>hrs export</code> writes the transpiled Rust as a plain crate under <code>target/export</code>, which is what you publish: the registry, and the people who depend on you, see Rust.</p>
-<p>That is the way to share Harsh code <em>with Rust users</em>: they get readable Rust, formatted by <code>cargo fmt</code>, with no Harsh anywhere — the parts of <code>hrs_std</code> you use become the crate's own <code>matrix</code> module — and they never need <code>hrs</code>. It is not the way to share it with Harsh users, because of what a Rust crate cannot carry: Harsh's own macros. A <code>~</code> macro unfolds in Harsh, before anything is transpiled, and leaves nothing in the Rust; so the exported crate has no <code>macro_rules~</code> in it, and a Harsh program that depends on it cannot call them. (Rust's <code>!</code> macros, which are Rust, survive the export.)</p>
+<p><code>crates.io</code> is the registry <code>cargo</code> fetches dependencies from, and publishing to it is <code>cargo publish</code> after <code>cargo login</code> once with a token from the site. <code>Cargo.toml</code> needs <code>name</code> (unique on the registry), <code>version</code>, <code>description</code> and <code>license</code> before the registry will accept it; a publish is permanent, since other crates may depend on it — versions can be <em>yanked</em> (<code>cargo yank --vers 1.0.1</code>) to stop new projects picking them up, but never deleted. For a Harsh crate, what you publish is its <code>export/</code> folder: every <code>hrs build</code> writes the whole project there as a plain Rust crate — its <code>Cargo.toml</code>, <code>src/</code> transpiled, your other files beside them — and <code>hrs -c publish</code> runs <code>cargo publish</code> in it. The registry, and the people who depend on you, see Rust.</p>
+<p>That is the way to share Harsh code <em>with Rust users</em>: they get Rust with no Harsh anywhere — the parts of <code>hrs_std</code> you use become the crate's own <code>hrs_std</code> module, its dependencies <code>nalgebra</code> and <code>num-traits</code> — and they never need <code>hrs</code>. The Rust keeps your file's lines, one for one, so it reads in the order your Harsh does. It is not the way to share it with Harsh users, because of what a Rust crate cannot carry: Harsh's own macros. A <code>~</code> macro unfolds in Harsh, before anything is transpiled, and leaves nothing in the Rust; so <code>export/</code> has no <code>macro_rules~</code> in it, and a Harsh program that depends on the published crate cannot call them. (Rust's <code>!</code> macros, which are Rust, are there as written.)</p>
 <p>To share a library <em>as Harsh</em>, macros and all, share its Harsh: another project depends on it by path, as the next section shows, and <code>hrs</code> transpiles it first — its <code>~</code> macros, and those it re-exports with <code>pub use</code>, reach the program that uses it. A registry of Harsh's own is planned, so that a Harsh library can be published and added by name as a Rust crate is; until it exists, a path is how Harsh travels as Harsh.</p>
-<p><strong>Adding dependencies.</strong> A Harsh project has two manifests side by side. <code>Cargo.toml</code> is Cargo's, and lists Rust's crates: <code>cargo add serde</code> writes there, as in Rust. <code>Hrs.toml</code> is Harsh's, and lists Harsh's dependencies — <code>hrs_std</code>, and Harsh crates — which <code>hrs</code> handles before Cargo runs: it reads each one's Harsh macros and signatures, transpiles it, and builds the project from a <code>Cargo.toml</code> it generates in <code>target/src/</code>, yours plus them. <code>hrs add hrs_std</code> writes to <code>Hrs.toml</code>. A Harsh crate of your own, in a folder beside the project, is one line:</p>
+<p><strong>Adding dependencies.</strong> A Harsh project has two manifests side by side. <code>Cargo.toml</code> is Cargo's, and lists Rust's crates: <code>cargo add serde</code> writes there, as in Rust. <code>Hrs.toml</code> is Harsh's, and lists Harsh's dependencies — <code>hrs_std</code>, and Harsh crates — which <code>hrs</code> handles before Cargo runs: it reads each one's Harsh macros and signatures, transpiles it, and builds the project from the <code>Cargo.toml</code> it writes in <code>export/</code>, yours plus them. <code>hrs add hrs_std</code> writes to <code>Hrs.toml</code>. A Harsh crate of your own, in a folder beside the project, is one line:</p>
 <pre class="code"><code># Hrs.toml
 [package]
 cargo = "Cargo.toml"        # optional: the Cargo.toml beside this file is the default
@@ -5260,7 +5260,7 @@ cargo = "Cargo.toml"        # optional: the Cargo.toml beside this file is the d
 [dependencies]
 hrs_std = "0.1"
 mylib = { path = "../mylib" }</code></pre>
-<p>Paths in <code>Hrs.toml</code> are relative to its own folder. In a workspace, a member that inherits (<code>version.workspace = true</code>) gets the workspace's values. <code>hrs export</code> writes such a project as plain Rust, each Harsh crate it uses exported beside it and named with a path and a version, so <code>cargo publish</code> takes them in order. Harsh files inside a Rust project are transpiled together — <code>hrs src/parser.hrs src/lexer.hrs</code> — each <code>.rs</code> beside its <code>.hrs</code>, headed with the name of its source; <code>hrs --check src/*.hrs</code> in CI fails when a committed <code>.rs</code> has fallen behind. Each command speaks to one registry, so a name is never looked up in the wrong one: <code>hrs add serde</code> answers that <code>serde</code> is a Rust crate, for <code>cargo add</code>. The crates for writing procedural macros — <code>hrs_proc_macro</code>, <code>hrs_quote</code>, <code>hrs_syn</code> — are compile-time tools, as <code>syn</code> and <code>quote</code> are Rust's, and stay in <code>Cargo.toml</code>. A project from before 0.3.0, with <code>hrs_std</code> in its <code>Cargo.toml</code>, is stopped with a message; <code>hrs migrate</code> moves it. In the rare project that wants a Harsh crate and a Rust crate of the same name, Cargo's rename keeps both: <code>foo_rs = { version = "1", package = "foo" }</code>, and the Rust one is <code>foo_rs</code> in your code.</p>
+<p>Paths in <code>Hrs.toml</code> are relative to its own folder. <code>export/Cargo.toml</code> names each Harsh crate the project uses by that crate's own <code>export/</code> and its version: the path while you build, the version once both are on crates.io, so <code>hrs -c publish</code> in each, the library first, publishes them in order. Harsh files inside a Rust project are transpiled together — <code>hrs src/parser.hrs src/lexer.hrs</code> — each <code>.rs</code> beside its <code>.hrs</code>, headed with the name of its source; <code>hrs --check src/*.hrs</code> in CI fails when a committed <code>.rs</code> has fallen behind. Each command speaks to one registry, so a name is never looked up in the wrong one: <code>hrs add serde</code> answers that <code>serde</code> is a Rust crate, for <code>cargo add</code>. The crates for writing procedural macros — <code>hrs_proc_macro</code>, <code>hrs_quote</code>, <code>hrs_syn</code> — are compile-time tools, as <code>syn</code> and <code>quote</code> are Rust's, and stay in <code>Cargo.toml</code>. A project from before 0.3.0, with <code>hrs_std</code> in its <code>Cargo.toml</code>, is stopped with a message; <code>hrs migrate</code> moves it. In the rare project that wants a Harsh crate and a Rust crate of the same name, Cargo's rename keeps both: <code>foo_rs = { version = "1", package = "foo" }</code>, and the Rust one is <code>foo_rs</code> in your code.</p>
 <p><strong>Three intents.</strong> How a project is made, and where its code is published, give three cases — and the commands for each already exist:</p>
 <table>
 <thead>
@@ -5292,35 +5292,39 @@ hrs publish</code></pre>
 <pre class="code"><code>[dependencies]
 geometry = { path = "../geometry" }</code></pre>
 <p><code>hrs add</code> adds the crates of Harsh's distribution, like <code>hrs_std</code>; a crate on a path is written into <code>Hrs.toml</code> by hand.</p>
-<p><em>#2, a Rust crate written in Harsh,</em> is shared with Rust users, who never need <code>hrs</code>. The project is written in Harsh, and published as the Rust <code>hrs export</code> writes:</p>
+<p><em>#2, a Rust crate written in Harsh,</em> is shared with Rust users, who never need <code>hrs</code>. The project is written in Harsh, and published as the Rust in its <code>export/</code>:</p>
 <pre class="code harsh"><code>hrs new <span class="p">-</span><span class="p">-</span>lib geometry
-hrs export                <span class="p">#</span> target<span class="p">/</span>export<span class="p">:</span> plain <span class="t">Rust</span><span class="p">,</span> the <span class="t">Harsh</span> crates it uses beside it
-cd target<span class="p">/</span>export
-cargo build               <span class="p">#</span> check it builds without hrs
-cargo publish</code></pre>
-<p><code>hrs export</code> keeps a library a library, and warns when <code>description</code> or <code>license</code> is missing from <code>Cargo.toml</code>, which crates.io requires before <code>cargo publish</code>.</p>
+hrs build                       <span class="p">#</span> export<span class="p">/</span><span class="p">:</span> plain <span class="t">Rust</span><span class="p">,</span> what crates<span class="p">.</span>io will get
+hrs <span class="p">-</span>c publish <span class="p">-</span><span class="p">-</span>dry<span class="p">-</span>run        <span class="p">#</span> cargo packages export<span class="p">/</span> and builds the package
+hrs <span class="p">-</span>c publish</code></pre>
+<p><code>hrs -c &lt;command&gt;</code> is <code>cd export &amp;&amp; cargo &lt;command&gt;</code>, after <code>hrs</code> has written <code>export/</code> afresh: <code>hrs -c publish</code> is <code>cargo publish</code> on the Rust. It warns first when <code>description</code> or <code>license</code> is missing from <code>Cargo.toml</code>, which crates.io requires, and it refuses a Harsh macro crate, whose macros exist only in Harsh — that one goes to Harsh's registry, #1.</p>
 <p><em>#3, Harsh files in a Rust crate,</em> keeps a Rust project and writes some of its files in Harsh. Each <code>.hrs</code> file is transpiled to the <code>.rs</code> beside it, headed with the name of its source; files transpiled together see each other's functions; and <code>--check</code> lets CI fail when a <code>.rs</code> is stale:</p>
 <pre class="code harsh"><code>cargo new parser
 hrs src<span class="p">/</span>lexer<span class="p">.</span>hrs src<span class="p">/</span>grammar<span class="p">.</span>hrs      <span class="p">#</span> writes src<span class="p">/</span>lexer<span class="p">.</span>rs and src<span class="p">/</span>grammar<span class="p">.</span>rs
 hrs <span class="p">-</span><span class="p">-</span>check src<span class="p">/</span>lexer<span class="p">.</span>hrs src<span class="p">/</span>grammar<span class="p">.</span>hrs   <span class="p">#</span> <span class="k">in</span> <span class="t">CI</span><span class="p">:</span> writes nothing<span class="p">,</span> fails <span class="k">if</span> stale
 cargo publish</code></pre>
-<p>The edge cases: a procedural-macro crate stays in <code>Cargo.toml</code> in every case, as a Rust dependency; in #2 the Harsh crates a project uses are published first, in the order <code>hrs export</code> names them; and in #3 the <code>.rs</code> files are what Cargo builds, so they are committed with the <code>.hrs</code> they come from.</p>
+<p>The edge cases: a procedural-macro crate stays in <code>Cargo.toml</code> in every case, as a Rust dependency; in #2 the Harsh crates a project uses are published first, each by <code>hrs -c publish</code> in its own folder; and in #3 the <code>.rs</code> files are what Cargo builds, so they are committed with the <code>.hrs</code> they come from.</p>
 <h3 id="17-4-workspaces">17.4 Workspaces</h3>
 <p>A <em>workspace</em> is a set of packages sharing one <code>Cargo.lock</code> and one <code>target/</code> directory, for a project that has grown to several crates — a binary and the libraries it is split into, say. The root <code>Cargo.toml</code> lists the members:</p>
 <pre class="code"><code>[workspace]
 members = ["adder", "add_one"]</code></pre>
-<p>and each member is an ordinary package in its own directory, depending on its siblings by path (<code>add_one = { path = "../add_one" }</code>). Run <code>hrs build</code> or <code>hrs run</code> in the member you want: <code>hrs</code> first transpiles the Harsh libraries it depends on by path, each only when its sources changed, and cargo then builds them all. A library written in Rust is cargo's, and needs nothing from <code>hrs</code>.</p>
-<p>At the workspace's root, <code>hrs build</code>, <code>hrs check</code>, <code>hrs test</code>, <code>hrs lint</code>, <code>hrs fmt</code> and <code>hrs cargo …</code> go through the members in the order <code>members</code> lists them (a trailing <code>*</code> takes every package in that folder; <code>exclude</code> leaves one out). Each Harsh member is built by <code>hrs</code> in its own folder, each Rust member by cargo, and <code>hrs fmt</code> skips the Rust ones. The first failure stops the run:</p>
+<p>and each member is an ordinary package in its own directory, depending on its siblings by path (<code>add_one = { path = "../add_one" }</code>). A member may be written in Harsh or in Rust. Run <code>hrs build</code> or <code>hrs run</code> in the member you want: <code>hrs</code> transpiles every Harsh member whose sources changed, and cargo then builds what that one needs.</p>
+<p>A workspace has one <code>export/</code>, at its root, and it is the whole workspace as Rust: the root's <code>Cargo.toml</code>, each Harsh member transpiled at its place — <code>export/adder/src/main.rs</code> — and each Rust member as it is. Cargo builds them there into one <code>target/</code>, with one <code>Cargo.lock</code>, which <code>hrs</code> keeps at the root beside yours. A member has no <code>export/</code> of its own, and <code>hrs</code>'s own files are in the root's <code>.hrs/</code>:</p>
+<pre class="code"><code>Cargo.toml          [workspace] members = ["adder", "add_one"]
+adder/              Cargo.toml  Hrs.toml  src/main.hrs
+add_one/            Cargo.toml  Hrs.toml  src/lib.hrs
+export/             Cargo.toml  Cargo.lock  adder/  add_one/  target/</code></pre>
+<p>At the workspace's root, <code>hrs build</code>, <code>hrs check</code>, <code>hrs test</code>, <code>hrs lint</code> and <code>hrs fmt</code> go through the members in the order <code>members</code> lists them (a trailing <code>*</code> takes every package in that folder; <code>exclude</code> leaves one out). Each Harsh member is built by <code>hrs</code>, each Rust member by cargo, and <code>hrs fmt</code> skips the Rust ones. The first failure stops the run:</p>
 <pre class="code harsh"><code><span class="defer">$</span> hrs test
 hrs<span class="p">:</span> workspace member adder
 <span class="op">..</span><span class="p">.</span>
 hrs<span class="p">:</span> workspace member add_one
 <span class="op">..</span><span class="p">.</span></code></pre>
-<p><code>hrs run</code> acts on one program, so at the root it is refused, and the message names the members: run it in the one you want.</p>
+<p><code>hrs run</code> acts on one program, so at the root it is refused, and the message names the members: run it in the one you want. <code>hrs -c …</code> at the root is cargo in the root's <code>export/</code>, for the whole workspace: <code>hrs -c build --release</code> builds every member, as <code>cargo build --release</code> does in a Rust workspace.</p>
 <h3 id="17-5-installing-binaries">17.5 Installing binaries</h3>
 <p><code>cargo install crate_name</code> fetches a crate from the registry, builds its binary and puts it in <code>~/.cargo/bin</code>, which is on your <code>PATH</code> once Rust is installed — it is how command-line tools written in Rust get distributed, and how <code>hrs</code> itself is installed from its repository (<code>cargo install --path .</code>). Any binary named <code>cargo-something</code> on the <code>PATH</code> also becomes a subcommand, <code>cargo something</code>, which is how cargo's own set of commands is extended.</p>
 <h3 id="17-6-what-you-have">17.6 What you have</h3>
-<p><code>--release</code> for the optimised build; <code>///</code> and <code>//!</code> for documentation that <code>cargo doc</code> renders and <code>cargo test</code> runs; <code>pub use</code> to give a crate a public shape; <code>cargo publish</code> for the registry, from <code>hrs export</code>'s Rust; workspaces for several crates; <code>cargo install</code> for tools. None of it is Harsh's, and all of it works on the transpiled tree.</p>
+<p><code>--release</code> for the optimised build; <code>///</code> and <code>//!</code> for documentation that <code>cargo doc</code> renders and <code>cargo test</code> runs; <code>pub use</code> to give a crate a public shape; <code>hrs -c publish</code> for the registry, from the Rust in <code>export/</code>; workspaces for several crates; <code>cargo install</code> for tools. None of it is Harsh's, and all of it works on the transpiled tree.</p>
 <p>Next: smart pointers — <code>Box</code>, <code>Rc</code> and <code>RefCell</code>, which are how Rust does the data structures a garbage-collected language takes for granted.</p>
 <h2 id="18-smart-pointers">18. Smart pointers</h2>
 <p>A reference, <code>&amp;T</code>, points at a value it does not own. A <em>smart pointer</em> is a struct that points at a value and <em>does</em> own it, with some rule about that ownership: <code>Box&lt;T&gt;</code> puts a value on the heap; <code>Rc&lt;T&gt;</code> lets several owners share one; <code>RefCell&lt;T&gt;</code> moves the borrow rules from compile time to run time. <code>String</code> and <code>Vec</code> are smart pointers too, by this definition — they own heap memory and know its length. What makes the three in this chapter worth a chapter is that between them they build the data structures that seem impossible under chapter 4's rules: recursive lists, shared graphs, values changed through a shared reference.</p>
@@ -5498,7 +5502,7 @@ c after = Cons(RefCell { value: 4 }, Cons(RefCell { value: 15 }, Nil))</code></p
     <span class="k">let</span> one <span class="p">=</span> cell <span class="op">&lt;-</span> borrow_mut<span class="defer">$</span>
     <span class="k">let</span> two <span class="p">=</span> cell <span class="op">&lt;-</span> borrow_mut<span class="defer">$</span>       <span class="com">// two mutable borrows: the rule, checked at runtime</span>
     <span class="mac">println!</span> <span class="str">"{one} {two}"</span></code></pre>
-<pre class="code"><code>thread 'main' (593) panicked at refcell_panic.hrs:7:
+<pre class="code"><code>thread 'main' (19144) panicked at refcell_panic.hrs:7:
 RefCell already borrowed</code></pre>
 <p>Two <code>borrow_mut$</code> guards alive at once is exactly what the compiler forbids for <code>&amp;mut</code>, and <code>RefCell</code> panics with <code>already borrowed</code>. The rules did not change; only when they are checked did. Use <code>RefCell</code> when you know the code respects the rules and the compiler cannot see it — a value mutated through shared handles, a mock object recording calls in a test — and accept that the check has moved from build time to the first run that violates it.</p>
 <h3 id="18-6-reference-cycles">18.6 Reference cycles</h3>
@@ -7674,7 +7678,7 @@ worker 3 shut down
 </ul>
 <h3 id="the-tools-chapters-1-14">The tools — chapters 1, 14</h3>
 <ul>
-<li><code>hrs new</code>, <code>hrs run</code>, <code>hrs build</code>, <code>hrs test</code>, <code>hrs check</code>, <code>hrs lint</code>, <code>hrs watch</code>; <code>hrs add hrs_std</code> adds Harsh's crates to a project's <code>Hrs.toml</code>, and Rust's are <code>cargo add</code>'s, in <code>Cargo.toml</code>; <code>hrs migrate</code> moves <code>hrs_std</code> out of a pre-0.3.0 <code>Cargo.toml</code>; <code>hrs fmt</code> lays a file out by these rules and is a no-op on one already laid out; <code>hrs export</code> writes the project as a plain Rust crate; <code>hrs-from</code> brings Rust in. (§1.2, §14.1)</li>
+<li><code>hrs new</code>, <code>hrs run</code>, <code>hrs build</code>, <code>hrs test</code>, <code>hrs check</code>, <code>hrs lint</code>, <code>hrs watch</code>; <code>hrs add hrs_std</code> adds Harsh's crates to a project's <code>Hrs.toml</code>, and Rust's are <code>cargo add</code>'s, in <code>Cargo.toml</code>; <code>hrs migrate</code> moves <code>hrs_std</code> out of a pre-0.3.0 <code>Cargo.toml</code>; <code>hrs fmt</code> lays a file out by these rules and is a no-op on one already laid out; <code>hrs build</code> writes the project as a plain Rust crate in <code>export/</code>, and <code>hrs -c publish</code> sends it to crates.io; <code>hrs-from</code> brings Rust in. (§1.2, §14.1)</li>
 <li>Errors point at your <code>.hrs</code> line, whether Harsh raised them or the compiler did. (§1.2, §3.4)</li>
 </ul>
 <h3 id="precedence-appendix">Precedence — appendix</h3>

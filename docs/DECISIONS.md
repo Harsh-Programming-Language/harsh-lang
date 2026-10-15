@@ -363,7 +363,7 @@ The commands (decided 2026-10-04):
 | A program | `hrs new app` — `src/main.hrs`, `[[bin]]` |
 | A library | `hrs new --lib geometry` (or `hrs new geometry --lib`) — `src/lib.hrs` with one public function and a test, `[lib]` |
 | #1, to Harsh's registry | `hrs build`, then `hrs publish` |
-| #2, to crates.io | `hrs export`, `cargo build`, then `cargo publish` |
+| #2, to crates.io | `hrs build`, then `hrs -c publish` -- cargo on `export/` (0.9.0; it was `hrs export`) |
 | #3, Harsh files in a Rust crate | `hrs src/a.hrs src/b.hrs`, `hrs --check …` in CI, `cargo publish` — settled |
 
 - **#1 or #2 is chosen when publishing, not when creating:** the same library
@@ -372,10 +372,10 @@ The commands (decided 2026-10-04):
   `name`, `version`, `description` and `license` present, and every Harsh
   dependency by version rather than by path — then a message naming the two
   ways to share today.
-- **`hrs export` keeps a library's `[lib]`** and warns when `description` or
-  `license` is missing, which crates.io requires.
+- **`hrs -c publish` warns** when `description` or `license` is missing,
+  which crates.io requires, and refuses a Harsh macro crate.
 
-### Two passes; the generated project is `target/src/` (decided 2026-10-06)
+### Two passes; the generated project is `target/src/` (decided 2026-10-06; the folder is `export/` since 0.9.0, below)
 
 `hrs` builds in two passes. **Pass 1** reads `Hrs.toml` and the `.hrs` files
 and writes an ordinary Rust project into `target/src/`, mirroring `src/`
@@ -407,6 +407,55 @@ sees `Hrs.toml`, which is pass 1's alone.
   let `hrs -- dx` and the terminal's `dx` differ.
 - Before 0.7.0 the folder was `target/hrs/`; `hrs build` refuses a
   `Cargo.toml` still pointing there, and `hrs migrate` updates it once.
+
+### The Rust project is `export/`, at the root (decided 2026-10-14, 0.9.0)
+
+Found by `cargo leptos`, which looked for a `.gitignore` beside the
+generated Rust in `target/src/`. The user's ruling: `target/src/` was there
+for whoever wants to read the Rust, and nesting the Rust project inside
+cargo's own build folder is a mess. A Harsh project has no `target/` at its
+root; it has `export/`, the whole Rust project generated from the Harsh, and
+cargo's `target/` is inside it.
+
+- **`export/`** holds only Rust: `export/Cargo.toml` (the project's, with its
+  Harsh crates added), `export/src/**.rs` (pass 1's output, line for line,
+  not formatted, so the source maps hold), the project's other files
+  mirrored -- hidden ones too, but not `.git`, `.hg`, `.svn` -- and
+  `src/`'s files that are not Harsh, beside the transpiled ones. It builds
+  with cargo alone, and is what crates.io gets.
+- **`.hrs/`** holds `hrs`'s own files, which are Harsh's, not the Rust's:
+  the source maps, the stamp, the proc-macro runner, the distribution it
+  builds with.
+- **The manifest is written, not linked:** cargo reads a target's path from
+  the folder it found the manifest in (tried before building). So a
+  project's `Cargo.toml` names no generated path; `hrs migrate` rewrites
+  `target/src/` to `src/`.
+- **`hrs_std` is folded in:** the part a crate uses is its own module,
+  `export/src/hrs_std/`, its paths `crate::hrs_std::…`; its dependencies
+  (`nalgebra`, `num-traits`) are in `export/Cargo.toml`. A Harsh library by
+  path is named there by its own `export/` and its version; the project's
+  `Cargo.toml` never lists it.
+- **The commands:** `hrs build`, `run`, `test`, `check`, `lint` and `hrs --`
+  work on `export/`; `hrs -c <cmd>` is `cd export && cargo <cmd>`, after
+  pass 1, and `hrs -c publish` publishes to crates.io; `hrs publish` is
+  Harsh's registry, and leaves `export/` out as `cargo publish` leaves
+  `target/` out. `hrs export` and `hrs cargo` are retired, each naming its
+  replacement.
+- **A program runs where the user is,** as `cargo run` runs it: `hrs run`
+  gives cargo `export/Cargo.toml` from the user's folder, so the program's
+  relative paths are the project's, not the mirror's (`hrs -c run` is cargo
+  in `export/`, literally).
+- **`Cargo.lock`** stays at the root, copied into `export/` and back.
+  `hrs new`'s `.gitignore` is `/target`, `/export`, `/.hrs`.
+- **A workspace has one `export/`, at its root** (the user's option A of
+  three): the whole workspace as Rust -- the root's `Cargo.toml`, each Harsh
+  member transpiled at its place (`export/app/src/main.rs`), each Rust
+  member mirrored -- with one `target/` and one `Cargo.lock`; a member has
+  no `export/` of its own, and its `hrs` files are under the root's
+  `.hrs/members/`. Rejected: an `export/` per member (several `target/`
+  folders, crates built twice, no place where cargo sees the workspace),
+  and taking Harsh members out of cargo's `[workspace]` into `Hrs.toml`
+  (the workspace listed in two files).
 
 ## Layout of a list after `=` (decided 2026-10-06)
 

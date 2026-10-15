@@ -83,7 +83,7 @@ If you already know Rust, *The Harsh Language Guide*, which teaches only the Har
 
 Every example is shown two ways: the **Harsh** you would write, and what it **prints** when run. Both are produced by the build from a single source file — the file is transpiled, compiled and run to make the page — so they cannot disagree. When an example is *meant* to fail, and learning Rust means learning what the compiler refuses and why, you see the Harsh and then the error the compiler reports, pointing at the line you wrote.
 
-> **Harsh —** Harsh is one spelling of Rust, and not the usual one. Rust as you will meet it in crates and in answers on the internet is written differently — the same language, the same meanings, other punctuation. Nothing in this book depends on that other spelling and none of it appears here. When you want the two set side by side, *The Harsh Language Guide* is where that comparison lives, and `hrs export` turns any project of yours into the other spelling to read.
+> **Harsh —** Harsh is one spelling of Rust, and not the usual one. Rust as you will meet it in crates and in answers on the internet is written differently — the same language, the same meanings, other punctuation. Nothing in this book depends on that other spelling and none of it appears here. When you want the two set side by side, *The Harsh Language Guide* is where that comparison lives, and every project of yours is in the other spelling too, in its `export/` folder, written there by each `hrs build`.
 
 The chapters follow the order of *The Rust Programming Language* (the "Rust Book"), because that order has been refined over years to introduce each idea exactly when you need it; the prose and the examples here are original.
 

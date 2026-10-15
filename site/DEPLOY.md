@@ -42,7 +42,9 @@ domain is set up). The old address,
 3. **Commit the site's lock file** (recommended). After `dx serve` has run
    on your Mac, `site/Cargo.lock` exists. Committing it makes every deploy
    build the same versions you tested, instead of the newest ones that day.
-   (`site/target` and `site/dist` are ignored; the lock file is not.)
+   (`site/export`, `site/.hrs` and `site/dist` are ignored; the lock file is
+   not -- `hrs` keeps it at `site/Cargo.lock`, copying it in and out of
+   `export/`.)
 
 ## B. Every deploy
 
@@ -54,7 +56,9 @@ workflow itself changed (or by hand: GitHub → Actions → *Publish the site*
 1. installs Rust and the wasm target, then `hrs` from the same commit;
 2. installs the Dioxus CLI, pinned to the newest **0.7.x**, matching the
    site's `dioxus = "0.7"`;
-3. transpiles the site's Harsh, runs `dx bundle --web --ssg --features ssg` -- every page pre-rendered (part D);
+3. writes the site's Rust project to `site/export/` (`hrs -c metadata`),
+   runs `dx bundle --web --ssg --features ssg` there -- every page
+   pre-rendered (part D);
 4. checks that the Book, *By Example* and the guide are in the output
    (they come from `site/public/`), adds `404.html` so every route loads,
    and deploys.
@@ -79,7 +83,7 @@ address under *deploy*. Open it, then check a few things by hand:
   --path .` locally too; fix it in the language.
 - *Build the site*: a Dioxus or Rust error, the same one `dx build` gives
   on your Mac.
-- *Assemble the pages*, at `find target/dx …`: the Dioxus CLI changed where
+- *Assemble the pages*, at `find export/target/dx …`: the Dioxus CLI changed where
   it writes its output. Run the build of part D on the Mac (`dx bundle --web --ssg --features ssg`),
   find the folder holding `index.html`, and adjust the path in the workflow.
 - the push never reached GitHub: the mirror's token lacks *Workflows* (A.1);
@@ -174,14 +178,13 @@ user's Mac ("blazingly fast"), then made the deploy by his decision.
 
 ```sh
 cd site
-hrs build
 cp Cargo.toml Cargo.toml.orig
 sed -i '' '/^ssg = /a\
 server = ["dioxus/server", "ssg"]
 ' Cargo.toml
-dx bundle --web --ssg --features ssg
+hrs -- dx bundle --web --ssg --features ssg    # in export/, the Rust project
 mv Cargo.toml.orig Cargo.toml
-public=$(find target/dx -type d -name public | head -n 1)
+public=$(find export/target/dx -type d -name public | head -n 1)
 grep -c "Rust without the braces" "$public/index.html"   # 1 or more: pre-rendered
 grep -c "The Harsh Book" "$public/learn/index.html"
 python3 -m http.server -d "$public" 8080                  # the pages still work as the app

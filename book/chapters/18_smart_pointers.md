@@ -249,7 +249,7 @@ fn main$:
 ```
 
 ```text
-thread 'main' (593) panicked at refcell_panic.hrs:7:
+thread 'main' (19144) panicked at refcell_panic.hrs:7:
 RefCell already borrowed
 ```
 

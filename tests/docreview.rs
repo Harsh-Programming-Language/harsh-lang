@@ -30,10 +30,11 @@ fn h11_fmt_leaves_a_mark_inside_a_holes_string() {
     assert!(out.contains("\"from:@{d} // :@\""), "{out}");
 }
 
-/// H12: the project's top level is in `target/src/`, files as well as
+/// H12: the project's top level is in `export/`, files as well as
 /// folders, so `dx` run there (`hrs -- dx`) finds `Dioxus.toml` -- but never
 /// the manifests `hrs` writes there itself. Since 0.8.2 (ShopBill's S7) a
-/// mirror -- real folders, files hard-linked -- not symbolic links.
+/// mirror -- real folders, files hard-linked -- not symbolic links; since
+/// 0.9.0 hidden files too (all but `.git`, `.hg`, `.svn` and `.hrs`).
 #[test]
 fn h12_top_level_files_are_linked_into_the_generated_project() {
     let d = std::env::temp_dir().join(format!("harsh-docreview-h12-{}", std::process::id()));
@@ -45,9 +46,9 @@ fn h12_top_level_files_are_linked_into_the_generated_project() {
     std::fs::write(root.join("Dioxus.toml"), "[application]\nname = \"app\"\n").unwrap();
     std::fs::create_dir_all(root.join("assets")).unwrap();
     std::fs::write(root.join(".secret"), "x").unwrap();
-    let out = Command::new(hrs).args(["cargo", "metadata", "--no-deps", "--format-version", "1"]).current_dir(&root).output().unwrap();
+    let out = Command::new(hrs).args(["-c", "metadata", "--no-deps", "--format-version", "1"]).current_dir(&root).output().unwrap();
     assert!(out.status.success(), "{}", String::from_utf8_lossy(&out.stderr));
-    let gen = root.join("target/src");
+    let gen = root.join("export");
     for name in ["Dioxus.toml", "assets"] {
         let m = std::fs::symlink_metadata(gen.join(name)).unwrap();
         assert!(!m.file_type().is_symlink(), "{name} is a symbolic link, not mirrored");
@@ -59,7 +60,8 @@ fn h12_top_level_files_are_linked_into_the_generated_project() {
             assert!(!m.file_type().is_symlink(), "{name} must be hrs's own, not a link");
         }
     }
-    assert!(std::fs::symlink_metadata(gen.join(".secret")).is_err(), "a hidden file was mirrored");
+    assert!(gen.join(".secret").is_file(), "a hidden file was not mirrored");
+    assert!(!gen.join(".hrs").exists() && !gen.join("src/main.hrs").exists());
 }
 
 /// H13: a record variant's fields are not constructors -- only the variants

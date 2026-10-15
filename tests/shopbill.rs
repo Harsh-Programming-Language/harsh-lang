@@ -176,7 +176,7 @@ fn s2_a_bare_literal_argument_is_refused() {
     assert!(flat(&r).contains("v.push(Card{id:2,})") && flat(&r).contains("returnSome(Card{id:6,})"), "{r}");
 }
 
-/// S7: the project's folders are mirrored into `target/src/` -- real
+/// S7: the project's folders are mirrored into `export/` -- real
 /// folders, each file a hard link -- not linked: Dioxus's `asset!` resolves a
 /// symbolic link back to the project, outside `CARGO_MANIFEST_DIR`, and
 /// refuses the file. The mirror follows the project at every pass 1.
@@ -195,12 +195,12 @@ fn s7_the_projects_folders_are_mirrored_not_linked() {
     std::fs::write(app.join("assets/main.css"), "body{}").unwrap();
     std::fs::write(app.join("assets/img/a.png"), "x").unwrap();
     std::fs::write(app.join("Hrs.toml"), "[dependencies]\n").unwrap();
-    let pass1 = || assert!(Command::new(hrs).args(["cargo", "version"]).current_dir(&app).output().unwrap().status.success());
+    let pass1 = || assert!(Command::new(hrs).args(["-c", "version"]).current_dir(&app).output().unwrap().status.success());
     // A symbolic link left by an earlier `hrs` is replaced.
-    std::fs::create_dir_all(app.join("target/src")).unwrap();
-    std::os::unix::fs::symlink(app.join("assets"), app.join("target/src/assets")).unwrap();
+    std::fs::create_dir_all(app.join("export")).unwrap();
+    std::os::unix::fs::symlink(app.join("assets"), app.join("export/assets")).unwrap();
     pass1();
-    let m = app.join("target/src/assets");
+    let m = app.join("export/assets");
     assert!(!std::fs::symlink_metadata(&m).unwrap().file_type().is_symlink() && m.is_dir());
     let ino = |p: &std::path::Path| std::fs::metadata(p).unwrap().ino();
     assert_eq!(ino(&app.join("assets/main.css")), ino(&m.join("main.css")));

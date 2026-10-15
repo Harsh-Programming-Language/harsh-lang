@@ -517,12 +517,13 @@ Rust. A macro's own language — an `rsx!` tree, `view!` markup, `select!` arms
 | `hrs watch` | rebuild on every save |
 | `hrs fmt` · `hrs fmt --check` | lay out the files by Harsh's rules |
 | `hrs test` at a workspace's root | each member in turn: a Harsh member by `hrs`, a Rust one by cargo (also `build`, `check`, `lint`, `fmt`) |
+| `hrs -c doc` | cargo in `export/`, the Rust project every build writes |
+| `hrs -c publish` | the Rust in `export/`, to crates.io |
 | `hrs add hrs_std` | add Harsh's crates, to `Hrs.toml` (Rust crates: `cargo add`, to `Cargo.toml`) |
-| `hrs migrate` | move `hrs_std` from a pre-0.3.0 `Cargo.toml` to `Hrs.toml` |
+| `hrs migrate` | bring an older project up to date: `Hrs.toml` (0.3.0), `export/` (0.9.0) |
 | `hrs in.hrs -o out.rs` | transpile one file, anywhere; the `.rs` starts with a header naming its source |
 | `hrs a.hrs b.hrs` | several files, each beside its `.hrs`, seeing each other's functions |
 | `hrs --check a.hrs b.hrs` | write nothing; fail if a `.rs` is not what its `.hrs` makes (for CI) |
-| `hrs export` | the project as a plain Rust crate |
 | `hrs-from file.rs` | convert Rust to Harsh |
 | Editors | `hrs-lsp`: Enter and Tab by layout, format on save, hover, definitions, completion |
 | Jupyter | the `harsh-kernel`: a cell's last value is shown; a last line `()` hides it |
@@ -537,10 +538,10 @@ Rust. A macro's own language — an `rsx!` tree, `view!` markup, `select!` arms
 - **#1:** `hrs new mylib`, `hrs build`, `hrs test`; used by path today, in
   the user's `Hrs.toml`: `mylib = { path = "../mylib" }`, Harsh macros
   included. Harsh's registry is still to come.
-- **#2:** `hrs new`, `hrs build`, then `hrs export` and `cargo publish`.
-  A Harsh crate it uses is exported beside it (`target/export-mylib`) and
-  named with a path and a version: publish that one first. Exported Harsh
-  macros do not survive the export.
+- **#2:** `hrs new`, `hrs build`, then `hrs -c publish`: the Rust in
+  `export/`. A Harsh crate it uses is named by its own `export/` and its
+  version: `hrs -c publish` that one first. Harsh macros unfold before
+  the Rust is written, so the published crate has none.
 - **#3:** `cargo new`; each `.hrs` file beside the `.rs` it produces, with
   `hrs src/parser.hrs src/lexer.hrs` (files given together see each other's
   functions); commit the `.rs`, put `hrs --check src/*.hrs` in CI, then

@@ -512,7 +512,7 @@ pub struct MacroCrate {
 }
 
 /// The runner's `Cargo.toml` and `main.rs` (decision P4: generated per
-/// consumer, under `target/src/proc-macros/`). `runtime` is the macro
+/// consumer, under `.hrs/proc-macros/`). `runtime` is the macro
 /// crates' own `hrs_proc_macro` dependency line, so the runner and the
 /// macros share one `TokenStream` type. The empty `[workspace]` keeps the
 /// runner out of any workspace the consumer belongs to.

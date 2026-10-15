@@ -9,7 +9,7 @@
 //! save -- answered from the text of each open file through
 //! `harsh_lang::columns` and `harsh_lang::fmt`, with no model of names or
 //! types. Through rust-analyzer: hover, go-to-definition and completion,
-//! asked about the Rust a file became (`target/src/`) and mapped both ways
+//! asked about the Rust a file became (`export/src/`) and mapped both ways
 //! through the source maps; rust-analyzer's Rust is shown as Harsh. Design in
 //! `docs/LSP.md` and the development notes.
 
@@ -418,11 +418,11 @@ impl Ra {
         });
         let mut ra = Ra { child, stdin, rx, next: 0, ready, started: Instant::now(), version: 0, given: HashMap::new() };
         let root_uri = Url::from_directory_path(root).map_err(|_| "the project's root is not a path".to_string())?;
-        // A project with Hrs.toml is built from its generated manifest
-        // (0.3.0): rust-analyzer reads that one, so hover and completion see
-        // the Harsh dependencies -- `hrs_std`, a nested Harsh crate.
+        // The Rust project is `export/` (0.9.0): rust-analyzer reads its
+        // manifest, so hover and completion see what cargo builds -- the
+        // Harsh crates by their `export/`, `hrs_std` folded in.
         let project = harsh_lang::driver::Project { root: root.to_path_buf() };
-        let generated = project.prepare(&mut Vec::new()).ok().flatten();
+        let generated = project.prepare(&mut Vec::new()).ok();
         let manifest = generated.clone().unwrap_or_else(|| root.join("Cargo.toml"));
         // Harsh's standard distribution, only for a project that names it.
         let patches = harsh_lang::driver::distribution(root, &[manifest]).unwrap_or_default();
@@ -467,17 +467,17 @@ impl Ra {
     }
 
     /// Hand rust-analyzer the text of every generated Rust file of the
-    /// project (`target/src/**/*.rs`, the distribution's crates included, the
-    /// completion side-file not), opening the new and updating the changed.
+    /// project (`export/src/**/*.rs`, `hrs_std` folded in included),
+    /// opening the new and updating the changed.
     fn give(&mut self, root: &Path) {
         let mut files = Vec::new();
-        let mut stack = vec![root.join("target/src")];
+        let mut stack = vec![harsh_lang::driver::Project { root: root.to_path_buf() }.gen_dir()];
         while let Some(dir) = stack.pop() {
             let Ok(entries) = std::fs::read_dir(&dir) else { continue };
             for e in entries.flatten() {
                 let p = e.path();
                 if p.is_dir() {
-                    if p.file_name().map_or(true, |n| n != ".complete" && n != "target") {
+                    if p.file_name().map_or(true, |n| n != "target") {
                         stack.push(p);
                     }
                 } else if p.extension().map_or(false, |x| x == "rs") {
@@ -564,11 +564,12 @@ fn root_of(file: &Path) -> Option<PathBuf> {
 }
 
 /// Where `hrs` writes a source's Rust and its map: `src/a/b.hrs` ->
-/// `target/src/a/b.rs` and `target/src/a/b.map.json`.
+/// `export/src/a/b.rs` and `.hrs/maps/a/b.map.json`.
 fn generated(root: &Path, file: &Path) -> Option<(PathBuf, PathBuf)> {
     let rel = file.strip_prefix(root.join("src")).ok()?;
-    let gen = root.join("target/src").join(rel);
-    Some((gen.with_extension("rs"), gen.with_extension("map.json")))
+    let rs = harsh_lang::driver::Project { root: root.to_path_buf() }.gen_dir().join(rel).with_extension("rs");
+    let map = harsh_lang::driver::Project { root: root.to_path_buf() }.map_of(&rs)?;
+    Some((rs, map))
 }
 
 /// The `hrs` beside this `hrs-lsp` (they are installed together), else the PATH's.
@@ -691,7 +692,9 @@ impl Bridge {
         let Some(file) = uri.to_file_path().ok() else { return };
         let Some(root) = root_of(&file) else { return };
         let ok = Command::new(hrs_exe())
-            .args(["cargo", "metadata", "--no-deps", "--format-version", "1"])
+            // `hrs -c` writes `export/`, then cargo reads it: pass 1 whole,
+            // building nothing (`hrs cargo` until 0.9.0, which retired it).
+            .args(["-c", "metadata", "--no-deps", "--format-version", "1"])
             .current_dir(&root)
             .stdout(Stdio::null())
             .stderr(Stdio::null())
@@ -816,10 +819,12 @@ impl Bridge {
         let one = |loc: Value| -> Value {
             let (uri_key, range_key) = if loc.get("targetUri").is_some() { ("targetUri", "targetRange") } else { ("uri", "range") };
             let Some(path) = loc[uri_key].as_str().and_then(|u| Url::parse(u).ok()).and_then(|u| u.to_file_path().ok()) else { return loc };
-            if !path.starts_with(root.join("target/src")) || path.extension().map_or(true, |e| e != "rs") {
+            let gen = harsh_lang::driver::Project { root: root.to_path_buf() }.gen_dir();
+            if !path.starts_with(&gen) || path.extension().map_or(true, |e| e != "rs") {
                 return loc;
             }
-            let Ok(m) = harsh_lang::remap::SourceMap::load(path.with_extension("map.json").to_str().unwrap_or("")) else { return loc };
+            let Some(map) = (harsh_lang::driver::Project { root: root.to_path_buf() }).map_of(&path) else { return loc };
+            let Ok(m) = harsh_lang::remap::SourceMap::load(map.to_str().unwrap_or("")) else { return loc };
             let Some(range) = range_back(&m, &loc[range_key]) else { return loc };
             let Ok(src) = Url::from_file_path(m.source()) else { return loc };
             if uri_key == "uri" {
@@ -859,11 +864,14 @@ impl Bridge {
         let start = now.split_inclusive('\n').take(line).map(str::len).sum::<usize>();
         let at = start + now[start..].chars().take(col).map(char::len_utf8).sum::<usize>();
         let marked = format!("{}{MARK}{}", &now[..at], &now[at..]);
-        let side = root.join("target/src/.complete");
+        let side = harsh_lang::driver::Project { root: root.to_path_buf() }.work_dir().join("complete");
         std::fs::create_dir_all(&side).ok()?;
         let (hrs, rs_side, map) = (side.join("cell.hrs"), side.join("cell.rs"), side.join("cell.map.json"));
         std::fs::write(&hrs, &marked).ok()?;
-        let out = Command::new(hrs_exe()).arg(&hrs).arg("-o").arg(&rs_side).arg("--map").arg(&map).output().ok()?;
+        // Written as the project's own files are: with `hrs_std` folded in,
+        // `crate::hrs_std::…`, when the project lists it.
+        let fold = if harsh_lang::driver::lists_hrs_std(&root) { "1" } else { "" };
+        let out = Command::new(hrs_exe()).env("HRS_FOLD_STD", fold).arg(&hrs).arg("-o").arg(&rs_side).arg("--map").arg(&map).output().ok()?;
         if !out.status.success() {
             log(&format!("completion at {}:{}: the text does not transpile: {}", line + 1, col + 1, String::from_utf8_lossy(&out.stderr).lines().next().unwrap_or("")));
             return None;

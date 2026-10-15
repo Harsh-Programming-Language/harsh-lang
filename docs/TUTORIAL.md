@@ -132,6 +132,8 @@ path = "target/src/main.rs"
 
 Cargo accepts arbitrary target paths, `/target` is already gitignored, dependencies stay in one manifest, and `mod` works across generated files. Five minutes of testing replaced weeks of intermittent deliberation.
 
+The same lesson held when the layout changed again, in 0.9.0: a tool (`cargo leptos`) looked for files beside the generated Rust that were not there, and the generated project moved out of `target/` to `export/`, a whole Rust project of its own. Before it was built, one question was tried rather than argued: can two folders share one `Cargo.toml` through a link? Cargo reads a target's path from the folder it finds the manifest in, so no; `export/Cargo.toml` is written, not linked.
+
 ---
 
 ## Part three — the lessons

@@ -6,10 +6,13 @@ positions both ways is tested without rust-analyzer installed.
 Hover answers with the very `.rs` position it was asked about, so the test
 sees what `hrs-lsp` sent; definition points at `fn helper` in the same file.
 
-Like the real one, it loads nothing under a project's `target/` from disk: it
-knows such a file only once it is handed its text (`didOpen`), and answers
-null about it otherwise -- the cause of empty hovers found on the user's Mac,
-2026-09-27."""
+It knows a generated file only once it is handed its text (`didOpen`), and
+answers null about it otherwise. The real one loaded nothing under a
+project's `target/` from disk -- the cause of empty hovers found on the
+user's Mac, 2026-09-27 -- and the generated Rust was there until 0.9.0; it
+is in `export/src/` now, which the real one reads, but `hrs-lsp` still hands
+it every file's text, so answers follow the last save, and this holds it to
+that."""
 import json, sys, urllib.parse
 
 def read():
@@ -56,7 +59,7 @@ while True:
         formats = (((p.get("capabilities") or {}).get("textDocument") or {}).get("hover") or {}).get("contentFormat") or []
         markdown = "markdown" in formats
         result = {"capabilities": {"hoverProvider": True, "definitionProvider": True}}
-    elif method in ("textDocument/hover", "textDocument/definition") and "/target/" in p["textDocument"]["uri"] and p["textDocument"]["uri"] not in opened:
+    elif method in ("textDocument/hover", "textDocument/definition") and "/export/src/" in p["textDocument"]["uri"] and p["textDocument"]["uri"] not in opened:
         result = None
     elif method == "textDocument/hover":
         pos, uri = p["position"], p["textDocument"]["uri"]

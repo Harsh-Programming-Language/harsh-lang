@@ -104,14 +104,20 @@ hrs fmt --check              # what the formatter would change (CI-friendly, exi
 hrs fmt                      # reformat src/**.hrs in place
 hrs fmt file.hrs             # one file
 hrs-from file.rs -o file.hrs # Rust in
-hrs export                   # the project as a plain Rust crate, cargo fmt'd
-hrs cargo leptos build       # transpile, then any cargo subcommand (Leptos, doc, ...)
-hrs -- dx serve              # transpile, then any program, in target/src/
+hrs -c leptos build          # write export/, then cargo there: any subcommand
+hrs -c publish               # export/, the Rust, to crates.io
+hrs -- dx serve              # write export/, then any program, run there
 hrs which dx                 # every program named dx on PATH, in order
 ```
 
+**The Rust project: `export/`.** Every build writes the project as Rust to
+`export/` -- its `Cargo.toml`, `src/` transpiled, your other files beside
+them -- and cargo builds it there, into `export/target/`. Read it there when
+you want the Rust. `hrs -c <cmd>` is `cd export && cargo <cmd>`, after the
+transpile: `hrs -c doc --open`, `hrs -c leptos watch`, `hrs -c publish`.
+
 **Other tools: `hrs -- <program>`.** After transpiling, `hrs --` runs any
-program in the generated project, `target/src/`: `hrs -- dx serve` for
+program in the Rust project, `export/`: `hrs -- dx serve` for
 Dioxus, `hrs -- trunk serve`, anything else. It finds the program exactly as
 your shell does -- the first of that name on your PATH, or the path you
 write -- so it runs what `dx` runs in your terminal. (`hrs dx` was retired in

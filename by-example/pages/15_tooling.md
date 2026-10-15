@@ -11,17 +11,21 @@ Harsh is a transpiler, so the tools are a thin layer over cargo's.
     hrs fmt               lay out the Harsh in the canonical form
     hrs watch             rebuild as files change
     hrs expand FILE       the file with its Harsh macros unfolded
-    hrs export DIR        the project as a plain Rust crate
+    hrs -c CMD            cargo CMD in export/: hrs -c publish for crates.io
+    hrs -- PROGRAM        any program, run in export/: hrs -- dx serve
 
-A project keeps its Harsh in `src/**.hrs`. The generated Rust goes to
-`target/src/`, and `Cargo.toml` points at it:
+A project keeps its Harsh in `src/**.hrs`, and its `Cargo.toml` is cargo's,
+unchanged. Each build writes the project as Rust to `export/` -- its
+`Cargo.toml`, `src/` transpiled, the other files beside them -- and cargo
+builds it there:
 
-    [[bin]]
-    name = "myapp"
-    path = "target/src/main.rs"
+    myapp/
+        Cargo.toml  Hrs.toml  src/main.hrs
+        export/     Cargo.toml  src/main.rs  target/
+        .hrs/       the source maps
 
-One manifest, ordinary dependencies, nothing extra to ignore — cargo already
-ignores `/target`.
+`hrs new` puts `/export` and `/.hrs` in `.gitignore`: both are written again
+from the `.hrs` files.
 
 ```rust harsh
 // This is what `hrs new` writes for you, and what `hrs run` builds.

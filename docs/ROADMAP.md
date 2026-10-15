@@ -27,9 +27,9 @@ Sizing is relative: XS, S, M, L. "Blocked by" matters more than the estimate.
   `a.slice(r, c)`, a copy: Julia's own split between `a[1:2, :]` and
   `@view`, told from the syntax alone (a range in a comma index).
 
-## Where things stand (2026-10-13)
+## Where things stand (2026-10-14)
 
-0.8.5 is the release in hand: the converter's attribute form pinned by a test, and the record's fixed converter gaps removed. 0.8.4 brought the user's ruling on a multi-line literal argument's layout, `hrs` at a workspace's root and a Rouge lexer; 0.8.3 was documentation only. The website is
+0.9.0 is the release in hand, a breaking one: the Rust project is `export/` at a project's root -- `src/` transpiled, the rest mirrored, cargo's `target/` inside -- with `hrs`'s own files in `.hrs/`, `hrs -c <cmd>` for cargo there, and one `export/` for a whole workspace (the user's design, `DECISIONS.md`). Projects move with `hrs migrate`. 0.8.5 pinned the converter's attribute form by a test; 0.8.4 brought the user's ruling on a multi-line literal argument's layout, `hrs` at a workspace's root and a Rouge lexer; 0.8.3 was documentation only. The website is
 live at https://harsh-lang.com/. `RELEASE.md` lists every product with its
 version, and publishing each is the user's. The changelog has every
 release.
@@ -66,15 +66,16 @@ files** -- cargo's sparse alternative-registry index on GitHub Pages
 (`harsh-lang.com/registry/`), packages (`.hrs` sources and `Cargo.toml`) as
 GitHub release downloads with checksums in the index, `hrs publish` with a
 GitHub token, `hrs` transpiling a registry dependency's Harsh before cargo
-builds it, so its `~` macros reach the user's code. Why not crates.io: `hrs
-export` unfolds `~` macros away, so a Harsh library shared as Rust loses them.
-`hrs export` to crates.io stays the way to make *Rust* crates from Harsh.
+builds it, so its `~` macros reach the user's code. Why not crates.io: the
+Rust in `export/` has its `~` macros unfolded away, so a Harsh library
+shared as Rust loses them. `hrs -c publish` of `export/` to crates.io stays
+the way to make *Rust* crates from Harsh.
 Design document first (`REGISTRY-DESIGN.md`), then the build.
 
 
 An online repository of Harsh crates, the user's request of 2026-09-17,
 placed at the end deliberately. It is not a prerequisite for anything above:
-a Harsh crate published to crates.io through `hrs export` is a Rust crate
+a Harsh crate published to crates.io through `hrs -c publish` is a Rust crate
 that can also ship its `.hrs` sources in the package; cargo vendors them,
 and `hrs` finds a crate's `macro_rules~` definitions (and any `harsh/dsl.hrs`)
 there. So Harsh crates live on crates.io as Rust crates with their Harsh

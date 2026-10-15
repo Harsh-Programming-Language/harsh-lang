@@ -277,6 +277,7 @@ echo 'fn main<span class="p">(</span><span class="p">)</span><span class="p">{</
 name = "myapp"
 path = "target/src/main.rs"</code></pre>
 <p>Cargo accepts arbitrary target paths, <code>/target</code> is already gitignored, dependencies stay in one manifest, and <code>mod</code> works across generated files. Five minutes of testing replaced weeks of intermittent deliberation.</p>
+<p>The same lesson held when the layout changed again, in 0.9.0: a tool (<code>cargo leptos</code>) looked for files beside the generated Rust that were not there, and the generated project moved out of <code>target/</code> to <code>export/</code>, a whole Rust project of its own. Before it was built, one question was tried rather than argued: can two folders share one <code>Cargo.toml</code> through a link? Cargo reads a target's path from the folder it finds the manifest in, so no; <code>export/Cargo.toml</code> is written, not linked.</p>
 <hr />
 <h2 id="part-three-the-lessons">Part three — the lessons</h2>
 <h3 id="permissive-was-wrong-every-single-time">Permissive was wrong every single time</h3>

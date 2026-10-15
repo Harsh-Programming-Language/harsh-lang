@@ -1382,7 +1382,7 @@ fn leptos_build_findings() {
         ".into_iter().map(|line| view! {\n                <span class=\"x\">{line}</span>\n        }",
     )]);
     // Include paths: relative to the source, re-based to where the Rust is
-    // written (`src/content.hrs` -> `target/src/content.rs` adds one `../`).
+    // written when that is elsewhere (here `target/hrs/`, one `../` more).
     let dir = std::env::temp_dir().join(format!("hrs-inc-{}", std::process::id()));
     let src_dir = dir.join("src");
     let gen_dir = dir.join("target").join("hrs");
@@ -1396,6 +1396,14 @@ fn leptos_build_findings() {
     let out = std::fs::read_to_string(&rs).unwrap();
     assert!(out.contains("include_str!(\"../../content/site.toml\")"), "{out}");
     assert!(out.contains("include_bytes!(\"../../src/data.bin\")"), "{out}");
+    // In `export/src/`, where `src/`'s other files are mirrored (0.9.0), a
+    // path is left as written.
+    let gen_dir = dir.join("export").join("src");
+    std::fs::create_dir_all(&gen_dir).unwrap();
+    let rs = gen_dir.join("content.rs");
+    harsh_lang::driver::transpile_one(&std::fs::read_to_string(&hrs).unwrap(), &hrs, &rs, &dir.join("m.json")).expect("transpile");
+    let out = std::fs::read_to_string(&rs).unwrap();
+    assert!(out.contains("include_str!(\"../content/site.toml\")") && out.contains("include_bytes!(\"data.bin\")"), "{out}");
     let _ = std::fs::remove_dir_all(&dir);
     // A single file written beside its source keeps its paths.
     check(&[("fn m$:\n    let s = include_str! \"../content/site.toml\"\n    s\n", "include_str!(\"../content/site.toml\")")]);
@@ -1828,36 +1836,37 @@ fn a_matrix_literal_follows_julias_grammar() {
 
 /// A panic names the Harsh line, not the generated one (2026-09-21): `hrs
 /// run` and `hrs test` read the program's stderr and put every
-/// `target/src/main.rs:L:C` back through the source map. Here through the
+/// `src/main.rs:L:C` -- relative to `export/`, where cargo runs -- back through the source map. Here through the
 /// real binary and a real map; the position is the same token Rust named.
 #[test]
 fn a_panic_is_put_back_on_its_harsh_line() {
     let dir = std::env::temp_dir().join(format!("hrs-panic-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
     std::fs::create_dir_all(dir.join("src")).unwrap();
-    std::fs::create_dir_all(dir.join("target/src")).unwrap();
+    std::fs::create_dir_all(dir.join("export/src")).unwrap();
+    std::fs::create_dir_all(dir.join(".hrs/maps")).unwrap();
     std::fs::write(dir.join("src/main.hrs"), "fn main$:\n    let v: Vec<i32> = vec!$\n    println! \"{}\" v[3]\n").unwrap();
     let ok = std::process::Command::new(env!("CARGO_BIN_EXE_hrs"))
         // Absolute paths, as the driver writes them into its maps.
         .arg(dir.join("src/main.hrs"))
         .arg("-o")
-        .arg(dir.join("target/src/main.rs"))
+        .arg(dir.join("export/src/main.rs"))
         .arg("--map")
-        .arg(dir.join("target/src/main.map.json"))
+        .arg(dir.join(".hrs/maps/main.map.json"))
         .current_dir(&dir)
         .status()
         .unwrap()
         .success();
     assert!(ok);
-    let generated = std::fs::read_to_string(dir.join("target/src/main.rs")).unwrap();
+    let generated = std::fs::read_to_string(dir.join("export/src/main.rs")).unwrap();
     let line = generated.lines().position(|l| l.contains("v[3]")).unwrap() + 1;
     let col = generated.lines().nth(line - 1).unwrap().find("v[3]").unwrap() + 1;
-    let places = harsh_lang::driver::PanicPlaces::load(&dir, &[dir.join("target/src/main.map.json")]);
-    let said = format!("thread 'main' panicked at target/src/main.rs:{line}:{col}:");
+    let places = harsh_lang::driver::PanicPlaces::load(&dir, &[dir.join(".hrs/maps/main.map.json")]);
+    let said = format!("thread 'main' panicked at src/main.rs:{line}:{col}:");
     assert_eq!(places.rewrite(&said), "thread 'main' panicked at src/main.hrs:3:19:");
     // A backtrace frame, with Rust's `./` prefix, and text the maps do not
     // cover, are handled and left alone respectively.
-    assert!(places.rewrite(&format!("  at ./target/src/main.rs:{line}:{col}")).contains("./src/main.hrs:3:19"));
+    assert!(places.rewrite(&format!("  at ./src/main.rs:{line}:{col}")).contains("./src/main.hrs:3:19"));
     assert_eq!(places.rewrite("no place here: main.rs"), "no place here: main.rs");
     let _ = std::fs::remove_dir_all(&dir);
 }
@@ -2674,9 +2683,22 @@ fn hrs_toml_reads_migrates_and_generates() {
     assert_eq!(moved, vec!["hrs_std".to_string()]);
     assert!(!c.contains("hrs_std") && c.contains("serde") && c.contains("hrs_proc_macro"), "{c}");
     assert!(h.contains("[dependencies]\nhrs_std = \"0.1\""), "{h}");
-    let g = generated_manifest("[package]\nname = \"a\"\n\n[[bin]]\nname = \"a\"\npath = \"target/src/main.rs\"\n\n[dependencies]\nserde = \"1\"\n", std::path::Path::new("/p"), &["hrs_std = \"0.1\"".to_string()]);
-    assert!(g.contains("path = \"/p/target/src/main.rs\""), "{g}");
+    // 0.9.0: `export/Cargo.toml` sits beside `export/src`, so a target's path
+    // stays as written; any other path is made absolute, and a path
+    // dependency on a Harsh project is named by its `export/`.
+    let g = generated_manifest(
+        "[package]\nname = \"a\"\n\n[[bin]]\nname = \"a\"\npath = \"src/main.rs\"\n\n[dependencies]\nserde = \"1\"\nlib = { path = \"../lib\" }\nrs = { path = \"../rs\" }\n",
+        std::path::Path::new("/p"),
+        &["hrs_std = \"0.1\"".to_string()],
+        true,
+        std::path::Path::new("/p"),
+        &mut |d: &std::path::Path| d.ends_with("lib").then(|| d.join("export")),
+    )
+    .unwrap();
+    assert!(g.contains("path = \"src/main.rs\""), "{g}");
     assert!(g.contains("[dependencies]\nhrs_std = \"0.1\"\nserde = \"1\""), "{g}");
+    assert!(g.contains("lib = { path = \"/p/../lib/export\" }"), "{g}");
+    assert!(g.contains("rs = { path = \"/p/../rs\" }"), "{g}");
     assert!(g.trim_end().ends_with("[workspace]"), "{g}");
 }
 

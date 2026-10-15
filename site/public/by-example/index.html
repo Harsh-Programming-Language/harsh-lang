@@ -454,7 +454,7 @@ returning something wrong:</p>
     <span class="mac">println!</span> <span class="str">"reaching for element {n}"</span>
     <span class="mac">println!</span> <span class="str">"{}"</span> xs<span class="p">[</span>n<span class="p">]</span></code></pre>
 <pre class="code"><code>reaching for element 5
-thread 'main' (4084) panicked at out_of_range.hrs:6:20:</code></pre>
+thread 'main' (22636) panicked at out_of_range.hrs:6:20:</code></pre>
 <h2 id="3-custom-types">3. Custom types</h2>
 <h3 id="3-1-structures">3.1 Structures</h3>
 <pre class="code harsh"><code><span class="attr">#[derive Debug]</span>
@@ -1723,16 +1723,20 @@ hrs lint              the same, through clippy, with its notes remapped
 hrs fmt               lay out the Harsh in the canonical form
 hrs watch             rebuild as files change
 hrs expand FILE       the file with its Harsh macros unfolded
-hrs export DIR        the project as a plain Rust crate
+hrs -c CMD            cargo CMD in export/: hrs -c publish for crates.io
+hrs -- PROGRAM        any program, run in export/: hrs -- dx serve
 </code></pre>
-<p>A project keeps its Harsh in <code>src/**.hrs</code>. The generated Rust goes to
-<code>target/src/</code>, and <code>Cargo.toml</code> points at it:</p>
-<pre><code>[[bin]]
-name = "myapp"
-path = "target/src/main.rs"
+<p>A project keeps its Harsh in <code>src/**.hrs</code>, and its <code>Cargo.toml</code> is cargo's,
+unchanged. Each build writes the project as Rust to <code>export/</code> -- its
+<code>Cargo.toml</code>, <code>src/</code> transpiled, the other files beside them -- and cargo
+builds it there:</p>
+<pre><code>myapp/
+    Cargo.toml  Hrs.toml  src/main.hrs
+    export/     Cargo.toml  src/main.rs  target/
+    .hrs/       the source maps
 </code></pre>
-<p>One manifest, ordinary dependencies, nothing extra to ignore — cargo already
-ignores <code>/target</code>.</p>
+<p><code>hrs new</code> puts <code>/export</code> and <code>/.hrs</code> in <code>.gitignore</code>: both are written again
+from the <code>.hrs</code> files.</p>
 <pre class="code harsh"><code><span class="com">// This is what `hrs new` writes for you, and what `hrs run` builds.</span>
 <span class="k">fn</span> main<span class="defer">$</span><span class="p">:</span>
     <span class="k">let</span> args<span class="p">:</span> <span class="t">Vec</span><span class="p">&lt;</span><span class="t">String</span><span class="p">&gt;</span> <span class="p">=</span> std<span class="p">.</span>env<span class="p">.</span>args<span class="defer">$</span> <span class="op">&lt;-</span> collect<span class="defer">$</span>

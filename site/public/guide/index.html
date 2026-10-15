@@ -381,12 +381,16 @@ hrs run</code></pre>
   <span class="p">.</span>gitignore
   src<span class="p">/</span>main<span class="p">.</span>hrs</code></pre>
 <p><code>Hrs.toml</code> lists Harsh's dependencies — <code>hrs_std</code>, Harsh crates — and <code>Cargo.toml</code> Rust's; <code>hrs</code> handles Harsh's before Cargo runs (since 0.3.0).</p>
-<p><code>Cargo.toml</code> is a normal manifest with one addition — the binary target points at the <em>generated</em> tree, not at <code>src/</code>:</p>
-<pre class="code"><code>[[bin]]
-name = "hello"
-path = "target/src/main.rs"</code></pre>
-<p>That is the whole arrangement. You write <code>src/**.hrs</code>; <code>hrs build</code> transpiles each one to <code>target/src/**.rs</code> beside a source map; cargo compiles what is in <code>target/src/</code>; errors come back pointing at your <code>.hrs</code> line and column. <code>target/</code> is ignored by git, so the generated Rust is never committed.</p>
-<p>To convert an existing cargo project, add that <code>[[bin]]</code> section (with the package's name) and move <code>src/main.rs</code> aside. If the <code>[[bin]]</code> entry is missing, <code>hrs</code> refuses to build and says so — otherwise cargo would silently compile <code>src/main.rs</code> and run the wrong program.</p>
+<p><code>Cargo.toml</code> is a normal manifest, as cargo writes it. Each build writes the project as Rust into <code>export/</code> (0.9.0):</p>
+<pre class="code"><code>hello/
+  Cargo.toml  Hrs.toml  src/main.hrs     yours
+  export/                                the Rust project
+    Cargo.toml                           yours, Harsh's crates added
+    src/main.rs                          src/ transpiled, line for line
+    target/                              cargo's
+  .hrs/                                  hrs's own: source maps, a stamp</code></pre>
+<p>That is the whole arrangement. You write <code>src/**.hrs</code>; <code>hrs build</code> transpiles each one to <code>export/src/**.rs</code>, with its source map in <code>.hrs/</code>; the project's other files are mirrored into <code>export/</code> beside them — <code>assets/</code>, <code>Dioxus.toml</code>, a data file in <code>src/</code> an <code>include_str!</code> reads — so <code>export/</code> builds alone; cargo compiles it there; errors come back pointing at your <code>.hrs</code> line and column. <code>export/</code> and <code>.hrs/</code> are written again from your sources, and <code>hrs new</code> lists both in <code>.gitignore</code>. <code>Cargo.lock</code> stays beside your <code>Cargo.toml</code>: <code>hrs</code> copies it into <code>export/</code> and back.</p>
+<p>To convert an existing cargo project, turn its <code>src/**.rs</code> into <code>.hrs</code> with <code>hrs-from</code> (below): a <code>.rs</code> file left in <code>src/</code> is Rust, mirrored into <code>export/src/</code> as it is, unless a <code>.hrs</code> of the same name replaces it. A project from before 0.9.0, whose <code>Cargo.toml</code> points at <code>target/src/</code>, is stopped with a message; <code>hrs migrate</code> moves it.</p>
 <h4 id="the-commands">The commands</h4>
 <pre class="code"><code>hrs build [cargo args]     transpile, then cargo build
 hrs run   [cargo args]     transpile, then cargo run
@@ -398,23 +402,26 @@ hrs new   [--lib] &lt;name&gt;   create a project laid out for Harsh: a program,
                            or with --lib a library
 hrs add   &lt;crate&gt;..         add Harsh crates to Hrs.toml (hrs_std, ...);
                            a Rust crate is added to Cargo.toml with cargo add
-hrs migrate                move Harsh's crates from Cargo.toml to Hrs.toml
+hrs -c &lt;cmd&gt; [args]        cargo &lt;cmd&gt; in export/, after writing it:
+                           hrs -c publish sends the Rust to crates.io
+hrs -- &lt;program&gt; [args]    any program, run in export/: hrs -- dx serve
+hrs migrate                bring an older project up to date: Harsh's crates
+                           from Cargo.toml to Hrs.toml (0.3.0), the targets
+                           from target/src/ (0.9.0)
 hrs publish                check the package for Harsh's registry (not open
                            yet: it says how to share today)
 hrs &lt;a.hrs&gt; [b.hrs ..]     transpile files in a Rust project, each beside its
                            .hrs, seeing each other's functions; --check
                            writes nothing and fails on a stale .rs
-hrs export [dir]           write the project as a plain Rust crate,
-                           formatted with cargo fmt (default: target/export)
 hrs dist  &lt;dir&gt;            write Harsh's standard distribution (hrs_std and
                            the macro crates) into &lt;dir&gt;, for building
                            outside a Harsh project -- the Jupyter kernel's use
 hrs &lt;input.hrs&gt; [-o out.rs] [--map out.map.json]
                            transpile a single file</code></pre>
-<p>At a workspace's root, a <code>Cargo.toml</code> with <code>[workspace]</code> and no <code>[package]</code>, <code>hrs build</code>, <code>check</code>, <code>test</code>, <code>lint</code>, <code>fmt</code> and <code>hrs cargo …</code> go through the members in the order <code>members</code> lists them: a Harsh member is built by <code>hrs</code> in its folder, a Rust member by cargo, and the first failure stops the run. <code>hrs run</code> acts on one program, so there it names the members instead.</p>
-<p><code>hrs export</code> is how Harsh code is shared with Rust users -- publish the exported crate to crates.io, and they get Rust. Harsh's <code>~</code> macros unfold before transpiling, so they are not in the export; to share a library with Harsh users, macros included, share its Harsh (a path dependency, for now; a Harsh registry is planned). The Book's chapter 17 has both.</p>
-<p>Anything after the subcommand goes to cargo unchanged: <code>hrs run --release</code>, <code>hrs test -- --nocapture</code>. Each command first reports what the transpile step did — <code>hrs: transpiled 1 of 3 file(s)</code> or <code>hrs: 3 file(s) up to date</code> — so a build that does nothing says so.</p>
-<p>The generated Rust under <code>target/src/</code> is not meant to be read. It keeps the <code>.hrs</code> file's line breaks so that every diagnostic maps back to the right line, and it is not formatted, because formatting would move every byte the source map depends on. When a Rust reader needs the code — a reviewer, a collaborator without <code>hrs</code>, a crates.io upload — <code>hrs export</code> writes the project as an ordinary cargo crate: <code>Cargo.toml</code> with its targets under <code>src/</code>, every module transpiled, no source maps, and <code>cargo fmt</code> run over the result (when rustfmt is installed; <code>rustup component add rustfmt</code>). The exported crate builds with <code>cargo build</code> alone. Nothing in it points back at the <code>.hrs</code> files, so it is a copy, not a link: export again after changes.</p>
+<p>A workspace has one <code>export/</code>, at its root: the whole workspace as Rust, each Harsh member transpiled at its place (<code>export/app/src/main.rs</code>), each Rust member mirrored, one <code>target/</code> and one <code>Cargo.lock</code> for all. At the workspace's root, a <code>Cargo.toml</code> with <code>[workspace]</code> and no <code>[package]</code>, <code>hrs build</code>, <code>check</code>, <code>test</code>, <code>lint</code> and <code>fmt</code> go through the members in the order <code>members</code> lists them: a Harsh member is built by <code>hrs</code>, a Rust member by cargo, and the first failure stops the run. <code>hrs -c …</code> there is cargo in the root's <code>export/</code>, for the whole workspace. <code>hrs run</code> acts on one program, so there it names the members instead.</p>
+<p><code>export/</code> is how Harsh code is shared with Rust users: <code>hrs -c publish</code> publishes it to crates.io, and they get Rust, with the part of <code>hrs_std</code> it uses as its own module. Harsh's <code>~</code> macros unfold before transpiling, so they are not in <code>export/</code>; to share a library with Harsh users, macros included, share its Harsh (a path dependency, for now; a Harsh registry is planned). The Book's chapter 17 has both.</p>
+<p>Anything after the subcommand goes to cargo unchanged: <code>hrs run --release</code>, <code>hrs test -- --nocapture</code>. <code>hrs run</code> runs the program in the folder you are in, as <code>cargo run</code> does; <code>hrs -c run</code> runs it in <code>export/</code>, as <code>cd export &amp;&amp; cargo run</code> would. Each command first reports what the transpile step did — <code>hrs: transpiled 1 of 3 file(s)</code> or <code>hrs: 3 file(s) up to date</code> — so a build that does nothing says so.</p>
+<p>The Rust in <code>export/</code> is there to be read — by you, by a reviewer, by a collaborator without <code>hrs</code>, by crates.io. It keeps the <code>.hrs</code> file's lines, one for one, so that every diagnostic maps back to the right line; for the same reason it is not formatted, since formatting would move every byte the source map depends on. It builds with cargo alone (<code>cd export &amp;&amp; cargo build</code>), and nothing in it points back at the <code>.hrs</code> files: it is written again by every build.</p>
 <h4 id="bringing-existing-rust-in">Bringing existing Rust in</h4>
 <pre class="code"><code>hrs-from src/old.rs -o src/old.hrs</code></pre>
 <p>The converter writes Harsh from Rust: braces become indentation, <code>::</code> becomes <code>.</code>, <code>.method()</code> becomes <code>&lt;- method$</code>, a <code>fn</code>'s parameter list becomes one group per parameter, <code>use a::{b, c}</code> becomes <code>use a.(b, c)</code>. Its output is valid Harsh that transpiles back to token-identical Rust — the transpiler's own source goes through this round trip in the test suite — and it is the fastest way to see what a file of your own looks like in Harsh.</p>

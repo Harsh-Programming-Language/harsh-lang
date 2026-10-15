@@ -22,8 +22,8 @@ the wasm target (`rustup target add wasm32-unknown-unknown`):
 
 ```sh
 cd site
-hrs cargo metadata --no-deps > /dev/null    # transpile src/**.hrs to target/src/
-dx serve                                    # then http://localhost:8080
+hrs -- dx serve      # writes export/, the Rust project, and runs dx there
+                     # then http://localhost:8080
 ```
 
 `dx` copies `public/` into its output (`public_dir` in `Dioxus.toml`), so

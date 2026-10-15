@@ -1006,7 +1006,7 @@ driver rewrites panic locations in the program's stderr the same way
   patches, only for the crates the manifests name by version.
 - **`hrs export`** writes a plain Rust crate; since 2026-09-25 it carries
   nothing of Harsh, `hrs_std`'s reached items becoming the crate's own module
-  (`export_is_pure_rust`, `export_takes_hrs_std_in_as_its_own_code`).
+  (`export_is_pure_rust`, `export_takes_hrs_std_in_as_its_own_code`; since 0.9.0 `the_rust_project_is_pure_rust` and `the_rust_project_takes_hrs_std_in_as_its_own_code`, on `export/`).
 - **Watch mode** polls every 250 ms with a settle delay: no dependency, no
   platform differences, and editors write in stages.
 - **`hrs -- <program>`** and **`hrs which`** (0.8.0); **a workspace's root**

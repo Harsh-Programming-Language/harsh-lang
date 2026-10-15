@@ -27,8 +27,8 @@ cargo check --lib --no-default-features --quiet
 say "The website transpiles and is formatted"
 # site/ is a Harsh project (Dioxus); its Rust is never built here -- the
 # container's Rust is too old for Dioxus -- but every .hrs must transpile
-# and match the formatter. `hrs cargo metadata` transpiles and builds nothing.
-( cd site && "$BIN/hrs" cargo metadata --no-deps --format-version 1 > /dev/null && "$BIN/hrs" fmt --check > /dev/null && echo "  site/src: $(find src -name '*.hrs' | wc -l | tr -d ' ') files transpiled, formatted" )
+# and match the formatter. `hrs -c metadata` writes export/ and builds nothing.
+( cd site && "$BIN/hrs" -c metadata --no-deps --format-version 1 > /dev/null && "$BIN/hrs" fmt --check > /dev/null && echo "  site/src: $(find src -name '*.hrs' | wc -l | tr -d ' ') files transpiled, formatted" )
 
 say "The website highlights as the books do"
 # site/src/highlight.hrs is a port of docs/build.py's highlighter (the user's
@@ -133,20 +133,19 @@ sed 's|let mut n: i64 = 0|let mut n: \&str = 0|' examples/general.hrs > "$WORK/b
 ( cd "$WORK/diag" && cargo build --message-format=json 2>/dev/null \
     | "$BIN/hrs-remap" --map map.json || true )
 
-say "Export: a Harsh project as a plain, formatted Rust crate"
+say "export/: a Harsh project's Rust, a crate cargo builds alone"
+# 0.9.0: every build writes export/, the whole Rust project.
 rm -rf "$WORK/exp" && (cd "$WORK" && "$BIN/hrs" new exp > /dev/null)
 cp examples/general.hrs "$WORK/exp/src/main.hrs"
-(cd "$WORK/exp" && "$BIN/hrs" export > "$WORK/export.log" 2>&1) || { cat "$WORK/export.log"; exit 1; }
-grep -q "exported 1 file" "$WORK/export.log" || { cat "$WORK/export.log"; exit 1; }
-[ -f "$WORK/exp/target/export/src/main.rs" ] || { echo "no exported main.rs"; exit 1; }
-grep -q "target/src" "$WORK/exp/target/export/Cargo.toml" && { echo "exported manifest still points at target/src"; exit 1; }
-(cd "$WORK/exp/target/export" && cargo run --quiet > "$WORK/export.out" 2>&1) || { cat "$WORK/export.out"; exit 1; }
+(cd "$WORK/exp" && "$BIN/hrs" build > "$WORK/export.log" 2>&1) || { cat "$WORK/export.log"; exit 1; }
+[ -f "$WORK/exp/export/src/main.rs" ] || { echo "no export/src/main.rs"; exit 1; }
+grep -qi "harsh\|target/src" "$WORK/exp/export/Cargo.toml" && { echo "export/Cargo.toml names Harsh"; exit 1; }
+(cd "$WORK/exp/export" && cargo run --quiet > "$WORK/export.out" 2>&1) || { cat "$WORK/export.out"; exit 1; }
 if diff -q "$WORK/export.out" "$WORK/general.out" > /dev/null 2>&1; then
-    echo "  exported crate builds with cargo alone and matches general's output"
+    echo "  export/ builds with cargo alone and matches general's output"
 else
-    echo "  exported crate output differs from general's"; diff "$WORK/export.out" "$WORK/general.out" | head; exit 1
+    echo "  export/'s output differs from general's"; diff "$WORK/export.out" "$WORK/general.out" | head; exit 1
 fi
-grep -q "formatted with cargo fmt" "$WORK/export.log" && echo "  formatted with cargo fmt" || echo "  (rustfmt not installed here; export left unformatted)"
 
 say "The guide: every code block transpiles"
 # docs/check-guide.py, which the Book's build also runs. Not run here before

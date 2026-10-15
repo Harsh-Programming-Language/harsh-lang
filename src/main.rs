@@ -10,15 +10,19 @@ use std::process::ExitCode;
 
 const USAGE: &str = "\
 usage:
-  hrs build [cargo args]     transpile, then cargo build
-  hrs run   [cargo args]     transpile, then cargo run
-  hrs test  [cargo args]     transpile, then cargo test
-  hrs check [cargo args]     transpile, then cargo check
-  hrs lint  [cargo args]     transpile, then cargo clippy
-  hrs cargo <sub> [args]     transpile, then any cargo subcommand (cargo leptos build, ..)
+  hrs build [cargo args]     transpile into export/, then cargo build there
+  hrs run   [cargo args]     the same, then cargo run (from where you are)
+  hrs test  [cargo args]     the same, then cargo test
+  hrs check [cargo args]     the same, then cargo check
+  hrs lint  [cargo args]     the same, then cargo clippy
   hrs watch [subcommand]     rebuild on every save (default: check)
-  hrs -- <program> [args]    transpile, then run any program in target/src/,
+  hrs -- <program> [args]    transpile, then run any program in export/,
                              found as your shell finds it (hrs -- dx serve)
+  hrs -c <command> [args]    transpile, then cargo <command> in export/ --
+                             hrs -c publish publishes the Rust to crates.io
+  hrs publish                publish to Harsh's registry: the .hrs sources,
+                             not export/ (not open yet: checks the package
+                             and says how to share today)
   hrs which <program>        every program of that name on PATH, in order,
                              with its --version: the first one is what runs
   hrs new   [--lib] <name>   create a project laid out for Harsh -- a program,
@@ -27,15 +31,11 @@ usage:
                              rest of Harsh's distribution; a Rust crate is
                              added to Cargo.toml with cargo add
   hrs migrate                bring a project up to date: Harsh's crates from
-                             Cargo.toml to Hrs.toml (0.3.0); paths from
-                             target/hrs/ to target/src/ (0.7.0)
-  hrs export [dir]           write the project as a plain Rust crate,
-                             formatted with cargo fmt (default: target/export)
-  hrs publish                check the package for Harsh's registry (not open
-                             yet: says how to share today)
-  hrs fmt   [--check] [files] reformat .hrs files in place (default: src/**.hrs);
+                             Cargo.toml to Hrs.toml (0.3.0); the generated
+                             Rust from target/src/ to export/ (0.9.0)
+  hrs fmt [--check] [files]  reformat .hrs files in place (default: src/**.hrs);
                              --check lists the files that would change, exit 1
-  hrs dist  <dir>             write Harsh's standard distribution (hrs_std,
+  hrs dist  <dir>            write Harsh's standard distribution (hrs_std,
                              hrs_proc_macro, hrs_quote, hrs_syn) into <dir>,
                              for building outside a Harsh project
   hrs expand <file.hrs>      print the file with its Harsh macros unfolded,
@@ -48,12 +48,15 @@ usage:
                              its .hrs (Harsh files in a Rust crate); --check
                              writes nothing and fails when a .rs is stale
 
-Sources live in src/**.hrs; generated Rust goes to target/src/, and
-Cargo.toml points its targets at that tree.
+Sources live in src/**.hrs. export/ beside them is the whole Rust project
+they make -- its Cargo.toml, src/**.rs, the project's other files, and
+cargo's target/ -- for building, for reading, and for crates.io. hrs's own
+working files are in .hrs/.
 
-At a workspace's root (a [workspace] with no [package]), build, check,
-test, lint, fmt and cargo go through the members in order: a Harsh member
-by hrs, a Rust member by cargo.";
+A workspace has one export/, at its root: the whole workspace as Rust.
+There (a [workspace] with no [package]), build, check, test, lint and fmt
+go through the members in order -- a Harsh member by hrs, a Rust member by
+cargo -- and -c is cargo in export/, for the whole workspace.";
 
 fn main() -> ExitCode {
     // `--version` is `hrs`'s own only before `--`: after it, the arguments
@@ -82,9 +85,17 @@ fn main() -> ExitCode {
         }
         "build" | "run" | "test" | "check" => cargo_cmd(first, &rest),
         "lint" => cargo_cmd("clippy", &rest),
-        // `hrs cargo <subcommand> [args]`: transpile, then any cargo
-        // subcommand -- `hrs cargo leptos build`, `hrs cargo doc`.
-        "cargo" if !rest.is_empty() => cargo_cmd(&rest[0], &rest[1..]),
+        // `hrs -c <command> [args]`: transpile, then `cargo <command>` in
+        // `export/` -- `hrs -c publish` for crates.io (the user, 2026-10-14).
+        "-c" if !rest.is_empty() => c_cmd(&rest),
+        "-c" => {
+            eprintln!("hrs: `hrs -c` runs cargo in export/ after transpiling: hrs -c <command> [args], e.g. hrs -c publish");
+            ExitCode::from(2)
+        }
+        "cargo" => {
+            eprintln!("hrs: `hrs cargo` is retired (0.9.0) -- write `hrs -c {}`: cargo, run in export/", rest.join(" "));
+            ExitCode::from(2)
+        }
         // Pass 2 is any program the programmer names, found as the shell
         // finds it: Harsh arbitrates no conflict between two programs of
         // one name (the user's ruling, 2026-10-12; `hrs dx` is retired).
@@ -107,7 +118,10 @@ fn main() -> ExitCode {
         "publish" => publish(&rest),
         "add" => add(&rest),
         "migrate" => migrate(),
-        "export" => export(&rest),
+        "export" => {
+            eprintln!("hrs: `hrs export` is retired (0.9.0) -- every `hrs build` writes export/, the whole Rust project; to publish it to crates.io: hrs -c publish");
+            ExitCode::from(2)
+        }
         "fmt" => fmt(&rest),
         "expand" => expand(&rest),
         "dist" => dist(&rest),
@@ -115,18 +129,19 @@ fn main() -> ExitCode {
     }
 }
 
-/// `hrs build`, `check`, `test`, `lint`, `fmt` and `hrs cargo …` at a
-/// workspace's root run in each member, in `members`' order: a Harsh member
-/// by `hrs` in its folder, a Rust member by cargo (`fmt`, Harsh's only, skips
-/// it). The first failure stops the run, as cargo's would. A command that
-/// acts on one program -- `run`, `--`, `watch`, `export`, `publish`, `add`
+/// `hrs build`, `check`, `test`, `lint` and `fmt` at a workspace's root run
+/// in each member, in `members`' order: a Harsh member by `hrs` in its
+/// folder, a Rust member by cargo in its place in the workspace's `export/`
+/// (`fmt`, Harsh's only, skips it). The first failure stops the run, as
+/// cargo's would. `hrs -c …` is cargo in `export/`, for the whole workspace. A command that
+/// acts on one program -- `run`, `--`, `watch`, `publish`, `add`
 /// -- is refused, naming the members. `None` when the folder is not a
 /// workspace's root, or the command is another.
 fn at_workspace_root(first: &str, rest: &[String]) -> Option<ExitCode> {
     let per_member = matches!(first, "build" | "check" | "test" | "lint")
-        || (first == "cargo" && !rest.is_empty())
+        || (first == "-c" && !rest.is_empty())
         || (first == "fmt" && rest.iter().all(|a| a == "--check"));
-    let one_program = matches!(first, "run" | "--" | "watch" | "export" | "publish" | "add");
+    let one_program = matches!(first, "run" | "--" | "watch" | "publish" | "add");
     if !per_member && !one_program {
         return None;
     }
@@ -146,6 +161,46 @@ fn at_workspace_root(first: &str, rest: &[String]) -> Option<ExitCode> {
         eprintln!("hrs: {} is a workspace's root with no members", root.display());
         return Some(ExitCode::FAILURE);
     }
+    // 0.9.0 (option A): the workspace's `export/` is the Rust workspace.
+    // Cargo, run anywhere in it, reads every member, so it is written
+    // whole first; `hrs -c` is cargo there, once, for the workspace.
+    if first != "fmt" {
+        if let Err(e) = driver::prepare_workspace_root(&root) {
+            eprintln!("{e}");
+            return Some(ExitCode::FAILURE);
+        }
+    }
+    let export = root.join(driver::EXPORT_DIR);
+    // Harsh's distribution, patched in for the crates of it the workspace
+    // names -- as for a member's own cargo -- and none for plain Rust.
+    let patches = if first == "fmt" {
+        Vec::new()
+    } else {
+        let mut manifests = vec![export.join("Cargo.toml")];
+        manifests.extend(driver::harsh_members(&root).into_iter().map(|m| Project { root: m }.export_dir().join("Cargo.toml")));
+        match driver::distribution(&root, &manifests) {
+            Ok(p) => p,
+            Err(e) => {
+                eprintln!("hrs: {e}");
+                return Some(ExitCode::FAILURE);
+            }
+        }
+    };
+    if first == "-c" {
+        let status = std::process::Command::new("cargo").args(&patches).args(rest).current_dir(&export).status();
+        let lock = export.join("Cargo.lock");
+        if lock.is_file() {
+            let _ = std::fs::copy(&lock, root.join("Cargo.lock"));
+        }
+        return Some(match status {
+            Ok(s) if s.success() => ExitCode::SUCCESS,
+            Ok(_) => ExitCode::FAILURE,
+            Err(e) => {
+                eprintln!("hrs: cargo: {e}");
+                ExitCode::FAILURE
+            }
+        });
+    }
     let exe = std::env::current_exe().unwrap_or_else(|_| PathBuf::from("hrs"));
     for m in &members {
         let harsh = driver::is_harsh_member(m);
@@ -158,10 +213,11 @@ fn at_workspace_root(first: &str, rest: &[String]) -> Option<ExitCode> {
         } else {
             let (sub, args) = match first {
                 "lint" => ("clippy", rest),
-                "cargo" => (rest[0].as_str(), &rest[1..]),
                 s => (s, rest),
             };
-            std::process::Command::new("cargo").arg(sub).args(args).current_dir(m).status()
+            // In its place in `export/`, mirrored there.
+            let at = export.join(m.strip_prefix(&root).unwrap_or(m));
+            std::process::Command::new("cargo").args(&patches).arg(sub).args(args).current_dir(&at).status()
         };
         match status {
             Ok(s) if s.success() => {}
@@ -213,10 +269,39 @@ fn add(args: &[String]) -> ExitCode {
     if ok { ExitCode::SUCCESS } else { ExitCode::FAILURE }
 }
 
+/// A new project's `.gitignore` (0.9.0): what `hrs` generates. `/target`
+/// covers `export/target/` too, the copy of this file there being read from
+/// `export/`.
+const NEW_GITIGNORE: &str = "/target\n/export\n/.hrs\n";
+
 /// A new project's `Hrs.toml`: Harsh's dependencies, beside Cargo.toml.
 const NEW_HRS_TOML: &str = "# Hrs.toml -- Harsh's dependencies; Cargo.toml beside it keeps Rust's\n[package]\ncargo = \"Cargo.toml\"        # optional: the Cargo.toml beside this file is the default\n\n[dependencies]\n";
 
-/// `hrs migrate`: Harsh's crates moved from Cargo.toml to Hrs.toml (0.3.0).
+/// `/export` and `/.hrs` added to the project's `.gitignore` -- when it has
+/// one, or is a git repository -- and what was done.
+fn ignore_generated(root: &std::path::Path) -> Option<String> {
+    let ignore = root.join(".gitignore");
+    let text = std::fs::read_to_string(&ignore).unwrap_or_default();
+    let missing: Vec<&str> = ["/export", "/.hrs"].into_iter().filter(|e| !text.lines().any(|l| l.trim() == *e || l.trim() == &e[1..])).collect();
+    if missing.is_empty() || !(ignore.exists() || root.join(".git").exists()) {
+        return None;
+    }
+    let mut t = text.clone();
+    if !t.is_empty() && !t.ends_with('\n') {
+        t.push('\n');
+    }
+    for e in &missing {
+        t.push_str(e);
+        t.push('\n');
+    }
+    std::fs::write(&ignore, t).ok()?;
+    Some(format!("added {} to .gitignore", missing.join(" and ")))
+}
+
+/// `hrs migrate`: Harsh's crates moved from Cargo.toml to Hrs.toml (0.3.0);
+/// the targets' paths from `target/src/` to `src/`, read in `export/`, the
+/// `.gitignore` given `/export` and `/.hrs`, and the old generated tree and
+/// builds removed (0.9.0). At a workspace's root, each Harsh member.
 fn migrate() -> ExitCode {
     // The nearest folder, here or above, with a Cargo.toml.
     let mut dir = std::env::current_dir().ok();
@@ -232,6 +317,22 @@ fn migrate() -> ExitCode {
         eprintln!("hrs: no Cargo.toml here or above");
         return ExitCode::FAILURE;
     };
+    // A workspace's root (0.9.0): its `.gitignore`, then each Harsh member
+    // migrated in its folder. Cargo builds in the root's `export/target/`.
+    if let Some(members) = driver::workspace_members(&root) {
+        if let Some(l) = ignore_generated(&root) {
+            eprintln!("hrs: {l}");
+        }
+        let exe = std::env::current_exe().unwrap_or_else(|_| PathBuf::from("hrs"));
+        for m in members.iter().filter(|m| driver::is_harsh_member(m)) {
+            eprintln!("hrs: workspace member {}", m.strip_prefix(&root).unwrap_or(m).display());
+            match std::process::Command::new(&exe).arg("migrate").current_dir(m).status() {
+                Ok(s) if s.success() => {}
+                _ => return ExitCode::FAILURE,
+            }
+        }
+        return ExitCode::SUCCESS;
+    }
     let cargo_path = root.join("Cargo.toml");
     let hrs_path = root.join(driver::HRS_MANIFEST);
     let Ok(cargo) = std::fs::read_to_string(&cargo_path) else {
@@ -240,8 +341,24 @@ fn migrate() -> ExitCode {
     };
     let hrs = std::fs::read_to_string(&hrs_path).ok();
     let (cargo2, hrs2, moved) = driver::migrate(&cargo, hrs.as_deref().or(Some(NEW_HRS_TOML)));
-    if moved.is_empty() {
+    // 0.9.0: what `hrs` generates is ignored, and the old places go -- the
+    // generated tree `target/src/` and the builds in `target/`, all `hrs`'s
+    // output since 0.3.0 (cargo builds into `export/target/` now).
+    let mut layout: Vec<String> = ignore_generated(&root).into_iter().collect();
+    let old = root.join("target");
+    if old.join("src").join(".hrs-stamp").is_file() || moved.iter().any(|n| n == driver::EXPORT_DIR) {
+        if old.is_dir() && std::fs::remove_dir_all(&old).is_ok() {
+            layout.push("removed target/ (the old generated tree and builds; cargo builds in export/target/ now)".to_string());
+        }
+    }
+    if moved.is_empty() && layout.is_empty() {
         eprintln!("hrs: nothing to migrate; the project is up to date");
+        return ExitCode::SUCCESS;
+    }
+    for l in &layout {
+        eprintln!("hrs: {l}");
+    }
+    if moved.is_empty() {
         return ExitCode::SUCCESS;
     }
     if std::fs::write(&cargo_path, cargo2).is_err() || std::fs::write(&hrs_path, hrs2).is_err() {
@@ -249,10 +366,10 @@ fn migrate() -> ExitCode {
         return ExitCode::FAILURE;
     }
     // The generated tree's new place is a path update, not a move.
-    if moved.iter().any(|n| n == "target/src") {
-        eprintln!("hrs: Cargo.toml now points at target/src/ (it was target/hrs/, before 0.7.0)");
+    if moved.iter().any(|n| n == driver::EXPORT_DIR) {
+        eprintln!("hrs: Cargo.toml's targets now say src/, read in export/, the Rust project (0.9.0; it was target/src/)");
     }
-    let crates: Vec<&String> = moved.iter().filter(|n| *n != "target/src").collect();
+    let crates: Vec<&String> = moved.iter().filter(|n| *n != driver::EXPORT_DIR).collect();
     if !crates.is_empty() {
         eprintln!("hrs: moved {} from Cargo.toml to Hrs.toml", crates.iter().map(|n| format!("`{n}`")).collect::<Vec<_>>().join(", "));
     }
@@ -427,32 +544,44 @@ fn fmt(args: &[String]) -> ExitCode {
     ExitCode::SUCCESS
 }
 
-fn export(args: &[String]) -> ExitCode {
-    let dir = args.first().map(PathBuf::from).unwrap_or_else(|| PathBuf::from("target/export"));
-    let r = Project::find().and_then(|p| {
-        let dir = if dir.is_absolute() { dir.clone() } else { p.root.join(&dir) };
-        p.export(&dir).map(|e| (dir, e))
-    });
-    match r {
-        Ok((dir, e)) => {
-            eprintln!(
-                "hrs: exported {} file(s) to {}{}",
-                e.files.len(),
-                dir.display(),
-                if e.formatted { ", formatted with cargo fmt" } else { " (cargo fmt not available; left unformatted)" }
-            );
-            // crates.io refuses a crate without these: say so now, not at
-            // `cargo publish` (decided 2026-10-04).
-            let toml = std::fs::read_to_string(dir.join("Cargo.toml")).unwrap_or_default();
-            let package = toml.split("\n[").next().unwrap_or("");
-            let has = |k: &str| package.lines().any(|l| { let t = l.trim_start(); t.starts_with(&format!("{k} ")) || t.starts_with(&format!("{k}=")) || (k == "license" && t.starts_with("license-file")) });
-            for k in ["description", "license"] {
-                if !has(k) {
-                    eprintln!("hrs: warning: Cargo.toml has no `{k}` in [package] -- crates.io requires it before `cargo publish`");
-                }
-            }
-            ExitCode::SUCCESS
+/// `hrs -c <command> [args]`: pass 1, then `cargo <command>` in `export/`,
+/// the Rust project (the user, 2026-10-14). For crates.io, `hrs -c publish`:
+/// a Harsh macro crate is refused -- its macros exist only in Harsh, and it
+/// has no Rust meaning -- and a missing `description` or `license`, which
+/// crates.io requires, is said before cargo says it.
+fn c_cmd(args: &[String]) -> ExitCode {
+    let p = match Project::find() {
+        Ok(p) => p,
+        Err(e) => {
+            eprintln!("hrs: {}", e);
+            return ExitCode::FAILURE;
         }
+    };
+    if args[0] == "publish" || args[0] == "package" {
+        if p.meta().map_or(false, |m| m.proc_macro) {
+            eprintln!("hrs: a Harsh macro crate is not published to crates.io: its macros exist only in Harsh, expanded where they are called -- it goes to Harsh's registry, hrs publish");
+            return ExitCode::FAILURE;
+        }
+        let toml = std::fs::read_to_string(p.root.join("Cargo.toml")).unwrap_or_default();
+        let package = toml.split("\n[").next().unwrap_or("");
+        let has = |k: &str| package.lines().any(|l| { let t = l.trim_start(); t.starts_with(&format!("{k} ")) || t.starts_with(&format!("{k}=")) || (k == "license" && t.starts_with("license-file")) });
+        for k in ["description", "license"] {
+            if !has(k) {
+                eprintln!("hrs: warning: Cargo.toml has no `{k}` in [package] -- crates.io requires it");
+            }
+        }
+    }
+    if let Err(e) = build_tree(&p) {
+        eprintln!("{}", e);
+        return ExitCode::FAILURE;
+    }
+    if let Some(msg) = driver::missing_std(&p.root) {
+        eprintln!("hrs: {msg}");
+        return ExitCode::FAILURE;
+    }
+    match p.tool("cargo", args) {
+        Ok(0) => ExitCode::SUCCESS,
+        Ok(_) => ExitCode::FAILURE,
         Err(e) => {
             eprintln!("hrs: {}", e);
             ExitCode::FAILURE
@@ -557,7 +686,7 @@ fn version_of(p: &std::path::Path) -> String {
 /// more than one program of that name, a note says which runs (2026-10-12).
 fn tool_cmd(prog: &str, args: &[String]) -> ExitCode {
     // A path is the caller's: resolved from where `hrs` runs, not from
-    // `target/src/`, where the program will.
+    // `export/`, where the program will.
     let prog: String = if prog.contains('/') || prog.contains('\\') {
         std::fs::canonicalize(prog).map(|p| p.display().to_string()).unwrap_or_else(|_| prog.to_string())
     } else {
@@ -695,7 +824,7 @@ fn publish(_args: &[String]) -> ExitCode {
             eprintln!("hrs publish: {p}");
         }
     }
-    eprintln!("hrs publish: Harsh's registry is not open yet. To share as Harsh today, list the crate by path in Hrs.toml; to publish to crates.io: hrs export, then cargo build and cargo publish in target/export.");
+    eprintln!("hrs publish: Harsh's registry is not open yet. To share as Harsh today, list the crate by path in Hrs.toml; to publish the Rust to crates.io: hrs -c publish.");
     ExitCode::FAILURE
 }
 
@@ -729,23 +858,20 @@ fn new_project(args: &[String]) -> ExitCode {
         eprintln!("hrs: cannot create {}", root.display());
         return ExitCode::FAILURE;
     }
-    let target = if lib {
-        "[lib]\npath = \"target/src/lib.rs\"\n".to_string()
-    } else {
-        format!("[[bin]]\nname = \"{name}\"\npath = \"target/src/main.rs\"\n")
-    };
+    // No target paths (0.9.0): `export/`, where cargo runs, has `src/main.rs`
+    // or `src/lib.rs`, where cargo looks unasked.
     let _ = mk(
         root.join("Cargo.toml"),
         &format!(
             "[package]\nname = \"{name}\"\nversion = \"0.1.0\"\nedition = \"2021\"\n\n\
-             # Harsh sources are in src/**.hrs; `hrs build` generates this tree.\n\
-             {target}\n[dependencies]\n"
+             # Harsh sources are in src/**.hrs; `hrs build` writes the Rust project to export/.\n\
+             [dependencies]\n"
         ),
     );
     let _ = mk(root.join(driver::HRS_MANIFEST), NEW_HRS_TOML);
     if lib {
         let _ = mk(root.join("src/lib.hrs"), NEW_LIB_HRS);
-        let _ = mk(root.join(".gitignore"), "/target\n");
+        let _ = mk(root.join(".gitignore"), NEW_GITIGNORE);
         println!("created {} (a library)\n  cd {} && hrs test", root.display(), root.display());
         return ExitCode::SUCCESS;
     }
@@ -753,7 +879,7 @@ fn new_project(args: &[String]) -> ExitCode {
         root.join("src/main.hrs"),
         "fn main$:\n    println! \"Hello from Harsh\"\n",
     );
-    let _ = mk(root.join(".gitignore"), "/target\n");
+    let _ = mk(root.join(".gitignore"), NEW_GITIGNORE);
     println!("created {}\n  cd {} && hrs run", root.display(), root.display());
     ExitCode::SUCCESS
 }
@@ -765,6 +891,11 @@ fn new_project(args: &[String]) -> ExitCode {
 /// naming its source; `--check` writes nothing and fails if a `.rs` is not
 /// what its `.hrs` makes -- the drift check, for CI.
 fn single_file(args: &[String]) -> ExitCode {
+    // The language server's completion transpiles a project's file on the
+    // side, and asks for it as the project writes it: `hrs_std` folded in.
+    if std::env::var("HRS_FOLD_STD").map_or(false, |v| v == "1") {
+        driver::set_fold_std(true);
+    }
     let (mut inputs, mut output, mut map, mut check) = (Vec::new(), None, None, false);
     let mut i = 0;
     while i < args.len() {

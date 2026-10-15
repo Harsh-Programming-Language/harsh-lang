@@ -15,9 +15,9 @@ fn project(name: &str) -> PathBuf {
     let root = std::env::temp_dir().join(format!("harsh-lsp-{}-{}", name, std::process::id()));
     let _ = fs::remove_dir_all(&root);
     fs::create_dir_all(root.join("src")).unwrap();
-    fs::write(root.join("Cargo.toml"), "[package]\nname = \"lsp\"\nversion = \"0.1.0\"\nedition = \"2021\"\n\n[[bin]]\nname = \"lsp\"\npath = \"target/src/main.rs\"\n").unwrap();
+    fs::write(root.join("Cargo.toml"), "[package]\nname = \"lsp\"\nversion = \"0.1.0\"\nedition = \"2021\"\n\n[[bin]]\nname = \"lsp\"\npath = \"src/main.rs\"\n").unwrap();
     fs::write(root.join("src/main.hrs"), "fn helper x: i32 -> i32:\n    x + 1\n\nfn main$:\n    let y = helper 41\n    println! \"{y}\"\n").unwrap();
-    let out = Command::new(env!("CARGO_BIN_EXE_hrs")).args(["cargo", "metadata", "--no-deps", "--format-version", "1"]).current_dir(&root).output().unwrap();
+    let out = Command::new(env!("CARGO_BIN_EXE_hrs")).args(["-c", "metadata", "--no-deps", "--format-version", "1"]).current_dir(&root).output().unwrap();
     assert!(out.status.success(), "{}", String::from_utf8_lossy(&out.stderr));
     root
 }
@@ -27,8 +27,8 @@ fn project(name: &str) -> PathBuf {
 #[test]
 fn the_source_map_goes_both_ways() {
     let root = project("find");
-    let m = harsh_lang::remap::SourceMap::load(root.join("target/src/main.map.json").to_str().unwrap()).unwrap();
-    let rust = fs::read_to_string(root.join("target/src/main.rs")).unwrap();
+    let m = harsh_lang::remap::SourceMap::load(root.join(".hrs/maps/main.map.json").to_str().unwrap()).unwrap();
+    let rust = fs::read_to_string(root.join("export/src/main.rs")).unwrap();
     // `helper` at its call: Harsh 5:13, Rust `let y = helper(41);` 6:13.
     assert_eq!(m.find(5, 13), Some((6, 13)), "{rust}");
     assert_eq!(m.locate(6, 13), Some((5, 13)));
@@ -193,10 +193,10 @@ fn a_missing_rust_analyzer_is_said_once() {
 fn a_name_passed_to_a_macro_maps_to_its_rust() {
     let root = project("macro");
     fs::write(root.join("src/main.hrs"), "macro_rules~ apply\n    (($v:ident) $( ($x:expr) )*) => do:\n        $v $( $x )*\n\nfn adding (x:i32) (y:i32) -> i32 do:\n    x + y\n\nfn main$:\n    let x = apply~ adding (4) (5)\n    println! \"{x}\"\n").unwrap();
-    let out = Command::new(env!("CARGO_BIN_EXE_hrs")).args(["cargo", "metadata", "--no-deps", "--format-version", "1"]).current_dir(&root).output().unwrap();
+    let out = Command::new(env!("CARGO_BIN_EXE_hrs")).args(["-c", "metadata", "--no-deps", "--format-version", "1"]).current_dir(&root).output().unwrap();
     assert!(out.status.success(), "{}", String::from_utf8_lossy(&out.stderr));
-    let m = harsh_lang::remap::SourceMap::load(root.join("target/src/main.map.json").to_str().unwrap()).unwrap();
-    let rust = fs::read_to_string(root.join("target/src/main.rs")).unwrap();
+    let m = harsh_lang::remap::SourceMap::load(root.join(".hrs/maps/main.map.json").to_str().unwrap()).unwrap();
+    let rust = fs::read_to_string(root.join("export/src/main.rs")).unwrap();
     let (line, text) = rust.lines().enumerate().find(|(_, l)| l.contains("adding(4")).unwrap();
     let col = text.find("adding").unwrap() + 1;
     // `adding` at the call, Harsh 9:20.
@@ -219,7 +219,7 @@ fn completion_asks_at_the_text_being_typed() {
     let items = r["items"].as_array().unwrap_or_else(|| panic!("{r}"));
     let labels: Vec<&str> = items.iter().map(|i| i["label"].as_str().unwrap()).collect();
     // The fake answers with where it was asked: the marker in `y.hrsCompletionMark`.
-    let side = fs::read_to_string(root.join("target/src/.complete/cell.rs")).unwrap();
+    let side = fs::read_to_string(root.join(".hrs/complete/cell.rs")).unwrap();
     let (line, l) = side.lines().enumerate().find(|(_, l)| l.contains("y.hrsCompletionMark")).unwrap();
     let col = l.find("hrsCompletionMark").unwrap();
     assert!(labels.contains(&format!("at {line}:{col}").as_str()), "{labels:?}\n{side}");
@@ -247,3 +247,46 @@ fn the_log_records_what_was_asked_and_answered() {
     let _ = fs::remove_dir_all(&root);
 }
 
+
+/// A save transpiles the project again (`hrs -c metadata`, 0.9.0) and makes
+/// the saved text the good one: a line changed while typing is answered
+/// again once it is saved. (0.9.0's first build still ran the retired
+/// `hrs cargo` here, so every save counted as failed -- found by the
+/// developer book's 3rd edition.)
+#[test]
+fn a_save_makes_the_saved_text_the_good_one() {
+    let root = project("save");
+    let text = fs::read_to_string(root.join("src/main.hrs")).unwrap();
+    let mut c = Client::start(&fake_ra());
+    let uri = c.open(&root, &text);
+    let edited = text.replace("helper 41", "helper 40 + helper 1");
+    c.notify("textDocument/didChange", serde_json::json!({"textDocument": {"uri": uri, "version": 2}, "contentChanges": [{"text": edited}]}));
+    assert!(c.request("textDocument/hover", Client::at(&uri, 4, 12)).is_null());
+    fs::write(root.join("src/main.hrs"), &edited).unwrap();
+    c.notify("textDocument/didSave", serde_json::json!({"textDocument": {"uri": uri}}));
+    let h = c.request("textDocument/hover", Client::at(&uri, 4, 12));
+    assert!(!h.is_null(), "the saved line is answered");
+    // The save wrote the Rust again: what rust-analyzer is handed is new.
+    let rust = fs::read_to_string(root.join("export/src/main.rs")).unwrap();
+    assert!(rust.contains("helper(40) + helper(1)"), "{rust}");
+    c.stop();
+    let _ = fs::remove_dir_all(&root);
+}
+
+/// Completion transpiles the text on the side as the project's own files
+/// are: a project listing `hrs_std` gets `crate::hrs_std::…`, the module
+/// folded into its crate, not a crate it no longer depends on (0.9.0).
+#[test]
+fn completion_writes_hrs_std_as_the_project_does() {
+    let root = project("completestd");
+    fs::write(root.join("Hrs.toml"), "[dependencies]\nhrs_std = \"0.1\"\n").unwrap();
+    let text = "fn main$:\n    let v = v~ [1, 2]\n    let n = v <- \n";
+    fs::write(root.join("src/main.hrs"), text).unwrap();
+    let mut c = Client::start(&fake_ra());
+    let uri = c.open(&root, text);
+    let _ = c.request("textDocument/completion", Client::at(&uri, 2, 17));
+    let side = fs::read_to_string(root.join(".hrs/complete/cell.rs")).unwrap();
+    assert!(side.contains("crate::hrs_std::Vector") && !side.contains(" hrs_std::"), "{side}");
+    c.stop();
+    let _ = fs::remove_dir_all(&root);
+}

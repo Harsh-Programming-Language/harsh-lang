@@ -4,23 +4,21 @@
 
 //! The build driver.
 //!
-//! Layout: Harsh sources live in `src/**.hrs`; generated Rust and its source
-//! maps go to `target/src/`, and `Cargo.toml` points its targets at that tree:
+//! Layout (0.9.0, the user's design of 2026-10-14): Harsh sources live in
+//! `src/**.hrs`, and `export/` beside them is the whole Rust project they
+//! make -- `export/Cargo.toml`, written from the project's `Cargo.toml` and
+//! `Hrs.toml`; `export/src/**.rs`, the transpilation; the project's other
+//! files (`assets/`, `Dioxus.toml`, `.gitignore`, …) mirrored in; and
+//! `export/target/`, cargo's. The project's root has no `target/`. `export/`
+//! holds Rust only: `hrs`'s own working files -- the source maps, the stamp,
+//! the proc-macro runner and the distribution it builds with -- live in
+//! `.hrs/` at the project's root, as git's do in `.git/` (the user,
+//! 2026-10-14).
 //!
-//! ```toml
-//! [[bin]]
-//! name = "myapp"
-//! path = "target/src/main.rs"
-//! ```
-//!
-//! Nothing extra to gitignore, since Cargo already ignores `/target`. A
-//! project without an `Hrs.toml` keeps one manifest, its dependencies
-//! untouched: plain `cargo build` works once the tree has been transpiled.
-//! With an `Hrs.toml` (0.3.0), `hrs build` is two passes: pass 1 transpiles
-//! the project and its Harsh crates and writes a generated manifest,
-//! `target/src/Cargo.toml` -- the user's `Cargo.toml` plus the Harsh
-//! dependencies (`Project::prepare`); pass 2 is Cargo on that manifest.
-//! `hrs build` runs both and remaps the diagnostics.
+//! `hrs build` is two passes: pass 1 transpiles the project and its Harsh
+//! crates and writes `export/` (`Project::prepare`); pass 2 is Cargo, run in
+//! `export/`, its diagnostics remapped onto the Harsh. `export/` is also
+//! what crates.io receives: `hrs -c publish` is `cargo publish` there.
 
 use std::collections::BTreeMap;
 use std::fs;
@@ -32,18 +30,18 @@ use std::process::Command;
 use std::process::Stdio;
 use std::time::SystemTime;
 
-pub const GEN_DIR: &str = "target/src";
+/// The generated Rust project (0.9.0; `target/src/` before).
+pub const EXPORT_DIR: &str = "export";
+/// Where the transpiled files go, mirroring `src/`.
+pub const GEN_DIR: &str = "export/src";
+/// `hrs`'s own working files: source maps, the stamp, the proc-macro
+/// runner, the distribution it builds with -- Harsh's, not the Rust's, so
+/// outside `export/` (the user, 2026-10-14).
+pub const WORK_DIR: &str = ".hrs";
 pub const SRC_DIR: &str = "src";
 
 pub struct Project {
     pub root: PathBuf,
-}
-
-/// What `Project::export` wrote.
-pub struct Export {
-    pub files: Vec<PathBuf>,
-    /// Whether `cargo fmt` ran successfully over the exported tree.
-    pub formatted: bool,
 }
 
 #[derive(Debug)]
@@ -72,41 +70,90 @@ impl Project {
         }
     }
 
-    /// Refuse to build unless `Cargo.toml` points a target at the generated
-    /// tree. Without that, cargo auto-discovers `src/main.rs` and quietly builds
-    /// the wrong program -- a success that runs something else is worse than
-    /// an error.
+    /// Refuse a manifest an older `hrs` laid out: its targets under
+    /// `target/hrs/` (before 0.7.0) or `target/src/` (before 0.9.0), where
+    /// nothing is generated any more -- `hrs migrate` updates it. And a Harsh
+    /// crate named in `Cargo.toml` (it belongs in `Hrs.toml`, 0.3.0).
     pub fn check_manifest(&self) -> Result<(), String> {
         let path = self.root.join("Cargo.toml");
         let text = fs::read_to_string(&path).map_err(|e| format!("{}: {}", path.display(), e))?;
-        if text.contains("target/hrs/") {
-            return Err(format!(
-                "{}: points at `target/hrs/`, which is `target/src/` since 0.7.0 -- run `hrs migrate` once to update it",
-                path.display()
-            ));
-        }
-        if text.contains(GEN_DIR) {
-            #[cfg(feature = "remap")]
-            {
-                let found = harsh_crates_in_cargo(&text);
-                if !found.is_empty() {
-                    return Err(format!(
-                        "{}: {} is Harsh's, and since 0.3.0 belongs in Hrs.toml beside it -- run `hrs migrate` to move it",
-                        path.display(),
-                        found.iter().map(|n| format!("`{n}`")).collect::<Vec<_>>().join(", ")
-                    ));
-                }
+        for (old, until) in [("target/hrs/", "0.7.0"), ("target/src/", "0.9.0")] {
+            if text.lines().any(|l| !l.trim_start().starts_with('#') && l.contains(old)) {
+                return Err(format!(
+                    "{}: points at `{old}`, where `hrs` generated the Rust before {until}; it is `{GEN_DIR}/` now -- run `hrs migrate` once to update the project",
+                    path.display()
+                ));
             }
-            return Ok(());
         }
-        Err(format!(
-            "{} has no target under {}/; cargo would build src/main.rs instead.\n\
-             Add one, or run `hrs new` for a project laid out for Harsh:\n\n\
-             [[bin]]\nname = \"<name>\"\npath = \"{}/main.rs\"",
-            path.display(),
-            GEN_DIR,
-            GEN_DIR
-        ))
+        #[cfg(feature = "remap")]
+        {
+            let found = harsh_crates_in_cargo(&text);
+            if !found.is_empty() {
+                return Err(format!(
+                    "{}: {} is Harsh's, and since 0.3.0 belongs in Hrs.toml beside it -- run `hrs migrate` to move it",
+                    path.display(),
+                    found.iter().map(|n| format!("`{n}`")).collect::<Vec<_>>().join(", ")
+                ));
+            }
+        }
+        Ok(())
+    }
+
+    /// The workspace this project is a member of -- or whose root it is,
+    /// with a `[package]` of its own -- if any.
+    pub fn workspace(&self) -> Option<PathBuf> {
+        workspace_of(&self.root)
+    }
+
+    /// Where this project stands in its workspace: `crates/util`; empty at
+    /// the root, or outside a workspace.
+    fn in_workspace(&self) -> Option<(PathBuf, PathBuf)> {
+        let w = self.workspace()?;
+        let rel = self.root.strip_prefix(&w).map(Path::to_path_buf).unwrap_or_default();
+        Some((w, rel))
+    }
+
+    /// The Rust project's folder: `export/`, or in a workspace (0.9.0,
+    /// the user's option A, 2026-10-14) the member's place in the
+    /// workspace root's `export/` -- `<root>/export/crates/util/`.
+    pub fn export_dir(&self) -> PathBuf {
+        match self.in_workspace() {
+            Some((w, rel)) => w.join(EXPORT_DIR).join(rel),
+            None => self.root.join(EXPORT_DIR),
+        }
+    }
+
+    /// Where the transpiled files go: `src/` in the Rust project.
+    pub fn gen_dir(&self) -> PathBuf {
+        self.export_dir().join(SRC_DIR)
+    }
+
+    /// `hrs`'s own working files: `.hrs/`, or a member's under its
+    /// workspace root's, `.hrs/members/crates/util/`.
+    pub fn work_dir(&self) -> PathBuf {
+        match self.in_workspace() {
+            Some((w, rel)) if !rel.as_os_str().is_empty() => w.join(WORK_DIR).join("members").join(rel),
+            _ => self.root.join(WORK_DIR),
+        }
+    }
+
+    /// The folder cargo works from, holding `Cargo.lock` and `target/`:
+    /// the `export/` of the workspace, or of the project.
+    pub fn cargo_root(&self) -> PathBuf {
+        self.lock_root().join(EXPORT_DIR)
+    }
+
+    /// The folder whose `Cargo.lock` is the user's: the workspace root, or
+    /// the project's.
+    pub fn lock_root(&self) -> PathBuf {
+        self.workspace().unwrap_or_else(|| self.root.clone())
+    }
+
+    /// The source map of a generated file, `export/src/a/b.rs` ->
+    /// `.hrs/maps/a/b.map.json`; `None` for a file outside `export/src/`.
+    pub fn map_of(&self, rust: &Path) -> Option<PathBuf> {
+        let rel = rust.strip_prefix(self.gen_dir()).ok()?;
+        Some(self.work_dir().join("maps").join(rel.with_extension("map.json")))
     }
 
     pub fn units(&self) -> Result<Vec<Unit>, String> {
@@ -115,7 +162,7 @@ impl Project {
             return Err(format!("{} does not exist", src.display()));
         }
         let mut out = Vec::new();
-        collect(&src, &src, &self.root.join(GEN_DIR), &mut out)?;
+        collect(&src, &src, &self.gen_dir(), &self.work_dir().join("maps"), &mut out)?;
         out.sort_by(|a, b| a.source.cmp(&b.source));
         Ok(out)
     }
@@ -183,8 +230,17 @@ impl Project {
         if old_gen.is_dir() {
             let _ = fs::remove_dir_all(&old_gen);
         }
-        let stamp_path = self.root.join(GEN_DIR).join(".hrs-stamp");
-        let stamp = hrs_stamp();
+        // So was `target/src/`, from 0.7.0 to 0.8.5 (its stamp says so).
+        let old_src = self.root.join("target").join("src");
+        if old_src.join(".hrs-stamp").is_file() {
+            let _ = fs::remove_dir_all(&old_src);
+        }
+        let stamp_path = self.work_dir().join("stamp");
+        // Whether `hrs_std` is folded into the crate is part of what the Rust
+        // is: a project that starts or stops listing it is transpiled afresh.
+        let fold = lists_hrs_std(&self.root);
+        set_fold_std(fold);
+        let stamp = format!("{}{}", hrs_stamp(), if fold { " fold" } else { "" });
         let new_hrs = fs::read_to_string(&stamp_path).ok().as_deref() != Some(stamp.as_str());
         // A `use` naming a Harsh macro crate -- a re-export,
         // `pub use hello_macro_derive.HelloMacro` -- has no Rust meaning: it
@@ -200,14 +256,14 @@ impl Project {
             // reflow split this closure's call across lines in a form the
             // transpiler refuses -- found by the self-host, 2026-09-24.)
             let older_than_runner = runner_time.map_or(false, |t| older_than(&u.rust, t));
-            if !force && !older_than_runner && !new_hrs && !is_stale(&u.source, &u.rust) {
+            if !force && !older_than_runner && !new_hrs && !is_stale(&u.source, &u.rust) && u.map.is_file() {
                 continue;
             }
             let rust = transpile_one_procs(&src, &u.source, &u.rust, &u.map, &arities, procs)?;
             rebuilt.push(rust);
         }
         if new_hrs {
-            let _ = fs::create_dir_all(self.root.join(GEN_DIR));
+            let _ = fs::create_dir_all(self.work_dir());
             let _ = fs::write(&stamp_path, &stamp);
         }
         Ok((rebuilt, maps))
@@ -287,8 +343,9 @@ impl Project {
             if seen.contains(&canon) {
                 continue;
             }
-            seen.push(canon);
-            let dep = Project { root };
+            seen.push(canon.clone());
+            // By its own name, not through this one's: `../crates/util`.
+            let dep = Project { root: canon };
             // Harsh when it has `.hrs` sources; a Rust crate is cargo's.
             if dep.units().map_or(true, |u| u.is_empty()) {
                 continue;
@@ -344,7 +401,7 @@ impl Project {
 
     /// Build the runner of the proc macros this project uses, if it uses
     /// any: each listed crate transpiled, the runner's sources written under
-    /// `target/src/proc-macros/` when they change, and cargo run over it --
+    /// `.hrs/proc-macros/` when they change, and cargo run over it --
     /// cargo's own freshness check is the cache (decision P4).
     pub fn proc_runner(&self) -> Result<Option<crate::procmac::Runner>, String> {
         let meta = self.meta()?;
@@ -393,12 +450,18 @@ impl Project {
             if runtime.is_none() {
                 runtime = crate::procmac::runtime_dependency(&text, &root);
             }
+            // The runner builds the crate's Rust: its `export/`.
+            #[cfg(feature = "remap")]
+            let root = {
+                dep.prepare(&mut Vec::new())?;
+                dep.export_dir()
+            };
             crates.push(crate::procmac::MacroCrate { lib: package.replace('-', "_"), package, root, macros });
         }
         let runtime = runtime.ok_or_else(|| {
             "a Harsh proc-macro crate depends on `hrs_proc_macro`; none of the listed crates does".to_string()
         })?;
-        let dir = self.root.join(GEN_DIR).join("proc-macros");
+        let dir = self.work_dir().join("proc-macros");
         fs::create_dir_all(&dir).map_err(|e| format!("{}: {}", dir.display(), e))?;
         let (manifest, main) = crate::procmac::runner_sources(&crates, &runtime);
         for (name, text) in [("Cargo.toml", &manifest), ("main.rs", &main)] {
@@ -435,303 +498,95 @@ impl Project {
         Ok(Some(crate::procmac::Runner { bin, macros }))
     }
 
-    /// Write the project as a plain Rust crate under `dir`: `Cargo.toml` with
-    /// its targets pointed at `src/`, every `.hrs` transpiled to `src/**.rs`,
-    /// no source maps, and `cargo fmt` run over the result when rustfmt is
-    /// installed. This is the hand-off artifact -- what a Rust reader, a
-    /// reviewer, or a crates.io upload sees. `target/src/` is not for
-    /// reading: it keeps the source layout so diagnostics map back, and
-    /// formatting it would break that map.
-    pub fn export(&self, dir: &Path) -> Result<Export, String> {
-        self.check_manifest()?;
-        // `export` is pure Rust, for reading what the Harsh becomes (the
-        // user, 2026-09-25; `docs/dev/PACKAGING.md`): a Harsh macro crate has
-        // no Rust meaning, and is refused.
-        if self.meta()?.proc_macro {
-            return Err(format!(
-                "{}: a Harsh macro crate is not exported: its macros exist only in Harsh, expanded where they are called, and have no Rust meaning",
-                self.root.join("Cargo.toml").display()
-            ));
+    /// Pass 1's second half (0.9.0, the user's design of 2026-10-14):
+    /// write `export/` as the whole Rust project -- its `Cargo.toml`, from
+    /// the project's `Cargo.toml` and `Hrs.toml`; `hrs_std` folded into
+    /// `export/src/hrs_std/` when the code uses it; the project's other files
+    /// mirrored in; the lockfile copied in. Each Harsh crate `Hrs.toml`
+    /// names by path is transpiled and prepared first, and named in
+    /// `export/Cargo.toml` by its own `export/` and its version. The path of
+    /// `export/Cargo.toml`.
+    ///
+    /// In a workspace, the whole workspace is prepared: cargo, run in any
+    /// member, reads every member's manifest.
+    #[cfg(feature = "remap")]
+    pub fn prepare(&self, seen: &mut Vec<PathBuf>) -> Result<PathBuf, String> {
+        if let Some(w) = self.workspace() {
+            prepare_workspace(&w, seen)?;
+            return Ok(self.export_dir().join("Cargo.toml"));
         }
-        let units = self.units()?;
-        let runner = self.proc_runner()?;
-        let procs: &dyn crate::mac::ProcMacros = match &runner {
-            Some(r) => r,
-            None => &crate::mac::NoProcMacros,
-        };
-        crate::juxt::reset_constructors();
-        let mut arities = std::collections::HashMap::new();
-        let mut sources = Vec::new();
-        for u in &units {
-            let src = fs::read_to_string(&u.source)
-                .map_err(|e| format!("{}: {}", u.source.display(), e))?;
-            if let Ok(toks) = crate::lex::lex(&src) {
-                arities.extend(crate::juxt::collect_arities(&toks));
-            }
-            sources.push(src);
-        }
-        let src_root = self.root.join(SRC_DIR);
-        let out_src = dir.join(SRC_DIR);
-        fs::create_dir_all(&out_src).map_err(|e| format!("{}: {}", out_src.display(), e))?;
-        let mut files = Vec::new();
-        for (u, src) in units.iter().zip(sources) {
-            let rel = u.source.strip_prefix(&src_root).unwrap_or(&u.source);
-            let rust = out_src.join(rel.with_extension("rs"));
-            // An expansion that produced a brace body is read again as source
-            // (`reread_expansion`), before anything else.
-            let src: String = {
-                let (w1, z) = crate::rawzone::prepare(&src);
-                let (w, d) = crate::dslzone::prepare(&w1);
-                let (w, r) = proc_marks(&w, &u.source, &src)?;
-                let t = crate::procmac::lex(&w, &r).map_err(|e| render_error(&u.source, &src, e.span, &e.msg))?;
-                let (t, _) = expand_harsh_macros(t, &u.source, &src, procs)?;
-                reread_expansion(&t, &src, &w1, &z, &d).unwrap_or_else(|| src.to_string())
-            };
-            let (work1, zs) = crate::rawzone::prepare(&src);
-            let (work, dz) = crate::dslzone::prepare(&work1);
-            let (work, regs) = proc_marks(&work, &u.source, &src)?;
-            let toks = crate::procmac::lex(&work, &regs)
-                .map_err(|e| render_error(&u.source, &src, e.span, &e.msg))?;
-            let (toks, expansions) = expand_harsh_macros(toks, &u.source, &src, procs)?;
-            let tree = crate::layout::build_with(toks, &arities)
-                .map_err(|e| render_error(&u.source, &src, crate::mac::at_call(e.span, &expansions), &e.msg))?;
-            crate::layout::check_top_level(&tree)
-                .map_err(|e| render_error(&u.source, &src, crate::mac::at_call(e.span, &expansions), &e.msg))?;
-            // What a derive removed is not copied back through a gap.
-            let emitted = crate::mac::erase(&work, &expansions);
-            let mut em = crate::emit::Emitter::new(&emitted);
-            em.program(&tree);
-            // The exported crate is built by cargo alone, doc tests included,
-            // so its doc examples are translated here as well.
-            crate::docex::to_rust_in(&mut em.out, &mut em.map, &work)
-                .map_err(|(span, msg)| render_error(&u.source, &src, span, &msg))?;
-            crate::dslzone::restore(&mut em.out, &work1, &dz, &hole, &mut em.map)
-                .map_err(|m| format!("{}: {m}", u.source.display()))?;
-            crate::rawzone::restore_with_map(&mut em.out, &src, &zs, &mut em.map);
-            if let Some(d) = rust.parent() {
-                fs::create_dir_all(d).map_err(|e| e.to_string())?;
-            }
-            fs::write(&rust, &em.out).map_err(|e| format!("{}: {}", rust.display(), e))?;
-            files.push(rust);
-        }
-        // `hrs_std` is a Harsh crate, and the export carries none (the user,
-        // 2026-09-25; `PACKAGING.md` section 4): when the code uses it, its
-        // sources become the crate's own module, `matrix`, and its Rust
-        // dependencies replace it in the manifest. Module-level for now --
-        // the whole of `hrs_std` when any of it is used; item-level shaking
-        // is the next step.
-        // (A named function and `cfg!`, not a nested closure under an
-        // attributed `let`: the converter misread that -- the self-host,
-        // 2026-09-25.)
-        let uses_std = cfg!(feature = "remap") && exports_name_hrs_std(&files);
-        #[cfg(feature = "remap")]
-        if uses_std {
-            for f in &files {
-                let t = fs::read_to_string(f).map_err(|e| e.to_string())?;
-                fs::write(f, vendor_paths(&t, "hrs_std::", "matrix")).map_err(|e| e.to_string())?;
-            }
-            let module = out_src.join("matrix");
-            fs::create_dir_all(&module).map_err(|e| e.to_string())?;
-            let mut vendored: Vec<(String, String)> = Vec::new();
-            for (path, text) in crate::dist::FILES {
-                let Some(name) = path.strip_prefix("hrs_std/src/") else { continue };
-                let target = if name == "lib.rs" { module.join("mod.rs") } else { module.join(name) };
-                // Its `//!` notes describe Harsh's own workings; the export is
-                // plain Rust, and carries the code only.
-                let text: String = text
-                    .split_inclusive('\n')
-                    .filter(|l| {
-                        let t = l.trim_start();
-                        !(t.starts_with("//!") || (t.starts_with("//") && speaks_of_harsh(t)))
-                    })
-                    .collect();
-                let text = strip_test_modules(&vendor_paths(&text, "crate::", "matrix"));
-                vendored.push((target.display().to_string(), text));
-            }
-            // Item level: only what the exported code reaches, closed over
-            // what each kept item uses (`shake`). The roots are every name the
-            // exported code writes -- generous on purpose.
-            let mut roots = std::collections::HashSet::new();
-            for f in &files {
-                if let Ok(t) = fs::read_to_string(f) {
-                    if let Ok(toks) = crate::lex::lex_rust(&t) {
-                        roots.extend(toks.into_iter().filter(|x| x.kind == crate::lex::Tk::Ident).map(|x| x.text));
-                    }
-                }
-            }
-            for (target, text) in crate::shake::shake(&vendored, &roots) {
-                fs::write(&target, text).map_err(|e| format!("{target}: {e}"))?;
-            }
-            for root in ["main.rs", "lib.rs"] {
-                let f = out_src.join(root);
-                if let Ok(t) = fs::read_to_string(&f) {
-                    let decl = "/// Matrices, vectors and element-wise operations.\n#[allow(dead_code, unused_imports, unused_macros)]\nmod matrix;\n\n";
-                    fs::write(&f, format!("{decl}{t}")).map_err(|e| e.to_string())?;
-                }
-            }
-        }
-        // The manifest: the same file with its targets under `src/`, which
-        // is also where cargo would find them unaided.
-        let manifest = self.root.join("Cargo.toml");
-        let text = fs::read_to_string(&manifest).map_err(|e| format!("{}: {}", manifest.display(), e))?;
-        let text = text.replace(&format!("{}/", GEN_DIR), &format!("{}/", SRC_DIR));
-        // No Harsh table in pure Rust: `[package.metadata.harsh]` stays in
-        // the Harsh project.
-        let text = without_harsh_table(&text);
-        // No `hrs_std`: its own dependencies instead, when the code used it.
-        let text = {
-            // Nor a manifest comment about the Harsh sources, which the export
-            // does not have.
-            #[cfg_attr(not(feature = "remap"), allow(unused_mut))]
-            let mut lines: Vec<String> = text
-                .lines()
-                .filter(|l| {
-                    let t = l.trim_start();
-                    !t.starts_with("hrs_std") && !(t.starts_with('#') && !t.starts_with("#[") && speaks_of_harsh(t))
-                })
-                .map(String::from)
-                .collect();
-            #[cfg(feature = "remap")]
-            if uses_std {
-                let std_manifest = crate::dist::FILES.iter().find(|(p, _)| *p == "hrs_std/Cargo.toml").map(|(_, t)| *t).unwrap_or("");
-                let deps: Vec<&str> = std_manifest
-                    .lines()
-                    .skip_while(|l| l.trim() != "[dependencies]")
-                    .skip(1)
-                    .take_while(|l| !l.trim_start().starts_with('['))
-                    .filter(|l| !l.trim().is_empty())
-                    .collect();
-                match lines.iter().position(|l| l.trim() == "[dependencies]") {
-                    Some(i) => {
-                        for (k, d) in deps.iter().enumerate() {
-                            lines.insert(i + 1 + k, d.to_string());
-                        }
-                    }
-                    None => {
-                        lines.push(String::new());
-                        lines.push("[dependencies]".into());
-                        lines.extend(deps.iter().map(|d| d.to_string()));
-                    }
-                }
-            }
-            lines.join("\n") + "\n"
-        };
-        fs::write(dir.join("Cargo.toml"), text).map_err(|e| e.to_string())?;
-        for extra in ["Cargo.lock", "README.md", "LICENSE"] {
-            // A lock naming `hrs_std`, which the export no longer has, is
-            // left for cargo to write afresh.
-            if extra == "Cargo.lock" && uses_std {
-                continue;
-            }
-            let from = self.root.join(extra);
-            if from.is_file() {
-                let _ = fs::copy(&from, dir.join(extra));
-            }
-        }
-        let formatted = Command::new("cargo")
-            .arg("fmt")
-            .arg("--manifest-path")
-            .arg(dir.join("Cargo.toml"))
-            .status()
-            .map(|s| s.success())
-            .unwrap_or(false);
-        // The Harsh crates this one uses (Hrs.toml), each exported beside it
-        // -- `target/export-mylib` -- and named with a path and a version, as
-        // Cargo's own workspaces are published: the path while building, the
-        // version on crates.io, once that crate is published first.
-        #[cfg(feature = "remap")]
-        {
-            let mut files = files;
-            if let Some(m) = read_hrs_manifest(&self.root)? {
-                let mut lines = Vec::new();
-                for (name, value) in &m.deps {
-                    if DISTRIBUTION.contains(&name.as_str()) {
-                        continue;
-                    }
-                    let Some(i) = value.find("path = \"") else { continue };
-                    let at = i + 8;
-                    let Some(len) = value[at..].find('"') else { continue };
-                    let dep_root = self.root.join(&value[at..at + len]);
-                    let dep = Project { root: dep_root.canonicalize().unwrap_or(dep_root) };
-                    let base = dir.file_name().map(|f| f.to_string_lossy().to_string()).unwrap_or_else(|| "export".into());
-                    let dep_dir = dir.with_file_name(format!("{base}-{name}"));
-                    let e = dep.export(&dep_dir)?;
-                    files.extend(e.files);
-                    let version = fs::read_to_string(dep.root.join("Cargo.toml"))
-                        .ok()
-                        .and_then(|t| t.lines().find_map(|l| l.trim().strip_prefix("version = \"").map(|v| v.trim_end_matches('"').to_string())))
-                        .unwrap_or_else(|| "0.1.0".into());
-                    lines.push(format!("{name} = {{ path = \"../{base}-{name}\", version = \"{version}\" }}"));
-                }
-                if !lines.is_empty() {
-                    let manifest = dir.join("Cargo.toml");
-                    let text = fs::read_to_string(&manifest).map_err(|e| format!("{}: {e}", manifest.display()))?;
-                    let text = if text.contains("[dependencies]") {
-                        text.replacen("[dependencies]", &format!("[dependencies]\n{}", lines.join("\n")), 1)
-                    } else {
-                        format!("{}\n\n[dependencies]\n{}\n", text.trim_end(), lines.join("\n"))
-                    };
-                    fs::write(&manifest, text).map_err(|e| format!("{}: {e}", manifest.display()))?;
-                }
-            }
-            return Ok(Export { files, formatted });
-        }
-        #[cfg(not(feature = "remap"))]
-        Ok(Export { files, formatted })
+        self.prepare_own(seen)
     }
 
-    /// Before Cargo, the Harsh level (the user's design, 2026-10-03): with
-    /// an `Hrs.toml`, each Harsh crate it names by path is transpiled and
-    /// prepared in turn (its own Harsh crates first), and the generated
-    /// `target/src/Cargo.toml` -- the user's `Cargo.toml` plus the Harsh
-    /// dependencies -- is written. Its path, for `--manifest-path`; `None`
-    /// for a project without `Hrs.toml`, built from its `Cargo.toml` as ever.
+    /// `prepare` for this project alone.
     #[cfg(feature = "remap")]
-    pub fn prepare(&self, seen: &mut Vec<PathBuf>) -> Result<Option<PathBuf>, String> {
-        let Some(m) = read_hrs_manifest(&self.root)? else { return Ok(None) };
-        let mut cargo_text = fs::read_to_string(&m.cargo).map_err(|e| format!("{}: {}", m.cargo.display(), e))?;
-        let cargo_dir = m.cargo.parent().unwrap_or(&self.root).to_path_buf();
-        // Cargo finds a `build.rs` beside its manifest unasked; the generated
-        // manifest is elsewhere, so it is named.
-        let script = cargo_dir.join("build.rs");
-        if script.is_file() && !cargo_text.lines().any(|l| l.trim_start().starts_with("build =")) {
-            cargo_text = cargo_text.replacen("[package]", &format!("[package]\nbuild = \"{}\"", manifest_path_str(&script)), 1);
-        }
+    fn prepare_own(&self, seen: &mut Vec<PathBuf>) -> Result<PathBuf, String> {
+        let export = self.export_dir();
+        let ws = self.workspace();
+        // A path inside the workspace is that place in its `export/`: a
+        // member transpiled there, or the rest mirrored.
+        let in_ws_export = |dir: &Path| -> Option<PathBuf> {
+            let w = ws.as_ref()?;
+            let (cw, cd) = (w.canonicalize().ok()?, dir.canonicalize().ok()?);
+            cd.strip_prefix(&cw).ok().map(|rel| w.join(EXPORT_DIR).join(rel))
+        };
+        // The Cargo.toml `Hrs.toml` names (`[package] cargo`), else the one
+        // beside it; its relative paths are read from its own folder.
+        let hrs_manifest = read_hrs_manifest(&self.root)?;
+        let manifest_path = hrs_manifest.as_ref().map_or_else(|| self.root.join("Cargo.toml"), |m| m.cargo.clone());
+        let cargo_dir = manifest_path.parent().unwrap_or(&self.root).to_path_buf();
+        let cargo_text = fs::read_to_string(&manifest_path).map_err(|e| format!("{}: {}", manifest_path.display(), e))?;
         let mut extra = Vec::new();
-        for (name, value) in &m.deps {
-            let mut value = value.clone();
-            if let Some(i) = value.find("path = \"") {
-                let at = i + 8;
-                let Some(len) = value[at..].find('"') else {
-                    return Err(format!("{}: `{name}`: an unclosed path", HRS_MANIFEST));
-                };
-                let rel = value[at..at + len].to_string();
-                // Harsh's own crates -- `hrs_std` from a checkout -- are
-                // Rust: passed through, the path made absolute.
-                if DISTRIBUTION.contains(&name.as_str()) {
-                    value.replace_range(at..at + len, &manifest_path_str(&self.root.join(&rel)));
-                    extra.push(format!("{name} = {value}"));
+        if let Some(m) = hrs_manifest {
+            for (name, value) in &m.deps {
+                // `hrs_std` is folded into the crate below; it is no
+                // dependency of the Rust.
+                if name == "hrs_std" {
                     continue;
                 }
-                let dir = self.root.join(&rel);
-                let dir = dir
-                    .canonicalize()
-                    .map_err(|e| format!("{}: the Harsh crate `{name}` at {}: {e}", HRS_MANIFEST, dir.display()))?;
-                let has_own = dir.join(HRS_MANIFEST).is_file();
-                if !seen.contains(&dir) {
-                    seen.push(dir.clone());
+                let mut value = value.clone();
+                if let Some(i) = value.find("path = \"") {
+                    let at = i + 8;
+                    let Some(len) = value[at..].find('"') else {
+                        return Err(format!("{}: `{name}`: an unclosed path", HRS_MANIFEST));
+                    };
+                    let rel = value[at..at + len].to_string();
+                    // Harsh's own Rust crates -- `hrs_proc_macro` from a
+                    // checkout -- passed through, the path made absolute.
+                    if DISTRIBUTION.contains(&name.as_str()) {
+                        value.replace_range(at..at + len, &manifest_path_str(&self.root.join(&rel)));
+                        extra.push(format!("{name} = {value}"));
+                        continue;
+                    }
+                    let dir = self.root.join(&rel);
+                    let dir = dir
+                        .canonicalize()
+                        .map_err(|e| format!("{}: the Harsh crate `{name}` at {}: {e}", HRS_MANIFEST, dir.display()))?;
                     let dep = Project { root: dir.clone() };
-                    dep.transpile(false)?;
-                    dep.prepare(seen)?;
+                    if !seen.contains(&dir) {
+                        seen.push(dir.clone());
+                        dep.transpile(false)?;
+                        dep.prepare(seen)?;
+                    }
+                    // Named by its own `export/`, with its version: the path
+                    // while building, the version once it is on crates.io
+                    // (as cargo's own workspaces are published).
+                    // In the workspace, the path as written finds it there.
+                    if in_ws_export(&dir).is_none() {
+                        value.replace_range(at..at + len, &manifest_path_str(&dep.export_dir()));
+                    }
+                    if !value.contains("version") {
+                        if let Some(v) = dep.manifest_text().ok().as_deref().and_then(package_version) {
+                            value = value.replacen('{', &format!("{{ version = \"{v}\","), 1);
+                        }
+                    }
                 }
-                // A Harsh crate with its own Hrs.toml is built from its
-                // generated manifest; one without, from its own Cargo.toml.
-                let at_dir = if has_own { dir.join(GEN_DIR) } else { dir.clone() };
-                value.replace_range(at..at + len, &manifest_path_str(&at_dir));
+                extra.push(format!("{name} = {value}"));
             }
-            extra.push(format!("{name} = {value}"));
         }
-        let cargo_text = resolve_workspace(&cargo_text, &cargo_dir);
+        // Outside a workspace `export/Cargo.toml` is its own, so inherited
+        // fields are written out; in one, cargo reads the workspace's.
+        let cargo_text = if ws.is_some() { cargo_text } else { resolve_workspace(&cargo_text, &cargo_dir) };
         // A Harsh crate belongs in Hrs.toml only (0.3.0): named in Cargo.toml
         // too, it would be a duplicate key in the generated manifest. Said
         // plainly, rather than merged (ShopBill's S3, 2026-10-06).
@@ -742,42 +597,158 @@ impl Project {
                 return Err(format!("`{name}` is in both Cargo.toml and {HRS_MANIFEST}: a Harsh crate belongs in {HRS_MANIFEST} only -- remove it from Cargo.toml"));
             }
         }
-        let text = generated_manifest(&cargo_text, &cargo_dir, &extra);
-        let gen = self.root.join(GEN_DIR).join("Cargo.toml");
-        fs::create_dir_all(gen.parent().unwrap()).map_err(|e| format!("{}: {e}", gen.display()))?;
+        // `hrs_std`, folded: the items the code reaches, as the crate's own
+        // module, and its Rust dependencies in the manifest.
+        // A project that stopped listing it keeps no copy behind.
+        let folded = if lists_hrs_std(&self.root) {
+            self.fold_hrs_std()?
+        } else {
+            // (Unless `src/hrs_std/` is the project's own module.)
+            if !self.root.join(SRC_DIR).join("hrs_std").exists() {
+                let _ = fs::remove_dir_all(self.gen_dir().join("hrs_std"));
+            }
+            false
+        };
+        if folded {
+            extra.extend(hrs_std_dependencies());
+        }
+        // Plain Rust: no Harsh table, nor a comment about the Harsh sources,
+        // which `export/` does not have.
+        let plain: String = without_harsh_table(&cargo_text)
+            .lines()
+            .filter(|l| {
+                let t = l.trim_start();
+                !(t.starts_with('#') && !t.starts_with("#[") && speaks_of_harsh(t))
+            })
+            .map(|l| format!("{l}\n"))
+            .collect();
+        let mirror_root = ws.clone().unwrap_or_else(|| self.root.clone());
+        // A Cargo.toml path dependency on a Harsh project -- a library beside
+        // it with `.hrs` sources -- is that project's `export/`.
+        let text = generated_manifest(&plain, &cargo_dir, &extra, ws.is_none(), &mirror_root, &mut |dir: &Path| {
+            // In the workspace: mirrored or transpiled at the same place.
+            if in_ws_export(dir).is_some() {
+                return None;
+            }
+            let dep = Project { root: dir.to_path_buf() };
+            if dep.units().map_or(true, |u| u.is_empty()) {
+                return None;
+            }
+            let canon = dir.canonicalize().unwrap_or(dir.to_path_buf());
+            if !seen.contains(&canon) {
+                seen.push(canon);
+                let _ = dep.prepare(seen);
+            }
+            Some(dep.export_dir())
+        })?;
+        let gen = export.join("Cargo.toml");
+        fs::create_dir_all(&export).map_err(|e| format!("{}: {e}", export.display()))?;
         if fs::read_to_string(&gen).ok().as_deref() != Some(text.as_str()) {
             fs::write(&gen, &text).map_err(|e| format!("{}: {e}", gen.display()))?;
         }
-        link_project_dirs(&self.root, gen.parent().unwrap());
-        // The lockfile stays the project's: copied in here, back after Cargo.
-        let lock = cargo_dir.join("Cargo.lock");
-        if lock.is_file() {
-            let _ = fs::copy(&lock, gen.with_file_name("Cargo.lock"));
+        let skip = ws.as_deref().map(harsh_members).unwrap_or_default();
+        link_project_dirs(&self.root, &export, &skip);
+        mirror_src_extras(&self.root.join(SRC_DIR), &self.gen_dir());
+        if ws.is_none() {
+            export_extras(&self.root);
         }
-        Ok(Some(gen))
+        Ok(gen)
     }
 
-    /// Run another tool -- `dx`, Dioxus's -- on the Rust project after pass
-    /// 1 (S3, 2026-10-06). A tool that reads the `Cargo.toml` of the folder
-    /// it runs in is run in the generated project, `target/src/`, where every
-    /// dependency is named; without an `Hrs.toml`, in the project itself.
+    /// Fold `hrs_std` into `export/src/hrs_std/` when the transpiled code
+    /// names it (the files already say `crate::hrs_std::`, written so by the
+    /// transpiler when the project lists `hrs_std`): only the items the code
+    /// reaches, closed over what each uses (`shake`), and a `mod hrs_std;`
+    /// at the end of each crate root, where it moves no line of the map.
+    /// Whether it was used.
+    #[cfg(feature = "remap")]
+    fn fold_hrs_std(&self) -> Result<bool, String> {
+        let gen = self.gen_dir();
+        let module = gen.join("hrs_std");
+        let units = self.units()?;
+        let macros = hrs_std_macros();
+        let uses = |t: &str| t.contains("crate::hrs_std::") || macros.iter().any(|m| t.contains(&format!("crate::{m}!")));
+        let files: Vec<PathBuf> = units.iter().map(|u| u.rust.clone()).filter(|f| fs::read_to_string(f).map_or(false, |t| uses(&t))).collect();
+        // Each crate root declares the module, at its end: `main.rs`,
+        // `lib.rs`, and each binary of `src/bin/`, which reaches it by path.
+        let mut roots_files: Vec<(PathBuf, String)> = Vec::new();
+        for root in ["main.rs", "lib.rs"] {
+            roots_files.push((gen.join(root), "mod hrs_std;".into()));
+        }
+        if let Ok(rd) = fs::read_dir(gen.join("bin")) {
+            for e in rd.flatten() {
+                if e.path().extension().map_or(false, |x| x == "rs") {
+                    roots_files.push((e.path(), "#[path = \"../hrs_std/mod.rs\"]\nmod hrs_std;".into()));
+                }
+            }
+        }
+        let decl_of = |decl: &str| format!("\n/// `hrs_std`: the parts of it this crate uses.\n#[allow(dead_code, unused_imports, unused_macros)]\n{decl}\n");
+        if files.is_empty() {
+            if module.is_dir() {
+                let _ = fs::remove_dir_all(&module);
+            }
+            // A root not transpiled again since it last declared the module
+            // would name a folder that is gone.
+            for (f, decl) in &roots_files {
+                let Ok(t) = fs::read_to_string(f) else { continue };
+                let d = decl_of(decl);
+                if let Some(at) = t.rfind(&d) {
+                    let mut t2 = t[..at].to_string();
+                    t2.push_str(&t[at + d.len()..]);
+                    fs::write(f, t2).map_err(|e| format!("{}: {e}", f.display()))?;
+                }
+            }
+            return Ok(false);
+        }
+        let mut vendored: Vec<(String, String)> = Vec::new();
+        for (path, text) in crate::dist::FILES {
+            let Some(name) = path.strip_prefix("hrs_std/src/") else { continue };
+            let target = if name == "lib.rs" { module.join("mod.rs") } else { module.join(name) };
+            let text = strip_test_modules(&vendor_paths(&without_harsh_notes(text), "crate::", "hrs_std"));
+            vendored.push((target.display().to_string(), text));
+        }
+        let mut roots = std::collections::HashSet::new();
+        for u in &units {
+            if let Ok(t) = fs::read_to_string(&u.rust) {
+                if let Ok(toks) = crate::lex::lex_rust(&t) {
+                    roots.extend(toks.into_iter().filter(|x| x.kind == crate::lex::Tk::Ident).map(|x| x.text));
+                }
+            }
+        }
+        fs::create_dir_all(&module).map_err(|e| format!("{}: {e}", module.display()))?;
+        for (target, text) in crate::shake::shake(&vendored, &roots) {
+            if fs::read_to_string(&target).ok().as_deref() != Some(text.as_str()) {
+                fs::write(&target, text).map_err(|e| format!("{target}: {e}"))?;
+            }
+        }
+        for (f, decl) in roots_files {
+            let Ok(t) = fs::read_to_string(&f) else { continue };
+            let decl = decl_of(&decl);
+            if !t.contains(&decl) {
+                let t = format!("{}{decl}", t.trim_end_matches('\n').to_string() + "\n");
+                fs::write(&f, t).map_err(|e| format!("{}: {e}", f.display()))?;
+            }
+        }
+        Ok(true)
+    }
+
+    /// Run another tool -- `dx`, Dioxus's; `cargo`, for `hrs -c` -- on the
+    /// Rust project after pass 1, in `export/`, where its `Cargo.toml` and
+    /// the project's other files are.
+    #[cfg(feature = "remap")]
     pub fn tool(&self, prog: &str, args: &[String]) -> Result<i32, String> {
-        #[cfg(feature = "remap")]
         let generated = self.prepare(&mut Vec::new())?;
-        #[cfg(not(feature = "remap"))]
-        let generated: Option<PathBuf> = None;
-        let dir = generated.as_ref().and_then(|g| g.parent().map(|d| d.to_path_buf())).unwrap_or_else(|| self.root.clone());
-        let status = Command::new(prog)
+        let dir = generated.parent().unwrap_or(&self.root).to_path_buf();
+        let mut cmd = Command::new(prog);
+        if prog == "cargo" {
+            cmd.args(distribution(&self.root, &[generated.clone()])?);
+        }
+        let status = cmd
             .args(args)
             .current_dir(&dir)
             .status()
             .map_err(|e| format!("cannot run `{prog}`: {e} -- is it installed?"))?;
-        if let Some(g) = &generated {
-            let back = g.with_file_name("Cargo.lock");
-            if back.is_file() {
-                let _ = fs::copy(&back, self.root.join("Cargo.lock"));
-            }
-        }
+        self.lock_back();
         Ok(status.code().unwrap_or(1))
     }
 
@@ -789,46 +760,57 @@ impl Project {
     /// which is what `hrs_proc_macro` builds on.
     #[cfg(feature = "remap")]
     pub fn cargo(&self, sub: &str, args: &[String], maps: &[PathBuf]) -> Result<i32, String> {
-        let generated = self.prepare(&mut Vec::new())?;
-        let result = self.cargo_run(sub, args, maps, generated.as_deref());
-        if let Some(g) = &generated {
-            let back = g.with_file_name("Cargo.lock");
-            if back.is_file() {
-                let _ = fs::copy(&back, self.root.join("Cargo.lock"));
+        let mut seen = Vec::new();
+        let generated = self.prepare(&mut seen)?;
+        // The maps of the Harsh libraries it builds by path too: an error in
+        // one is reported at its `.hrs` line.
+        let mut maps = maps.to_vec();
+        for dir in &seen {
+            if let Ok(units) = (Project { root: dir.clone() }).units() {
+                maps.extend(units.into_iter().map(|u| u.map).filter(|m| !maps.contains(m)).collect::<Vec<_>>());
             }
         }
+        let result = self.cargo_run(sub, args, &maps, &generated);
+        self.lock_back();
         result
     }
 
+    /// The lockfile cargo wrote in `export/`, back where the user keeps it.
     #[cfg(feature = "remap")]
-    fn cargo_run(&self, sub: &str, args: &[String], maps: &[PathBuf], generated: Option<&Path>) -> Result<i32, String> {
-        let manifest = generated.map(|g| g.to_path_buf()).unwrap_or_else(|| self.root.join("Cargo.toml"));
-        // The generated manifest, with the project's own `target/` -- unless
-        // the user chose a target directory (`CARGO_TARGET_DIR`, or
-        // `target-dir` in a `.cargo/config.toml`), which then wins.
-        let chosen = std::env::var_os("CARGO_TARGET_DIR").is_some()
-            || ["config.toml", "config"].iter().any(|f| {
-                fs::read_to_string(self.root.join(".cargo").join(f)).map_or(false, |t| t.contains("target-dir"))
-            });
-        let at: Vec<String> = match generated {
-            Some(g) if chosen => vec!["--manifest-path".into(), g.display().to_string()],
-            Some(g) => vec![
-                "--manifest-path".into(),
-                g.display().to_string(),
-                "--target-dir".into(),
-                self.root.join("target").display().to_string(),
-            ],
-            None => Vec::new(),
-        };
+    fn lock_back(&self) {
+        let back = self.cargo_root().join("Cargo.lock");
+        if back.is_file() {
+            let _ = fs::copy(&back, self.lock_root().join("Cargo.lock"));
+        }
+    }
+
+    #[cfg(feature = "remap")]
+    fn cargo_run(&self, sub: &str, args: &[String], maps: &[PathBuf], generated: &Path) -> Result<i32, String> {
+        // Cargo runs in `export/`, the Rust project, and builds into its
+        // `target/` -- or where the user chose (`CARGO_TARGET_DIR`, a
+        // `.cargo/config.toml`), which cargo reads unasked.
+        let manifest = generated.to_path_buf();
+        let mut dir = generated.parent().unwrap_or(&self.root).to_path_buf();
+        let mut at: Vec<String> = Vec::new();
+        // The program runs where the user is, as `cargo run` runs it: its
+        // relative paths are the project's, not the mirror's (a file it
+        // writes into a mirrored folder would go at the next pass 1).
+        if sub == "run" {
+            at = vec!["--manifest-path".into(), manifest.display().to_string()];
+            dir = std::env::current_dir().unwrap_or(dir);
+        }
         // Only cargo's own build commands speak `--message-format`; an
         // external subcommand (`cargo leptos`, `cargo doc`'s cousins) is run
         // plainly, its output passed through unmapped.
         if !matches!(sub, "build" | "run" | "test" | "check" | "clippy" | "bench" | "doc") {
+            // A patch only for a crate of Harsh's distribution the manifest
+            // names -- a Harsh macro crate's `hrs_proc_macro`; none for
+            // ordinary Rust, whose cargo runs plain.
             let status = Command::new("cargo")
                 .args(distribution(&self.root, &[manifest.clone()])?)
                 .arg(sub)
                 .args(args)
-                .current_dir(&self.root)
+                .current_dir(&dir)
                 .status()
                 .map_err(|e| format!("cargo: {}", e))?;
             return Ok(status.code().unwrap_or(1));
@@ -849,11 +831,11 @@ impl Project {
             .arg("--message-format=json-diagnostic-rendered-ansi")
             .args(&at)
             .args(args)
-            .current_dir(&self.root)
+            .current_dir(&dir)
             .stdout(Stdio::piped())
             .stderr(Stdio::inherit());
         // A program that panics names the generated file,
-        // `target/src/main.rs:4:20`. For `run` and `test` its stderr is read
+        // `src/main.rs:4:20`, from `export/`. For `run` and `test` its stderr is read
         // here and every such place is put back on the Harsh line,
         // `src/main.hrs:4:9`, through the same maps as the compiler's
         // errors (2026-09-21). Cargo keeps its colours when the terminal
@@ -945,7 +927,7 @@ impl Project {
 }
 
 /// The generated files of a project, each with its map, for putting a
-/// panic's `target/src/main.rs:4:20` back on its Harsh line.
+/// panic's `src/main.rs:4:20` (from `export/`) back on its Harsh line.
 #[cfg(feature = "remap")]
 pub struct PanicPlaces {
     files: Vec<(String, String, crate::remap::SourceMap)>, // (generated, source), relative to the root
@@ -954,14 +936,20 @@ pub struct PanicPlaces {
 #[cfg(feature = "remap")]
 impl PanicPlaces {
     pub fn load(root: &Path, maps: &[PathBuf]) -> Self {
-        let rel = |p: &str| -> String {
+        // A panic names the generated file as cargo compiled it, from
+        // `export/`: `src/main.rs:4:20`; the Harsh file is named from the
+        // project's root, `src/main.hrs:4:9`.
+        // In a workspace, cargo names a member's file from the workspace's
+        // `export/`: `app/src/main.rs`.
+        let export = Project { root: root.to_path_buf() }.cargo_root();
+        let rel = |p: &str, from: &Path| -> String {
             let p = Path::new(p);
-            p.strip_prefix(root).unwrap_or(p).display().to_string()
+            p.strip_prefix(from).unwrap_or(p).display().to_string()
         };
         let files = maps
             .iter()
             .filter_map(|m| crate::remap::SourceMap::load(&m.display().to_string()).ok())
-            .map(|m| (rel(m.generated()), rel(m.source()), m))
+            .map(|m| (rel(m.generated(), &export), rel(m.source(), root), m))
             .collect();
         PanicPlaces { files }
     }
@@ -974,6 +962,16 @@ impl PanicPlaces {
             let needle = format!("{generated}:");
             let mut from = 0;
             while let Some(at) = out[from..].find(&needle).map(|i| i + from) {
+                // `src/lib.rs:` is also the tail of a dependency's path,
+                // `…/nalgebra-0.33/src/lib.rs:123`: only a path that starts
+                // here is the crate's own.
+                // Rust's own `./src/main.rs` is the crate's.
+                let path_char = |c: char| c.is_alphanumeric() || matches!(c, '/' | '\\' | '_' | '-' | '.');
+                let before = out[..at].strip_suffix("./").unwrap_or(&out[..at]);
+                if before.chars().next_back().map_or(false, path_char) {
+                    from = at + needle.len();
+                    continue;
+                }
                 let rest = &out[at + needle.len()..];
                 let l: String = rest.chars().take_while(|c| c.is_ascii_digit()).collect();
                 let after_l = &rest[l.len()..];
@@ -1056,15 +1054,16 @@ pub fn uses_hrs_std(src: &str) -> Option<(String, usize)> {
     None
 }
 
-fn collect(dir: &Path, src_root: &Path, gen_root: &Path, out: &mut Vec<Unit>) -> Result<(), String> {
+fn collect(dir: &Path, src_root: &Path, gen_root: &Path, map_root: &Path, out: &mut Vec<Unit>) -> Result<(), String> {
     for e in fs::read_dir(dir).map_err(|e| format!("{}: {}", dir.display(), e))? {
         let p = e.map_err(|e| e.to_string())?.path();
         if p.is_dir() {
-            collect(&p, src_root, gen_root, out)?;
+            collect(&p, src_root, gen_root, map_root, out)?;
         } else if p.extension().map(|x| x == "hrs").unwrap_or(false) {
             let rel = p.strip_prefix(src_root).unwrap_or(&p).to_path_buf();
             let rust = gen_root.join(rel.with_extension("rs"));
-            let map = gen_root.join(rel.with_extension("map.json"));
+            // The map beside nothing a reader or crates.io sees.
+            let map = map_root.join(rel.with_extension("map.json"));
             out.push(Unit { source: p, rust, map });
         }
     }
@@ -1136,7 +1135,9 @@ fn reexports_of(src: &str, lib: &str) -> Vec<String> {
 /// The crates of Harsh's standard distribution, which ship inside `hrs`
 /// (the user, 2026-09-25): named in a `Cargo.toml` as Rust names `syn` or
 /// `quote` -- `hrs_quote = "0.1"` -- and never fetched: `hrs` writes them
-/// under `target/src/dist/` and patches them in.
+/// under `.hrs/dist/` and patches them into the proc-macro runner's build
+/// (only a Harsh macro crate uses them, and it is never exported);
+/// `hrs_std`, since 0.9.0, is folded into the crate instead.
 #[cfg(feature = "remap")]
 pub const DISTRIBUTION: [&str; 4] = ["hrs_std", "hrs_proc_macro", "hrs_quote", "hrs_syn"];
 
@@ -1243,11 +1244,12 @@ pub fn migrate(cargo: &str, hrs: Option<&str>) -> (String, String, Vec<String>) 
                 continue;
             }
         }
-        // The generated tree's old place (0.7.0: `target/hrs/` is
-        // `target/src/`, mirroring the project's `src/`).
-        if raw.contains("target/hrs/") {
-            names.push("target/src".to_string());
-            kept.push(raw.replace("target/hrs/", "target/src/"));
+        // The generated tree's old places: `target/hrs/` (to 0.6.x) and
+        // `target/src/` (0.7.0 to 0.8.x). Since 0.9.0 the Rust project is
+        // `export/`, whose `src/` the target's path names as cargo would.
+        if !raw.trim_start().starts_with('#') && (raw.contains("target/hrs/") || raw.contains("target/src/")) {
+            names.push(EXPORT_DIR.to_string());
+            kept.push(raw.replace("target/hrs/", "src/").replace("target/src/", "src/"));
             continue;
         }
         kept.push(raw.to_string());
@@ -1271,6 +1273,15 @@ pub fn migrate(cargo: &str, hrs: Option<&str>) -> (String, String, Vec<String>) 
 /// `None` when `root`'s `Cargo.toml` is a package, or is no workspace
 /// (2026-10-13: `hrs` at a workspace's root was not a command).
 pub fn workspace_members(root: &Path) -> Option<Vec<PathBuf>> {
+    match workspace_listing(root)? {
+        (members, false) => Some(members),
+        _ => None,
+    }
+}
+
+/// A `[workspace]`'s members, as `workspace_members` reads them, and
+/// whether the root is a package too.
+pub fn workspace_listing(root: &Path) -> Option<(Vec<PathBuf>, bool)> {
     let text = fs::read_to_string(root.join("Cargo.toml")).ok()?;
     let mut section = String::new();
     let mut is_workspace = false;
@@ -1326,7 +1337,7 @@ pub fn workspace_members(root: &Path) -> Option<Vec<PathBuf>> {
             open = false;
         }
     }
-    if !is_workspace || has_package {
+    if !is_workspace {
         return None;
     }
     // `./crates/old/` and `crates/old` name one folder.
@@ -1334,6 +1345,9 @@ pub fn workspace_members(root: &Path) -> Option<Vec<PathBuf>> {
     let exclude: Vec<PathBuf> = lists.get("exclude").into_iter().flatten().map(|e| root.join(clean(e))).collect();
     let mut out = Vec::new();
     for m in lists.get("members").into_iter().flatten() {
+        if m.trim().is_empty() {
+            continue;
+        }
         let m = clean(m);
         let found: Vec<PathBuf> = if let Some(base) = m.strip_suffix("/*") {
             let mut v: Vec<PathBuf> = fs::read_dir(root.join(base))
@@ -1350,20 +1364,135 @@ pub fn workspace_members(root: &Path) -> Option<Vec<PathBuf>> {
             }
         }
     }
-    Some(out)
+    Some((out, has_package))
 }
 
-/// A member `hrs` builds: one with an `Hrs.toml`, or a `Cargo.toml` whose
-/// target's `path` is under `target/src/` (a comment naming it does not
-/// count). Any other member is Rust's, built by cargo.
-pub fn is_harsh_member(dir: &Path) -> bool {
-    dir.join(HRS_MANIFEST).is_file()
-        || fs::read_to_string(dir.join("Cargo.toml")).map_or(false, |t| {
-            t.lines().any(|l| {
-                let l = l.split('#').next().unwrap_or("").trim();
-                l.starts_with("path") && l.contains(GEN_DIR)
+/// The workspace `root` belongs to: the nearest folder, from `root`
+/// upwards, whose `[workspace]` lists it -- or `root` itself when it is a
+/// package with a `[workspace]` of its own.
+pub fn workspace_of(root: &Path) -> Option<PathBuf> {
+    let me = root.canonicalize().ok()?;
+    for w in root.ancestors() {
+        let Some((members, has_package)) = workspace_listing(w) else { continue };
+        if w == root {
+            if has_package {
+                return Some(w.to_path_buf());
+            }
+            continue;
+        }
+        if members.iter().any(|m| m.canonicalize().ok().as_ref() == Some(&me)) {
+            return Some(w.to_path_buf());
+        }
+        // The nearest workspace is the one cargo takes.
+        return None;
+    }
+    None
+}
+
+/// A workspace's Harsh members, canonical.
+pub fn harsh_members(w: &Path) -> Vec<PathBuf> {
+    let Some((members, has_package)) = workspace_listing(w) else { return Vec::new() };
+    let mut out: Vec<PathBuf> = members.iter().filter(|m| is_harsh_member(m)).filter_map(|m| m.canonicalize().ok()).collect();
+    if has_package && is_harsh_member(w) {
+        if let Ok(c) = w.canonicalize() {
+            out.push(c);
+        }
+    }
+    out
+}
+
+/// A workspace's `export/` (0.9.0, the user's option A, 2026-10-14): the
+/// whole Rust workspace -- its `Cargo.toml`, each Harsh member transpiled
+/// at its place, the rest of the workspace (its Rust members among it)
+/// mirrored -- with one `Cargo.lock` and one `target/`. Once per run.
+#[cfg(feature = "remap")]
+fn prepare_workspace(w: &Path, seen: &mut Vec<PathBuf>) -> Result<(), String> {
+    let marker = w.canonicalize().unwrap_or(w.to_path_buf()).join("[workspace]");
+    if seen.contains(&marker) {
+        return Ok(());
+    }
+    seen.push(marker);
+    let Some((_, has_package)) = workspace_listing(w) else { return Ok(()) };
+    let export = w.join(EXPORT_DIR);
+    let harsh = harsh_members(w);
+    // The root's own manifest: a virtual root's, or a Rust package's -- a
+    // Harsh root package writes its own below, as a member does.
+    let rust_root = has_package && !is_harsh_member(w);
+    if !has_package || rust_root {
+        let path = w.join("Cargo.toml");
+        let text = fs::read_to_string(&path).map_err(|e| format!("{}: {e}", path.display()))?;
+        let plain: String = without_harsh_table(&text)
+            .lines()
+            .filter(|l| {
+                let t = l.trim_start();
+                !(t.starts_with('#') && !t.starts_with("#[") && speaks_of_harsh(t))
             })
-        })
+            .map(|l| format!("{l}\n"))
+            .collect();
+        let cw = w.canonicalize().unwrap_or(w.to_path_buf());
+        let text = generated_manifest(&plain, w, &[], false, w, &mut |dir: &Path| {
+            // Outside the workspace, a Harsh library is its own `export/`.
+            let cd = dir.canonicalize().ok()?;
+            if cd.starts_with(&cw) {
+                return None;
+            }
+            let dep = Project { root: dir.to_path_buf() };
+            (!dep.units().map_or(true, |u| u.is_empty())).then(|| dep.export_dir())
+        })?;
+        fs::create_dir_all(&export).map_err(|e| format!("{}: {e}", export.display()))?;
+        let gen = export.join("Cargo.toml");
+        if fs::read_to_string(&gen).ok().as_deref() != Some(text.as_str()) {
+            fs::write(&gen, &text).map_err(|e| format!("{}: {e}", gen.display()))?;
+        }
+        link_project_dirs(w, &export, &harsh);
+        if rust_root {
+            // Its Rust is its own: `src/` as it is.
+            mirror_entry(&w.join(SRC_DIR), &export.join(SRC_DIR), &[]);
+        }
+    }
+    for m in &harsh {
+        let p = Project { root: m.clone() };
+        if !seen.contains(m) {
+            seen.push(m.clone());
+        }
+        let name = m.strip_prefix(w.canonicalize().unwrap_or(w.to_path_buf())).unwrap_or(m).display().to_string();
+        let name = if name.is_empty() { ".".to_string() } else { name };
+        p.transpile(false).map_err(|e| format!("in the workspace member `{name}`:\n{e}"))?;
+        p.prepare_own(seen)?;
+    }
+    export_extras(w);
+    Ok(())
+}
+
+/// `prepare_workspace`, for `hrs` at a workspace's root: before cargo runs
+/// a Rust member, in its place in `export/`.
+#[cfg(feature = "remap")]
+pub fn prepare_workspace_root(w: &Path) -> Result<(), String> {
+    prepare_workspace(w, &mut Vec::new())
+}
+
+/// What `export/` gets beside the Rust: a `.gitignore` for its `target/`
+/// when the project has none -- cargo leaves its `target/` alone when the
+/// project says so (`cargo leptos watch` watched its own builds without
+/// it, 0.8.5) -- and the lockfile, the user's, copied in (back after
+/// cargo).
+#[cfg(feature = "remap")]
+fn export_extras(root: &Path) {
+    let export = root.join(EXPORT_DIR);
+    let ignore = export.join(".gitignore");
+    if !root.join(".gitignore").exists() && !ignore.exists() {
+        let _ = fs::write(&ignore, "/target\n");
+    }
+    let lock = root.join("Cargo.lock");
+    if lock.is_file() {
+        let _ = fs::copy(&lock, export.join("Cargo.lock"));
+    }
+}
+
+/// A member `hrs` builds: one with an `Hrs.toml`, or with `.hrs` sources
+/// in `src/`. Any other member is Rust's, built by cargo.
+pub fn is_harsh_member(dir: &Path) -> bool {
+    dir.join(HRS_MANIFEST).is_file() || Project { root: dir.to_path_buf() }.units().map_or(false, |u| !u.is_empty())
 }
 
 /// A workspace member's inherited fields written out (2026-10-03): the
@@ -1493,38 +1622,82 @@ fn cargo_dependency_names(text: &str) -> Vec<String> {
 }
 
 #[cfg(feature = "remap")]
-/// The project's top level, mirrored into the generated project (S3,
-/// 2026-10-06): Cargo builds there, so `CARGO_MANIFEST_DIR` is `target/src/`,
+/// The project's top level, mirrored into `export/`, the Rust project (S3,
+/// 2026-10-06): Cargo builds there, so `CARGO_MANIFEST_DIR` is `export/`,
 /// and `asset!("/assets/main.css")` or `env!("CARGO_MANIFEST_DIR")` paths
 /// must find the project's `assets/`, `migrations/`, … Every top-level
 /// entry, folders and files alike (Docreview's H12, 0.7.3: `Dioxus.toml` was
-/// missing), but `src`, `target`, hidden ones and the manifests `hrs` writes
-/// there itself (`Cargo.toml`, `Cargo.lock`, `Hrs.toml`).
+/// missing), hidden ones included since 0.9.0 (`cargo leptos` reads the
+/// `.gitignore` of the folder it runs in) -- but `src` (transpiled instead),
+/// `export` itself, `.hrs` (`hrs`'s own), a `target` left by an older `hrs`, a version-control
+/// folder (`.git`, `.hg`, `.svn`), and the manifests `hrs` writes there
+/// itself (`Cargo.toml`, `Cargo.lock`, `Hrs.toml`).
 ///
 /// A mirror, not a symbolic link (ShopBill's S7, 0.8.2): Dioxus's `asset!`
 /// resolves a path through its links and requires the file to sit inside
-/// `CARGO_MANIFEST_DIR`, and a link led back out of `target/src/` to the
-/// project. Each folder is a real folder there and each file a hard link to
+/// `CARGO_MANIFEST_DIR`, and a link led back out of the generated project to
+/// the project. Each folder is a real folder there and each file a hard link to
 /// the project's -- the same file, no copy -- or a copy where a link cannot
 /// be made (another disk). Run at every pass 1: a file added, changed or
 /// replaced (an editor that saves by writing a new file breaks a hard link)
 /// is linked again, one removed is removed. A symbolic link left by an
 /// earlier `hrs` is replaced.
-fn link_project_dirs(root: &Path, gen: &Path) {
+fn link_project_dirs(root: &Path, gen: &Path, skip: &[PathBuf]) {
     let Ok(entries) = fs::read_dir(root) else { return };
     for e in entries.flatten() {
         let name = e.file_name();
         let n = name.to_string_lossy();
-        if n.starts_with('.') || ["src", "target", "Cargo.toml", "Cargo.lock", HRS_MANIFEST].contains(&n.as_ref()) {
+        if [SRC_DIR, EXPORT_DIR, WORK_DIR, "target", ".git", ".hg", ".svn", "Cargo.toml", "Cargo.lock", HRS_MANIFEST].contains(&n.as_ref()) {
             continue;
         }
-        mirror_entry(&e.path(), &gen.join(&name));
+        mirror_entry(&e.path(), &gen.join(&name), skip);
+    }
+}
+
+/// Whether `gen` is `src`'s place in `export/`: `<root>/export/<rel>` for
+/// `<root>/<rel>`.
+fn mirrors(src: &Path, gen: &Path) -> bool {
+    src.ancestors().skip(1).any(|a| src.strip_prefix(a).map_or(false, |rel| a.join(EXPORT_DIR).join(rel) == gen))
+}
+
+/// The files in `src/` that are not Harsh -- a data file an `include_str!`
+/// reads, a Rust module written in Rust -- mirrored into `export/src/`
+/// beside the transpiled ones, so `export/` builds and publishes alone and
+/// a relative path means there what it means in `src/`.
+#[cfg(feature = "remap")]
+fn mirror_src_extras(src: &Path, gen: &Path) {
+    let Ok(entries) = fs::read_dir(src) else { return };
+    for e in entries.flatten() {
+        let path = e.path();
+        let to = gen.join(e.file_name());
+        let Ok(meta) = fs::symlink_metadata(&path) else { continue };
+        if meta.is_dir() {
+            let _ = fs::create_dir_all(&to);
+            mirror_src_extras(&path, &to);
+        } else if path.extension().map_or(false, |x| x == "hrs") {
+            continue;
+        } else if path.extension().map_or(false, |x| x == "rs") && path.with_extension("hrs").is_file() {
+            // The transpiled file's name: the `.hrs` wins.
+            continue;
+        } else {
+            mirror_entry(&path, &to, &[]);
+        }
     }
 }
 
 #[cfg(feature = "remap")]
-fn mirror_entry(src: &Path, dst: &Path) {
+fn mirror_entry(src: &Path, dst: &Path, skip: &[PathBuf]) {
     let Ok(meta) = fs::symlink_metadata(src) else { return };
+    // A Harsh member of the workspace: its own `prepare` writes its place.
+    if meta.is_dir() && !skip.is_empty() && src.canonicalize().map_or(false, |c| skip.contains(&c)) {
+        return;
+    }
+    // Any other Harsh project beneath -- one the workspace excludes -- is
+    // no Rust: `export/` holds only Rust.
+    if meta.is_dir() && src.join("Cargo.toml").is_file() && is_harsh_member(src) {
+        remove_any(dst);
+        return;
+    }
     if meta.file_type().is_symlink() {
         // A link in the project stays a link: it is the project's choice.
         if let Ok(to) = fs::read_link(src) {
@@ -1539,14 +1712,14 @@ fn mirror_entry(src: &Path, dst: &Path) {
         return;
     }
     if meta.is_dir() {
-        mirror_dir(src, dst);
+        mirror_dir(src, dst, skip);
     } else {
         mirror_file(src, &meta, dst);
     }
 }
 
 #[cfg(feature = "remap")]
-fn mirror_dir(src: &Path, dst: &Path) {
+fn mirror_dir(src: &Path, dst: &Path, skip: &[PathBuf]) {
     let real_dir = fs::symlink_metadata(dst).map_or(false, |m| m.is_dir() && !m.file_type().is_symlink());
     if !real_dir {
         remove_any(dst);
@@ -1555,10 +1728,16 @@ fn mirror_dir(src: &Path, dst: &Path) {
         }
     }
     let mut names = std::collections::HashSet::new();
+    // A Rust crate's own `target/`, and version control, are not the project.
+    let is_crate = src.join("Cargo.toml").is_file();
     if let Ok(entries) = fs::read_dir(src) {
         for e in entries.flatten() {
-            names.insert(e.file_name());
-            mirror_entry(&e.path(), &dst.join(e.file_name()));
+            let n = e.file_name();
+            if (is_crate && n == "target") || [".git", ".hg", ".svn"].iter().any(|v| n == *v) {
+                continue;
+            }
+            names.insert(n);
+            mirror_entry(&e.path(), &dst.join(e.file_name()), skip);
         }
     }
     // What the project no longer has goes from the mirror too.
@@ -1607,23 +1786,62 @@ fn remove_any(p: &Path) {
     }
 }
 
-/// The generated `Cargo.toml` (`target/src/Cargo.toml`): the user's, with
-/// every relative `path`/`build` made absolute (the file moved), its own
-/// `[workspace]` (so a workspace above it does not claim it), and `extra`
-/// dependency lines added to `[dependencies]`.
-pub fn generated_manifest(cargo_text: &str, cargo_dir: &Path, extra: &[String]) -> String {
+/// `export/Cargo.toml`: the user's, with
+/// - a target's `path` and the package's `build` left relative, since
+///   `export/` holds `src/` transpiled and the rest of the project mirrored;
+/// - every other relative path made absolute (the file moved), and a path
+///   dependency on a Harsh project -- `harsh_dep` says which, and prepares
+///   it -- named by that project's `export/`;
+/// - its own `[workspace]` when it stands alone (`standalone`), so a
+///   workspace above it does not claim it -- a member's belongs to its
+///   workspace's `export/`;
+/// - a relative path inside `mirror_root`, the folder `export/` mirrors,
+///   left as written;
+/// - `extra` dependency lines added to `[dependencies]`.
+pub fn generated_manifest(
+    cargo_text: &str,
+    root: &Path,
+    extra: &[String],
+    standalone: bool,
+    mirror_root: &Path,
+    harsh_dep: &mut dyn FnMut(&Path) -> Option<PathBuf>,
+) -> Result<String, String> {
+    // Inside the folder `export/` mirrors, a relative path means the same
+    // there: kept as written, so `export/` stays movable and publishable.
+    let mirrored = mirror_root.canonicalize().ok();
+    let inside = |p: &Path| match (&mirrored, p.canonicalize()) {
+        (Some(m), Ok(c)) => c.starts_with(m),
+        _ => false,
+    };
     let mut out = Vec::new();
     let mut has_deps = false;
     let mut has_workspace = false;
+    let mut table = String::new();
     for raw in cargo_text.lines() {
         let mut line = raw.to_string();
+        let t0 = line.trim();
+        if t0.starts_with('[') {
+            table = t0.trim_matches(|c| c == '[' || c == ']').trim().to_string();
+        }
+        let is_target = matches!(table.as_str(), "lib" | "bin" | "test" | "example" | "bench");
+        let is_deps = table.ends_with("dependencies");
         for key in ["path", "build"] {
+            if is_target || (key == "build" && table == "package") {
+                continue;
+            }
             let mut search = 0;
             while let Some(i) = line[search..].find(&format!("{key} = \"")) {
                 let at = search + i + key.len() + 4;
                 let Some(len) = line[at..].find('"') else { break };
                 let value = line[at..at + len].to_string();
-                let abs = if Path::new(&value).is_absolute() { value.clone() } else { manifest_path_str(&cargo_dir.join(&value)) };
+                let relative = !Path::new(&value).is_absolute();
+                let abs = if relative { root.join(&value) } else { PathBuf::from(&value) };
+                let dep = if is_deps && key == "path" { harsh_dep(&abs) } else { None };
+                let abs = match dep {
+                    Some(d) => manifest_path_str(&d),
+                    None if relative && inside(&abs) => value.clone(),
+                    None => manifest_path_str(&abs),
+                };
                 line.replace_range(at..at + len, &abs);
                 search = at + abs.len();
             }
@@ -1643,12 +1861,142 @@ pub fn generated_manifest(cargo_text: &str, cargo_dir: &Path, extra: &[String]) 
         out.push("[dependencies]".into());
         out.extend(extra.iter().cloned());
     }
-    if !has_workspace {
+    if standalone && !has_workspace {
         out.push(String::new());
-        out.push("# Its own workspace root: generated by hrs from Cargo.toml and Hrs.toml.".into());
+        out.push("# Its own workspace root. Written by hrs from the project's Cargo.toml.".into());
         out.push("[workspace]".into());
     }
-    out.join("\n") + "\n"
+    Ok(out.join("\n") + "\n")
+}
+
+/// A package's `version`, from its manifest's `[package]` table.
+#[cfg(feature = "remap")]
+fn package_version(manifest: &str) -> Option<String> {
+    let mut in_package = false;
+    for l in manifest.lines() {
+        let t = l.trim();
+        if t.starts_with('[') {
+            in_package = t == "[package]";
+            continue;
+        }
+        if in_package {
+            if let Some(v) = t.strip_prefix("version") {
+                let v = v.trim_start().strip_prefix('=')?.trim();
+                return Some(v.trim_matches('"').to_string());
+            }
+        }
+    }
+    None
+}
+
+/// Whether `Hrs.toml` lists `hrs_std`: then the transpiler writes its paths
+/// `crate::hrs_std::…` and `prepare` folds it into the crate.
+pub fn lists_hrs_std(root: &Path) -> bool {
+    std::fs::read_to_string(root.join(HRS_MANIFEST)).map_or(false, |m| {
+        m.lines().any(|l| {
+            let t = l.trim_start();
+            t.starts_with("hrs_std") && t[7..].trim_start().starts_with(['=', '.'])
+        })
+    })
+}
+
+/// The macros `hrs_std` exports (`#[macro_export]`): at the crate's root
+/// once folded, so `hrs_std::each!` is written `crate::each!`.
+#[cfg(feature = "remap")]
+fn hrs_std_macros() -> Vec<String> {
+    let mut out = Vec::new();
+    for (path, text) in crate::dist::FILES {
+        if !path.starts_with("hrs_std/src/") {
+            continue;
+        }
+        let mut exported = false;
+        for l in text.lines() {
+            let t = l.trim();
+            if t == "#[macro_export]" {
+                exported = true;
+            } else if let Some(r) = t.strip_prefix("macro_rules!") {
+                if exported {
+                    out.push(r.trim().trim_end_matches('{').trim().to_string());
+                }
+                exported = false;
+            } else if !t.starts_with("#[") && !t.starts_with("///") && !t.is_empty() {
+                exported = false;
+            }
+        }
+    }
+    out
+}
+
+/// `hrs_std`'s own Rust dependencies, for `export/Cargo.toml` once it is
+/// folded into the crate.
+#[cfg(feature = "remap")]
+fn hrs_std_dependencies() -> Vec<String> {
+    let std_manifest = crate::dist::FILES.iter().find(|(p, _)| *p == "hrs_std/Cargo.toml").map(|(_, t)| *t).unwrap_or("");
+    std_manifest
+        .lines()
+        .skip_while(|l| l.trim() != "[dependencies]")
+        .skip(1)
+        .take_while(|l| !l.trim_start().starts_with('['))
+        .filter(|l| !l.trim().is_empty())
+        .map(String::from)
+        .collect()
+}
+
+thread_local! {
+    /// Whether the transpiler writes `hrs_std`'s paths into the crate's own
+    /// module (`Project::transpile_only` sets it from `Hrs.toml`).
+    static FOLD_STD: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+}
+
+pub fn set_fold_std(on: bool) {
+    FOLD_STD.with(|f| f.set(on));
+}
+
+/// `hrs_std::Matrix` written `crate::hrs_std::Matrix`, and `hrs_std::each!`
+/// written `crate::each!` (an exported macro sits at the crate's root),
+/// every map entry after each change shifted by what it added, so rustc's
+/// errors still land on the Harsh line and column. A path already
+/// `crate::hrs_std::` (or `$crate::…`) is left; strings and comments are
+/// not read (the Rust lexer skips them).
+#[cfg(feature = "remap")]
+pub fn fold_std_paths(out: &mut String, map: &mut [crate::emit::MapEntry]) {
+    use crate::lex::Tk;
+    let Ok(toks) = crate::lex::lex_rust(out) else { return };
+    let mut edits: Vec<(usize, usize, String)> = Vec::new(); // (at, removed, inserted)
+    for k in 0..toks.len() {
+        let t = &toks[k];
+        if !(t.kind == Tk::Ident && t.text == "hrs_std") {
+            continue;
+        }
+        if toks.get(k + 1).map_or(true, |n| n.kind != Tk::PathSep) {
+            continue;
+        }
+        if k > 0 && toks[k - 1].kind == Tk::PathSep {
+            continue;
+        }
+        let at = t.span.lo as usize;
+        let is_macro = toks.get(k + 2).map_or(false, |n| n.kind == Tk::Ident)
+            && toks.get(k + 3).map_or(false, |n| n.text == "!");
+        if is_macro {
+            // `hrs_std::` → `crate::`
+            let end = toks[k + 1].span.hi as usize;
+            edits.push((at, end - at, "crate::".into()));
+        } else {
+            edits.push((at, 0, "crate::".into()));
+        }
+    }
+    for (at, removed, inserted) in edits.into_iter().rev() {
+        out.replace_range(at..at + removed, &inserted);
+        let delta = inserted.len() as i64 - removed as i64;
+        for e in map.iter_mut() {
+            if e.gen_lo as usize > at || (removed == 0 && e.gen_lo as usize == at) {
+                e.gen_lo = (e.gen_lo as i64 + delta).max(at as i64) as u32;
+            }
+            if e.gen_hi as usize > at {
+                e.gen_hi = (e.gen_hi as i64 + delta).max(at as i64) as u32;
+            }
+        }
+    }
 }
 
 /// A distribution crate's version as a dependency line gives it, `"0.1"`:
@@ -1735,12 +2083,12 @@ pub fn missing_std(root: &Path) -> Option<String> {
     if listed {
         return None;
     }
-    let mut stack = vec![root.join("target").join("src")];
+    let mut stack = vec![Project { root: root.to_path_buf() }.gen_dir()];
     while let Some(dir) = stack.pop() {
         for e in std::fs::read_dir(&dir).ok()?.flatten() {
             let p = e.path();
             if p.is_dir() {
-                if p.file_name().map_or(true, |n| n != "dist" && n != ".complete") {
+                if p.file_name().map_or(true, |n| n != "hrs_std") {
                     stack.push(p);
                 }
             } else if p.extension().map_or(false, |x| x == "rs")
@@ -1753,7 +2101,7 @@ pub fn missing_std(root: &Path) -> Option<String> {
     None
 }
 
-/// Write the standard distribution under `root/target/src/dist/` (a file
+/// Write the standard distribution under `.hrs/dist/` (a file
 /// only when its text differs, so cargo rebuilds nothing needlessly), and
 /// return the `--config` arguments that patch crates.io's requests for its
 /// crates to those copies -- only those the `manifests` name, and what they
@@ -1763,8 +2111,20 @@ pub fn missing_std(root: &Path) -> Option<String> {
 /// crates.io at this version.
 #[cfg(feature = "remap")]
 pub fn distribution(root: &Path, manifests: &[PathBuf]) -> Result<Vec<String>, String> {
-    let dist = root.join(GEN_DIR).join("dist");
-    write_distribution(&dist)?;
+    // In a workspace cargo reads every member's manifest, wherever it runs:
+    // the patches are the whole workspace's, written once, at its root.
+    let mut manifests = manifests.to_vec();
+    let dist = match workspace_of(root) {
+        Some(w) => {
+            manifests.push(w.join(EXPORT_DIR).join("Cargo.toml"));
+            for m in harsh_members(&w) {
+                manifests.push(Project { root: m }.export_dir().join("Cargo.toml"));
+            }
+            w.join(WORK_DIR).join("dist")
+        }
+        None => Project { root: root.to_path_buf() }.work_dir().join("dist"),
+    };
+    let manifests = &manifests[..];
     let toml_path = |p: &Path| p.display().to_string().replace('\\', "\\\\").replace('"', "\\\"");
     // Which crates the manifests name, and what those need: `hrs_syn` needs
     // `hrs_quote`, which needs `hrs_proc_macro`, which needs `harsh-lang`.
@@ -1815,6 +2175,11 @@ pub fn distribution(root: &Path, manifests: &[PathBuf]) -> Result<Vec<String>, S
     let quote = syn || named("hrs_quote");
     let procs = quote || named("hrs_proc_macro");
     let wanted = [("hrs_std", named("hrs_std")), ("hrs_proc_macro", procs), ("hrs_quote", quote), ("hrs_syn", syn)];
+    // Written only when something uses it: an ordinary project's cargo runs
+    // plain, with nothing of Harsh's beside it.
+    if wanted.iter().any(|(_, w)| *w) {
+        write_distribution(&dist)?;
+    }
     let mut args = Vec::new();
     for (c, want) in wanted {
         if want {
@@ -1832,7 +2197,7 @@ pub fn distribution(root: &Path, manifests: &[PathBuf]) -> Result<Vec<String>, S
 
 /// Write Harsh's standard distribution -- `hrs_std`, `hrs_proc_macro`,
 /// `hrs_quote`, `hrs_syn` -- into `dir`, one folder per crate, as `hrs build`
-/// writes it under a project's `target/src/dist/`: a file only when its text
+/// writes it under a project's `.hrs/dist/`: a file only when its text
 /// differs, so cargo rebuilds nothing needlessly. Also `hrs dist <dir>`, for
 /// what builds outside a Harsh project and still wants `hrs_std` -- the
 /// Jupyter kernel, whose evcxr takes it by `:dep hrs_std = { path = … }`
@@ -1873,8 +2238,9 @@ fn caret_allows(asked: &str, shipped: &str) -> bool {
 }
 
 /// `prefix` (`hrs_std::` in the exported code, `crate::` in `hrs_std`'s own)
-/// rewritten to `crate::<module>::`, where `hrs_std` now lives -- `matrix` in
-/// an export, `hrs_std` in a single file (`single_file`) -- except before a
+/// rewritten to `crate::<module>::`, where `hrs_std` now lives -- `hrs_std`,
+/// in a project's `export/src/` and in a single file (`single_file`) alike
+/// -- except before a
 /// macro, `each!`, which `#[macro_export]` puts at the crate's root:
 /// `crate::each!`. `$crate::` likewise, for the macros' own bodies.
 fn vendor_paths(text: &str, prefix: &str, module: &str) -> String {
@@ -1951,7 +2317,7 @@ fn strip_test_modules(text: &str) -> String {
 /// and has no `hrs_std`: the Rust Playground, which the website's Playground
 /// sends its code to (the user, 2026-09-26). When the code names `hrs_std`,
 /// the items of `hrs_std` it reaches follow it as an inline module,
-/// `mod hrs_std { … }`, shaken as `hrs export` shakes them (`shake`), its
+/// `mod hrs_std { … }`, shaken as a build folds them (`shake`), its
 /// own modules nested inside. The code comes first, its lines where they
 /// were, so rustc's line numbers for it stand; only its `hrs_std::` paths
 /// change, to `crate::hrs_std::`. Code that does not name `hrs_std` is
@@ -1968,14 +2334,7 @@ pub fn single_file(rust: &str) -> String {
     let mut vendored: Vec<(String, String)> = Vec::new();
     for (path, text) in crate::dist::FILES {
         let Some(name) = path.strip_prefix("hrs_std/src/") else { continue };
-        // As in an export: the code, not the notes on Harsh's workings.
-        let text: String = text
-            .split_inclusive('\n')
-            .filter(|l| {
-                let t = l.trim_start();
-                !(t.starts_with("//!") || (t.starts_with("//") && speaks_of_harsh(t)))
-            })
-            .collect();
+        let text = without_harsh_notes(text);
         vendored.push((name.to_string(), strip_test_modules(&vendor_paths(&text, "crate::", "hrs_std"))));
     }
     let shaken = crate::shake::shake(&vendored, &roots);
@@ -1996,25 +2355,26 @@ pub fn single_file(rust: &str) -> String {
     )
 }
 
-/// Whether any exported file names `hrs_std`.
-fn exports_name_hrs_std(files: &[PathBuf]) -> bool {
-    for f in files {
-        if let Ok(t) = fs::read_to_string(f) {
-            if t.contains("hrs_std::") {
-                return true;
-            }
-        }
-    }
-    false
+/// `hrs_std`'s text without its notes on Harsh's workings -- its `//!`
+/// lines and the comments that speak of Harsh -- as the Rust it is folded
+/// into, or sent with, carries the code and nothing of Harsh.
+fn without_harsh_notes(text: &str) -> String {
+    text.split_inclusive('\n')
+        .filter(|l| {
+            let t = l.trim_start();
+            !(t.starts_with("//!") || (t.starts_with("//") && speaks_of_harsh(t)))
+        })
+        .collect()
 }
 
 /// Whether a comment is about the Harsh world -- the language, its tool,
-/// its sources -- which the export, plain Rust, does not carry.
+/// its sources -- which `export/`, plain Rust, does not carry.
 fn speaks_of_harsh(comment: &str) -> bool {
     comment.contains("Harsh") || comment.contains("harsh") || comment.contains("hrs ") || comment.contains(".hrs") || comment.contains("`hrs`")
 }
 
-/// A manifest without its `[package.metadata.harsh]` table, for `export`.
+/// A manifest without its `[package.metadata.harsh]` table, for `export/`.
+#[cfg(feature = "remap")]
 fn without_harsh_table(manifest: &str) -> String {
     let mut out = String::new();
     let mut skipping = false;
@@ -2049,7 +2409,7 @@ fn older_than(rust: &Path, time: std::time::SystemTime) -> bool {
 }
 
 /// Whether a generated file is older than its source. (A newer `hrs` is
-/// `.hrs-stamp`'s business, in `Project::transpile`: comparing the binary's
+/// the stamp's business, `.hrs/stamp`, in `Project::transpile_only`: comparing the binary's
 /// time with the file's, as this did, retranspiled for ever after an
 /// upgrade, since a file written identically keeps its old time.)
 fn is_stale(source: &Path, rust: &Path) -> bool {
@@ -2374,8 +2734,12 @@ fn transpile_tokens(
     let mut em = crate::emit::Emitter::new(&emitted);
     // `include_str!` paths are relative to the source file; the Rust is
     // written elsewhere, so they are re-based from there.
+    // Not when the Rust is in `export/src/`, where `src/`'s other files are
+    // mirrored: there a path means what it means in `src/`.
     if let (Some(fd), Some(rd)) = (from.parent(), rust.parent()) {
-        em.set_include_base(fd, rd);
+        if !mirrors(fd, rd) {
+            em.set_include_base(fd, rd);
+        }
     }
     em.program(&tree);
     // A proc macro's tokens sit in a region of their own past the file
@@ -2397,6 +2761,11 @@ fn transpile_tokens(
     crate::dslzone::restore(&mut em.out, dsl.0, dsl.1, &hole, &mut em.map)
         .map_err(|m| format!("{}: {m}", from.display()))?;
     crate::rawzone::restore_with_map(&mut em.out, original, zones, &mut em.map);
+    // `hrs_std` folded into the crate (0.9.0): its paths are the crate's own.
+    #[cfg(feature = "remap")]
+    if FOLD_STD.with(|f| f.get()) {
+        fold_std_paths(&mut em.out, &mut em.map);
+    }
 
     if let Some(d) = rust.parent() {
         fs::create_dir_all(d).map_err(|e| e.to_string())?;
@@ -2424,6 +2793,9 @@ fn transpile_tokens(
         j.push_str(&format!(",{},{}]", x.call_lo, x.call_hi));
     }
     j.push_str("]}");
+    if let Some(d) = map.parent() {
+        fs::create_dir_all(d).map_err(|e| format!("{}: {e}", d.display()))?;
+    }
     fs::write(map, j).map_err(|e| format!("{}: {}", map.display(), e))?;
     Ok(rust.to_path_buf())
 }

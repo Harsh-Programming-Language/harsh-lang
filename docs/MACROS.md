@@ -204,9 +204,6 @@ name = "hello"
 version = "0.1.0"
 edition = "2021"
 
-[lib]
-path = "target/src/lib.rs"
-
 [dependencies]
 hrs_proc_macro = "0.2"
 
@@ -255,7 +252,7 @@ fn main$:
   `src/lib.hrs`. A crate marked `proc-macro = true` registers at least one;
   an unmarked crate registers none.
 - **How it runs:** `hrs build`, `hrs run` and `hrs expand` transpile the
-  listed crates and build a small runner under `target/src/proc-macros/`
+  listed crates and build a small runner under `.hrs/proc-macros/`
   (cargo's own freshness check makes later builds a no-op), then run it
   once per call. Changing a macro retranspiles its callers.
 - **Not yet:** the attribute form; tokens with spans; a proc-macro crate

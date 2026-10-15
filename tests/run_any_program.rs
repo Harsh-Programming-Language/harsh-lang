@@ -4,7 +4,8 @@
 
 //! Pass 2 is any program the programmer names (the user's ruling,
 //! 2026-10-12, 0.8.0): `hrs -- <program> [args]` transpiles, then runs the
-//! program in `target/src/`, found as a shell finds it. Harsh arbitrates no
+//! program in the Rust project, `export/` (`target/src/` before 0.9.0),
+//! found as a shell finds it. Harsh arbitrates no
 //! conflict between two programs of one name -- Dioxus's `dx` and Deno's --
 //! it shows them: `hrs which`, and a note when PATH holds several.
 //! `hrs dx` is retired.
@@ -47,12 +48,12 @@ fn a_program_runs_in_the_generated_project_as_the_shell_finds_it() {
     let (ok, out, err) = run(&app, &path, &["--", "dx", "serve", "--version"]);
     assert!(ok, "{err}");
     // The first on PATH runs, as in a shell; its arguments are its own, `--version` included.
-    assert!(out.contains("deno 2.0") && out.contains("ran: serve --version in") && out.contains("app/target/src"), "{out}");
+    assert!(out.contains("deno 2.0") && out.contains("ran: serve --version in") && out.contains("app/export"), "{out}");
     // Two programs of the name: said, never decided.
     assert!(err.contains("2 programs named `dx` on PATH; running") && err.contains("hrs which dx"), "{err}");
     // A path is the programmer's choice, resolved from where `hrs` runs.
     let (ok, out, _) = run(&app, &path, &["--", "../b/dx", "serve"]);
-    assert!(ok && out.contains("dioxus-cli 0.7.10") && out.contains("app/target/src"), "{out}");
+    assert!(ok && out.contains("dioxus-cli 0.7.10") && out.contains("app/export"), "{out}");
 }
 
 #[test]

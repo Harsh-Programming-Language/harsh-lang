@@ -1,5 +1,38 @@
 # Changelog
 
+## 0.9.0 — 2026-10-14  (`hrs_proc_macro` 0.2.2, now on `harsh-lang` 0.9; Harshlings 0.1.10; `hrs_std` 0.1.5, the Jupyter kernel 0.1.3 and the VS Code extension 0.1.6, unchanged)
+
+**Breaking: the Rust project is `export/`.** A Harsh project has no `target/` at its root any more. Each build writes the whole project as Rust to `export/`, and cargo builds it there. A project made by an earlier `hrs` is refused with a message until `hrs migrate` moves it, once. `cargo leptos` found the old layout wanting: it looked for a `.gitignore` beside the Rust in `target/src/`.
+
+- **`export/` is the Rust project**:
+  - `export/Cargo.toml` is yours, with Harsh's crates added;
+  - `export/src/**.rs` is `src/**.hrs` transpiled, line for line;
+  - your other files are mirrored beside them, hidden ones too, but not `.git`: `assets/`, `Dioxus.toml`, `.env`, and the files in `src/` that are not Harsh;
+  - cargo's `target/` is inside it.
+
+  It builds with `cd export && cargo build` alone. It is where you read the Rust, and it is what crates.io gets. `include_str!` paths mean in `export/src/` what they mean in `src/`.
+- **`.hrs/`** holds `hrs`'s own files: the source maps, the stamp, the proc-macro runner and the distribution it builds with. They are Harsh's files, not the Rust's.
+- **`Cargo.toml` names no generated path.** `hrs new` writes none, and `hrs migrate` rewrites `target/src/` to `src/`, adds `/export` and `/.hrs` to `.gitignore`, and removes the old `target/`. `Cargo.lock` stays beside `Cargo.toml`: `hrs` copies it into `export/` and back.
+- **`hrs_std` is folded in.** The part of it a crate uses becomes the crate's own module, `export/src/hrs_std/`, written `crate::hrs_std::…`, with `nalgebra` and `num-traits` in `export/Cargo.toml`. The source maps are shifted with each change, so errors land on the same `.hrs` column. A Harsh library used by path is named in `export/Cargo.toml` by its own `export/` and its version, and its errors are reported at its `.hrs` lines.
+- **`hrs -c <cmd>`** is `cd export && cargo <cmd>`, after `hrs` writes `export/`: `hrs -c doc --open`, `hrs -c leptos watch`. `hrs -c publish` publishes the Rust to crates.io. It warns first when `description` or `license` is missing, and it refuses a Harsh macro crate. `hrs publish` stays Harsh's registry.
+- **Retired:** `hrs export` (every build writes `export/`) and `hrs cargo …` (write `hrs -c …`). Each says so and names its replacement.
+- **`hrs run` runs the program where you are**, as `cargo run` does, so its relative paths are your project's, not the mirror's. `hrs -c run` runs it in `export/`.
+- **A workspace has one `export/`, at its root.** It is the whole workspace as Rust: each Harsh member transpiled at its place (`export/app/src/main.rs`), each Rust member mirrored, with one `target/` and one `Cargo.lock`. `hrs -c …` at the root is cargo there, for the whole workspace. A Rust member in a workspace with Harsh members now builds; before, cargo stopped on a Harsh member's manifest.
+- `hrs migrate` at a workspace's root migrates each Harsh member and the root's `.gitignore`.
+- The tests that named the retired `hrs export` are now `the_rust_project_is_pure_rust` and `the_rust_project_takes_hrs_std_in_as_its_own_code`. `tests/export_layout.rs` (8 tests) and two language-server tests are new: 404 tests in all.
+- The language server points rust-analyzer at `export/Cargo.toml`. A save writes `export/` again with `hrs -c metadata`. Completion's side file is in `.hrs/complete/`, and it writes `hrs_std` as the project does.
+- The folded `hrs_std` leaves `export/` with its last use, and so does its `mod hrs_std;`. It carries none of its notes on Harsh, so nothing of Harsh is in `export/`.
+- In a workspace, Harsh's distribution is patched in for every cargo run: once for the whole workspace, at its root's `.hrs/dist/`.
+- A workspace whose root is a Rust package gets its manifest and `src/` in `export/` too.
+- `Hrs.toml`'s `[package] cargo` names the `Cargo.toml` that `export/` is written from, as before.
+- The website builds from `site/export/`, and its deploy runs `dx` there.
+- Taught in:
+  - the Book: chapters 1, 7 and 17 (publishing, where #2 is now `hrs -c publish`, and workspaces), and 25;
+  - *By Example*'s 15;
+  - the guide, the installation notes, the cheat sheet, the README and `MACROS.md`/`LSP.md`;
+  - `DECISIONS.md`, which records the ruling.
+- **Harshlings 0.1.10** follows: its manifests name `src/main.rs`, and `verify.py` runs the matrix project from `export/target/`.
+
 ## 0.8.5 — 2026-10-13  (`hrs_std` 0.1.5, `hrs_proc_macro` 0.2.1, the Jupyter kernel 0.1.3, Harshlings 0.1.9 and the VS Code extension 0.1.6, unchanged)
 
 No change to the language or the tools: what was fixed is now pinned, and what was fixed no longer reads as open.

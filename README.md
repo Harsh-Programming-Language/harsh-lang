@@ -121,15 +121,16 @@ hrs run                transpile, then cargo run
 hrs watch              rebuild on every save
 ```
 
-Harsh sources live in `src/**.hrs`. Generated Rust and its source maps go to `target/src/`, and `Cargo.toml` points its targets at that tree:
+Harsh sources live in `src/**.hrs`, and `Cargo.toml` is cargo's, unchanged. Each build writes the project as Rust to `export/` — its `Cargo.toml`, `src/` transpiled, the other files mirrored — and cargo builds it there; `hrs`'s source maps go to `.hrs/`:
 
-```toml
-[[bin]]
-name = "myapp"
-path = "target/src/main.rs"
+```text
+myapp/
+  Cargo.toml  Hrs.toml  src/main.hrs
+  export/     Cargo.toml  src/main.rs  target/
+  .hrs/       maps/main.map.json
 ```
 
-One manifest, dependencies untouched, and nothing extra to gitignore since Cargo already ignores `/target`. Plain `cargo build` works once the tree has been transpiled.
+`hrs new` ignores `/export` and `/.hrs` in git. `cd export && cargo build` works without `hrs` once it has been written, and `export/` is what crates.io gets.
 
 | Command | Does |
 |---|---|
@@ -141,7 +142,8 @@ One manifest, dependencies untouched, and nothing extra to gitignore since Cargo
 | `hrs watch [sub]` | rebuild on save; defaults to `check` |
 | at a workspace's root | `build`, `check`, `test`, `lint`, `fmt` go through each member |
 | `hrs new <name>` | scaffold a project |
-| `hrs export [dir]` | write the project as a plain Rust crate, formatted with `cargo fmt` — the hand-off artifact; `target/src/` is for the compiler, not for reading |
+| `hrs -c <cmd>` | `cargo <cmd>` in `export/`, after transpiling: `hrs -c publish` sends the Rust to crates.io |
+| `hrs -- <program>` | any program, run in `export/`: `hrs -- dx serve` |
 
 Transpiling is incremental by modification time. Every diagnostic — from rustc or clippy — is remapped onto your `.hrs` source with the correct line and column; Harsh's own syntax errors are rendered the same way.
 
@@ -179,7 +181,7 @@ To run one:
 
 ```sh
 cargo new --bin demo
-hrs examples/general.hrs -o demo/src/main.rs --map demo/target/src.map.json
+hrs examples/general.hrs -o demo/src/main.rs --map demo/main.map.json
 cd demo && cargo run
 ```
 
